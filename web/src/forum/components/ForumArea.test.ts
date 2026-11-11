@@ -1,0 +1,428 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import type { VueWrapper } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
+import ForumArea from './ForumArea.vue'
+import { setLocale } from '../../i18n'
+import { useChatStore } from '../../stores/chat'
+import { usePermissionsStore } from '../../stores/permissions'
+import * as forumApi from '../lib/forumApi'
+import { openSearch } from '../../chat/lib/globalSearch'
+import type { ForumTag } from '../../types/domain'
+import { channelFixture, messageFixture, forumTagFixture } from '../../test-fixtures.fixture'
+
+vi.mock('../../chat/lib/globalSearch', () => ({ openSearch: vi.fn() }))
+vi.mock('../lib/forumApi', () => ({
+  createForumPost: vi.fn(),
+  fetchForumPosts: vi.fn(),
+  fetchForumTags: vi.fn(),
+  fetchForumSettings: vi.fn(),
+  fetchUnreadForumPosts: vi.fn(),
+  updateForumSettings: vi.fn(),
+  reorderForumTags: vi.fn(),
+  createForumPostWithFile: vi.fn(),
+  uploadForumPostFile: vi.fn(),
+  updateForumPost: vi.fn(),
+  createForumTag: vi.fn(),
+  updateForumTag: vi.fn(),
+  deleteForumTag: vi.fn()
+}))
+
+let wrapper: VueWrapper
+let chatStore: ReturnType<typeof useChatStore>
+let permsStore: ReturnType<typeof usePermissionsStore>
+
+const mockChannel = channelFixture({
+  id: 'forum-chan-1',
+  name: 'general-discussions',
+  type: 'forum',
+  topic: 'All community topics'
+})
+
+const mockTags: ForumTag[] = [
+  forumTagFixture({ id: 'tag-1', channel_id: 'forum-chan-1', name: 'discussion', emoji: '💬' }),
+  forumTagFixture({ id: 'tag-2', channel_id: 'forum-chan-1', name: 'help', emoji: '❓', position: 2 })
+]
+
+const mockPosts = [
+  messageFixture({
+    id: 'post-1',
+    channel_id: 'forum-chan-1',
+    title: 'Welcome to the forum!',
+    content: 'This is the first post.',
+    tags: [mockTags[0]!],
+    reply_count: 2,
+    created_at: '2026-01-01T10:00:00Z',
+    last_activity_at: '2026-01-01T12:00:00Z'
+  }),
+  messageFixture({
+    id: 'post-2',
+    channel_id: 'forum-chan-1',
+    title: 'Need help with setup',
+    content: 'How do I configure this?',
+    tags: [mockTags[1]!],
+    reply_count: 0,
+    created_at: '2026-01-01T11:00:00Z',
+    last_activity_at: '2026-01-01T11:00:00Z'
+  })
+]
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  setLocale('en')
+  vi.clearAllMocks()
+
+  chatStore = useChatStore()
+  permsStore = usePermissionsStore()
+
+  chatStore.activeChannel = mockChannel
+  chatStore.openThread = vi.fn()
+
+  vi.spyOn(permsStore, 'canIn').mockReturnValue(true)
+  vi.mocked(forumApi.fetchForumTags).mockResolvedValue(mockTags)
+  vi.mocked(forumApi.fetchForumPosts).mockResolvedValue(mockPosts)
+  vi.mocked(forumApi.fetchForumSettings).mockResolvedValue({ require_tag: false, guidelines: '' })
+  vi.mocked(forumApi.fetchUnreadForumPosts).mockResolvedValue([])
+})
+
+afterEach(() => {
+  wrapper?.unmount()
+})
+
+describe('ForumArea', () => {
+  it('loads tags and posts on mount', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-1')
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', { sort: 'activity' })
+
+    expect(wrapper.text()).toContain('general-discussions')
+    expect(wrapper.text()).toContain('All community topics')
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(2)
+    expect(wrapper.text()).toContain('Welcome to the forum!')
+    expect(wrapper.text()).toContain('Need help with setup')
+  })
+
+  it('filters posts by tag when tag pill is clicked', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    const tagPills = wrapper.findAll('[data-testid="filter-tag-pill"]')
+    expect(tagPills).toHaveLength(2)
+
+    await tagPills[0]!.trigger('click')
+    await flushPromises()
+
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', {
+      sort: 'activity',
+      tagId: 'tag-1'
+    })
+
+    const allPill = wrapper.find('[data-testid="filter-all-tags"]')
+    await allPill.trigger('click')
+    await flushPromises()
+
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', {
+      sort: 'activity'
+    })
+  })
+
+  it('changes sort mode when select is changed', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    const select = wrapper.find<HTMLSelectElement>('[data-testid="forum-sort-select"]')
+    await select.setValue('newest')
+    await flushPromises()
+
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', {
+      sort: 'newest'
+    })
+  })
+
+  it('opens thread when clicking a post card', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    await cards[0]!.trigger('click')
+
+    expect(chatStore.openThread).toHaveBeenCalledWith(mockPosts[0])
+  })
+
+  it('displays empty state when no posts exist', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('No posts yet')
+  })
+
+  it('survives failing post and tag requests with an empty list and no tag pills', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(forumApi.fetchForumPosts).mockRejectedValueOnce(new Error('posts down'))
+    vi.mocked(forumApi.fetchForumTags).mockRejectedValueOnce(new Error('tags down'))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="forum-error"]').text()).toContain('posts down')
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="filter-tag-pill"]')).toHaveLength(0)
+    spy.mockRestore()
+  })
+
+  it('retries a failed load from the error state', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockRejectedValueOnce(new Error('offline'))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-error"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(2)
+  })
+
+  it('pages older posts behind the last one with the activity cursor', async () => {
+    const page = Array.from({ length: 50 }, (_, i) => messageFixture({
+      id: `p-${i}`, channel_id: 'forum-chan-1', title: `Post ${i}`, last_activity_at: `2026-01-01T10:${String(59 - i).padStart(2, '0')}:00Z`
+    }))
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce(page)
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(50)
+
+    const older = messageFixture({ id: 'p-old', channel_id: 'forum-chan-1', title: 'Old post' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([older, page[49]!])
+    await wrapper.find('[data-testid="forum-load-more"]').trigger('click')
+    await flushPromises()
+    expect(forumApi.fetchForumPosts).toHaveBeenLastCalledWith('forum-chan-1', {
+      sort: 'activity', tagId: undefined, before: 'p-49', beforeActivity: page[49]!.last_activity_at
+    })
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(51)
+    expect(wrapper.find('[data-testid="forum-load-more"]').exists()).toBe(false)
+  })
+
+  it('offers no load-more for a short page', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-load-more"]').exists()).toBe(false)
+  })
+
+  it('ignores a slow answer of the previous forum after switching', async () => {
+    let releaseOld: (v: typeof mockPosts) => void = () => {}
+    vi.mocked(forumApi.fetchForumPosts).mockImplementationOnce(() => new Promise(r => { releaseOld = r }))
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    const other = messageFixture({ id: 'other-1', channel_id: 'forum-chan-2', title: 'Other forum post' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([other])
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+    releaseOld(mockPosts)
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(1)
+    expect(cards[0]!.text()).toContain('Other forum post')
+  })
+
+  it('loads the posts once when the channel changes with a tag filter selected', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockClear()
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+    expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the tag-filter empty text and no create button when a tag filters everything out', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+
+    const empty = wrapper.find('[data-testid="forum-empty-filtered"]')
+    expect(empty.text()).toContain('No posts match')
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="new-post-btn"]').exists()).toBe(true)
+
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce(mockPosts)
+    await empty.find('button').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(2)
+  })
+
+  it('offers to start a post from the empty state', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="forum-empty"] button').trigger('click')
+    expect(wrapper.findComponent({ name: 'CreateForumPostModal' }).exists()).toBe(true)
+  })
+
+  it('hides the action buttons without permission and the empty-state button too', async () => {
+    vi.spyOn(permsStore, 'canIn').mockReturnValue(false)
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="new-post-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="manage-tags-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="forum-empty"] button').exists()).toBe(false)
+  })
+
+  it('puts a newly created post on top and opens its thread', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="new-post-btn"]').trigger('click')
+
+    const created = messageFixture({ id: 'post-3', channel_id: 'forum-chan-1', title: 'Brand new', content: 'fresh' })
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('created', created)
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(3)
+    expect(cards[0]!.text()).toContain('Brand new')
+    expect(chatStore.openThread).toHaveBeenCalledWith(created)
+
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('close')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'CreateForumPostModal' }).exists()).toBe(false)
+  })
+
+  it('does not duplicate a post that is already listed', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="new-post-btn"]').trigger('click')
+    wrapper.findComponent({ name: 'CreateForumPostModal' }).vm.$emit('created', mockPosts[1])
+    await flushPromises()
+
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards).toHaveLength(2)
+    expect(cards[0]!.text()).toContain('Need help with setup')
+  })
+
+  it('reloads the tags after the tag manager reports a change and closes it', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.find('[data-testid="manage-tags-btn"]').trigger('click')
+    const modal = wrapper.findComponent({ name: 'ManageForumTagsModal' })
+    expect(modal.exists()).toBe(true)
+
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+    modal.vm.$emit('updated')
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-1')
+
+    modal.vm.$emit('close')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'ManageForumTagsModal' }).exists()).toBe(false)
+  })
+
+  it('reloads tags when another client changed them in this channel only', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+
+    chatStore.forumTagsSignal = { channelId: 'other-chan', seq: 1 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
+
+    chatStore.forumTagsSignal = { channelId: 'forum-chan-1', seq: 2 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-1')
+  })
+
+  it('resets the tag filter and reloads when the channel changes', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
+    await flushPromises()
+    vi.mocked(forumApi.fetchForumPosts).mockClear()
+    vi.mocked(forumApi.fetchForumTags).mockClear()
+
+    chatStore.activeChannel = channelFixture({ id: 'forum-chan-2', name: 'other', type: 'forum' })
+    await flushPromises()
+
+    expect(forumApi.fetchForumTags).toHaveBeenCalledWith('forum-chan-2')
+    expect(forumApi.fetchForumPosts).toHaveBeenLastCalledWith('forum-chan-2', { sort: 'activity' })
+    expect(wrapper.text()).toContain('other')
+  })
+
+  it('loads nothing without an active channel', async () => {
+    chatStore.activeChannel = null
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
+    expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+  })
+
+  it('has the way back to the channel list on a phone and a search button like other channels', async () => {
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="open-nav"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="search-in-channel"]').trigger('click')
+    expect(openSearch).toHaveBeenCalledWith('in:general-discussions ')
+  })
+
+  it('searches the forum after a pause in typing and sends the text as q', async () => {
+    vi.useFakeTimers()
+    try {
+      wrapper = mount(ForumArea, { attachTo: document.body })
+      await flushPromises()
+      vi.mocked(forumApi.fetchForumPosts).mockClear()
+      await wrapper.find('[data-testid="forum-search"]').setValue('roles')
+      expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(400)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', { sort: 'activity', search: 'roles' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('marks the unread posts the server names and clears the mark when the post is opened', async () => {
+    vi.mocked(forumApi.fetchUnreadForumPosts).mockResolvedValue(['post-2'])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards[0]!.find('[data-testid="forum-post-unread"]').exists()).toBe(false)
+    expect(cards[1]!.find('[data-testid="forum-post-unread"]').exists()).toBe(true)
+
+    await cards[1]!.trigger('click')
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')[1]!.find('[data-testid="forum-post-unread"]').exists()).toBe(false)
+  })
+
+  it('shows the guidelines in the empty state of a new forum', async () => {
+    vi.mocked(forumApi.fetchForumSettings).mockResolvedValue({ require_tag: false, guidelines: 'Be kind.' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-empty"]').text()).toContain('Be kind.')
+  })
+
+  it('refreshes the list when the forum posts signal fires for this channel', async () => {
+    vi.useFakeTimers()
+    try {
+      wrapper = mount(ForumArea, { attachTo: document.body })
+      await flushPromises()
+      vi.mocked(forumApi.fetchForumPosts).mockClear()
+      chatStore.forumPostsSignal = { channelId: 'other', seq: 1 }
+      await vi.advanceTimersByTimeAsync(600)
+      expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+      chatStore.forumPostsSignal = { channelId: 'forum-chan-1', seq: 2 }
+      await vi.advanceTimersByTimeAsync(600)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

@@ -42,7 +42,7 @@ const (
 	// "1.3 times the heap plus 250 MB" (the 250 MB is already in the RSS now).
 	RSSPerHeap = 1.3
 	// CameraPublishBits is one camera sending all three layers at their caps
-	// (2.5 Mbit/s, 500 and 150 kbit/s; web/src/lib/cameraLayers.ts).
+	// (2.5 Mbit/s, 500 and 150 kbit/s; web/src/talk/lib/cameraLayers.ts).
 	CameraPublishBits = 3.15e6
 	// CameraViewBits is one camera as a grid tile receives it: the 360p layer.
 	CameraViewBits = 500e3

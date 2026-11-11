@@ -1,16 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isPermRole } from '../types/rest'
 import { decodePermissionsInfo } from '../types/domain'
 import type { PermissionsInfo, Role } from '../types/domain'
 import { useAuthStore } from './auth'
-import { ADMIN_AREA_KEYS, DEFAULT_EVERYONE, hasPermission, roleColorCss } from '../lib/permissions'
-import type { PermissionKey } from '../lib/permissions'
-import { newMemberTimes } from '../lib/newMember'
-import { useNewMemberClock } from '../composables/useNewMemberClock'
+import { ADMIN_AREA_KEYS, DEFAULT_EVERYONE, hasPermission, roleColorCss } from '../shared/lib/permissions'
+import type { PermissionKey } from '../shared/lib/permissions'
+import { newMemberTimes } from '../shared/lib/newMember'
+import { useNewMemberClock } from '../shared/composables/useNewMemberClock'
 
 const decodeRoles = arrayDecoder('roles', isPermRole)
 

@@ -1,5 +1,5 @@
 // Package mdplain reduces a message's Markdown to the text a notification may
-// show. It reads the same flavour as the web client (web/src/lib/markdown), so
+// show. It reads the same flavour as the web client (web/src/shared/lib/markdown), so
 // a push, a reply preview and the message view agree: formatting marks go,
 // link and code text stay, ||spoilers|| become a word, custom emoji tokens
 // become :name:. The shared fixtures in testdata are checked by both sides.

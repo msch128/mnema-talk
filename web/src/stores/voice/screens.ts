@@ -1,4 +1,4 @@
-import { layersShape } from '../../lib/screenLayers'
+import { layersShape } from '../../talk/lib/screenLayers'
 import type { MediaState, ScreenLayers, ScreenLayersWanted, ScreenReception, ScreenViewers } from '../../types/events'
 import type { VoiceState } from './state'
 import { emitSubscription, screenRequest } from './cameras'

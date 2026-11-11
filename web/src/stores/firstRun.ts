@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeOnboardingFirstRun, type OnboardingFirstRun, type OnboardingFirstRunInput } from '../types/rest'
 import { useAuthStore } from './auth'
 

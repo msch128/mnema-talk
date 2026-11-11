@@ -6,18 +6,18 @@ import { useServerFeaturesStore } from './serverFeatures'
 import { useToastStore } from './toast'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import { ApiError, type ApiOptions } from '../lib/api'
-import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../lib/drafts'
+import { ApiError, type ApiOptions } from '../shared/lib/api'
+import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../chat/lib/drafts'
 import type { Message } from '../types/domain'
 import { t } from '../i18n'
 
 // What a member sees when they write while the connection is down.
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 
 const ch = channelFixture({ id: fixtureId(2) })
 const me = userFixture({ id: fixtureId(1), username: 'me', presence: 'online' })

@@ -6,13 +6,13 @@ import { useBlocksStore } from './blocks'
 import { useServerFeaturesStore } from './serverFeatures'
 import { channelFixture, categoryFixture, fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../lib/api'
-import { api } from '../lib/api'
-import * as router from '../lib/router'
+import type { ApiOptions } from '../shared/lib/api'
+import { api } from '../shared/lib/api'
+import * as router from '../shared/lib/router'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
 

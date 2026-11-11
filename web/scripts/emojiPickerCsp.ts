@@ -18,7 +18,7 @@
 //      setAttribute. Custom properties, var() and url() work the same way.
 //   3. The template engine's innerHTML takes a TrustedHTML of the policy
 //      `mnema-emoji-picker`, which the app creates at start-up
-//      (src/lib/trustedTypes.ts); the patched picker imports that module. What
+//      (src/shared/lib/trustedTypes.ts); the patched picker imports that module. What
 //      it parses is only the static text of the picker's own html`` templates:
 //      every expression (emoji, names, search text) is bound afterwards
 //      through the DOM, never as markup. Browsers without Trusted Types, or a
@@ -44,7 +44,7 @@ export const TEMPLATE_POLICY = 'mnema-emoji-picker'
  * picker its templates through it. The picker's own chunk is loaded on first
  * use, and a policy created only then would leave the name free until then.
  */
-export const TEMPLATE_MODULE = '@/lib/trustedTypes'
+export const TEMPLATE_MODULE = '@/shared/lib/trustedTypes'
 
 const STYLE_ELEMENT = `    const style = document.createElement('style');
     style.textContent = baseStyles + EXTRA_STYLES;

@@ -9,7 +9,7 @@
     "skipLibCheck": false
   },
   "include": [
-    "src/lib/dfn/dfnBridgeWorklet.ts",
+    "src/talk/lib/dfn/dfnBridgeWorklet.ts",
     "src/types/audio-worklet.d.ts"
   ]
 }

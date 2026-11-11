@@ -19,7 +19,7 @@ in any release.
 | **Bot gateway and bot API** | [bots.md](bots.md) | Opcodes, intents, dispatch names and payloads, bot REST routes, slash commands and interactions. |
 | **Webhooks** | [webhooks.md](webhooks.md) | The incoming (Discord execute format) request, the outgoing event names, payloads and signature headers. |
 | **Desktop client contract** | `web_client_api` and the compat fields in [`web/desktop-compat.json`](../web/desktop-compat.json) (`min_server_version`, `security_floor`), the signed bundle manifest, `GET /api/health`; [desktop-trusted-client.md](desktop-trusted-client.md) | The integer a bundle and a server agree on, the manifest fields, the verification rules. |
-| **Desktop bridge** | The `Platform` interface in [`web/src/lib/platform.ts`](../web/src/lib/platform.ts), plus the host commands and window globals behind it, which the desktop client repository implements | Method names and shapes, command names and their arguments and results. |
+| **Desktop bridge** | The `Platform` interface in [`web/src/shared/lib/platform.ts`](../web/src/shared/lib/platform.ts), plus the host commands and window globals behind it, which the desktop client repository implements | Method names and shapes, command names and their arguments and results. |
 | **Environment variables** | [`.env.example`](../.env.example) and [operations.md](operations.md#configuration-reference) | Names, meaning and default values of documented variables. |
 | **Metric names** | [operations.md](operations.md#what-each-metric-means) (`GET /api/metrics`) | Metric names, types and label names. |
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |

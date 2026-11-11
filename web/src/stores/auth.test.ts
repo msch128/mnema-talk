@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
 import { locale, setLocale } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
-import { DRAFT_KEY_PREFIX, clearAllDrafts, hasDraft, setDraft } from '../lib/drafts'
+import { DRAFT_KEY_PREFIX, clearAllDrafts, hasDraft, setDraft } from '../chat/lib/drafts'
 import type { User } from '../types/domain'
 
 function respond(body: unknown, status = 200): Promise<Response> {

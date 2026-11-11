@@ -63,7 +63,7 @@ function shipLicenses(): Plugin {
 
 // Where the build writes the hashed scripts, styles and workers. The app's
 // Trusted Types policy for worker scripts accepts only this prefix and /sw.js
-// (src/lib/trustedTypes.ts).
+// (src/shared/lib/trustedTypes.ts).
 const ASSETS_DIR = 'assets'
 
 export default defineConfig(({ mode }) => ({

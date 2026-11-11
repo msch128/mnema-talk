@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { api, isApiError } from '../lib/api'
+import { api, isApiError } from '../shared/lib/api'
 import { isBlocksBlockedMember, type BlocksBlockedMember } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
 import { t } from '../i18n'

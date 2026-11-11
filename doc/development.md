@@ -171,7 +171,7 @@ The look of the web client comes from tokens and a few shared classes, not from 
 
 - `web/src/style.css` `@theme`: colours, radius scale (`rounded-sm` to `rounded-2xl`), elevation scale (`shadow-xs` to `shadow-2xl`), motion (`--ease-mnema`, 150 ms default, `animate-*` entry animations).
 - `web/src/styles/buttons.css`: `.btn` with `-primary`, `-secondary`, `-ghost`, `-danger`, `-danger-solid`, sizes `-sm`/`-lg`, `.btn-icon`, `.btn-link`, `.chip` (a choice in a row), `.choice-card`, and the keyboard focus ring. A loading button sets `aria-busy="true"`.
-- `web/src/styles/controls.css`: checkbox, radio, slider, select and text fields are styled on the elements themselves (no class needed); `.switch` is the toggle (`role="switch"` and `aria-checked`). Slider fill is painted by `lib/rangeFill.ts`.
+- `web/src/styles/controls.css`: checkbox, radio, slider, select and text fields are styled on the elements themselves (no class needed); `.switch` is the toggle (`role="switch"` and `aria-checked`). Slider fill is painted by `shared/lib/rangeFill.ts`.
 - `web/src/styles/surfaces.css`: dialog scrim and panel (`BaseDialog`), `.pop-in` for menus and popovers, toast motion, the `shadow-popover` utility, and the single `prefers-reduced-motion` rule.
 - `web/src/styles/settings.css`: `.settings-group` and its label, card, help and row classes for the account and audio settings pages.
 

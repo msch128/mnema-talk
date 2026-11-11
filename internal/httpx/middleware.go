@@ -188,7 +188,7 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 
 // SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts and
 // no JS eval; 'wasm-unsafe-eval' only allows compiling WebAssembly, which the
-// bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs.
+// bundled AI noise filter (web/src/talk/lib/noiseSuppressor.js) needs.
 //
 // style-src is 'self' with style-src-attr 'none': no <style> elements and no
 // style="" attributes, only stylesheet files and constructable stylesheets.
@@ -217,7 +217,7 @@ const SPAContentSecurityPolicy = basePolicy + "; " + trustedTypesDirectives
 // (React's dangerouslySetInnerHTML) and has no switch to hand over TrustedHTML.
 const APIDocsContentSecurityPolicy = basePolicy
 
-// The policies, one per sink the app has (web/src/lib/trustedTypes.ts):
+// The policies, one per sink the app has (web/src/shared/lib/trustedTypes.ts):
 //   - vue: Vue's own, for the static markup its template compiler hoists and
 //     for v-html. It passes text through, so what keeps a second v-html or a
 //     bound innerHTML out stays the lint rules (web/eslint.config.ts).

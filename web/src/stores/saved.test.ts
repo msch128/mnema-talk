@@ -1,4 +1,4 @@
-import { ApiError, type ApiOptions } from '../lib/api'
+import { ApiError, type ApiOptions } from '../shared/lib/api'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -7,8 +7,8 @@ import { useSavedStore } from './saved'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

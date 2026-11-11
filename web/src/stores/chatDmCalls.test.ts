@@ -6,20 +6,20 @@ import { useBlocksStore } from './blocks'
 import { useDmCallsStore } from './dmCalls'
 import { useServerFeaturesStore } from './serverFeatures'
 import { useVoiceStore } from './voice'
-import { platform } from '../lib/platform'
-import type { OsNotification } from '../lib/osNotify'
+import { platform } from '../shared/lib/platform'
+import type { OsNotification } from '../shared/lib/osNotify'
 import { setLocale } from '../i18n'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
 import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
-import * as router from '../lib/router'
+import * as router from '../shared/lib/router'
 
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve([]))
 }))
 
 const join = vi.hoisted(() => vi.fn())
-vi.mock('../composables/useDmCall', () => ({ useDmCall: () => ({ join }) }))
+vi.mock('../dm/composables/useDmCall', () => ({ useDmCall: () => ({ join }) }))
 
 const me = fixtureId(1)
 const ada = fixtureId(2)
@@ -210,7 +210,7 @@ describe('the messages of a call', () => {
 describe('the conversation list', () => {
   it('brings back a call that rings after a reload or a reconnect, without announcing it again', async () => {
     const chat = setup({ away: true })
-    const { api } = await import('../lib/api')
+    const { api } = await import('../shared/lib/api')
     vi.mocked(api).mockResolvedValueOnce([dmFixture({
       id: conversation,
       members: [dmMemberFixture(1), dmMemberFixture(2, { display_name: 'Ada' })],

@@ -506,7 +506,7 @@ use, change and share it, also commercially, as long as you publish the
 complete source code of your version under the same license. That includes
 running a changed version as a network service: its users must be able to get
 the source (the legal dialog in the app links to it; point `SOURCE_URL` in
-`web/src/lib/thirdParty.ts` at your own repository).
+`web/src/shared/lib/thirdParty.ts` at your own repository).
 
 **Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
 obligations (for example in a closed-source product or service), get a

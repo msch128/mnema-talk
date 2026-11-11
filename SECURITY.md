@@ -563,7 +563,7 @@ details and the limits.
   second line behind the escaping described under "Message rendering": markup
   that reached a sink outside those policies, from the app or from a
   dependency, would be refused by the browser. What each policy does
-  (`web/src/lib/trustedTypes.ts`):
+  (`web/src/shared/lib/trustedTypes.ts`):
   - `mnema-markdown` is the Markdown renderer itself: its only rule runs
     `renderMarkdown`, so a value of this policy is always escaped renderer
     output. The one `v-html` takes it.
@@ -590,7 +590,7 @@ details and the limits.
   writes its sanitized HTML as plain strings. The desktop shells apply their
   own copy of the policy, which does not carry the directives yet.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
-  (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
+  (`web/src/shared/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention
   pills, future custom emoji) pass an attribute allowlist with a pattern per
   attribute (an image source must be a same-origin path). Links are limited to

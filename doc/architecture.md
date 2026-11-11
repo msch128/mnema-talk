@@ -413,7 +413,7 @@ web client puts H.264 first; a browser would then switch a running camera
 from VP8 to H.264 at the next renegotiation while the forwarded track keeps
 the first codec, and viewers could not decode it. The client still reorders
 its own screen line so screen shares prefer H.264 (hardware encoding) and get
-a higher start bitrate ([`tuneScreenOffer`](../web/src/composables/useWebRTC.ts)).
+a higher start bitrate ([`tuneScreenOffer`](../web/src/talk/composables/useWebRTC.ts)).
 
 **Layers of a screen share (0.8).** A sharer can send its screen as up to three
 separate encodings of the same capture ("layers", best first), and each viewer
@@ -452,7 +452,7 @@ The SFU cannot read the media; it never estimates from it.
 *Size of the picture.* The stage tells the server how large it shows the share
 (`fit` on `webrtc_subscribe`: the index of the smallest layer that still has
 the pixels the stage shows, its CSS height times `devicePixelRatio`, see
-`fitLayer` in `web/src/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
+`fitLayer` in `web/src/talk/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
 that layer and never goes above it, so a small tile or a share that is watched
 but not on the stage costs a small stream. When the picture grows (fullscreen,
 a bigger window) a viewer that sat on the old limit climbs on after four quiet
@@ -493,8 +493,8 @@ link with a rate and a queue to try this.
 Cameras and audio are not layered (small pictures, and every layer costs the
 sender an encoder).
 
-The web client ([`lib/screenLayers.ts`](../web/src/lib/screenLayers.ts),
-`syncLayers` in [`useWebRTC.ts`](../web/src/composables/useWebRTC.ts)) sends
+The web client ([`talk/lib/screenLayers.ts`](../web/src/talk/lib/screenLayers.ts),
+`syncLayers` in [`useWebRTC.ts`](../web/src/talk/composables/useWebRTC.ts)) sends
 the share as the streamer chose it on layer 0 and up to two smaller ones
 (1080p, 720p, 480p or 360p, at most 30 fps, at least a quarter smaller than the
 layer above) from the same capture with `scaleResolutionDownBy` on the extra
@@ -543,8 +543,8 @@ which layers anyone needs in the same event as for a screen, marked
 `source: "camera"` (`screen_layers_wanted`), and switches the others off. The
 server announces the capability as `server_info.camera_layers`; a client sends
 camera layers and size reports only where it is there. The web client
-([`lib/cameraLayers.ts`](../web/src/lib/cameraLayers.ts),
-[`useCameraFit.ts`](../web/src/composables/useCameraFit.ts)) plans up to three
+([`talk/lib/cameraLayers.ts`](../web/src/talk/lib/cameraLayers.ts),
+[`useCameraFit.ts`](../web/src/talk/composables/useCameraFit.ts)) plans up to three
 layers of the capture (full size, 360p and 180p thumbnail at 150 kbit/s, none
 smaller than 180p) and sends them with `scaleResolutionDownBy` on the extra
 lines.
@@ -838,11 +838,19 @@ and Administrators) gathers version, update state, database, storage, backup and
 
 ## Frontend structure (`web/src`)
 
+- **Folders**: one folder per feature (`chat`, `talk`, `dm`, `forum`, `events`,
+  `wiki`, `admin`, `settings`), each with `components/`, `composables/` and `lib/`.
+  `shared/` holds what several features use, `app/` the shell that composes them
+  (sidebar, user bar, member list, sign-in, routing). `stores/`, `types/`, `i18n/`
+  and `directives/` serve all of them. [`lib/media/`](../web/src/lib/media/) is the
+  media encryption of Talks and stays where it is.
+  A feature imports `shared` and itself, not another feature; the allowed edges are
+  the tables in [`web/scripts/importZones.ts`](../web/scripts/importZones.ts), checked by ESLint.
 - **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)
-  (routing via [`lib/router.ts`](../web/src/lib/router.ts), layout, dialogs).
-- **Addresses**: [`lib/routePaths.ts`](../web/src/lib/routePaths.ts) builds every
+  (routing via [`shared/lib/router.ts`](../web/src/shared/lib/router.ts), layout, dialogs).
+- **Addresses**: [`shared/lib/routePaths.ts`](../web/src/shared/lib/routePaths.ts) builds every
   address (`/c/:slug`, `/v/:slug`, `/c/:forum/p/:title-:shortId`, `/dm/:username`,
-  `/dm/g/:shortId`) and `lib/router.ts` parses and resolves them client-side against the
+  `/dm/g/:shortId`) and `shared/lib/router.ts` parses and resolves them client-side against the
   channels and conversations the member already sees: the current slug, then
   `previous_slugs`, then a legacy id; the last two are rewritten (replace) to the
   canonical address. The server has no slug-resolving endpoint. Slugs are assigned by
@@ -852,43 +860,46 @@ and Administrators) gathers version, update state, database, storage, backup and
   rename and not kept in the history).
 - **Stores (Pinia)**:
   [`auth`](../web/src/stores/auth.ts) (current user; the session itself is an
-  HttpOnly cookie), [`chat`](../web/src/stores/chat.ts) (channels, messages,
-  WebSocket events, unread state, presence),
+  HttpOnly cookie), [`socket`](../web/src/stores/socket.ts) (the WebSocket
+  transport: connect, heartbeat, reconnect backoff; it knows no event),
+  [`chat`](../web/src/stores/chat.ts) (channels, messages, WebSocket events,
+  unread state, presence; it hosts the transport and still exposes its
+  connection state and `sendWSEvent`, so callers did not change),
   [`voice`](../web/src/stores/voice.ts) (call state, devices, input mode and
   push-to-talk key, per-person volumes, camera and stage choices),
   [`appVersion`](../web/src/stores/appVersion.ts) (reload banner on version
   mismatch), [`toast`](../web/src/stores/toast.ts).
-- **Composables**: [`useWebRTC`](../web/src/composables/useWebRTC.ts) (peer
+- **Composables**: [`useWebRTC`](../web/src/talk/composables/useWebRTC.ts) (peer
   connection, publishing mic/screen/camera, push-to-talk keys, screen offer
-  tuning, stats), [`useTalkStage`](../web/src/composables/useTalkStage.ts) and
-  [`useVideoGrid`](../web/src/composables/useVideoGrid.ts) (stage and grid
-  layout), [`usePictureInPicture`](../web/src/composables/usePictureInPicture.ts),
-  [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
-  [`useSortableDrag`](../web/src/composables/useSortableDrag.ts) and
-  [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
-  drop with immediate save and undo), [`useNavMenus`](../web/src/composables/useNavMenus.ts)
-  (context menus), [`useMessageActions`](../web/src/composables/useMessageActions.ts),
-  [`useMessageKeyboard`](../web/src/composables/useMessageKeyboard.ts),
-  [`useResizable`](../web/src/composables/useResizable.ts), [`useDialog`](../web/src/composables/useDialog.ts).
-- **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
-  [`ChatArea.vue`](../web/src/components/ChatArea.vue),
-  [`ThreadSidebar.vue`](../web/src/components/ThreadSidebar.vue),
-  [`VoiceStage.vue`](../web/src/components/VoiceStage.vue) (the Talk view),
-  [`ParticipantTile.vue`](../web/src/components/ParticipantTile.vue),
-  [`VoiceChatPanel.vue`](../web/src/components/VoiceChatPanel.vue),
-  [`ScreenViewers.vue`](../web/src/components/ScreenViewers.vue),
-  [`PipHost.vue`](../web/src/components/PipHost.vue),
-  [`MemberList.vue`](../web/src/components/MemberList.vue),
-  [`AdminDashboard.vue`](../web/src/components/AdminDashboard.vue) with one
+  tuning, stats), [`useTalkStage`](../web/src/talk/composables/useTalkStage.ts) and
+  [`useVideoGrid`](../web/src/talk/composables/useVideoGrid.ts) (stage and grid
+  layout), [`usePictureInPicture`](../web/src/talk/composables/usePictureInPicture.ts),
+  [`useSidebarReorder`](../web/src/app/composables/useSidebarReorder.ts),
+  [`useSortableDrag`](../web/src/shared/composables/useSortableDrag.ts) and
+  [`useChannelLayout`](../web/src/app/composables/useChannelLayout.ts) (drag and
+  drop with immediate save and undo), [`useNavMenus`](../web/src/chat/composables/useNavMenus.ts)
+  (context menus), [`useMessageActions`](../web/src/chat/composables/useMessageActions.ts),
+  [`useMessageKeyboard`](../web/src/chat/composables/useMessageKeyboard.ts),
+  [`useResizable`](../web/src/shared/composables/useResizable.ts), [`useDialog`](../web/src/shared/composables/useDialog.ts).
+- **Components**: [`Sidebar.vue`](../web/src/app/components/Sidebar.vue),
+  [`ChatArea.vue`](../web/src/chat/components/ChatArea.vue),
+  [`ThreadSidebar.vue`](../web/src/chat/components/ThreadSidebar.vue),
+  [`VoiceStage.vue`](../web/src/talk/components/VoiceStage.vue) (the Talk view),
+  [`ParticipantTile.vue`](../web/src/talk/components/ParticipantTile.vue),
+  [`VoiceChatPanel.vue`](../web/src/app/components/VoiceChatPanel.vue),
+  [`ScreenViewers.vue`](../web/src/talk/components/ScreenViewers.vue),
+  [`PipHost.vue`](../web/src/talk/components/PipHost.vue),
+  [`MemberList.vue`](../web/src/app/components/MemberList.vue),
+  [`AdminDashboard.vue`](../web/src/admin/components/AdminDashboard.vue) with one
   component per tab (users, layout, invites, media,
-  [system](../web/src/components/AdminSystemTab.vue)),
-  [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
+  [system](../web/src/admin/components/AdminSystemTab.vue)),
+  [`UpdateBanner.vue`](../web/src/app/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
-  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/lib/markdown)),
-  [`channelLayout.ts`](../web/src/lib/channelLayout.ts),
-  [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
-  [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
-  [`thirdParty.ts`](../web/src/lib/thirdParty.ts) (in-app license list).
+  [`api.ts`](../web/src/shared/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/shared/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/shared/lib/markdown)),
+  [`channelLayout.ts`](../web/src/shared/lib/channelLayout.ts),
+  [`voiceSession.ts`](../web/src/talk/lib/voiceSession.ts) (rejoin within 30 s),
+  [`noiseSuppressor.ts`](../web/src/talk/lib/noiseSuppressor.ts),
+  [`thirdParty.ts`](../web/src/shared/lib/thirdParty.ts) (in-app license list).
 - **Styles**: Tailwind CSS 4 (`@import 'tailwindcss'` in
   [`style.css`](../web/src/style.css), the `@tailwindcss/vite` plugin; no
   `tailwind.config`). The Mnema design tokens are in its `@theme` block. The
@@ -900,16 +911,16 @@ and Administrators) gathers version, update state, database, storage, backup and
   account and audio settings pages). They use tokens only and no inline style, because the
   Content-Security-Policy forbids it.
 - **1.1 features in the UI**: direct messages
-  ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
-  [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
-  reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
-  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
+  ([`DmCreateDialog.vue`](../web/src/dm/components/DmCreateDialog.vue),
+  [`DmInfoDialog.vue`](../web/src/dm/components/DmInfoDialog.vue)), blocking and
+  reports ([`BlockedMessageRow.vue`](../web/src/chat/components/BlockedMessageRow.vue),
+  [`ReportDialog.vue`](../web/src/app/components/ReportDialog.vue)), saved messages and
   reminders in one header panel
-  ([`SavedLaterPanel.vue`](../web/src/components/SavedLaterPanel.vue)), forwarding
-  ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
-  [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
-  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))
-  and the slash bar ([`SlashCommandBar.vue`](../web/src/components/SlashCommandBar.vue)).
+  ([`SavedLaterPanel.vue`](../web/src/chat/components/SavedLaterPanel.vue)), forwarding
+  ([`ForwardDialog.vue`](../web/src/chat/components/ForwardDialog.vue),
+  [`ForwardedQuote.vue`](../web/src/chat/components/ForwardedQuote.vue)), pinned
+  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/chat/components/PinnedMessages.vue))
+  and the slash bar ([`SlashCommandBar.vue`](../web/src/chat/components/SlashCommandBar.vue)).
   Each shows only when `GET /api/health` lists its feature.
 - **i18n**: [`i18n/de.json`](../web/src/i18n/de.json) and
   [`i18n/en.json`](../web/src/i18n/en.json); tests fail on hard-coded UI text

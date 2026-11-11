@@ -9,11 +9,11 @@ import '@fontsource/inter/700.css'
 import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
-import { gamingSurface } from './lib/desktopGaming'
-import { platform } from './lib/platform'
-import { captureInstallPrompt, registerServiceWorker } from './lib/pwa'
-import { installRangeFill } from './lib/rangeFill'
-import { unlockAudioOnFirstGesture } from './lib/soundEffects'
+import { gamingSurface } from './talk/lib/desktopGaming'
+import { platform } from './shared/lib/platform'
+import { captureInstallPrompt, registerServiceWorker } from './shared/lib/pwa'
+import { installRangeFill } from './shared/lib/rangeFill'
+import { unlockAudioOnFirstGesture } from './talk/lib/soundEffects'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { maxChars } from './directives/maxChars'
@@ -23,9 +23,9 @@ import { tooltip } from './directives/tooltip'
 setLocale(browserLocale())
 
 const root = gamingSurface()
-  ? (await import('./components/DesktopGamingOverlay.vue')).default
+  ? (await import('./talk/components/DesktopGamingOverlay.vue')).default
   : platform.isWebDesktopSelector()
-    ? (await import('./components/DesktopSelector.vue')).default
+    ? (await import('./app/components/DesktopSelector.vue')).default
     : App
 
 createApp(root)

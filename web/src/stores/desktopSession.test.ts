@@ -3,8 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { userFixture } from '../test-fixtures.fixture'
 
 const request = vi.hoisted(() => vi.fn())
-vi.mock('../lib/api', async importOriginal => ({
-  ...await importOriginal<typeof import('../lib/api')>(),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...await importOriginal<typeof import('../shared/lib/api')>(),
   api: request
 }))
 import { useAuthStore } from './auth'

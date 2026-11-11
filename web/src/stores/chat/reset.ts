@@ -11,10 +11,10 @@ import { useOnboardingStore } from '../onboarding'
 import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
 import { useDmCallsStore } from '../dmCalls'
-import { clearAllWikiDrafts } from '../../lib/wikiDraft'
+import { clearAllWikiDrafts } from '../../wiki/lib/wikiDraft'
 import { useWikiStore } from '../wiki'
-import { clearAllTrays } from '../../composables/attachmentTrayState'
-import { emptyWindow } from '../../lib/messageWindow'
+import { clearAllTrays } from '../../chat/composables/attachmentTrayState'
+import { emptyWindow } from '../../chat/lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
@@ -52,7 +52,7 @@ export function resetCommunityState(cx: Cx) {
   cs.latestChannelsFetch = Promise.resolve()
   ++cs.membersFetchSeq
   ++cs.memberRevision
-  ++cs.reconnectCheckSeq
+  ++cs.socket.reconnectCheckSeq
   closeWebSocket(cx)
   resetOutbox(cx)
   closeThread(cx)
@@ -102,7 +102,7 @@ export function resetCommunityState(cx: Cx) {
   cs.isIdle = false
   cs.lastActivityAt = 0
   cs.lastVoiceActivityAt = 0
-  cs.reconnectDelay = 1000
+  cs.socket.reconnectDelay = 1000
   cs.reconnectCount.value = 0
   cs.nextRetryAt.value = 0
   cs.webrtcOfferHandler = null

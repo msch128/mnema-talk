@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { useChatStore } from './chat'
 import { messageFixture } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

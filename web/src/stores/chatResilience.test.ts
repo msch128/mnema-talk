@@ -9,12 +9,12 @@ import { createChatState, type Cx } from './chat/state'
 import { useVoiceStore } from './voice'
 import { saveDmSettings } from './chat/dmPrefs'
 import { insertMessage, refreshLatest } from './chat/messageWindow'
-import type { ApiOptions } from '../lib/api'
-import { api } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
+import { api } from '../shared/lib/api'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
 

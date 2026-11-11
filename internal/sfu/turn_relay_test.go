@@ -26,6 +26,27 @@ func freeUDPPort(t *testing.T) uint16 {
 	return uint16(c.LocalAddr().(*net.UDPAddr).Port)
 }
 
+// muxSFU starts an SFU with its UDP mux on a free port. freeUDPPort only
+// probes the loopback address while the mux binds every interface, so another
+// process (a test of another package, a container) can hold the port on one
+// of them: try again with another port then.
+func muxSFU(t *testing.T, announce []string) (*SFU, uint16) {
+	t.Helper()
+	var err error
+	for range 20 {
+		port := freeUDPPort(t)
+		var s *SFU
+		if s, err = NewSFU(port, port, announce, nil, WithUDPMuxPort(port)); err == nil {
+			return s, port
+		}
+		if !strings.Contains(err.Error(), "address already in use") {
+			break
+		}
+	}
+	t.Fatal(err)
+	return nil, 0
+}
+
 // freeUDPRange returns the first of n consecutive UDP ports that are all free
 // and cannot overflow a uint16.
 func freeUDPRange(t *testing.T, n int) uint16 {
@@ -172,8 +193,7 @@ func TestRelayOnlyClientsExchangeAudio(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.mux {
-				port := freeUDPPort(t)
-				s, err = NewSFU(port, port, announce, nil, WithUDPMuxPort(port))
+				s, _ = muxSFU(t, announce)
 			} else {
 				min := freeUDPRange(t, 21)
 				s, err = NewSFU(min, min+20, announce, nil)
@@ -218,11 +238,7 @@ func TestRelayFollowsAChangedAnnouncedAddress(t *testing.T) {
 	if len(interfaceIPv4s(false, false)) == 0 {
 		t.Skip("needs a non-loopback IPv4 interface")
 	}
-	port := freeUDPPort(t)
-	s, err := NewSFU(port, port, []string{"198.51.100.70"}, nil, WithUDPMuxPort(port))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s, port := muxSFU(t, []string{"198.51.100.70"})
 	t.Cleanup(func() { _ = s.Close() })
 	relay := relayFor(t, s)
 	if err := s.SetAnnouncedIPs([]string{"198.51.100.77"}); err != nil {

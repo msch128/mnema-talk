@@ -5,13 +5,13 @@ import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { setLocale } from '../i18n'
 import { fixtureId, memoryStorageFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
-import { notifyShowsText } from '../lib/notifyPreview'
-import { ApiError } from '../lib/api'
+import { notifyShowsText } from '../shared/lib/notifyPreview'
+import { ApiError } from '../shared/lib/api'
 import { useToastStore } from './toast'
 
 const mockApi = vi.fn()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: unknown[]) => mockApi(...args)
 }))
 

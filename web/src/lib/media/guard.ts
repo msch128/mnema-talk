@@ -1,5 +1,5 @@
 import type { EpochKeys, FrameSource } from './frame'
-import { ownScriptUrl } from '../trustedTypes'
+import { ownScriptUrl } from '../../shared/lib/trustedTypes'
 import mediaFrameWorkerUrl from './mediaFrameWorker.ts?worker&url'
 
 export interface FrameStats { opened: number, newer: number, epoch: number, legacy: number }

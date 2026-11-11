@@ -1,6 +1,6 @@
-import { playSoundEffect } from '../../lib/soundEffects'
-import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../../lib/streamQuality'
-import type { ScreenQuality } from '../../lib/streamQuality'
+import { playSoundEffect } from '../../talk/lib/soundEffects'
+import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../../talk/lib/streamQuality'
+import type { ScreenQuality } from '../../talk/lib/streamQuality'
 import type { NoiseMode } from '../voiceSettings'
 import type { VoiceState } from './state'
 

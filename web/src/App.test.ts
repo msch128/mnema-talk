@@ -9,16 +9,16 @@ import { useToastStore } from './stores/toast'
 import { useLaterStore } from './stores/later'
 import { usePermissionsStore } from './stores/permissions'
 import { useServerFeaturesStore } from './stores/serverFeatures'
-import { PERMISSION_BITS } from './lib/permissions'
-import * as router from './lib/router'
-import { requestAdminTab, adminTabRequest } from './lib/adminRequest'
+import { PERMISSION_BITS } from './shared/lib/permissions'
+import * as router from './shared/lib/router'
+import { requestAdminTab, adminTabRequest } from './shared/lib/adminRequest'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
-import { useCompactLayout } from './composables/useCompactLayout'
-import { openEvents, closeEvents } from './lib/eventsDialog'
+import { useCompactLayout } from './shared/composables/useCompactLayout'
+import { openEvents, closeEvents } from './events/lib/eventsDialog'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
-vi.mock('./composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
+vi.mock('./talk/composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
 const channels = [channelFixture({ id: 'ch1' }), channelFixture({ id: 'ch2' }), channelFixture({ id: 'ch3' }), channelFixture({ id: 'v1', type: 'voice' }), channelFixture({ id: 'v2', type: 'voice' })]
 let wrapper: VueWrapper | undefined
 beforeEach(() => {

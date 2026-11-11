@@ -61,7 +61,7 @@ const itemNormalisers = new Map<unknown, Normaliser>()
 const listNormalisers = new Map<unknown, Normaliser>()
 
 /**
- * Answers of older servers lack fields the current contract requires; lib/compat/olderServers.ts registers,
+ * Answers of older servers lack fields the current contract requires; shared/lib/compat/olderServers.ts registers,
  * per guard, what fills them (before the guard runs). A list normaliser sees the whole list (it may need the
  * position of an item); without one, the item normaliser runs on each item.
  */

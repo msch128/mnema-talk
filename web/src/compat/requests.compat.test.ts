@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { effectScope } from 'vue'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { Wire as WireType } from './wire.fixture'
 import { Wire } from './wire.fixture'
 import { allBaselines } from './baselines'
@@ -15,22 +15,22 @@ import { useEventsStore } from '../stores/events'
 import { usePermissionsStore } from '../stores/permissions'
 import { useReportsOpenStore } from '../stores/reportsOpen'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { useChannelLayout } from '../composables/useChannelLayout'
-import { moveChannel } from '../lib/channelLayout'
-import { liftTimeout } from '../lib/moderationActions'
-import { payloadOf, changedFields, fieldsOf } from '../lib/eventPayload'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { useChannelLayout } from '../app/composables/useChannelLayout'
+import { moveChannel } from '../shared/lib/channelLayout'
+import { liftTimeout } from '../shared/lib/moderationActions'
+import { payloadOf, changedFields, fieldsOf } from '../events/lib/eventPayload'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import AdminVanityLink from '../components/AdminVanityLink.vue'
-import ProfileModerationTab from '../components/ProfileModerationTab.vue'
+import AdminVanityLink from '../admin/components/AdminVanityLink.vue'
+import ProfileModerationTab from '../app/components/ProfileModerationTab.vue'
 
 // The current web app against what each older server release promised: every
 // request it sends for these flows must fit that release's contract, and every
 // endpoint it uses must exist there or be allowlisted with a fallback.
 const server = vi.hoisted(() => ({ wire: null as WireType | null }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (path: string, options?: ApiOptions) => required(server.wire).handle(path, options)
 }))
 

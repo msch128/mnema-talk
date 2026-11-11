@@ -1,0 +1,127 @@
+import type { VueWrapper } from '@vue/test-utils'
+
+import { userFixture } from '../../test-fixtures.fixture'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
+import { nextTick } from 'vue'
+import UserBar from '../../app/components/UserBar.vue'
+import { useAuthStore } from '../../stores/auth'
+import { setLocale, locale } from '../../i18n'
+import { settingsTab } from '../../shared/lib/settingsDialog'
+import { useAccountStore } from '../../stores/account'
+import { shortcutsOpen } from '../../shared/lib/shortcutsDialog'
+
+vi.mock('../../talk/composables/useWebRTC', () => ({
+  useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
+}))
+
+let w: VueWrapper
+beforeEach(() => {
+  setLocale('de')
+  setActivePinia(createPinia())
+  vi.stubGlobal('fetch', vi.fn((url, init) => Promise.resolve({
+    status: 200, ok: true,
+    json: () => Promise.resolve(userFixture({ display_name: 'Mnema', role: 'admin', locale: JSON.parse(String(init?.body)).locale }))
+  })))
+})
+afterEach(() => {
+  w?.unmount()
+  vi.unstubAllGlobals()
+  document.body.innerHTML = ''
+})
+
+describe('verified app line', () => {
+  async function openMenu() {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+  }
+  it('is absent in a browser', async () => {
+    await openMenu()
+    expect(w.find('[role="menu"]').exists()).toBe(true)
+    expect(w.find('[data-testid="verified-app"]').exists()).toBe(false)
+  })
+  it('names the verified bundle in the trusted desktop client', async () => {
+    vi.stubGlobal('isTauri', true)
+    vi.stubGlobal('location', new URL('https://mnema.localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
+    await openMenu()
+    expect(w.find('[data-testid="verified-app"]').text()).toBe('Geprüfte App v0.8.0 · im Installer enthalten')
+  })
+})
+
+describe('settings entry', () => {
+  it('opens the settings dialog from the menu, one entry instead of separate audio and app dialogs', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    expect(w.find('[data-testid="menu-settings"]').text()).toBe('Einstellungen')
+    expect(w.find('[data-testid="account-app"]').exists()).toBe(false)
+    await w.find('[data-testid="menu-settings"]').trigger('click')
+    expect(useAccountStore().dialogOpen).toBe(true)
+    expect(settingsTab.value).toBe('audio')
+    useAccountStore().close()
+  })
+})
+
+describe('shortcuts and sound entries', () => {
+  it('opens the shortcut list and the audio settings from the menu', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[data-testid="menu-shortcuts"]').trigger('click')
+    expect(shortcutsOpen.value).toBe(true)
+    shortcutsOpen.value = false
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[data-testid="menu-sound"]').trigger('click')
+    expect(settingsTab.value).toBe('audio')
+    expect(useAccountStore().dialogOpen).toBe(true)
+    useAccountStore().close()
+  })
+})
+
+describe('account menu language switcher', () => {
+  it('switches the language, stores it and confirms with a toast', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'admin', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    const trigger = w.find('[data-lang-trigger]')!
+    expect(trigger.text()).toContain('Sprache')
+    expect(trigger.text()).toContain('Deutsch')
+    await trigger.trigger('click')
+    const radios = w.findAll('[role="menuitemradio"]')
+    expect(radios.map(r => r.text())).toEqual(['Deutsch', 'English'])
+    expect(radios[0]!.attributes('aria-checked')).toBe('true')
+    await radios[1]!.trigger('click')
+    await vi.waitFor(() => expect(locale.value).toBe('en'))
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]!.body))).toEqual({ locale: 'en' })
+    expect(vi.mocked(fetch).mock.calls[0]![0]!).toBe('/api/users/me/locale')
+    expect(document.documentElement.lang).toBe('en')
+    await nextTick()
+    // menu closed after choosing
+    expect(w.find('[role="menu"]')!.exists()).toBe(false)
+  })
+
+  it('closes on Escape and returns focus to the ⋯ button', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    const btn = w.find('[data-testid="account-menu-button"]')!
+    await btn.trigger('click')
+    await nextTick()
+    await nextTick()
+    const menu = w.find('[role="menu"]')!
+    expect(menu.exists()).toBe(true)
+    // admin-only entry is absent for members
+    expect(menu.text()).not.toContain('Admin-Konsole')
+    menu.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(w.find('[role="menu"]')!.exists()).toBe(false)
+    expect(document.activeElement).toBe(btn.element)
+  })
+})

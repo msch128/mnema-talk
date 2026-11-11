@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-// The web app mirrors the bits in web/src/lib/permissions.ts so it can decide
+// The web app mirrors the bits in web/src/shared/lib/permissions.ts so it can decide
 // what to show without a round trip. The two tables must not drift.
 func TestWebMirrorsTheCatalog(t *testing.T) {
-	src, err := os.ReadFile("../../web/src/lib/permissions.ts")
+	src, err := os.ReadFile("../../web/src/shared/lib/permissions.ts")
 	if err != nil {
 		t.Fatal(err)
 	}

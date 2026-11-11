@@ -32,7 +32,7 @@ test('h() with innerHTML and a direct assignment are refused in script', async (
 })
 
 test('the desktop adapters are held to the rule too', async () => {
-  assert.deepEqual(await htmlFindings("declare const el: HTMLElement\nel.innerHTML = '<b>x</b>'\n", 'src/lib/platform.ts'), ['no-restricted-syntax'])
+  assert.deepEqual(await htmlFindings("declare const el: HTMLElement\nel.innerHTML = '<b>x</b>'\n", 'src/shared/lib/platform.ts'), ['no-restricted-syntax'])
 })
 
 test('reading innerHTML, textContent and ordinary bindings stay allowed', async () => {

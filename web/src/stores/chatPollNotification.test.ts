@@ -6,7 +6,7 @@ import { useAuthStore } from './auth'
 import { setLocale } from '../i18n'
 import { fixtureId, memoryStorageFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import { notifyShowsText } from '../lib/notifyPreview'
+import { notifyShowsText } from '../shared/lib/notifyPreview'
 
 // These tests look at the notification text, which is shown when the member's setting allows it.
 notifyShowsText.value = true

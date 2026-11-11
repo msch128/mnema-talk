@@ -1,7 +1,7 @@
 // A stand-in for a server of an older release: it answers what that release's
 // contract answers, and records every way the app asks for more than that
 // release promised (see requests.compat.test.ts).
-import { ApiError, type ApiOptions } from '../lib/api'
+import { ApiError, type ApiOptions } from '../shared/lib/api'
 import { newEndpoints, responseGaps } from './allowlist'
 import { bodyViolations, findOperation, synthesize, type CompatBaseline } from './contract.fixture'
 

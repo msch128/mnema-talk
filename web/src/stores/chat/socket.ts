@@ -1,4 +1,6 @@
-import { platform, type PlatformSocket } from '../../lib/platform'
+// The chat store's side of the WebSocket: it is the host of the transport
+// (stores/socket.ts). It says who is signed in, routes every event into the
+// chat modules and reads the state again after each (re)connect.
 import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
 import { useEmojiStore } from '../emoji'
@@ -6,8 +8,8 @@ import { usePermissionsStore } from '../permissions'
 import { useBlocksStore } from '../blocks'
 import { useReportsOpenStore } from '../reportsOpen'
 import { useServerFeaturesStore } from '../serverFeatures'
-import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
-import { visibleInterval } from '../../lib/pageVisibility'
+import { closeSocket, installSocketRetry, openSocket, retrySocketNow, sendSocketEvent, type SocketHost, type SocketState } from '../socket'
+import { installGlobalSearch, uninstallGlobalSearch } from '../../chat/lib/globalSearch'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms } from './dms'
@@ -17,51 +19,9 @@ import { refreshLatest } from './messageWindow'
 import { fetchReadState } from './readState'
 import { fetchNotificationSettings } from './notifySettings'
 import { fetchFollowedThreads } from './threadFollow'
-import { loadNotifyPreview } from '../../lib/notifyPreview'
+import { loadNotifyPreview } from '../../shared/lib/notifyPreview'
 import { openThread } from './threads'
 import { outboxReconnected, restoreOutbox } from './outbox'
-
-const PING_INTERVAL_MS = 5000
-// A hidden tab only needs to learn that the socket died before the next push is missed; the server pings every 30 s itself.
-const PING_HIDDEN_INTERVAL_MS = 30000
-// A socket that answered no ping for this long is dead, even if the browser still reports it open.
-const PONG_TIMEOUT_MS = 15000
-// A connect that has not opened by now is stuck (half-open TCP after a network change); the browser's own give-up takes minutes.
-const CONNECT_TIMEOUT_MS = 10000
-
-/** Stops listening to a socket and closes it: close handshakes never finish on a dead connection. */
-function detachSocket(socket: PlatformSocket) {
-  socket.onopen = null
-  socket.onmessage = null
-  socket.onclose = null
-  socket.close()
-}
-
-function startPingHeartbeat(cx: Cx, session: SocketSession) {
-  const { cs } = cx
-  stopPingHeartbeat(cx)
-  cs.lastPongAt = Date.now()
-  cs.lastPingAt = 0
-  cs.stopPing = visibleInterval(() => {
-    // Judge the last ping actually sent: throttled timers (hidden tab, sleep) stretch the gap between ticks.
-    if (cs.lastPingAt > cs.lastPongAt && Date.now() - cs.lastPingAt > PONG_TIMEOUT_MS) {
-      // Close handshakes never finish on a half-open connection: drop the socket and reconnect now.
-      detachSocket(session.socket)
-      handleSocketClose(cx, session)
-      return
-    }
-    const now = Date.now()
-    // Keep the oldest unanswered ping as the reference so the wait keeps growing until a pong arrives.
-    if (cs.lastPingAt <= cs.lastPongAt) cs.lastPingAt = now
-    sendWSEvent(cx, 'ping', { t: now })
-  }, PING_INTERVAL_MS, { hiddenMs: PING_HIDDEN_INTERVAL_MS, catchUp: false })
-}
-
-function stopPingHeartbeat(cx: Cx) {
-  const { cs } = cx
-  cs.stopPing?.()
-  cs.stopPing = undefined
-}
 
 // Refresh after every socket opens, including the first one: the initial
 // HTTP snapshots were fetched before broadcasts could reach this client.
@@ -92,84 +52,14 @@ function resyncState(cx: Cx) {
   outboxReconnected(cx)
 }
 
-async function attemptReconnect(cx: Cx) {
-  const { cs, authStore } = cx
-  const accountId = authStore.user?.id
-  if (!accountId) return
-  const generation = cs.socketGeneration
-  const check = ++cs.reconnectCheckSeq
-  const signedIn = await authStore.checkAuth()
-  if (generation !== cs.socketGeneration || check !== cs.reconnectCheckSeq || authStore.user?.id !== accountId) return
-  if (signedIn === true) initWebSocket(cx)
-  else if (signedIn === null) scheduleReconnect(cx) // server unreachable: keep trying
-  // false: the session is gone; the login screen takes over.
+function socketUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  // Conversations are only sent to sockets that ask for them (dm=1), and only a server that has them understands the question.
+  const dm = useServerFeaturesStore().dm ? '?dm=1' : ''
+  return `${protocol}//${window.location.host}/api/ws${dm}`
 }
 
-function scheduleReconnect(cx: Cx) {
-  const { cs } = cx
-  clearTimeout(cs.reconnectTimer)
-  cs.reconnectAttempt.value++
-  cs.nextRetryAt.value = Date.now() + cs.reconnectDelay
-  cs.reconnectTimer = setTimeout(() => attemptReconnect(cx), cs.reconnectDelay)
-  cs.reconnectDelay = Math.min(cs.reconnectDelay * 2, 30000)
-}
-
-/** "Jetzt versuchen": skip the wait and reconnect immediately. */
-export function retryNow(cx: Cx) {
-  reconnectNow(cx, true)
-}
-
-/**
- * Visibility and network events reconnect too, but must not restart a connect
- * that is likely still going well: a socket that has been connecting for less
- * than half the connect timeout is left alone. The user's own request always wins.
- */
-function reconnectNow(cx: Cx, replaceConnecting: boolean) {
-  const { cs } = cx
-  if (cs.isConnected.value) return
-  if (cs.ws.value) {
-    if (!replaceConnecting && Date.now() - cs.connectStartedAt < CONNECT_TIMEOUT_MS / 2) return
-    // Not connected, yet a socket is set: it is still connecting and stuck, or the caller would not be asking. Replace it.
-    clearTimeout(cs.connectTimer)
-    ++cs.socketGeneration
-    detachSocket(cs.ws.value)
-    cs.ws.value = null
-  }
-  clearTimeout(cs.reconnectTimer)
-  cs.nextRetryAt.value = Date.now()
-  attemptReconnect(cx)
-}
-
-interface SocketSession {
-  socket: PlatformSocket
-  generation: number
-  accountId: string
-}
-
-function isCurrentSession(cx: Cx, session: SocketSession): boolean {
-  const { cs, authStore } = cx
-  return cs.ws.value === session.socket && cs.socketGeneration === session.generation && authStore.user?.id === session.accountId
-}
-
-function handleSocketOpen(cx: Cx, session: SocketSession) {
-  if (!isCurrentSession(cx, session)) return
-  const { cs } = cx
-  clearTimeout(cs.connectTimer)
-  cs.isConnected.value = true
-  cs.wasConnected.value = true
-  cs.reconnectAttempt.value = 0
-  cs.nextRetryAt.value = 0
-  cs.reconnectDelay = 1000
-  startPingHeartbeat(cx, session)
-  sendWSEvent(cx, 'ping', { t: Date.now() })
-  if (cs.isIdle) sendWSEvent(cx, 'presence_idle', { idle: true })
-  if (cs.hadConnection) cs.reconnectCount.value++
-  resyncState(cx)
-  cs.hadConnection = true
-}
-
-function handleSocketMessage(cx: Cx, session: SocketSession, data: string) {
-  if (!isCurrentSession(cx, session)) return
+function handleSocketMessage(cx: Cx, data: string) {
   try {
     const decoded = decodeServerEvent(JSON.parse(data))
     if (decoded) handleWSEvent(cx, decoded)
@@ -178,91 +68,55 @@ function handleSocketMessage(cx: Cx, session: SocketSession, data: string) {
   }
 }
 
-function handleSocketClose(
-  cx: Cx,
-  session: SocketSession,
-  event?: { code?: number }
-) {
+function hostOf(cx: Cx): SocketHost {
   const { cs, authStore } = cx
-  if (cs.ws.value !== session.socket || cs.socketGeneration !== session.generation) return
-  cs.suppressedPresence.clear()
-  cs.isConnected.value = false
-  clearTimeout(cs.connectTimer)
-  stopPingHeartbeat(cx)
-  cs.ws.value = null
-  if (authStore.user?.id !== session.accountId) return
-
-  // The server closed this tab for a newer one of the same account (too
-  // many connections). Reconnecting at once would evict another tab in
-  // turn; this one reconnects when it is shown again (visibilitychange).
-  if (event?.code === 4001) {
-    cs.reconnectAttempt.value = 0
-    cs.nextRetryAt.value = 0
-    return
+  return {
+    accountId: () => authStore.user?.id,
+    isAuthenticated: () => authStore.isAuthenticated,
+    checkAuth: () => authStore.checkAuth(),
+    url: socketUrl,
+    opening: () => {
+      restoreOutbox(cx)
+      installGlobalSearch()
+    },
+    connected: () => { if (cs.isIdle) sendWSEvent(cx, 'presence_idle', { idle: true }) },
+    resync: () => resyncState(cx),
+    message: data => handleSocketMessage(cx, data),
+    dropped: () => cs.suppressedPresence.clear(),
+    closing: () => {
+      cs.suppressedPresence.clear()
+      uninstallGlobalSearch()
+    }
   }
-  // Exponential backoff; attemptReconnect checks the session first and ends the loop when it is gone.
-  scheduleReconnect(cx)
 }
 
-function socketUrl(): string {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  // Conversations are only sent to sockets that ask for them (dm=1), and only a server that has them understands the question.
-  const dm = useServerFeaturesStore().dm ? '?dm=1' : ''
-  return `${protocol}//${window.location.host}/api/ws${dm}`
+const hosted = new WeakSet<SocketState>()
+
+/** The transport of this chat state, with the chat store attached as its host. */
+function transportOf(cx: Cx): SocketState {
+  const socket = cx.cs.socket
+  if (!hosted.has(socket)) {
+    hosted.add(socket)
+    socket.host = hostOf(cx)
+  }
+  return socket
+}
+
+/** The member asked for it: skip the wait and reconnect immediately. */
+export function retryNow(cx: Cx) {
+  retrySocketNow(transportOf(cx))
 }
 
 export function initWebSocket(cx: Cx) {
-  const { cs, authStore } = cx
-  const accountId = authStore.user?.id
-  if (cs.ws.value || !accountId) return
-  restoreOutbox(cx)
-  const generation = ++cs.socketGeneration
-  installGlobalSearch()
-
-  // The session cookie authenticates the upgrade; no token in the URL.
-  // The trusted desktop client cannot reach the server from its own origin:
-  // its host opens the socket (doc/desktop-trusted-client.md).
-  const socket = platform.openSocket(socketUrl())
-  const session: SocketSession = { socket, generation, accountId }
-
-  socket.onopen = () => handleSocketOpen(cx, session)
-  socket.onmessage = (event: { data: string }) => handleSocketMessage(cx, session, event.data)
-  socket.onclose = (event?: { code?: number }) => handleSocketClose(cx, session, event)
-
-  cs.ws.value = socket
-  cs.connectStartedAt = Date.now()
-  clearTimeout(cs.connectTimer)
-  cs.connectTimer = setTimeout(() => {
-    if (!isCurrentSession(cx, session) || cs.isConnected.value) return
-    detachSocket(socket)
-    handleSocketClose(cx, session)
-  }, CONNECT_TIMEOUT_MS)
+  openSocket(transportOf(cx))
 }
 
 export function closeWebSocket(cx: Cx) {
-  const { cs } = cx
-  ++cs.socketGeneration
-  cs.suppressedPresence.clear()
-  uninstallGlobalSearch()
-  cs.hadConnection = false
-  cs.wasConnected.value = false
-  cs.reconnectAttempt.value = 0
-  clearTimeout(cs.reconnectTimer)
-  clearTimeout(cs.connectTimer)
-  stopPingHeartbeat(cx)
-  if (cs.ws.value) {
-    cs.ws.value.onclose = null
-    cs.ws.value.close()
-    cs.ws.value = null
-  }
-  cs.isConnected.value = false
+  closeSocket(transportOf(cx))
 }
 
 export function sendWSEvent<K extends keyof ClientEventPayloads>(cx: Cx, type: K, payload: ClientEventPayloads[K]) {
-  const { cs } = cx
-  if (cs.ws.value && cs.isConnected.value) {
-    cs.ws.value.send(JSON.stringify({ type, payload }))
-  }
+  sendSocketEvent(transportOf(cx), type, payload)
 }
 
 export function setWebRTCHandlers(cx: Cx, { onOffer, onCandidate, onKicked, onMedia, onTalkMoved }: {
@@ -281,24 +135,5 @@ export function setWebRTCHandlers(cx: Cx, { onOffer, onCandidate, onKicked, onMe
 }
 
 export function installVisibilityRetry(cx: Cx) {
-  const { cs, authStore } = cx
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        if (authStore.isAuthenticated && (!cs.ws.value || !cs.isConnected.value)) {
-          reconnectNow(cx, false)
-        } else if (cs.isConnected.value) {
-          sendWSEvent(cx, 'ping', { t: Date.now() })
-        }
-      }
-    })
-  }
-  if (typeof window !== 'undefined') {
-    // The network is back: reconnect at once, or find out whether a socket that looks open still works.
-    window.addEventListener('online', () => {
-      if (!authStore.isAuthenticated) return
-      if (!cs.ws.value || !cs.isConnected.value) reconnectNow(cx, false)
-      else sendWSEvent(cx, 'ping', { t: Date.now() })
-    })
-  }
+  installSocketRetry(transportOf(cx))
 }

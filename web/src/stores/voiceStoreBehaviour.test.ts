@@ -6,10 +6,10 @@ import * as auth from './auth'
 import { userFixture, voiceUserFixture, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import { streamFixture } from '../store-test-support.fixture'
 import { TestTrack } from '../media-test.fixture'
-import { SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
-import { playSoundEffect } from '../lib/soundEffects'
+import { SCREEN_QUALITY_STORAGE_KEY } from '../talk/lib/streamQuality'
+import { playSoundEffect } from '../talk/lib/soundEffects'
 
-vi.mock('../lib/soundEffects', () => ({ playSoundEffect: vi.fn() }))
+vi.mock('../talk/lib/soundEffects', () => ({ playSoundEffect: vi.fn() }))
 
 beforeEach(() => {
   localStorage.clear()

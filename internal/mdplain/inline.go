@@ -3,7 +3,7 @@ package mdplain
 import "strings"
 
 // maxDepth is how deep formatting nests; deeper delimiters stay literal. It
-// mirrors the web client's parser (web/src/lib/markdown/inline.ts).
+// mirrors the web client's parser (web/src/shared/lib/markdown/inline.ts).
 const maxDepth = 6
 
 // maxLabel bounds a link label, like the client.

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { onScopeDispose } from 'vue'
-import { onVideoSeenChange, onVisibilityChange } from '../lib/pageVisibility'
+import { onVideoSeenChange, onVisibilityChange } from '../shared/lib/pageVisibility'
 import { createVoiceState, type VoiceState } from './voice/state'
 import { toggleScreenAudioMute, setScreenQuality, resetScreenQuality, openScreenShareModal, closeScreenShareModal, recordPing, setNoiseMode, toggleNoiseCancelling, toggleMute, toggleDeafen } from './voice/controls'
 import { setSubscriptionSink, isCameraHidden, isCameraOffscreen, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, setVideoPaused, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
@@ -11,10 +11,10 @@ import { setCameraSize } from './voice/cameraFit'
 import { installStage } from './voice/cameras'
 import { handleStageHand, handleStageTalkPower, handleTalkReaction, hasTalkPower } from './voice/stage'
 
-export type { RTCConnectionStats } from '../lib/rtcStats'
-export type { ScreenQuality } from '../lib/streamQuality'
+export type { RTCConnectionStats } from '../talk/lib/rtcStats'
+export type { ScreenQuality } from '../talk/lib/streamQuality'
 export type { InputMode, NoiseMode, SoundEvent } from './voiceSettings'
-export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../lib/voicePlayback'
+export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../shared/lib/voicePlayback'
 export { NOISE_MODES, SOUND_EVENTS } from './voiceSettings'
 
 /** What the store shows of the voice state, as the refs the modules update. */

@@ -7,7 +7,7 @@ import { useToastStore } from './toast'
 import { useServerFeaturesStore } from './serverFeatures'
 import { channelFixture, categoryFixture, messageFixture, userFixture, readStateFixture, fixtureId } from '../test-fixtures.fixture'
 const request = vi.hoisted(() => vi.fn())
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: request }))
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: request }))
 function deferred() {
   let resolve!: (value: unknown) => void
   const promise = new Promise<unknown>(r => { resolve = r })

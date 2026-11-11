@@ -5,8 +5,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore, TYPING_EXPIRY_MS, MARK_READ_INTERVAL_MS } from './chat'
 import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
-import { currentRoute } from '../lib/router'
-import { pushOnThisDevice } from '../lib/webPush'
+import { currentRoute } from '../shared/lib/router'
+import { pushOnThisDevice } from '../shared/lib/webPush'
 
 let calls: { url: string; method: string }[]
 function stubFetch() {

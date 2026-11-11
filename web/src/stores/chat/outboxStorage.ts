@@ -1,4 +1,4 @@
-import { clampChars } from '../../lib/textLength'
+import { clampChars } from '../../shared/lib/textLength'
 import type { PendingMessage } from './outboxTypes'
 
 // Pending messages are kept per account in this browser (localStorage), so a

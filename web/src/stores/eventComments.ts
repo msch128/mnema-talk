@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ServerEventPayloads } from '../types/events'
 import { useToastStore } from './toast'
-import { openEvents } from '../lib/eventsDialog'
+import { openEvents } from '../events/lib/eventsDialog'
 import { t } from '../i18n'
 
 export type CommentChange = ServerEventPayloads['event_comment']

@@ -57,7 +57,7 @@ func (h *Handler) requireOwnerToOpen(r *http.Request, slug string, accepts bool)
 // reservedSlugs are words that name something of the app: its routes (the
 // API, the web app's top-level paths), its static files and the words people
 // expect to mean the service itself. A test keeps the list in step with the
-// routes of web/src/lib/router.ts and the files in web/public.
+// routes of web/src/shared/lib/router.ts and the files in web/public.
 var reservedSlugs = map[string]bool{
 	"admin": true, "api": true, "assets": true, "c": true, "dm": true, "docs": true,
 	"events": true, "favicon": true, "health": true, "help": true, "invite": true,

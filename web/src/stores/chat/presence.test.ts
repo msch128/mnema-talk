@@ -4,11 +4,11 @@ import { useAuthStore } from '../auth'
 import { useVoiceStore } from '../voice'
 import { createChatState, type Cx } from './state'
 import { installActivityListeners, setMyPresence } from './presence'
-import { IDLE_AFTER_MS } from '../../lib/presence'
+import { IDLE_AFTER_MS } from '../../shared/lib/presence'
 import { userFixture, fixtureId } from '../../test-fixtures.fixture'
 
-vi.mock('../../lib/api', async importOriginal => ({
-  ...await importOriginal<typeof import('../../lib/api')>(),
+vi.mock('../../shared/lib/api', async importOriginal => ({
+  ...await importOriginal<typeof import('../../shared/lib/api')>(),
   api: vi.fn(async (_url: string, opts: { json: { presence: string } }) => userFixture({ id: fixtureId(1), presence: opts.json.presence as 'away' }))
 }))
 

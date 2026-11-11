@@ -1,8 +1,8 @@
 // The voice settings a member keeps in this browser: how the microphone opens,
 // noise handling, volumes, devices and sound effects. Built inside the voice store.
 import { computed, ref, watch } from 'vue'
-import { readItem, readJson, writeItem, writeJson } from '../lib/voicePlayback'
-import { normalizeMessageSoundMode, type MessageSoundMode } from '../lib/messageSound'
+import { readItem, readJson, writeItem, writeJson } from '../shared/lib/voicePlayback'
+import { normalizeMessageSoundMode, type MessageSoundMode } from '../shared/lib/messageSound'
 
 export type InputMode = 'activity' | 'ptt'
 export type NoiseMode = 'ai' | 'ai-lite' | 'browser' | 'off'
@@ -45,7 +45,7 @@ function isNoiseMode(value: string | null): value is NoiseMode {
   return value !== null && VALID_NOISE_MODES.has(value)
 }
 
-// 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see lib/noiseSuppressor),
+// 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see talk/lib/noiseSuppressor),
 // 'browser' (getUserMedia noiseSuppression) or 'off'. Older clients stored
 // only 'true'/'false'.
 function savedNoiseMode(): NoiseMode {

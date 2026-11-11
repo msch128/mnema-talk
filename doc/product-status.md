@@ -190,7 +190,7 @@ silence (the voice gate read a dead meter and stayed shut) without any notice. T
 page now watches the context: if it is not rendering after 3 s the call is rebuilt
 around it (the capture is sent as it is, the gate stays open outside push-to-talk)
 and the member is told once; a filter that processes no frame within 3 s of the
-context running is given up the same way (`web/src/lib/audioHealth.ts`). The
+context running is given up the same way (`web/src/talk/lib/audioHealth.ts`). The
 Firefox CI job covers both: `audio-stall.spec.ts` on the runner as it is, and
 `late-join.spec.ts` (filter running) after `e2e/ci-audio-sink.sh` gave it a null
 audio sink.

@@ -4,13 +4,13 @@ import { useServerFeaturesStore } from './serverFeatures'
 import { useBlocksStore } from './blocks'
 import { useToastStore } from './toast'
 import { fixtureId } from '../test-fixtures.fixture'
-import type { ApiOptions } from '../lib/api'
-import { ApiError } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
+import { ApiError } from '../shared/lib/api'
 import { setLocale } from '../i18n'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })

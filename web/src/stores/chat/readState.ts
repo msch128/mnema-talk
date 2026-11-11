@@ -1,7 +1,7 @@
 import type { ReadState } from '../../types/domain'
 import { isChatReadState } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import { assertCommunity, type Cx } from './state'
 
 const decodeReadStates = arrayDecoder('read states', isChatReadState)

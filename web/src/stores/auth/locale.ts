@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import { decodeUser, type User, type Locale } from '../../types/domain'
 import { setLocale, browserLocale, explicitLocale, SUPPORTED, isSupportedLocale } from '../../i18n'
 import type { SessionCore } from './session'

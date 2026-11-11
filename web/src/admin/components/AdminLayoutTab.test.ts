@@ -1,0 +1,453 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
+import type { ApiOptions } from '../../shared/lib/api'
+import AdminLayoutTab from './AdminLayoutTab.vue'
+import BaseDialog from '../../shared/components/BaseDialog.vue'
+import CreateChannelModal from './CreateChannelModal.vue'
+import { useChatStore } from '../../stores/chat'
+import { categoryFixture, channelFixture, fixtureId, userFixture } from '../../test-fixtures.fixture'
+import { tree, errors } from './adminTestkit.fixture'
+import { useAuthStore } from '../../stores/auth'
+import { setLocale } from '../../i18n'
+import { useToastStore } from '../../stores/toast'
+
+const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
+vi.mock('../../shared/lib/api', async (original) => ({
+  ...(await original<typeof import('../../shared/lib/api')>()),
+  api: (path: string, options?: ApiOptions) => apiMock(path, options),
+}))
+const confirmMock = vi.fn<() => Promise<boolean>>()
+vi.mock('../../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
+// The live operations panel has its own tests and endpoint.
+vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
+
+let wrappers: VueWrapper[] = []
+function keep<T extends VueWrapper>(w: T): T {
+  wrappers.push(w)
+  return w
+}
+beforeEach(() => {
+  setActivePinia(createPinia())
+  setLocale('en')
+  apiMock.mockReset()
+  confirmMock.mockReset().mockResolvedValue(true)
+  useAuthStore().user = userFixture({ role: 'admin', username: 'owner' }) // the Owner may do everything
+})
+afterEach(() => {
+  for (const w of wrappers) w.unmount()
+  wrappers = []
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+  document.body.innerHTML = ''
+})
+describe('layout editing recovery and unsaved order', () => {
+  async function openLayout() {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    apiMock.mockImplementation(async (path, options) => {
+      if (path === '/api/channels') return tree()
+      if (path === '/api/admin/categories' && options?.method === 'POST')
+        return categoryFixture({ id: fixtureId(99), name: 'New category' })
+      if (options?.method === 'PATCH')
+        return channelFixture({ name: 'server name', topic: 'server topic' })
+      return { ok: true }
+    })
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    return w
+  }
+  const cat = (w: VueWrapper, id = 20) =>
+    w.find(`[data-testid="category-item-${fixtureId(id)}"]`)
+  const ch = (w: VueWrapper, id = 21) =>
+    w.find(`[data-testid="channel-item-${fixtureId(id)}"]`)
+  async function dirty(w: VueWrapper) {
+    await cat(w).find('[data-testid="move-down-channel"]').trigger('click')
+  }
+  it('creates a channel from the header button and from a category, keeping an unsaved order', async () => {
+    const w = await openLayout()
+    const chat = useChatStore()
+    chat.categories = tree().categories
+    const create = vi.spyOn(chat, 'createChannel').mockResolvedValue(
+      channelFixture({ id: fixtureId(50), name: 'ideas', category_id: fixtureId(30) }),
+    )
+    await w.get('[data-testid="layout-add-channel"]').trigger('click')
+    expect(w.find('#channel-name').exists()).toBe(true)
+    await w.findComponent(CreateChannelModal).vm.$emit('close')
+    expect(w.find('#channel-name').exists()).toBe(false)
+    await dirty(w)
+    await cat(w, 30).get('[data-testid="add-channel-category"]').trigger('click')
+    expect(w.get<HTMLSelectElement>('#channel-category').element.value).toBe(fixtureId(30))
+    await w.get('#channel-name').setValue('ideas')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ categoryId: fixtureId(30), name: 'ideas' }))
+    expect(cat(w, 30).text()).toContain('ideas')
+    expect(w.text()).toContain('You have unsaved changes')
+  })
+
+  it('reorders categories and uncategorized channels in both directions and exercises native drag events', async () => {
+    const w = await openLayout()
+    await cat(w).find('[data-testid="move-down-category"]').trigger('click')
+    await cat(w).find('[data-testid="move-up-category"]').trigger('click')
+    await ch(w, 10).find('[data-testid="move-down-channel"]').trigger('click')
+    await ch(w, 10).find('[data-testid="move-up-channel"]').trigger('click')
+    await ch(w).find('[data-testid="move-down-channel"]').trigger('click')
+    await ch(w).find('[data-testid="move-up-channel"]').trigger('click')
+    const transfer = { effectAllowed: '' }
+    await cat(w).trigger('dragstart', { dataTransfer: transfer })
+    expect(transfer.effectAllowed).toBe('move')
+    await cat(w, 30).trigger('drop')
+    await cat(w, 30).trigger('dragend')
+    await cat(w).trigger('dragover')
+    await ch(w, 10).trigger('dragstart', { dataTransfer: transfer })
+    await ch(w, 11).trigger('dragover')
+    await ch(w, 11).trigger('drop')
+    await ch(w, 11).trigger('dragend')
+    await ch(w).trigger('dragstart', { dataTransfer: transfer })
+    await ch(w, 22).trigger('dragover')
+    await ch(w).trigger('dragend')
+    await cat(w, 30).find('div.border-l-2').trigger('dragover')
+    await cat(w, 30).find('div.border-l-2').trigger('drop')
+    await ch(w, 11).trigger('dragover')
+    await ch(w, 11).trigger('dragstart')
+    await ch(w, 11).trigger('dragend')
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(
+      '/api/admin/layout',
+      expect.objectContaining({ method: 'PUT' }),
+    )
+  })
+  it('renames categories with unsaved order, validates empty submissions, and permits both cancellation controls', async () => {
+    const w = await openLayout()
+    await dirty(w)
+    await cat(w).find('[data-testid="rename-category"]').trigger('click')
+    await w.find('form input').setValue('  ')
+    await w.find('form').trigger('submit')
+    expect(
+      apiMock.mock.calls.some(([, opts]) => opts?.method === 'PATCH'),
+    ).toBe(false)
+    await w.find('form input').setValue(' Renamed ')
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(cat(w).text()).toContain('Renamed')
+    expect(w.text()).toContain('You have unsaved changes')
+    await cat(w).find('[data-testid="rename-category"]').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(w.find('form').exists()).toBe(false)
+    await cat(w).find('[data-testid="rename-category"]').trigger('click')
+    w.findComponent(BaseDialog).vm.$emit('close')
+    await nextTick()
+    expect(w.find('form').exists()).toBe(false)
+  })
+  it('creates categories through enter and click, preserves unsaved state, and reports failure without clearing input', async () => {
+    const w = await openLayout()
+    const input = w.find('input')
+    await input.setValue(' ')
+    await input.trigger('keydown.enter')
+    expect(apiMock.mock.calls.some(([, opts]) => opts?.method === 'POST')).toBe(
+      false,
+    )
+    await dirty(w)
+    await input.setValue('New category')
+    await input.trigger('keydown.enter')
+    await flushPromises()
+    expect(cat(w, 99).text()).toContain('New category')
+    expect(input.element).toHaveProperty('value', '')
+    await input.setValue('Retry')
+    apiMock.mockRejectedValueOnce(new Error('create denied'))
+    w.find('input').element.parentElement!.querySelector('button')!.click()
+    await flushPromises()
+    expect(errors()).toContain('create denied')
+    expect(input.element).toHaveProperty('value', 'Retry')
+  })
+  it.each(['category', 'channel'] as const)(
+    'keeps a failed %s edit open and supports cancellation',
+    async (kind) => {
+      const w = await openLayout()
+      const item = kind === 'category' ? cat(w) : ch(w, 10)
+      await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
+      if (kind === 'channel') {
+        await w.find('form input').setValue(' ')
+        await w.find('form').trigger('submit')
+        expect(
+          apiMock.mock.calls.some(([, opts]) => opts?.method === 'PATCH'),
+        ).toBe(false)
+      }
+      await w.find('form input').setValue('renamed')
+      apiMock.mockRejectedValueOnce(new Error('edit denied'))
+      await w.find('form').trigger('submit')
+      await flushPromises()
+      expect(w.find('[data-testid="unsaved-error"]').text()).toContain('edit denied')
+      expect(w.find('form').exists()).toBe(true)
+      // The refused rename stays unsaved, so closing asks first.
+      confirmMock.mockResolvedValueOnce(false)
+      await w.find('[data-dialog-close]').trigger('click')
+      await flushPromises()
+      expect(w.find('form').exists()).toBe(true)
+      await w.find('[data-dialog-close]').trigger('click')
+      await flushPromises()
+      expect(w.find('form').exists()).toBe(false)
+      await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
+      w.findComponent(BaseDialog).vm.$emit('close')
+      await nextTick()
+      expect(w.find('form').exists()).toBe(false)
+    },
+  )
+  it.each(['category', 'channel'] as const)(
+    'cancels %s deletion and reports mutation failure',
+    async (kind) => {
+      const w = await openLayout()
+      const item = kind === 'category' ? cat(w) : ch(w, 10)
+      confirmMock.mockResolvedValueOnce(false)
+      apiMock.mockClear()
+      await item.find(`[data-testid="delete-${kind}"]`).trigger('click')
+      await flushPromises()
+      expect(apiMock).not.toHaveBeenCalled()
+      apiMock.mockRejectedValueOnce(new Error('delete denied'))
+      await item.find(`[data-testid="delete-${kind}"]`).trigger('click')
+      await flushPromises()
+      expect(errors()).toContain('delete denied')
+      expect(item.exists()).toBe(true)
+    },
+  )
+  it('deletes an uncategorized channel while preserving unsaved order', async () => {
+    const w = await openLayout()
+    await dirty(w)
+    await ch(w, 10).find('[data-testid="delete-channel"]').trigger('click')
+    await flushPromises()
+    expect(ch(w, 10).exists()).toBe(false)
+    expect(w.text()).toContain('You have unsaved changes')
+  })
+  it('reports a save failure and preserves the unsaved layout', async () => {
+    const w = await openLayout()
+    await dirty(w)
+    apiMock.mockRejectedValueOnce(new Error('save denied'))
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await flushPromises()
+    // Said in the bar next to the order, not only in a toast.
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('save denied')
+    expect(w.text()).toContain('You have unsaved changes')
+    expect(
+      w.find('[data-testid="save-layout-button"]').attributes('disabled'),
+    ).toBeUndefined()
+    // A retry clears the message.
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="unsaved-error"]').exists()).toBe(false)
+  })
+  it('retains a local edit when its follow-up channel reload fails', async () => {
+    const w = await openLayout()
+    await ch(w).find('[data-testid="rename-channel"]').trigger('click')
+    await w.find('form input').setValue('local name')
+    apiMock
+      .mockResolvedValueOnce(channelFixture({ name: 'local name' }))
+      .mockRejectedValueOnce(new Error('reload denied'))
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(ch(w).text()).toContain('local name')
+    expect(errors()).toContain('reload denied')
+  })
+  it('preserves a reorder begun while a post-edit reload is in flight', async () => {
+    const w = await openLayout()
+    await cat(w).find('[data-testid="rename-category"]').trigger('click')
+    await w.find('form input').setValue('new name')
+    let resolveReload: ((value: unknown) => void) | undefined
+    apiMock.mockResolvedValueOnce({ ok: true }).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveReload = resolve
+        }),
+    )
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    await dirty(w)
+    if (!resolveReload) throw new Error('Missing reload resolver')
+    resolveReload(tree())
+    await flushPromises()
+    expect(cat(w).text()).toContain('new name')
+    expect(w.text()).toContain('You have unsaved changes')
+  })
+  it('handles initial loading failures', async () => {
+    apiMock.mockRejectedValue(new Error('layout offline'))
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    expect(errors()).toContain('layout offline')
+    expect(w.findAll('[data-testid^="category-item-"]')).toHaveLength(0)
+  })
+})
+describe('layout defensive stale action handling', () => {
+  it('opens empty names for editing and invokes the channel topic update handler', async () => {
+    const data = tree()
+    data.categories[0]!.name = ''
+    data.categories[0]!.channels[0]!.name = ''
+    data.categories[0]!.channels[0]!.topic = ''
+    apiMock.mockResolvedValue(data)
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    await w.find('[data-testid="rename-category"]').trigger('click')
+    expect(w.find('form input').element).toHaveProperty('value', '')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    await w
+      .find(
+        `[data-testid="channel-item-${fixtureId(21)}"] [data-testid="rename-channel"]`,
+      )
+      .trigger('click')
+    expect(w.find('form input').element).toHaveProperty('value', '')
+    await w.findAll('form input')[1]!.setValue('new topic')
+    expect(w.findAll('form input')[1]!.element).toHaveProperty(
+      'value',
+      'new topic',
+    )
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+  })
+  it.each(['category', 'channel'] as const)(
+    'safely ignores a successful %s rename after concurrent removal',
+    async (kind) => {
+      vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+      apiMock.mockResolvedValue(tree())
+      const w = keep(mount(AdminLayoutTab))
+      await flushPromises()
+      await w
+        .find(
+          `[data-testid="category-item-${fixtureId(20)}"] [data-testid="move-down-channel"]`,
+        )
+        .trigger('click')
+      const item = w.find(
+        `[data-testid="${kind}-item-${fixtureId(kind === 'category' ? 20 : 21)}"]`,
+      )
+      await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
+      await w.find('form input').setValue('Renamed')
+      let complete: ((value: unknown) => void) | undefined
+      apiMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve
+          }),
+      )
+      await w.find('form').trigger('submit')
+      await item.find(`[data-testid="delete-${kind}"]`).trigger('click')
+      await flushPromises()
+      if (!complete) throw new Error('Missing rename resolver')
+      complete(channelFixture({ name: 'Renamed' }))
+      await flushPromises()
+      expect(
+        w
+          .find(
+            `[data-testid="${kind}-item-${fixtureId(kind === 'category' ? 20 : 21)}"]`,
+          )
+          .exists(),
+      ).toBe(false)
+      expect(errors()).toEqual([])
+    },
+  )
+})
+
+describe('layout stale arrow handler', () => {
+  it('ignores an arrow from a channel removed by another action', async () => {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    apiMock.mockResolvedValue(tree())
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    const row = w.find(`[data-testid="channel-item-${fixtureId(22)}"]`)
+    const arrow = row.find('[data-testid="move-up-channel"]')
+    await arrow.trigger('click')
+    const downArrow = row.find('[data-testid="move-down-channel"]')
+    await row.find('[data-testid="delete-channel"]').trigger('click')
+    await flushPromises()
+    await downArrow.trigger('click')
+    expect(w.find(`[data-testid="channel-item-${fixtureId(22)}"]`).exists()).toBe(false)
+    expect(errors()).toEqual([])
+  })
+
+})
+
+describe('layout save and create races', () => {
+  async function open() {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    const calls: { path: string; method?: string | undefined }[] = []
+    let release: (() => void) | undefined
+    apiMock.mockImplementation(async (path, options) => {
+      calls.push({ path, method: options?.method })
+      if (path === '/api/channels') return tree()
+      if (path === '/api/admin/categories') {
+        await new Promise<void>((resolve) => { release = resolve })
+        return categoryFixture({ id: fixtureId(99), name: 'New category' })
+      }
+      if (path === '/api/admin/layout') {
+        await new Promise<void>((resolve) => { release = resolve })
+      }
+      return { ok: true }
+    })
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    return { w, calls, release: () => release?.() }
+  }
+
+  it('keeps a reorder made while the layout is being saved', async () => {
+    const { w, calls, release } = await open()
+    const item = (id: number) => w.find(`[data-testid="category-item-${fixtureId(id)}"]`)
+    await item(20).find('[data-testid="move-down-category"]').trigger('click')
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await item(20).find('[data-testid="move-up-category"]').trigger('click')
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
+    expect(w.text()).toContain('You have unsaved changes')
+    expect(w.findAll('[data-testid^="category-item-"]')[0]!.attributes('data-testid')).toBe(`category-item-${fixtureId(20)}`)
+  })
+
+  it('sends one save for a double click on the Save button', async () => {
+    const { w, calls, release } = await open()
+    await w.find('[data-testid^="category-item-"] [data-testid="move-down-category"]').trigger('click')
+    const banner = w.find('[data-testid="save-layout-button"]')
+    await banner.trigger('click')
+    await banner.trigger('click')
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
+  })
+
+  it('creates a category once and says it was created', async () => {
+    const { w, calls, release } = await open()
+    await w.find('input[type="text"]').setValue('Fresh')
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter' })
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter' })
+    release()
+    await flushPromises()
+    expect(calls.filter(c => c.path === '/api/admin/categories' && c.method === 'POST')).toHaveLength(1)
+    expect(useToastStore().toasts.map(x => x.text)).toContain('Category created')
+  })
+
+  it('does not create a category while an IME composition is confirmed with Enter', async () => {
+    const { w, calls } = await open()
+    await w.find('input[type="text"]').setValue('にほ')
+    await w.find('input[type="text"]').trigger('keydown', { key: 'Enter', isComposing: true })
+    expect(calls.filter(c => c.path === '/api/admin/categories')).toHaveLength(0)
+  })
+})
+
+describe('layout editor button names', () => {
+  it('names the channel and the category on their repeated row buttons', async () => {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    apiMock.mockResolvedValue(tree())
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    const category = tree().categories[0]!
+    const channel = category.channels![0]!
+    const row = w.get(`[data-testid="channel-item-${channel.id}"]`)
+    for (const testid of ['move-up-channel', 'move-down-channel', 'rename-channel', 'delete-channel']) {
+      expect(row.get(`[data-testid="${testid}"]`).attributes('aria-label'), testid).toContain(channel.name)
+    }
+    const header = w.get(`[data-testid="category-item-${category.id}"]`)
+    for (const testid of ['move-up-category', 'move-down-category', 'rename-category', 'delete-category']) {
+      expect(header.get(`[data-testid="${testid}"]`).attributes('aria-label'), testid).toContain(category.name)
+    }
+  })
+})

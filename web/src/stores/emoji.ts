@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeEmojiEmoji, decodeEmojiList } from '../types/rest'
-import { setEmojiSource } from '../lib/customEmoji'
-import type { CustomEmoji } from '../lib/customEmoji'
+import { setEmojiSource } from '../shared/lib/customEmoji'
+import type { CustomEmoji } from '../shared/lib/customEmoji'
 
 /** True when the member asked the system for less motion. */
 export function prefersReducedMotion(): boolean {

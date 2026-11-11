@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeRaidSettings } from '../types/rest'
 import type { RaidInput, RaidLockdownInput, RaidSettings } from '../types/rest'
 

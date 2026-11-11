@@ -1,0 +1,187 @@
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { User as ProfileUser } from '../../types/domain'
+import type { LivePresence } from '../../shared/components/presentationTypes'
+import { ref } from 'vue'
+import { AtSign, Camera, Loader2, MessageCircle, Trash2 } from '@lucide/vue'
+import { caughtErrorMessage } from '../../shared/lib/api'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { useToastStore } from '../../stores/toast'
+import { t } from '../../i18n'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../../shared/lib/pickImage'
+import PresenceDot from '../../shared/components/PresenceDot.vue'
+import MediaImage from '../../shared/components/MediaImage.vue'
+import { initialOf } from '../../shared/lib/initial'
+
+// The top of a profile: the large avatar (changeable on one's own profile),
+// the live status dot and the buttons next to it.
+defineProps({
+  profileUser: { type: Object as PropType<Partial<ProfileUser>>, required: true },
+  isSelf: { type: Boolean, default: false },
+  liveStatus: { type: String as PropType<LivePresence>, required: true },
+  // Offer "Message": direct messages are on and this member can be written to.
+  canMessage: { type: Boolean, default: false }
+})
+const emit = defineEmits<{ mention: []; message: [] }>()
+
+const authStore = useAuthStore()
+const chatStore = useChatStore()
+const toasts = useToastStore()
+const features = useServerFeaturesStore()
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const isUploading = ref(false)
+
+function triggerAvatarUpload() {
+  if (fileInput.value) {
+    fileInput.value.click()
+  }
+}
+
+async function onAvatarSelected(e: Event) {
+  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
+  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
+  if (!file) return
+
+  const openId = chatStore.selectedUserProfile?.id
+  isUploading.value = true
+
+  try {
+    const updated = await authStore.uploadAvatar(file)
+    // Update profile view immediately
+    chatStore.patchOpenProfile(openId, updated)
+    toasts.success(t('profile.avatarSaved'))
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('profile.avatarFailed')))
+  } finally {
+    isUploading.value = false
+  }
+}
+
+async function removeAvatar() {
+  const openId = chatStore.selectedUserProfile?.id
+  isUploading.value = true
+  try {
+    const updated = await authStore.removeAvatar()
+    // A removed avatar is absent from the answer; the merge must not keep the old one.
+    chatStore.patchOpenProfile(openId, updated, ['avatar_url'])
+    toasts.success(t('profile.avatarRemoved'))
+  } catch (err) {
+    toasts.error(caughtErrorMessage(err, t('profile.avatarRemoveFailed')))
+  } finally {
+    isUploading.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="-mt-12 mb-4 flex items-end justify-between gap-3">
+    <!-- Large Avatar with overlap -->
+    <div class="relative group">
+      <div
+        class="w-20 h-20 rounded-full border-4 border-mnema-surface shadow-xl bg-mnema-canvas overflow-hidden flex items-center justify-center relative cursor-pointer"
+        @click="isSelf ? triggerAvatarUpload() : null"
+      >
+        <MediaImage
+          v-if="profileUser.avatar_url"
+          :src="profileUser.avatar_url"
+          :alt="profileUser.display_name || $t('user.avatar')"
+          class="w-full h-full object-cover"
+        >
+          <template #fallback>
+            <span class="text-2xl font-bold text-mnema-mint">{{ initialOf(profileUser.display_name || profileUser.username) }}</span>
+          </template>
+        </MediaImage>
+        <span v-else class="text-2xl font-bold text-mnema-mint">
+          {{ initialOf(profileUser.display_name || profileUser.username) }}
+        </span>
+
+        <!-- Hover overlay for own profile -->
+        <div
+          v-if="isSelf"
+          class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-150"
+        >
+          <Camera class="w-5 h-5 mb-0.5" />
+          <span class="text-xs font-bold tracking-wider uppercase">{{ $t('profile.change') }}</span>
+        </div>
+
+        <!-- Uploading Spinner -->
+        <div
+          v-if="isUploading"
+          class="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-mnema-accent"
+        >
+          <Loader2 class="w-6 h-6 animate-spin" />
+        </div>
+      </div>
+
+      <!-- Live status -->
+      <span
+        class="absolute bottom-0.5 right-0.5"
+        v-tooltip.visual="$t(`presence.${liveStatus}`)"
+        role="img"
+        :aria-label="$t(`presence.${liveStatus}`)"
+      >
+        <PresenceDot :status="liveStatus" :size="14" ring-class="bg-mnema-surface" />
+      </span>
+
+      <!-- Hidden File Input for Avatar Upload -->
+      <input
+        v-if="isSelf"
+        ref="fileInput"
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        class="hidden"
+        @change="onAvatarSelected"
+      />
+    </div>
+
+    <!-- Action Buttons in Top Right -->
+    <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
+      <button
+        v-if="!isSelf"
+        @click="emit('mention')"
+        class="btn btn-secondary btn-sm max-md:min-h-11"
+        v-tooltip.visual="$t('profile.mentionHint')"
+      >
+        <AtSign class="w-4 h-4 text-mnema-accent" />
+        <span>{{ $t('profile.mention') }}</span>
+      </button>
+
+      <button
+        v-if="canMessage"
+        type="button"
+        data-testid="profile-message"
+        @click="emit('message')"
+        class="btn btn-sm max-md:min-h-11 border-mnema-accent/30 bg-mnema-accent/15 text-mnema-accent hover:bg-mnema-accent/25"
+        v-tooltip.visual="$t('dm.messageHint')"
+      >
+        <MessageCircle class="w-4 h-4" />
+        <span>{{ $t('dm.message') }}</span>
+      </button>
+
+      <button
+        v-if="isSelf"
+        @click="triggerAvatarUpload"
+        :disabled="isUploading"
+        class="btn btn-secondary btn-sm max-md:min-h-11"
+      >
+        <Camera class="w-4 h-4" aria-hidden="true" />
+        <span>{{ $t('profile.changeAvatar') }}</span>
+      </button>
+
+      <button
+        v-if="isSelf && profileUser.avatar_url && features.avatarRemove"
+        type="button"
+        data-testid="avatar-remove"
+        :disabled="isUploading"
+        class="btn btn-ghost btn-sm"
+        @click="removeAvatar"
+      >
+        <Trash2 class="w-4 h-4" aria-hidden="true" />
+        <span>{{ $t('profile.removeAvatar') }}</span>
+      </button>
+    </div>
+  </div>
+</template>

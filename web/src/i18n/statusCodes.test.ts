@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import codes from '../../../api/status-codes.json'
 import de from './de.json'
 import en from './en.json'
-import { describeWarning } from '../lib/operatorWarnings'
-import { describeCheck } from '../lib/setupChecks'
+import { describeWarning } from '../admin/lib/operatorWarnings'
+import { describeCheck } from '../admin/lib/setupChecks'
 import { setLocale } from './index'
 
 type Tree = { [key: string]: Tree | string }

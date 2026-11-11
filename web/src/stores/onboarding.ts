@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '../lib/api'
-import { retryWithBackoff } from '../lib/retry'
+import { api } from '../shared/lib/api'
+import { retryWithBackoff } from '../shared/lib/retry'
 import { decodeOnboardingState, type OnboardingState, type OnboardingTipsInput } from '../types/rest'
-import { migrateLegacyHint, withFinished } from '../lib/onboardingTips'
+import { migrateLegacyHint, withFinished } from '../chat/lib/onboardingTips'
 import { useAuthStore } from './auth'
 
 const RETRY_LOAD_MS = 1500

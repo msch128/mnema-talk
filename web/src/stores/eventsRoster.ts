@@ -1,8 +1,8 @@
 // The roster actions of the events store: roles, sign-ups and the notice that a
 // sign-up changed without the member's doing. Every answer is the event as it
 // stands, so the store's list follows it.
-import * as roles from '../lib/eventRolesApi'
-import type { RoleInput } from '../lib/eventRolesApi'
+import * as roles from '../events/lib/eventRolesApi'
+import type { RoleInput } from '../events/lib/eventRolesApi'
 import type { CommunityeventsCommunityEvent as CommunityEvent } from '../types/rest'
 import type { ServerEventPayloads } from '../types/events'
 import { useToastStore } from './toast'

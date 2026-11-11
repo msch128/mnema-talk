@@ -11,7 +11,7 @@ import (
 // Videos the client may play inline. The embed URL is built here from the id
 // found in the link itself, for exactly these providers and hosts; nothing
 // from a fetched page ever becomes an iframe address. The web client checks
-// the same shapes again (web/src/lib/videoEmbed.ts) and the CSP frame-src
+// the same shapes again (web/src/shared/lib/videoEmbed.ts) and the CSP frame-src
 // allows only these two origins.
 const (
 	embedYouTube = "youtube"

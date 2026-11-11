@@ -1,5 +1,5 @@
 // Package presets loads the ready-made choices of the web client's quick menus
-// (web/src/lib/presets.json), so a server test can push every one of them
+// (web/src/shared/lib/presets.json), so a server test can push every one of them
 // through the real validation. The client imports the same file.
 package presets
 
@@ -34,7 +34,7 @@ type Set struct {
 func Load(t testing.TB) Set {
 	t.Helper()
 	_, here, _, _ := runtime.Caller(0)
-	path := filepath.Join(filepath.Dir(here), "..", "..", "..", "web", "src", "lib", "presets.json")
+	path := filepath.Join(filepath.Dir(here), "..", "..", "..", "web", "src", "shared", "lib", "presets.json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read presets: %v", err)

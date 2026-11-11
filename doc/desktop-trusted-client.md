@@ -538,7 +538,7 @@ host:
   notify, `mentions`: unread mentions; both whole numbers, 0 to 999) instead of
   `desktop_set_badge`, and sums the counts over its instances for the taskbar
   or dock badge. `Platform.reportUnread` / `supportsUnreadReport`
-  (`web/src/lib/platform.ts`) do the feature detection, so a client without the
+  (`web/src/shared/lib/platform.ts`) do the feature detection, so a client without the
   capability keeps getting `desktop_set_badge`, and a browser gets neither. No
   `web_client_api` bump. Allowed only in the instance window, like the other
   notification commands.
@@ -566,7 +566,7 @@ host:
 
 ### Web app changes
 
-`web/src/lib/trustedDesktop.ts` reads the identity the host injects before
+`web/src/shared/lib/native/trustedDesktop.ts` reads the identity the host injects before
 any page script (`window.__MNEMA_TRUSTED_APP__`, defined by an
 initialization script, frozen): `version`, `source` (`builtin` or `cache`),
 `web_client_api`, `key_id`, `server_version`. The app uses it to pick

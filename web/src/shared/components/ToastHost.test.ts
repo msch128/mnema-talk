@@ -1,0 +1,111 @@
+import { requireValue } from '../../test-fixtures.fixture'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
+import ToastHost from './ToastHost.vue'
+import { useToastStore } from '../../stores/toast'
+
+beforeEach(() => setActivePinia(createPinia()))
+
+describe('ToastHost', () => {
+  it('renders toasts in an aria-live region; errors are alerts', async () => {
+    const toasts = useToastStore()
+    const w = mount(ToastHost)
+    expect(w.attributes('aria-live')).toBe('polite')
+    toasts.success('Link copied')
+    toasts.error('File is too large (max. 50 MB).', { detail: 'holiday.mov is 212 MB.' })
+    await w.vm.$nextTick()
+    const items = w.findAll('[data-toast]')
+    expect(requireValue(items[0]).attributes('role')).toBe('status')
+    expect(requireValue(items[1]).attributes('role')).toBe('alert')
+    expect(requireValue(items[1]).text()).toContain('holiday.mov')
+    // errors can be closed
+    await requireValue(items[1]).find('button').trigger('click')
+    expect(w.findAll('[data-toast]')).toHaveLength(1)
+  })
+
+  it('sits above the composer on desktop widths', () => {
+    const w = mount(ToastHost)
+    expect(w.classes()).toContain('bottom-24')
+    expect(w.classes()).toContain('max-md:top-3')
+  })
+
+  it('runs a toast action once and dismisses the toast', async () => {
+    const toasts = useToastStore()
+    let called = 0
+    toasts.info('New version', { action: { label: 'Reload', onClick: () => { called++ } } })
+    const w = mount(ToastHost)
+    await w.find('[data-toast] button').trigger('click')
+    expect(called).toBe(1)
+    expect(toasts.toasts).toHaveLength(0)
+  })
+
+  it('offers a second, quieter action next to the main one', async () => {
+    const toasts = useToastStore()
+    const calls: string[] = []
+    toasts.info('No sound', { action: { label: 'Open', onClick: () => { calls.push('open') } }, secondary: { label: 'Stop', onClick: () => { calls.push('stop') } } })
+    const w = mount(ToastHost)
+    const buttons = w.findAll('[data-toast] button')
+    expect(buttons.map(b => b.text()).slice(0, 2)).toEqual(['Open', 'Stop'])
+    await requireValue(buttons[1]).trigger('click')
+    expect(calls).toEqual(['stop'])
+    expect(toasts.toasts).toHaveLength(0)
+  })
+
+  it('keeps a persistent warning dismissible without running its action', async () => {
+    const toasts = useToastStore()
+    let muted = false
+    toasts.info('This recording has no confirmed protection against echo.', {
+      action: { label: 'Mute stream audio', onClick: () => { muted = true } },
+    })
+    const w = mount(ToastHost, { global: { mocks: { $t: () => 'Close' } } })
+    expect(w.find('[role="status"]').text()).toContain('echo')
+    const close = w.find('button[aria-label="Close"]')
+    expect(close.exists()).toBe(true)
+    await close.trigger('click')
+    expect(muted).toBe(false)
+    expect(toasts.toasts).toHaveLength(0)
+  })
+})
+
+it('uses informational icon and tone for a malformed runtime toast type', () => {
+  const toasts = useToastStore(); toasts.info('Recovered runtime notification')
+  // A persisted or plugin-created runtime object can bypass the static union.
+  Reflect.set(requireValue(toasts.toasts[0]), 'type', 'unexpected')
+  const w = mount(ToastHost)
+  expect(w.find('[data-toast] svg').classes()).toContain('text-mnema-mint')
+  expect(w.find('[data-toast]').attributes('role')).toBe('status')
+  w.unmount()
+})
+
+describe('ToastHost interaction', () => {
+  it('pauses a plain toast under the pointer and closes it with a click', async () => {
+    vi.useFakeTimers()
+    const toasts = useToastStore()
+    toasts.success('Saved')
+    const w = mount(ToastHost)
+    const item = w.get('[data-toast]')
+    await item.trigger('mouseenter')
+    vi.advanceTimersByTime(20000)
+    expect(toasts.toasts).toHaveLength(1)
+    await item.trigger('mouseleave')
+    vi.advanceTimersByTime(5100)
+    expect(toasts.toasts).toHaveLength(0)
+    toasts.info('Second')
+    await w.vm.$nextTick()
+    await w.get('[data-toast]').trigger('click')
+    expect(toasts.toasts).toHaveLength(0)
+    vi.useRealTimers()
+    w.unmount()
+  })
+
+  it('keeps an error open when its text is clicked', async () => {
+    const toasts = useToastStore()
+    toasts.error('Upload failed')
+    const w = mount(ToastHost)
+    await w.get('[data-toast]').trigger('click')
+    expect(toasts.toasts).toHaveLength(1)
+    w.unmount()
+  })
+})

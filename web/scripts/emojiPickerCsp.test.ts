@@ -21,7 +21,7 @@ test('the patch moves the base styles and style attributes off the inline paths'
 
 test('the patch leaves no HTML sink that takes a plain string under Trusted Types', () => {
   const patched = patchEmojiPicker(source)
-  assert.match(patched, /^import \{ emojiPickerTemplate as mnemaTemplateHtml \} from '@\/lib\/trustedTypes';$/m)
+  assert.match(patched, /^import \{ emojiPickerTemplate as mnemaTemplateHtml \} from '@\/shared\/lib\/trustedTypes';$/m)
   assert.deepEqual(patched.match(/\.(?:inner|outer)HTML\s*=[^=].*/g), ['.innerHTML = mnemaTemplateHtml(htmlString);'])
   assert.doesNotMatch(patched, /insertAdjacentHTML|document\.write|createContextualFragment|\beval\(|new Function/)
 })

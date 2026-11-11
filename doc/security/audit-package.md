@@ -699,7 +699,7 @@ permission check on the channel.
 | CSP and headers | `httpx.SecurityHeaders` | No inline script or style (`style-src-attr 'none'`), no eval, `frame-ancestors 'none'`, `nosniff`, referrer policy; e2e specs fail on any violation |
 | SSRF guard | `internal/ssrf` | Resolve once, vet every address (public unicast only, also IPv4-mapped), connect to the vetted address, no redirects, no proxies; used by webhooks, link previews, push endpoints and the Discord template fetch |
 | Content handling | `internal/media`, `imgproc` | Content sniffing, risky types served only as downloads, filename sanitising; avatars, banners and emoji decoded, bounded, re-encoded; pixel and frame budgets before decode |
-| Markdown rendering | `web/src/lib/markdown` | Tree of plain nodes, one HTML-producing module with attribute allow-lists; single `v-html` sink |
+| Markdown rendering | `web/src/shared/lib/markdown` | Tree of plain nodes, one HTML-producing module with attribute allow-lists; single `v-html` sink |
 | Audit log | `internal/audit` | Append-only (database trigger), visibility classes per action (`VisAuditors`, `VisChannel`, `VisPrivileged`), no secrets stored, scrub-only update path for account erasure |
 | Account erasure and export | `internal/auth/account` | Transactional, foreign-key-walking test, tombstone row guarded by a trigger |
 | Automod (1.2) | `internal/automod` | Word, link, raid and new-account rules, hits go to the report queue; DM hits store no text |

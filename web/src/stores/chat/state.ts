@@ -1,9 +1,10 @@
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref } from 'vue'
 import type { Category, Channel, Member, Message, NotificationSettings, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
 import type { ChatDMSettings, ChatDirectMessage } from '../../types/rest'
-import { platform, type PlatformSocket } from '../../lib/platform'
-import { createKeyedThrottle } from '../../lib/chatLogic'
+import { platform } from '../../shared/lib/platform'
+import { createSocketState, type SocketState } from '../socket'
+import { createKeyedThrottle } from '../../shared/lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
 import type { PendingMessage } from './outboxTypes'
@@ -16,14 +17,14 @@ export function emptyNotificationSettings(): NotificationSettings {
 
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
 
-/** The channels, the open channel with its windowed history and thread, and the socket. */
+/** The channels and the open channel with its windowed history and thread. */
 function channelState() {
   return {
     communityGeneration: 0,
     categories: ref<Category[]>([]),
     uncategorized: ref<Channel[]>([]),
     activeChannel: ref<Channel | null>(null),
-    // Windowed history of the active channel (see lib/messageWindow).
+    // Windowed history of the active channel (see chat/lib/messageWindow).
     messages: ref<Message[]>([]),
     hasMoreBefore: ref(false),
     hasMoreAfter: ref(false),
@@ -48,9 +49,7 @@ function channelState() {
     pinNotices: ref<PinNotice[]>([]),
     pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),
-    isThreadLoading: ref(false),
-    ws: shallowRef<PlatformSocket | null>(null),
-    isConnected: ref(false)
+    isThreadLoading: ref(false)
   }
 }
 
@@ -134,18 +133,19 @@ function outboxState() {
   }
 }
 
-/** Socket generations, timers and the handlers the voice layer installs. */
-function socketState() {
+/**
+ * The transport (stores/socket.ts) with its connection state under the names
+ * the chat modules and the store's callers use, and the handlers the voice layer installs.
+ */
+function socketState(socket: SocketState) {
   return {
-    socketGeneration: 0,
-    reconnectCheckSeq: 0,
-    stopPing: undefined as (() => void) | undefined,
-    lastPongAt: 0,
-    lastPingAt: 0,
-    reconnectTimer: undefined as Timer | undefined,
-    connectTimer: undefined as Timer | undefined,
-    connectStartedAt: 0,
-    reconnectDelay: 1000,
+    socket,
+    ws: socket.ws,
+    isConnected: socket.isConnected,
+    reconnectCount: socket.reconnectCount,
+    wasConnected: socket.wasConnected,
+    reconnectAttempt: socket.reconnectAttempt,
+    nextRetryAt: socket.nextRetryAt,
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,
     voiceKickedHandler: null as Handler<'voice_kicked'>,
@@ -155,7 +155,7 @@ function socketState() {
   }
 }
 
-/** Fetch ordering, window generations, reconnect bookkeeping and idle tracking. */
+/** Fetch ordering, window generations and idle tracking. */
 function syncState(markRead: (channelId: string) => void) {
   return {
     // Overlapping fetches (a channels_changed broadcast while a refetch runs)
@@ -176,16 +176,6 @@ function syncState(markRead: (channelId: string) => void) {
     countedReplies: new Set<string>(),
     threadGen: 0,
 
-    // Bumped on every successful reconnect; voice and other views watch it to
-    // restore their server-side state.
-    reconnectCount: ref(0),
-    hadConnection: false,
-    // For the connection banner: true once the socket has been up at least once
-    // in this session, how many reconnects were tried, and when the next one runs.
-    wasConnected: ref(false),
-    reconnectAttempt: ref(0),
-    nextRetryAt: ref(0),
-
     // After IDLE_AFTER_MS without input (speaking, push-to-talk, a shared screen or the camera in a Talk count as input, see presence.ts) the server shows "online" as "away".
     isIdle: false,
     idleTimer: undefined as Timer | undefined,
@@ -197,13 +187,13 @@ function syncState(markRead: (channelId: string) => void) {
 }
 
 /** Everything the chat store keeps; the modules in this folder read and write it through Cx. */
-export function createChatState(markRead: (channelId: string) => void) {
+export function createChatState(markRead: (channelId: string) => void, socket: SocketState = createSocketState()) {
   const base = {
     ...channelState(),
     ...memberState(),
     ...dmState(),
     ...outboxState(),
-    ...socketState(),
+    ...socketState(socket),
     ...syncState(markRead)
   }
   const allChannels = computed(() => [

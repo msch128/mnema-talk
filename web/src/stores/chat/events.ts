@@ -12,8 +12,8 @@ import { useEventsStore } from '../events'
 import { useEventCommentsStore } from '../eventComments'
 import { useOnboardingStore } from '../onboarding'
 import { useServerFeaturesStore } from '../serverFeatures'
-import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
-import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
+import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../shared/lib/moderation'
+import { snapshotToMap, applyPresenceUpdate } from '../../shared/lib/presence'
 import { MAX_EPHEMERAL } from './types'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
@@ -194,7 +194,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
 
 const HANDLERS: Handlers = {
   pong: ({ cs, voiceStore }, p) => {
-    cs.lastPongAt = Date.now()
+    cs.socket.lastPongAt = Date.now()
     if (p?.t) voiceStore.recordPing(Date.now() - p.t)
   },
   server_info: ({ authStore, voiceStore }, p) => {
