@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/update"
 )
@@ -172,7 +172,7 @@ func (h *systemHandler) triggerSelfUpdate(ctx context.Context, upd UpdateStatus,
 	}
 	log.Info("self-update started")
 	if h.events != nil {
-		h.events.Broadcast(events.Untyped(events.SystemUpdate, map[string]string{"version": upd.LatestVersion}))
+		h.events.Broadcast(wire.SystemUpdate{Version: upd.LatestVersion})
 	}
 	return nil
 }

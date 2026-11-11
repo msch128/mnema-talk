@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -36,15 +36,6 @@ var (
 	errNotBanned      = httpx.ErrNotFound("this member is not banned")
 )
 
-// notice is what a member is told about a moderation action (WebSocket event
-// moderation_notice).
-type notice struct {
-	Kind    string     `json:"kind"`
-	Until   *time.Time `json:"until,omitempty"`
-	Seconds int        `json:"duration_seconds,omitempty"`
-	Reason  string     `json:"reason"`
-}
-
 func cleanReason(s string) (string, error) {
 	return httpx.CleanText("reason", s, MaxReasonLen, false)
 }
@@ -58,9 +49,9 @@ func (h *API) mountModeration(r chi.Router) {
 	bans.Delete("/users/{id}/ban", httpx.Handle(h.unbanUser))
 }
 
-func (h *API) notify(id uuid.UUID, n notice) {
+func (h *API) notify(id uuid.UUID, n wire.ModerationNotice) {
 	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{id}, events.Untyped(events.ModerationNotice, n))
+		h.Events.SendToUsers([]uuid.UUID{id}, n)
 	}
 }
 
@@ -141,8 +132,8 @@ func (h *API) TimeoutMember(r *http.Request, id uuid.UUID, req auth.TimeoutReque
 	// Rebuild the permission state: the member's rights shrink now, and a
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
-	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
-	h.Events.Broadcast(events.Untyped(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until}))
+	h.notify(id, wire.ModerationNotice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
+	h.Events.Broadcast(wire.MemberTimeout{ID: id, TimeoutUntil: &until})
 	return auth.TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason}, nil
 }
 
@@ -177,8 +168,8 @@ func (h *API) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.Perms.Changed([]uuid.UUID{id})
-	h.notify(id, notice{Kind: "timeout_removed"})
-	h.Events.Broadcast(events.Untyped(events.MemberTimeout, map[string]any{"id": id, "timeout_until": nil}))
+	h.notify(id, wire.ModerationNotice{Kind: "timeout_removed"})
+	h.Events.Broadcast(wire.MemberTimeout{ID: id})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

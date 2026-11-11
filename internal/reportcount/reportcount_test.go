@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -43,7 +44,7 @@ func TestModeratorsGetTheCurrentOpenCount(t *testing.T) {
 	if len(got) != 1 || got[0].Type != events.ReportsOpen || got[0].Need != perm.ManageReports {
 		t.Fatalf("events = %+v, want one reports event for Manage reports holders", got)
 	}
-	if p, ok := got[0].Payload.(map[string]int); !ok || p["open"] != 4 {
+	if p, ok := got[0].Payload.(wire.ReportsOpen); !ok || p.Open != 4 {
 		t.Fatalf("payload = %+v, want open 4", got[0].Payload)
 	}
 }

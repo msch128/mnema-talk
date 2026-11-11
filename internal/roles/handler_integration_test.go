@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -155,11 +156,11 @@ func TestMembersChooseOpenRolesThroughTheHandlers(t *testing.T) {
 	if len(rec.Events) != 2 || rec.Events[0].Type != events.MemberRolesChanged {
 		t.Fatalf("one targeted member_roles_changed per real change: %+v", rec.Events)
 	}
-	first, ok := rec.Events[0].Payload.(map[string]any)
-	if !ok || first["id"] != memberID || len(first["role_ids"].([]uuid.UUID)) != 1 {
+	first, ok := rec.Events[0].Payload.(wire.MemberRolesChanged)
+	if !ok || first.ID != memberID || len(first.RoleIDs) != 1 {
 		t.Fatalf("the event names the member and the roles they hold: %+v", rec.Events[0].Payload)
 	}
-	if last := rec.Events[1].Payload.(map[string]any); len(last["role_ids"].([]uuid.UUID)) != 0 {
+	if last := rec.Events[1].Payload.(wire.MemberRolesChanged); len(last.RoleIDs) != 0 {
 		t.Fatalf("after dropping, no roles are held: %+v", last)
 	}
 }

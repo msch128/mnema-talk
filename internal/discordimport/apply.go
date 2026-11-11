@@ -199,7 +199,7 @@ func (im *Importer) Apply(ctx context.Context, sub perm.Subject, actorName strin
 	im.Perms.Changed(nil)
 	if im.Events != nil {
 		im.Events.Broadcast(wire.ChannelsChanged{})
-		im.Events.Broadcast(events.Untyped(events.RolesChanged, nil))
+		im.Events.Broadcast(wire.RolesChanged{})
 	}
 	return rec, nil
 }

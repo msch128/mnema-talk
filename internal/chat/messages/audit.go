@@ -12,7 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -191,9 +191,9 @@ func (a *API) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	if s == nil || s.msg.UserID == by.ID || a.Events == nil {
 		return
 	}
-	a.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.Untyped(events.ModerationNotice, map[string]any{
-		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
-	}))
+	a.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, wire.MessageDeletedNotice{
+		Kind: "message_deleted", Reason: reason, ChannelName: s.channel,
+	})
 }
 
 // channelAuditName reads a channel's name and whether it is private: a conversation or

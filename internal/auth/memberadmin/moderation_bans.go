@@ -40,7 +40,7 @@ func (h *API) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
 	if h.Live != nil {
 		h.Live.EndingUser(id)
 	}
-	h.notify(id, notice{Kind: "ban", Until: until, Reason: reason})
+	h.notify(id, wire.ModerationNotice{Kind: "ban", Until: until, Reason: reason})
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -90,7 +90,7 @@ func (h *Handler) setSelfRole(w http.ResponseWriter, r *http.Request, on bool) e
 			action = "role.self_assign"
 		}
 		h.Audit.RecordOrLog(r.Context(), audit.Entry{Action: action, TargetType: "role", TargetID: role.ID.String(), TargetName: role.Name})
-		h.Events.Broadcast(events.Untyped(events.MemberRolesChanged, map[string]any{"id": user.ID, "role_ids": held}))
+		h.Events.Broadcast(wire.MemberRolesChanged{ID: user.ID, RoleIDs: held})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

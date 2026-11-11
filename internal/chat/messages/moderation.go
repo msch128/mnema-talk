@@ -13,7 +13,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -206,9 +205,9 @@ func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID {
-		a.Events.SendToUsers([]uuid.UUID{req.UserID}, events.Untyped(events.ModerationNotice, map[string]any{
-			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
-		}))
+		a.Events.SendToUsers([]uuid.UUID{req.UserID}, wire.MessagesDeletedNotice{
+			Kind: "messages_deleted", Reason: rep.reason, ChannelName: rep.channelName, Count: len(rep.gone),
+		})
 	}
 }
 

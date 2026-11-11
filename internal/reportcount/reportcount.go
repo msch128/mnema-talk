@@ -10,6 +10,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -34,5 +35,5 @@ func Announce(ctx context.Context, q db.Querier, pub events.Publisher) {
 		slog.Warn("open report count not announced", "err", err)
 		return
 	}
-	pub.BroadcastPerm(perm.ManageReports, events.Untyped(events.ReportsOpen, map[string]int{"open": n}))
+	pub.BroadcastPerm(perm.ManageReports, wire.ReportsOpen{Open: n})
 }
