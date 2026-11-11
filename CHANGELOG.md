@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.6](https://github.com/msch128/mnema-talk/compare/v3.0.5...v3.0.6) (2026-11-11)
+
+
+### Bug Fixes
+
+* a member that was removed is not added again from a key package it sent before it was in the group ([e2c3afa](https://github.com/msch128/mnema-talk/commit/e2c3afa898eaec382cd62b9b1ed4cb02c0bf5765))
+* **security:** a key package is good for one join ([e2c3afa](https://github.com/msch128/mnema-talk/commit/e2c3afa898eaec382cd62b9b1ed4cb02c0bf5765))
+* three commits for one epoch no longer leave a member behind ([e2c3afa](https://github.com/msch128/mnema-talk/commit/e2c3afa898eaec382cd62b9b1ed4cb02c0bf5765))
+* two groups in one Talk become one ([e2c3afa](https://github.com/msch128/mnema-talk/commit/e2c3afa898eaec382cd62b9b1ed4cb02c0bf5765))
+
 ## [3.0.5](https://github.com/msch128/mnema-talk/compare/v3.0.4...v3.0.5) (2026-11-11)
 
 
