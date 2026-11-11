@@ -300,6 +300,7 @@
       "srvActionMustBeBlockOr": "Die Aktion muss „block“ oder „flag“ sein.",
       "srvAddAnEMailAddress": "Hinterlege eine E-Mail-Adresse in deinem Konto oder nenne einen Empfänger.",
       "srvAfterMustBeEarlierThan": "„after“ muss vor „before_date“ liegen.",
+      "srvAllowedMentionsMustBeA": "allowed_mentions muss ein JSON-Objekt sein.",
       "srvAnotherWikiPageHasThatTitle": "Eine andere Wiki-Seite hat diesen Titel bereits.",
       "srvAnAttachmentIsUnknownAlready": "Ein Anhang ist unbekannt, schon gesendet oder abgelaufen. Lade ihn erneut hoch.",
       "srvAnInteractionTakesAtMost": "Eine Interaktion nimmt höchstens {a} Antworten an.",

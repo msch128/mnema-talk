@@ -24496,6 +24496,10 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "allowed_mentions": {
+                    "description": "The allowed_mentions object of the message route (parse, users, roles), JSON-encoded. Without it the caption notifies the members it names, never @all, @here or a role.",
+                    "type": "string"
+                  },
                   "content": {
                     "description": "Optional caption.",
                     "maxLength": 4000,

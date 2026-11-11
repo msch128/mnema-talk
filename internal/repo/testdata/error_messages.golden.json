@@ -70,6 +70,7 @@
   "add an e-mail address to your account or name a recipient",
   "after must be an RFC 3339 timestamp",
   "after must be earlier than before_date",
+  "allowed_mentions must be a JSON object",
   "an account can use push on at most %d devices; remove one first",
   "an attachment is unknown, already sent or has expired; upload it again",
   "an emoji must be a PNG, GIF or WebP image",

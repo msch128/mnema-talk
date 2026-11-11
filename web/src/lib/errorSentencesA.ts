@@ -73,6 +73,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['add an e-mail address to your account or name a recipient', 'srvAddAnEMailAddress'],
   ['after must be an RFC 3339 timestamp', 'srvAfterRfc3339', []],
   ['after must be earlier than before_date', 'srvAfterMustBeEarlierThan'],
+  ['allowed_mentions must be a JSON object', 'srvAllowedMentionsMustBeA'],
   ['an account can use push on at most %d devices; remove one first', 'pushDeviceLimit', ['count']],
   ['an attachment is unknown, already sent or has expired; upload it again', 'srvAnAttachmentIsUnknownAlready'],
   ['an emoji must be a PNG, GIF or WebP image', 'emojiImageType', []],
