@@ -272,8 +272,9 @@ export class MediaGroup extends GroupSync {
       const wins = commitWinsConflict({ rejected: processed.actionTaken === 'reject', renews, empty, isCommitter }, from, saved.sender)
       // Going back is right only while that update is the last commit taken: behind a later one it would undo it (a removal, for one).
       const followed = this.state?.groupContext.epoch !== saved.state.groupContext.epoch + 1n
-      if (wins && !followed) return this.switchConflictState(saved, processed, from)
-      wipeConsumed(processed.consumed)
+      if (wins && !followed) return this.switchConflictState(saved, processed, from, empty && !isCommitter)
+      // What the trial used up belongs to the state I keep, which the next rival is checked against: it goes when that does.
+      saved.held.push(...processed.consumed)
       if (processed.newState !== saved.state) this.wipeRejected(processed.newState)
       return wins ? this.overtaken() : this.step()
     } catch {
@@ -291,7 +292,8 @@ export class MediaGroup extends GroupSync {
     return this.step(this.canCommit(this.room) ? await this.commit([]) : [])
   }
 
-  protected async switchConflictState(saved: NonNullable<GroupBase['selfUpdate']>, processed: ProcessedPublicMessage, from: string): Promise<MediaStep> {
+  /** Goes back and takes the winner. Behind a renewal the state before it stays for the rest of its time: the committer's commit, or a still lower id's renewal, may yet beat it. */
+  protected async switchConflictState(saved: NonNullable<GroupBase['selfUpdate']>, processed: ProcessedPublicMessage, from: string, renewal: boolean): Promise<MediaStep> {
     const mine = this.state as ClientState
     const mineCurrent = this.current
     const minePrevious = this.previousEpoch
@@ -300,14 +302,14 @@ export class MediaGroup extends GroupSync {
     this.current = saved.current
     this.previousEpoch = saved.previousEpoch
     const adopted = await this.adopt(processed.newState, keepsEveryLeaf(saved.state, processed.newState) ? 'soft' : 'commit')
-    wipeConsumed(processed.consumed)
-    wipeConsumed(saved.held)
+    if (!adopted || !renewal) wipeConsumed([...processed.consumed, ...saved.held])
     if (!adopted) {
       this.state = mine
       this.current = mineCurrent
       this.previousEpoch = minePrevious
       return this.recoverNow()
     }
+    if (renewal) this.selfUpdate = { ...saved, sender: from, held: [...saved.held, ...processed.consumed] }
     this.alive.set(from, clock.now())
     this.wipeRejected(mine)
     return this.step()

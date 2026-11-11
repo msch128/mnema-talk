@@ -46,7 +46,7 @@ describe('known: seeds that end in a split room', () => {
 // each takes a full run, and the eight above stand for them.
 describe.skip('known: all failing seeds among 1..400', () => {
   const HOSTILE = [11, 30, 48, 59, 61, 62, 69, 73, 80, 83, 89, 104, 107, 122, 125, 126, 142, 148, 156, 166, 175, 178, 185, 195, 203, 213, 221, 227, 238, 244, 245, 254, 277, 278, 300, 301, 303, 310, 315, 322, 323, 335, 352, 354, 362, 365, 371, 373, 378, 380, 383, 399]
-  const HONEST = [2, 5, 25, 30, 37, 64, 68, 81, 95, 98, 109, 119, 142, 148, 159, 162, 195, 210, 226, 228, 245, 246, 254, 258, 276, 282, 300, 303, 306, 315, 354, 360, 364, 373, 377]
+  const HONEST = [2, 5, 25, 30, 37, 64, 68, 81, 98, 109, 119, 142, 148, 159, 162, 195, 210, 226, 228, 245, 246, 254, 258, 276, 282, 300, 303, 306, 315, 354, 360, 364, 373, 377]
 
   it.each(HOSTILE)('hostile relay, seed %i', async (seed) => {
     const result = await runSeed(seed, { relay: 'hostile' })
