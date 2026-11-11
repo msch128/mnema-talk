@@ -138,7 +138,7 @@ func (g *layerGroup) viewerWriteDone(vt *viewerTrack) {
 		// Out of the group first: the next packet must not reach it again.
 		g.removeViewer(vt)
 		if g.dropViewer != nil {
-			g.dropViewer(vt.viewer)
+			g.dropViewer(vt.viewer, vt.gen)
 		}
 	})
 }

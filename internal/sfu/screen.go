@@ -109,7 +109,7 @@ func (r *Room) layerGroupLocked(peer *Peer, source Source, trackID string, codec
 		g = newLayerGroup(id, r.ID, userID, r.notifier, codec)
 		g.source = source
 		g.declared.Store(int32(len(r.layerMetaLocked(source)[userID])))
-		g.onPanic, g.dropViewer = r.dropOnPanic(peer), r.dropUser
+		g.onPanic, g.dropViewer = r.dropOnPanic(peer), r.dropViewerPeer
 		r.groupsLocked(source)[userID] = g
 		return g
 	}

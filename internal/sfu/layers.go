@@ -153,7 +153,7 @@ type layerGroup struct {
 	// dropViewer the peer of a viewer whose own track panicked. The room sets
 	// both (layerGroupLocked); a group without a room lets the process exit.
 	onPanic    func()
-	dropViewer func(viewer uuid.UUID)
+	dropViewer func(viewer uuid.UUID, gen uint64)
 
 	// live has bit i set while layer i is attached; declared is the number of
 	// layers the sender announced (0 when it did not).

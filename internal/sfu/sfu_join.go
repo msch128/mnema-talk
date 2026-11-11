@@ -3,11 +3,15 @@ package sfu
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/pion/interceptor"
+	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -231,14 +235,101 @@ func (r *Room) dropOnPanic(peer *Peer) func() {
 	}
 }
 
-// dropUser removes the current peer of userID, if any, on a goroutine of its
-// own: the caller is another peer's forwarding loop.
-func (r *Room) dropUser(userID uuid.UUID) {
+// dropViewerPeer removes the peer of userID a panicking viewer track was made
+// for (gen), on a goroutine of its own: the caller is another peer's
+// forwarding loop. A member who joined again since has a new, healthy peer,
+// which stays.
+func (r *Room) dropViewerPeer(userID uuid.UUID, gen uint64) {
 	r.mu.RLock()
 	peer := r.peers[userID]
 	r.mu.RUnlock()
-	if peer != nil {
+	if peer != nil && peer.gen == gen {
 		r.goDropLost(peer)
+	}
+}
+
+// viewerGuardFactory puts a viewerGuard on top of every connection's chain of
+// interceptors. It is added to the registry last, which makes its writer the
+// first one a packet passes.
+type viewerGuardFactory struct {
+	// drop removes the peer whose connection has the given ID.
+	drop func(connID string)
+}
+
+func (f viewerGuardFactory) NewInterceptor(connID string) (interceptor.Interceptor, error) {
+	return &viewerGuard{connID: connID, drop: f.drop}, nil
+}
+
+// viewerGuard keeps a panic in one viewer's connection with that viewer. A
+// track that is shared by its viewers (a microphone, the sound of a screen, a
+// camera sent plain) writes every packet to each viewer's chain (NACK
+// history, counters, transport-cc stamp, bandwidth estimate, SRTP) on the
+// publisher's forwarding goroutine. Without the guard a panic there would
+// drop the member who speaks, again after every rejoin, while the connection
+// that caused it stayed.
+type viewerGuard struct {
+	interceptor.NoOp
+	connID string
+	drop   func(connID string)
+	// dead: a write panicked. Nothing more goes into the chain it left
+	// half-updated, while the peer is on its way out.
+	dead atomic.Bool
+}
+
+func (g *viewerGuard) BindLocalStream(_ *interceptor.StreamInfo, w interceptor.RTPWriter) interceptor.RTPWriter {
+	return &guardedWriter{guard: g, next: w}
+}
+
+// guardedWriter is the writer of one outgoing stream of a guarded connection.
+type guardedWriter struct {
+	guard *viewerGuard
+	next  interceptor.RTPWriter
+}
+
+// Write runs once per packet and viewer: it must not allocate.
+func (w *guardedWriter) Write(h *rtp.Header, payload []byte, a interceptor.Attributes) (n int, err error) {
+	if w.guard.dead.Load() {
+		return 0, io.ErrClosedPipe
+	}
+	defer w.guard.writeDone(&err)
+	return w.next.Write(h, payload, a)
+}
+
+// writeDone is deferred by Write. It costs a few nanoseconds per packet and
+// allocates nothing unless the write panicked. The writer reports a closed
+// stream then, like a viewer whose sender just stopped.
+func (g *viewerGuard) writeDone(err *error) {
+	rec := recover()
+	if rec == nil {
+		return
+	}
+	*err = io.ErrClosedPipe
+	g.dead.Store(true)
+	// The caller holds locks of the track it writes to: the peer is looked
+	// up and removed on a goroutine of its own.
+	safego.Recovered("sfu_viewer_write", rec, func() {
+		safego.Go("sfu_peer_drop", safego.Crash, func() { g.drop(g.connID) })
+	})
+}
+
+// dropConnection removes the peer whose connection is connID and tells its
+// owner. A connection the member has replaced is gone already.
+func (s *SFU) dropConnection(connID string) {
+	var room *Room
+	var found *Peer
+	safego.Locked(&s.roomsMu, func() {
+		for _, r := range s.rooms {
+			safego.Locked(r.mu.RLocker(), func() {
+				for _, peer := range r.peers {
+					if peer.PC != nil && peer.PC.ID() == connID {
+						room, found = r, peer
+					}
+				}
+			})
+		}
+	})
+	if found != nil {
+		room.goDropLost(found)
 	}
 }
 

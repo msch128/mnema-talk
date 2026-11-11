@@ -55,6 +55,19 @@ func (r *steadyRemote) Read(b []byte) (int, interceptor.Attributes, error) {
 func watch(t *testing.T, r *Room, publisher, viewer uuid.UUID, sink func(*rtp.Packet) error) {
 	t.Helper()
 	r.mu.RLock()
+	var gen uint64
+	if peer := r.peers[viewer]; peer != nil {
+		gen = peer.gen
+	}
+	r.mu.RUnlock()
+	watchAs(t, r, publisher, viewer, gen, sink)
+}
+
+// watchAs is watch for the track of one particular connection of the viewer,
+// the one numbered gen.
+func watchAs(t *testing.T, r *Room, publisher, viewer uuid.UUID, gen uint64, sink func(*rtp.Packet) error) {
+	t.Helper()
+	r.mu.RLock()
 	g := r.groups[publisher]
 	r.mu.RUnlock()
 	if g == nil {
@@ -64,6 +77,7 @@ func watch(t *testing.T, r *Room, publisher, viewer uuid.UUID, sink func(*rtp.Pa
 	if err != nil {
 		t.Fatal(err)
 	}
+	vt.gen = gen
 	vt.sink = sink
 	if !g.addViewer(vt) {
 		t.Fatal("the viewer was refused")
