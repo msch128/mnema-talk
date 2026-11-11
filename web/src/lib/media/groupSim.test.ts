@@ -69,6 +69,19 @@ describe('rooms that used to split', () => {
   }, 60_000)
 })
 
+// Seeds that ended with two groups of several members, or with one side still listing the other, until a
+// member whose group lacks the room's lowest id learned to offer it a key package, and one that holds
+// that id in another state to start over on its signed heartbeats.
+describe('rooms in which two groups never became one', () => {
+  it.each([37, 58, 357, 263])('honest relay, seed %i', async (seed) => {
+    await expectHolds(seed, { relay: 'honest' })
+  }, 60_000)
+
+  it.each([48, 59, 179, 182])('hostile relay, seed %i', async (seed) => {
+    await expectHolds(seed, { relay: 'hostile' })
+  }, 60_000)
+})
+
 describe('two members that renew their leaf for the same epoch', () => {
   it('end on the lower id\'s renewal, and nobody loses its group', async () => {
     const result = await runScript(RENEWAL_RACE)

@@ -34,6 +34,10 @@ export const FOUND_WAIT_MS = 4000
 // is let in. It stays longer than OFFER_WAIT_MS, so a lost welcome is asked
 // for again before the member who sent it is written off.
 export const TAKEOVER_MS = 2 * OFFER_WAIT_MS
+// The room's lowest id signs heartbeats for an epoch that is not mine: two of
+// them this far apart say it lives in another state of the group (see
+// groupMerge.ts). Longer than any wait for a commit that is on its way.
+export const OTHER_STATE_MS = 2 * OFFER_WAIT_MS
 // How long the state before a member's self-update is kept: a commit that
 // raced it for the same epoch and wins replaces it (see `selfUpdate`).
 export const CONFLICT_MS = 10_000
