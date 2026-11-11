@@ -95,6 +95,8 @@ export abstract class GroupEpoch extends GroupBase {
     const { rotateMs, rotateJitterMs } = this.timing
     this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     const members = treeMembers(state)
+    // A package kept from before its sender was in my tree must not add it again once it was removed.
+    for (const id of members.keys()) this.pending.delete(id)
     this.trackLeaves(state, members, now)
     this.forgetDeparted(members)
     this.markNewMembers(members, now)
