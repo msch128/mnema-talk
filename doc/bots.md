@@ -213,6 +213,11 @@ security scheme `botAuth`).
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
 | `GET /members`, `GET /members/{id}` | the `GUILD_MEMBERS` intent allowed; only members who can view a channel the bot can view; id, name, avatar |
 
+Slow mode: a channel's slow mode holds a bot back like a member, on every route
+that posts (a message, an upload, the response to a command): a post inside the
+wait answers `429` with `retry_after`. A bot whose roles give it Manage messages
+is exempt, again like a member, and may also reply under a locked forum post.
+
 Mentions: `@username` notifies members who can view the channel; `@all` and
 `@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
 contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention @all and @here it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit (which takes no `allowed_mentions`, so editing a message removes its role mentions instead of adding them). Only members who can view the channel are notified. Bots cannot join Talks (voice) in v1.
