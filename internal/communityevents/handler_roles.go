@@ -47,7 +47,7 @@ func (h *Handler) requireRoster(r *http.Request, ev *CommunityEvent) error {
 
 // auditRoster records a change of an event's roles or sign-ups as an edit of the event.
 func (h *Handler) auditRoster(r *http.Request, ev *CommunityEvent, change string, extra map[string]any) {
-	if h.Audit == nil {
+	if !h.auditable(r, ev) {
 		return
 	}
 	action := "event.edit"

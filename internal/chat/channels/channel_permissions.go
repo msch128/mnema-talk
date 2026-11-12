@@ -153,7 +153,9 @@ func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
 // the channel (one they cannot see was replaced by an unknown id, which they do
 // not see either) and may move it between categories.
 func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
-	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+	// A conversation's call Talk is no part of the community's layout: it is as
+	// hidden as a channel that does not exist, even from its own members.
+	if snap.IsDMTalk(c.ID) || !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
 	to := uuid.Nil

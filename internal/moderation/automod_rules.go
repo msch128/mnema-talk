@@ -102,7 +102,10 @@ func (h *Handler) parseRule(r *http.Request) (automod.RuleInput, error) {
 		}
 	}
 	for _, id := range in.ExemptChannels {
-		if !snap.KnowsChannel(id) {
+		// A conversation's call Talk is no community channel: a rule naming it
+		// would hand its id to every Administrator, so it is as unknown as a
+		// channel that does not exist.
+		if !snap.KnowsChannel(id) || snap.IsDMTalk(id) {
 			return in, httpx.ErrInvalidInput("exempt_channels: unknown channel " + id.String())
 		}
 	}

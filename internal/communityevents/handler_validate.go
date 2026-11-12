@@ -2,6 +2,7 @@ package communityevents
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -32,6 +34,8 @@ func validateEventTimes(start time.Time, end *time.Time) error {
 	return nil
 }
 
+var errNotATalk = httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
+
 func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *string) error {
 	hasChannel := chID != nil
 	hasLoc := loc != nil && strings.TrimSpace(*loc) != ""
@@ -49,15 +53,21 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 	return err
 }
 
-// validateEventTalk checks that chID is a Talk (voice) channel the caller may view.
+// validateEventTalk checks that chID is a Talk (voice) channel of the community
+// that the caller may view. A conversation's call Talk is no community channel:
+// an event is a community object, audited and listed for the community, and
+// the call's members are the only ones who may know it exists. It is refused
+// like a channel that does not exist (same status, same bytes), and a failed
+// lookup refuses the request instead of guessing.
 func (h *Handler) validateEventTalk(r *http.Request, chID uuid.UUID) error {
 	var kind string
-	err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, chID).Scan(&kind)
+	var isCall bool
+	err := h.DB.QueryRow(r.Context(), `SELECT type, dm_id IS NOT NULL FROM channels WHERE id = $1`, chID).Scan(&kind, &isCall)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
-	if err != nil || kind != "voice" {
-		return httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
+	if err != nil || kind != "voice" || isCall {
+		return errNotATalk
 	}
 	if !h.canViewChannel(r, chID) {
 		return httpx.ErrForbidden("you cannot view this Talk channel")
@@ -75,8 +85,27 @@ func (h *Handler) validateEventPayload(r *http.Request, title, desc string, star
 	return h.validateEventLocation(r, chID, loc)
 }
 
-func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent) {
+// auditable reports whether an entry about ev may be written. An event that
+// names a conversation's call Talk (one made before such a location was
+// refused) is not audited: the entry would carry the call's id and the event's
+// title to the Owner and the Administrators outside the conversation. When
+// the lookup fails nothing is written either.
+func (h *Handler) auditable(r *http.Request, ev *CommunityEvent) bool {
 	if h.Audit == nil || ev == nil {
+		return false
+	}
+	if ev.ChannelID == nil {
+		return true
+	}
+	isCall, err := talks.IsDMTalk(r.Context(), h.DB, *ev.ChannelID)
+	if err != nil {
+		slog.WarnContext(r.Context(), "event audit skipped, Talk lookup failed", "event_id", ev.ID, "err", err)
+	}
+	return err == nil && !isCall
+}
+
+func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent) {
+	if !h.auditable(r, ev) {
 		return
 	}
 	h.Audit.RecordOrLog(r.Context(), eventEntry(action, ev))

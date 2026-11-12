@@ -231,7 +231,7 @@ func (h *Handler) deleteComment(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) auditComment(r *http.Request, ev *CommunityEvent, c EventComment) {
-	if h.Audit == nil {
+	if !h.auditable(r, ev) {
 		return
 	}
 	action := "event.comment_delete"

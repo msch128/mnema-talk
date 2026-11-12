@@ -164,7 +164,7 @@ func FileReport(ctx context.Context, p *db.Pool, nr NewReport) (uuid.UUID, error
 		return uuid.Nil, errReportOwn
 	}
 	var kind, name string
-	if err := p.QueryRow(ctx, `SELECT CASE WHEN type = 'dm' THEN 'dm' ELSE 'channel' END, CASE WHEN type = 'dm' THEN '' ELSE name END FROM channels WHERE id = $1`, ref.ChannelID).Scan(&kind, &name); err != nil {
+	if err := p.QueryRow(ctx, `SELECT CASE WHEN `+core.PrivateChannelSQL("c")+` THEN 'dm' ELSE 'channel' END, CASE WHEN `+core.PrivateChannelSQL("c")+` THEN '' ELSE c.name END FROM channels c WHERE c.id = $1`, ref.ChannelID).Scan(&kind, &name); err != nil {
 		return uuid.Nil, fmt.Errorf("load report channel: %w", err)
 	}
 	snap, err := reportContext(ctx, p, ref.ChannelID, nr.MessageID)

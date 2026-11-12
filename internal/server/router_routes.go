@@ -153,7 +153,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 }
 
 func (c *components) mountAdmin(adm chi.Router) {
-	adm.Use(auth.RequireAnyPerm(c.permSvc, perm.AdminArea), c.auditLog.Middleware)
+	adm.Use(auth.RequireAnyPerm(c.permSvc, perm.AdminArea), hideCallTalks(c.d.DB), c.auditLog.Middleware)
 	// Avatars are parsed in memory (at most 5 MB): their routes sit outside
 	// the JSON body limit, like the member avatar routes.
 	adm.Group(func(u chi.Router) {

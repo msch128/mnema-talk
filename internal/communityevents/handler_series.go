@@ -68,7 +68,7 @@ func (h *Handler) broadcastIDs(r *http.Request, ids []uuid.UUID) {
 }
 
 func (h *Handler) auditSeries(r *http.Request, action string, ev *CommunityEvent, n int) {
-	if h.Audit == nil {
+	if !h.auditable(r, ev) {
 		return
 	}
 	if ev.ChannelID != nil {
