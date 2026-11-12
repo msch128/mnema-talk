@@ -33,9 +33,13 @@ const (
 	tokenChars = 43
 	// TokensPerHour bounds the links issued for one account and purpose per
 	// hour, in the database, so it holds across restarts and for any number of
-	// clients.
+	// clients (IssueAccountToken counts and inserts under one lock).
 	TokensPerHour = 5
 )
+
+// ErrTooManyLinks is IssueAccountToken's answer when the hourly budget of the
+// account and purpose is spent.
+var ErrTooManyLinks = errors.New("hourly budget of account links spent")
 
 // ErrInvalidLink is the one answer for every unusable link (unknown, used,
 // expired, bound to an address that changed): nothing tells them apart.
@@ -60,28 +64,58 @@ func WellFormedToken(s string) bool {
 // IssueAccountToken stores a fresh token for the user and returns its plain text,
 // which only ever goes into the mail. Earlier unused tokens of the same
 // purpose stop working, so only the newest link is live. email is the address
-// a verification token is bound to.
-func IssueAccountToken(ctx context.Context, q db.Querier, userID uuid.UUID, purpose, email string, ttl time.Duration) (string, error) {
+// a verification token is bound to. Once TokensPerHour links of the purpose
+// were issued to the account in the last hour it stores nothing and returns
+// ErrTooManyLinks.
+//
+// The count, the retire and the insert run in one transaction that first
+// takes a transaction-scoped advisory lock keyed on the account and the
+// purpose. Concurrent requests for one account and purpose therefore run one
+// after the other, each seeing the rows the previous one committed, and
+// nothing else waits on the lock (no row of users is locked). It is held for
+// those three short statements and released at commit; the caller sends the
+// mail after that, so no connection is held while mail goes out.
+func IssueAccountToken(ctx context.Context, p *db.Pool, userID uuid.UUID, purpose, email string, ttl time.Duration) (string, error) {
 	raw := make([]byte, TokenBytes)
 	if _, err := rand.Read(raw); err != nil {
 		return "", fmt.Errorf("random token: %w", err)
 	}
 	plain := base64.RawURLEncoding.EncodeToString(raw)
 	// Superseded tokens stay as used rows: they still count toward the hourly
-	// budget. Only rows long past their expiry are deleted.
-	if _, err := q.Exec(ctx, `UPDATE account_tokens SET used_at = NOW()
-		WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, userID, purpose); err != nil {
-		return "", fmt.Errorf("retire tokens: %w", err)
-	}
-	if _, err := q.Exec(ctx, `DELETE FROM account_tokens WHERE expires_at < NOW() - INTERVAL '1 day'`); err != nil {
+	// budget. Only rows long past their expiry are deleted, outside the lock.
+	if _, err := p.Exec(ctx, `DELETE FROM account_tokens WHERE expires_at < NOW() - INTERVAL '1 day'`); err != nil {
 		return "", fmt.Errorf("prune tokens: %w", err)
 	}
-	_, err := q.Exec(ctx, `INSERT INTO account_tokens (user_id, purpose, token_hash, email, token_version, expires_at)
-		VALUES ($1, $2, $3, $4, (SELECT token_version FROM users WHERE id = $1), NOW() + $5 * INTERVAL '1 second')`, userID, purpose, HashToken(plain), email, int64(ttl.Seconds()))
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		return replaceToken(ctx, tx, userID, purpose, email, HashToken(plain), ttl)
+	})
 	if err != nil {
-		return "", fmt.Errorf("store token: %w", err)
+		return "", err
 	}
 	return plain, nil
+}
+
+// replaceToken is IssueAccountToken's transaction: lock, count, retire, insert.
+func replaceToken(ctx context.Context, tx pgx.Tx, userID uuid.UUID, purpose, email string, hash []byte, ttl time.Duration) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('account_token:' || $1::text || ':' || $2::text, 0))`, userID, purpose); err != nil {
+		return fmt.Errorf("lock tokens: %w", err)
+	}
+	n, err := recentTokens(ctx, tx, userID, purpose)
+	if err != nil {
+		return fmt.Errorf("count tokens: %w", err)
+	}
+	if n >= TokensPerHour {
+		return ErrTooManyLinks
+	}
+	if _, err := tx.Exec(ctx, `UPDATE account_tokens SET used_at = NOW()
+		WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, userID, purpose); err != nil {
+		return fmt.Errorf("retire tokens: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO account_tokens (user_id, purpose, token_hash, email, token_version, expires_at)
+		VALUES ($1, $2, $3, $4, (SELECT token_version FROM users WHERE id = $1), NOW() + $5 * INTERVAL '1 second')`, userID, purpose, hash, email, int64(ttl.Seconds())); err != nil {
+		return fmt.Errorf("store token: %w", err)
+	}
+	return nil
 }
 
 // recentTokens counts the tokens issued for the user and purpose in the last
