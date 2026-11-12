@@ -19,7 +19,9 @@ const HOSTS = [
   'a.b.c.d.e.f/', '0x/', '0xg/', 'a.0xg/', '1.0x/', 'a.b./', 'a..b..c', '..', 'a...', '0.0.0.0', '00/', '0x00000000001/',
   '1.2.0x3/', 'x.y:65535', '-/', '_/', '1.2.3.999/', '1.2.3.4.5/', 'a.0x/', 'a.08/', 'h.x:65536/', 'a|b/', 'a^b/', '09/',
   '4294967296/', 'a..1/', '1..2/', 'a.b:12a/', 'x:1:2/', '12345678901234567890/', '[[zq]]/', '[::1]x/', '[/', '[zz]/',
-  'e.example[/', '[::1]/', '[::1]:80/', '[1:2]/', 'xn--abc/', 'xn--caf-dma.example/', 'x.XN--y/', 'caf\u00e9.example/',
+  // No malformed punycode label here ("xn--abc"): engines differ on it (Node 24 refuses, Node 26 links), and the
+  // server leaves every punycode host to the browser anyway.
+  'e.example[/', '[::1]/', '[::1]:80/', '[1:2]/', 'xn--caf-dma.example/', 'caf\u00e9.example/',
   // User info: the client links none.
   'u:p@h.x/', '@h.x/', 'a@b@c/', 'a.b@c.d/', 'h.x@/', 'a:b@/', 'a@[::1]/', ':@h.x/', 'allowed.example@other.example/',
   'h.x/@path', 'h.x?@q', 'h.x#@f',

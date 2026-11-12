@@ -488,28 +488,12 @@
   "ok": false
  },
  {
-  "href": "http://xn--abc/",
-  "ok": false
- },
- {
-  "href": "https://xn--abc/",
-  "ok": false
- },
- {
   "href": "http://xn--caf-dma.example/",
   "ok": true
  },
  {
   "href": "https://xn--caf-dma.example/",
   "ok": true
- },
- {
-  "href": "http://x.XN--y/",
-  "ok": false
- },
- {
-  "href": "https://x.XN--y/",
-  "ok": false
  },
  {
   "href": "http://café.example/",
