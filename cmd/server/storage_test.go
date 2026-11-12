@@ -104,3 +104,95 @@ func TestLazyStoreDoesNotBlockOnAHangingFirstAttempt(t *testing.T) {
 		t.Fatal("startLazyStore waited for the first init attempt")
 	}
 }
+
+// probedStore is a store whose storage can be switched off after the start.
+type probedStore struct {
+	*media.MemoryStore
+	down   atomic.Bool
+	probes atomic.Int32
+}
+
+func (p *probedStore) Probe(context.Context) error {
+	p.probes.Add(1)
+	if p.down.Load() {
+		return errors.New("connection refused")
+	}
+	return nil
+}
+
+func TestLazyStoreReportsStorageThatDiesAfterTheStartAndItsReturn(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	store := &probedStore{MemoryStore: media.NewMemoryStore()}
+	l := startLazyStore(ctx, func(context.Context) (media.Store, error) { return store, nil }, time.Millisecond, time.Millisecond)
+	waitReady(t, l)
+
+	store.down.Store(true)
+	// The first answer is cached: many callers, one request to storage.
+	for range 5 {
+		if err := l.Ready(); err != nil {
+			t.Fatalf("a cached healthy answer was dropped early: %v", err)
+		}
+	}
+	if n := store.probes.Load(); n != 1 {
+		t.Fatalf("probes = %d, want 1", n)
+	}
+
+	expireProbe(l)
+	if err := l.Ready(); err != nil {
+		t.Fatalf("one failed probe was reported: %v", err)
+	}
+	// The second probe is asked sooner than probeTTL, so an outage shows within seconds.
+	expireProbeAfter(l, probeRetry)
+	if l.Ready() == nil {
+		t.Fatal("storage that died after a healthy start is still reported as ready")
+	}
+	if l.Ready() == nil || store.probes.Load() != 3 {
+		t.Fatalf("the outage was not cached: probes = %d", store.probes.Load())
+	}
+
+	store.down.Store(false)
+	expireProbe(l)
+	if err := l.Ready(); err != nil {
+		t.Fatalf("storage is back but still reported down: %v", err)
+	}
+}
+
+func TestLazyStoreDoesNotReportOneFailedProbeBetweenSuccesses(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	store := &probedStore{MemoryStore: media.NewMemoryStore()}
+	l := startLazyStore(ctx, func(context.Context) (media.Store, error) { return store, nil }, time.Millisecond, time.Millisecond)
+	waitReady(t, l)
+	for range 3 {
+		store.down.Store(true)
+		expireProbe(l)
+		if err := l.Ready(); err != nil {
+			t.Fatalf("a single blip was reported: %v", err)
+		}
+		store.down.Store(false)
+		expireProbeAfter(l, probeRetry)
+		if err := l.Ready(); err != nil {
+			t.Fatalf("storage is back but reported down: %v", err)
+		}
+	}
+	// The failed probe is asked again soon, not only after probeTTL.
+	store.down.Store(true)
+	expireProbe(l)
+	_ = l.Ready()
+	l.probeMu.Lock()
+	wait := l.wait
+	l.probeMu.Unlock()
+	if wait != probeRetry {
+		t.Fatalf("the second probe waits %v, want %v", wait, probeRetry)
+	}
+}
+
+// expireProbe makes the cached probe result old enough to be asked again.
+func expireProbe(l *lazyStore) { expireProbeAfter(l, probeTTL) }
+
+func expireProbeAfter(l *lazyStore, age time.Duration) {
+	l.probeMu.Lock()
+	defer l.probeMu.Unlock()
+	l.probedAt = time.Now().Add(-age)
+}

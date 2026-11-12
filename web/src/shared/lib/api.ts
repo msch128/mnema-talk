@@ -157,6 +157,8 @@ export interface ApiClient {
   readonly onUnauthorized: (handler: UnauthorizedHandler) => () => boolean
   /** Fires when a write is refused because the community rules are not accepted. */
   readonly onRulesRequired: (handler: () => void) => () => boolean
+  /** Fires when another request than the health check is answered 503 UNAVAILABLE: a dependency (object storage, say) is down. */
+  readonly onUnavailable: (handler: () => void) => () => boolean
 }
 
 function buildApiRequest(options: ApiOptions): ApiRequest {
@@ -189,11 +191,20 @@ function handleUnauthorizedNotification(
   }
 }
 
+type Handlers = Set<{ readonly handler: () => void }>
+
+/** Tells the subscribers of a refusal that is not about the session: the rules are not accepted, or a dependency is down (503). */
+function notifyRefusal(status: number, error: ApiError, rules: Handlers, unavailable: Handlers) {
+  const targets = error.code === 'RULES_NOT_ACCEPTED' ? rules : status === 503 && error.code === 'UNAVAILABLE' ? unavailable : null
+  for (const { handler } of [...(targets ?? [])]) handler()
+}
+
 /** Construct once per session owner. Transport is immutable and every
  * client owns its listeners; choosing a profile never replaces global fetch. */
 export function createApiClient(transport: ApiTransport): ApiClient {
   const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
   const rulesHandlers = new Set<{ readonly handler: () => void }>()
+  const unavailableHandlers = new Set<{ readonly handler: () => void }>()
   // Identical GETs that opt in (dedupe) and are in flight at the same time share
   // one request: a route change, a watcher and a click often ask for the same
   // page together. Reads that must see the state after an event do not opt in.
@@ -223,7 +234,7 @@ export function createApiClient(transport: ApiTransport): ApiClient {
     if (!answered) {
       const error = serverFailure(response.status, body, path, operation.method)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
-      if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
+      notifyRefusal(response.status, error, rulesHandlers, unavailableHandlers)
       throw error
     }
     options.onStatus?.(response.status)
@@ -240,6 +251,11 @@ export function createApiClient(transport: ApiTransport): ApiClient {
       const subscription = { handler }
       rulesHandlers.add(subscription)
       return () => rulesHandlers.delete(subscription)
+    },
+    onUnavailable: (handler: () => void) => {
+      const subscription = { handler }
+      unavailableHandlers.add(subscription)
+      return () => unavailableHandlers.delete(subscription)
     }
   })
 }
@@ -267,3 +283,4 @@ const browserClient = createApiClient(browserTransport)
 export const api: ApiCall = browserClient.api
 export const onUnauthorized = browserClient.onUnauthorized
 export const onRulesRequired = browserClient.onRulesRequired
+export const onUnavailable = browserClient.onUnavailable

@@ -100,6 +100,9 @@ type Hub struct {
 
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
+	// graceKeep is a seam for tests: when set, it replaces the check by which
+	// the grace timer keeps a seat that a connection of the user holds again.
+	graceKeep func(voiceKey) bool
 
 	// PingInterval and RevalidateInterval pace the keep-alive ping and the
 	// session re-check of every connection. Zero means the defaults

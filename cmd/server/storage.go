@@ -10,6 +10,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
@@ -21,6 +22,40 @@ type lazyStore struct {
 	mu    sync.RWMutex
 	store media.Store
 	err   error
+
+	// probeMu serialises the live check and guards its cached result.
+	probeMu  sync.Mutex
+	probedAt time.Time
+	wait     time.Duration // how long the last probe stays current
+	fails    int           // failed probes in a row
+	probeErr error         // what is reported: set after probeFailures failures in a row
+}
+
+// Reaching storage again after the start is checked at most once per
+// probeTTL, and one check may take probeTimeout: a health endpoint that
+// anyone can call must not become a stream of requests to object storage.
+//
+// One failed or slow probe is not reported: the container health check and
+// the scripts that wait on /api/health must not change outcome in a short
+// storage blip. The outage is reported after probeFailures failed probes in
+// a row, the second asked after probeRetry instead of probeTTL, so it shows
+// within about 10-15 s; a successful probe reports storage healthy at once.
+// One /api/health call runs at most one probe: its worst case is the 2 s
+// database ping plus probeTimeout, 4 s, under Docker's 5 s health-check timeout.
+const (
+	probeTTL      = 10 * time.Second
+	probeRetry    = 3 * time.Second
+	probeTimeout  = 2 * time.Second
+	probeFailures = 2
+)
+
+// The live check is on only while the production client can answer it.
+var _ prober = (*s3.Client)(nil)
+
+// prober is a store that can say whether its storage is reachable right now
+// (*s3.Client does, with one HEAD request on the bucket).
+type prober interface {
+	Probe(ctx context.Context) error
 }
 
 var errStorageStarting = errors.New("object storage not initialised yet")
@@ -75,11 +110,37 @@ func (l *lazyStore) try(ctx context.Context, init func(context.Context) (media.S
 	return true
 }
 
-// Ready returns nil once the store is usable, otherwise the last init error.
+// Ready returns nil while the store is usable, otherwise why not: the last
+// init error before the store was first reached, and afterwards the result of
+// a live check (cached for probeTTL), so storage that dies while the server
+// runs is reported and so is its return.
 func (l *lazyStore) Ready() error {
 	l.mu.RLock()
-	defer l.mu.RUnlock()
-	return l.err
+	store, err := l.store, l.err
+	l.mu.RUnlock()
+	if store == nil {
+		return err
+	}
+	p, ok := store.(prober)
+	if !ok {
+		return nil
+	}
+	l.probeMu.Lock()
+	defer l.probeMu.Unlock()
+	if l.probedAt.IsZero() || time.Since(l.probedAt) >= l.wait {
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+		defer cancel()
+		l.wait = probeTTL
+		if err := p.Probe(ctx); err == nil {
+			l.fails, l.probeErr = 0, nil
+		} else if l.fails++; l.fails >= probeFailures {
+			l.probeErr = err
+		} else {
+			l.wait = probeRetry
+		}
+		l.probedAt = time.Now()
+	}
+	return l.probeErr
 }
 
 func (l *lazyStore) get() (media.Store, error) {

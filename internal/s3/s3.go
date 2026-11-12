@@ -70,6 +70,14 @@ func CheckBucket(ctx context.Context, cfg *config.Config) error {
 	return err
 }
 
+// Probe reports whether the bucket can be reached right now, with a single
+// HEAD request. The server's health check calls it to notice storage that
+// goes down (or comes back) after the start.
+func (c *Client) Probe(ctx context.Context) error {
+	_, err := c.client.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(c.bucket)})
+	return err
+}
+
 // bucketAPI is the part of the S3 client ensureBucket needs (tests fake it).
 type bucketAPI interface {
 	HeadBucket(ctx context.Context, in *s3svc.HeadBucketInput, opts ...func(*s3svc.Options)) (*s3svc.HeadBucketOutput, error)

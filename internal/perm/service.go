@@ -358,6 +358,12 @@ func (s *Service) scheduleWaitEnd(snap *Snapshot, now time.Time) {
 		return
 	}
 	delay := max(end.Sub(now)+100*time.Millisecond, minWaitGap)
+	// Crash stays: the callback fans out to every notifier (hub, bot gateway,
+	// events) for a batch of members after announcedUntil moved its mark. The
+	// hub fails closed on its own panic (it disconnects the members, see
+	// enforceFailClosed), but a panic in another notifier leaves some members
+	// never told and nothing records which, so a restart that reads every
+	// right again is the safe answer.
 	s.waitTimer = safego.AfterFunc("perm_wait_end", delay, safego.Crash, func() {
 		fired := s.now()
 		if ids := snap.waitsEndedSince(s.announcedUntil(fired, fired), fired); len(ids) > 0 {
