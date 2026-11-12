@@ -370,8 +370,8 @@ back), so it needs no public relay ports and cannot reach anything else.
    while the noise filter is Off, the setting for studio microphones and music;
    it applies from the next Talk. With sealed media the encoder's empty frames
    (one or two bytes, header only) pass the media worker, which drops them on
-   a line that uses DTX: sealed they would be 107 bytes of overhead plus the one or two bytes of payload, each and go out 50
-   times a second. Sequence numbers stay consecutive and only the RTP
+   a line that uses DTX: sealed, each would be 107 bytes of overhead plus its one or two
+   payload bytes, and they would go out 50 times a second. Sequence numbers stay consecutive and only the RTP
    timestamp jumps, which the SFU forwards untouched; listeners' browsers
    fill the gap with comfort noise. Nothing on the server depends on a steady
    packet rate: speaking comes from the client's own `voice_speaking`, the
