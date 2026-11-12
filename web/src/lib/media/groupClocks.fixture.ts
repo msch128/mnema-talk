@@ -12,6 +12,8 @@ export const CLOCK_VARIANTS: Readonly<Record<string, ClockPlan>> = {
   offset: { offsetMs: 3_600_000, driftPpm: 0, stepMs: 0, monoStops: 0 },
   drift: { offsetMs: 0, driftPpm: 5000, stepMs: 0, monoStops: 0 },
   steps: { offsetMs: 0, driftPpm: 0, stepMs: 600_000, monoStops: 0.5 },
+  'steps-forward': { offsetMs: 0, driftPpm: 0, stepMs: 600_000, monoStops: 0, direction: 'forward' },
+  'steps-back': { offsetMs: 0, driftPpm: 0, stepMs: 600_000, monoStops: 0, direction: 'back' },
   all: { offsetMs: 3_600_000, driftPpm: 5000, stepMs: 600_000, monoStops: 0.5 },
   // Far beyond real hardware: clocks 3 % apart eat the slack of the removal rule (a tenth of the absence limit in the
   // simulator's timing). Here to show that the oracle can see a clock fault at all.

@@ -6,7 +6,7 @@ import { appendFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
-import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
+import { KNOWN_CLOCKS } from './groupSweep.known.fixture'
 import { CLOCK_VARIANTS } from './groupClocks.fixture'
 import { occurrences, report, runSeed, type SimResult } from './groupSimRun.fixture'
 
@@ -25,26 +25,33 @@ const variants = Object.entries(CLOCK_VARIANTS).filter(([name]) => !process.env.
 describe.skipIf(!process.env.SIM_CLOCKS)('seeds with a clock per member', () => {
   it.each(variants.flatMap(([name, clocks]) => (['honest', 'hostile'] as const).map(relay => [name, relay, clocks] as const)))('%s, %s relay', async (name, relay, clocks) => {
     const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
-    const known = relay === 'honest' ? KNOWN_HONEST : KNOWN_HOSTILE
+    const listed = KNOWN_CLOCKS[`${name}/${relay}`] ?? []
+    const failing: number[] = []
+    const ran: number[] = []
     const failures: string[] = []
     let skewed = 0
     let stepped = 0
-    let ran = 0
+    let runs = 0
     for (const seed of seeds(process.env.SIM_CLOCKS_SEEDS ?? '1..400')) {
       if (seed % count !== index) continue
+      ran.push(seed)
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
       const result = await runSeed(seed, { relay, clocks }).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
-      ran++
+      runs++
       skewed += occurrences(result, /^\s*[\d.]+ clock of m\d+: offset -?[1-9]\d* ms|drift -?[1-9]\d* ppm/) > 0 ? 1 : 0
       stepped += occurrences(result, / step m\d+#\d+ wall clock by /) > 0 ? 1 : 0
       const a = availabilityOf(result)
-      const row = { variant: name, relay, seed, failed: result.violations.length > 0, known: known.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 200), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
+      const row = { variant: name, relay, seed, failed: result.violations.length > 0, known: listed.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 200), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
       if (process.env.SIM_CLOCKS_OUT) appendFileSync(process.env.SIM_CLOCKS_OUT, `${JSON.stringify(row)}\n`)
-      else if (row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
+      if (row.failed) failing.push(seed)
+      if (!process.env.SIM_CLOCKS_OUT && row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
     }
     // The perturbation the variant names must have happened in the runs.
-    if (clocks.offsetMs || clocks.driftPpm) expect(skewed, `${name}: runs with a skewed clock`).toBe(ran)
-    if (clocks.stepMs) expect(stepped, `${name}: runs with a wall clock step`).toBeGreaterThan(ran / 4)
+    if (clocks.offsetMs || clocks.driftPpm) expect(skewed, `${name}: runs with a skewed clock`).toBe(runs)
+    if (clocks.stepMs) expect(stepped, `${name}: runs with a wall clock step`).toBeGreaterThan(runs / 4)
+    // The failure budget may only shrink: a listed seed that passes now must leave the list (groupSweep.known.fixture.ts).
+    const healed = process.env.SIM_CLOCKS_OUT ? [] : listed.filter(seed => ran.includes(seed) && !failing.includes(seed))
+    expect(healed, 'seeds in the failure budget that pass now: delete them from the list').toEqual([])
     expect(failures, 'seeds outside the failure budget that fail').toEqual([])
   }, 7_200_000)
 })

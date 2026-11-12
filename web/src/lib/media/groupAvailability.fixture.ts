@@ -95,19 +95,21 @@ export function availabilityOf(result: SimResult): Availability {
 }
 
 /**
- * The most member time without keys after holding them that the nightly sweep
- * (groupSim.sweep.test.ts) accepts, as a share of member time, per relay. Set
- * from the measurement at v3.0.8 plus room for the 8 shards: a shard of 50
- * seeds pools between 6 and 19 % (honest) and 14 to 26 % (hostile). Lower it
- * when a fix lands; a number that only ever goes down is the point.
- * - seed: any seed outside the failure budget (the worst measured: 26 and 37 %)
- * - knownSeed: any seed inside it (the worst measured: 62 and 61 %)
- * - shardPooled: the pooled share of the seeds one shard ran
+ * What the nightly sweep (groupSim.sweep.test.ts) accepts of the time members spend without keys, per relay.
+ * - seed / knownSeed: the most one seed may lose of its member time after it held keys, outside and inside the
+ *   failure budget (measured at v3.0.8: worst 26 % and 37 % outside, 62 % and 61 % inside).
+ * - joinMs: the longest a tab may wait for its first keys (worst measured 134 s; the room must agree within 240 s).
+ * - shardLost: the share of member time lost after holding keys, pooled over the seeds of each of the 8 shards of
+ *   the nightly sweep, as measured at origin/main. The run is deterministic, so a shard must land within
+ *   SHARD_WINDOW of its number: above it is a regression, below it means the protocol got better and this table
+ *   must be lowered to the new measurement (the removal fix takes the honest pool from 12.7 % to about 6 %).
  */
 export const LOST_BUDGET = {
-  honest: { seed: 0.3, knownSeed: 0.65, shardPooled: 0.22 },
-  hostile: { seed: 0.4, knownSeed: 0.65, shardPooled: 0.29 },
+  honest: { seed: 0.3, knownSeed: 0.65, joinMs: 150_000, shardLost: [0.1317, 0.0754, 0.1014, 0.06, 0.1292, 0.1385, 0.1677, 0.1914] },
+  hostile: { seed: 0.4, knownSeed: 0.65, joinMs: 150_000, shardLost: [0.1571, 0.1621, 0.1597, 0.195, 0.1966, 0.1511, 0.2551, 0.1414] },
 } as const
+export const SHARD_WINDOW = 0.02
+export const SHARDS = 8
 
 /**
  * The longest one epoch's keys may be held in a sweep run: rotated late by the jitter, with a committer that
@@ -122,7 +124,7 @@ export class AvailabilityBudget {
   private lostMs = 0
   private readonly over: string[] = []
 
-  constructor(private readonly relay: 'honest' | 'hostile') {}
+  constructor(private readonly relay: 'honest' | 'hostile', private readonly shard: readonly [index: number, count: number] = [0, 1]) {}
 
   add(seed: number, known: boolean, a: Availability) {
     this.memberMs += a.memberMs
@@ -130,13 +132,18 @@ export class AvailabilityBudget {
     const limit = LOST_BUDGET[this.relay][known ? 'knownSeed' : 'seed']
     const lost = share(a.lostMs, a.memberMs)
     if (a.longestEpochMs > EPOCH_LIFE_MS) this.over.push(`seed ${seed}: one epoch's keys were held for ${Math.round(a.longestEpochMs / 1000)} s (limit ${EPOCH_LIFE_MS / 1000} s)`)
+    if (a.longestJoinMs > LOST_BUDGET[this.relay].joinMs) this.over.push(`seed ${seed}: a tab waited ${Math.round(a.longestJoinMs / 1000)} s for its first keys (limit ${LOST_BUDGET[this.relay].joinMs / 1000} s)`)
     if (lost > limit) this.over.push(`seed ${seed}: ${(100 * lost).toFixed(1)}% of member time lost its keys (limit ${100 * limit}% for a seed ${known ? 'inside' : 'outside'} the failure budget)`)
   }
 
-  /** What is over budget, one line each; empty when the run is within it. */
+  /** What is over budget, one line each; empty when the run is within it. Pooled per shard, when the run is one of the 8 shards. */
   breaches(): string[] {
+    const [index, count] = this.shard
+    if (count !== SHARDS) return this.over
     const pooled = share(this.lostMs, this.memberMs)
-    const limit = LOST_BUDGET[this.relay].shardPooled
-    return pooled > limit ? [...this.over, `pooled ${(100 * pooled).toFixed(1)}% of member time lost its keys (limit ${100 * limit}%)`] : this.over
+    const expected = LOST_BUDGET[this.relay].shardLost[index] as number
+    if (pooled > expected + SHARD_WINDOW) return [...this.over, `shard ${index}: pooled ${(100 * pooled).toFixed(1)}% of member time lost its keys (budget ${(100 * expected).toFixed(1)}% plus ${100 * SHARD_WINDOW} points)`]
+    if (pooled < expected - SHARD_WINDOW) return [...this.over, `shard ${index}: pooled ${(100 * pooled).toFixed(1)}% is below the budget of ${(100 * expected).toFixed(1)}%: the protocol got better, so set LOST_BUDGET.${this.relay}.shardLost[${index}] to ${pooled.toFixed(4)}`]
+    return this.over
   }
 }

@@ -36,6 +36,8 @@ export interface ClockPlan {
   stepMs: number
   /** The share of machines whose monotonic clock stops in sleep. */
   monoStops: number
+  /** Which way the wall clock may be stepped; both when left out. */
+  direction?: 'forward' | 'back'
 }
 
 export interface SimPlan {
@@ -99,7 +101,11 @@ function actions(sim: GroupSim, ids: readonly string[], plan: SimPlan): Action[]
   list.push(['reconnect', 1, () => sim.reconnect(sim.pick(awake), sim.between(200, 6000))])
   if (plan.lies) list.push(['lie', 2, () => sim.lie(sim.pick(awake), sim.pick(['hide', 'ghost', 'lead'] as const))])
   if (clocks?.stepMs) {
-    const step = () => Math.round((sim.clockDraw() * 2 - 1) * (clocks as ClockPlan).stepMs)
+    const step = () => {
+      const size = Math.round(sim.clockDraw() * (clocks as ClockPlan).stepMs)
+      const sign = clocks.direction === 'forward' ? 1 : clocks.direction === 'back' ? -1 : (sim.clockDraw() < 0.5 ? -1 : 1)
+      return sign * size
+    }
     list.push(['step', 1, () => sim.stepWall(sim.pick(awake), step())])
   }
   return list

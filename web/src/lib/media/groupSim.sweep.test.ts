@@ -30,7 +30,7 @@ describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget
   it.each([['hostile', KNOWN_HOSTILE], ['honest', KNOWN_HONEST]] as const)('%s relay', async (relay, known) => {
     const failing: number[] = []
     const reports: string[] = []
-    const budget = new AvailabilityBudget(relay)
+    const budget = new AvailabilityBudget(relay, [index, count])
     for (let seed = 1; seed <= SEEDS; seed++) {
       if (!mine(seed)) continue
       // A run that throws counts as a failing seed and the sweep goes on.

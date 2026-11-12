@@ -3,7 +3,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
-import { report, runSeed } from './groupSimRun.fixture'
+import { occurrences, report, runSeed } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -24,8 +24,21 @@ describe('a server that says old handshakes again', () => {
 })
 
 describe('a server that lies about the roster while it interferes', () => {
-  it.each([4, 9, 12])('leaves a room that agrees once the lies stop and one true roster follows, honest relay, seed %i', async (seed) => {
-    const result = await runSeed(seed, liarPlan({ relay: 'honest' }))
-    expect(result.violations, report(result)).toEqual([])
+  it('tells somebody a roster that is not the room, and leaves a room that agrees once the lies stop and one true roster follows, honest relay', async () => {
+    let lies = 0
+    for (const seed of [4, 9, 12]) {
+      const result = await runSeed(seed, liarPlan({ relay: 'honest' }))
+      lies += occurrences(result, /lie to /)
+      expect(result.violations, report(result)).toEqual([])
+    }
+    expect(lies, 'lies told in these runs').toBeGreaterThan(0)
+  }, 60_000)
+})
+
+describe('a server that replays', () => {
+  it('really replays: the handshakes it kept are played again to every member', async () => {
+    const result = await runSeed(4, replayPlan({ relay: 'honest' }, HARMLESS))
+    expect(occurrences(result, /replay \d+ old handshakes/)).toBe(1)
+    expect(occurrences(result, /replay \d+->m\d+#\d+ (heartbeat|capability|welcome)/)).toBeGreaterThan(50)
   }, 60_000)
 })

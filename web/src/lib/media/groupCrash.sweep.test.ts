@@ -3,7 +3,7 @@
 //   smoke (normal run): one script of a room of 2, every boundary of each member up to 60
 //   Boundaries of one protocol step give the same run from outside (nothing it was about to send or adopt gets out), so the
 //   count of different traces is the count of steps interrupted; it is recorded next to the count of boundaries and checked to be large.
-//   deep:  SIM_CRASH=1 [SIM_CRASH_MEMBERS=2|3|4] [SIM_CRASH_MAX=400] [SIM_SHARD=<i>/<n>] [SIM_CRASH_OUT=<file>] npx vitest run src/lib/media/groupCrash.sweep.test.ts
+//   deep:  SIM_CRASH=1 [SIM_CRASH_MEMBERS=2|3|4] [SIM_CRASH_MAX=400] [SIM_CRASH_STRIDE=1] [SIM_SHARD=<i>/<n>] [SIM_CRASH_OUT=<file>] npx vitest run src/lib/media/groupCrash.sweep.test.ts
 import { appendFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -78,7 +78,7 @@ describe.skipIf(!process.env.SIM_CRASH)('every boundary of every step, in every 
     const failures: string[] = []
     for (const [number, named] of scripts(members).entries()) {
       if (number % count !== index) continue
-      const done = await crashAll(named, most)
+      const done = await crashAll(named, most, Number(process.env.SIM_CRASH_STRIDE ?? 1))
       runs += done.runs
       distinct += done.distinct
       failures.push(...done.failures)

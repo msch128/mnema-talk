@@ -6,7 +6,7 @@ import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
-import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
+import { KNOWN_POWERS } from './groupSweep.known.fixture'
 import { occurrences, report, runSeed, type SimPlan, type SimResult } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
@@ -34,7 +34,9 @@ const chosen = Object.entries(POWERS).filter(([name]) => !process.env.SIM_POWER 
 describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more than interfere', () => {
   it.each(chosen.flatMap(([name, plan]) => (['honest', 'hostile'] as const).map(relay => [name, relay, plan] as const)))('%s, %s relay', async (name, relay, plan) => {
     const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
-    const known = relay === 'honest' ? KNOWN_HONEST : KNOWN_HOSTILE
+    const listed = KNOWN_POWERS[`${name}/${relay}`] ?? []
+    const failing: number[] = []
+    const ran: number[] = []
     const failures: string[] = []
     // What the power claims to do must show in the traces: lies told, handshakes replayed.
     const claimed = name === 'liar' ? /lie to / : /replay \d+ old handshakes/
@@ -42,17 +44,22 @@ describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more tha
     let agreed = 0
     for (const seed of seeds(process.env.SIM_POWERS_SEEDS ?? '1..400')) {
       if (seed % count !== index) continue
+      ran.push(seed)
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
       const result = await runSeed(seed, plan({ relay })).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
       happened += occurrences(result, claimed) > 0 ? 1 : 0
       agreed += result.agreedAfterMs !== null ? 1 : 0
       const a = availabilityOf(result)
-      const row = { power: name, relay, seed, failed: result.violations.length > 0, known: known.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 240), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
+      const row = { power: name, relay, seed, failed: result.violations.length > 0, known: listed.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 240), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
       if (process.env.SIM_POWERS_OUT) appendFileSync(process.env.SIM_POWERS_OUT, `${JSON.stringify(row)}\n`)
-      else if (row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
+      if (row.failed) failing.push(seed)
+      if (!process.env.SIM_POWERS_OUT && row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
     }
     // A sweep in which the power never happened tested nothing (a power needs a room that agreed first, for a replay).
     expect(happened, `${name}: runs in which the power happened`).toBeGreaterThan(Math.floor(agreed / 4))
+    // The failure budget may only shrink: a listed seed that passes now must leave the list (groupSweep.known.fixture.ts).
+    const healed = process.env.SIM_POWERS_OUT ? [] : listed.filter(seed => ran.includes(seed) && !failing.includes(seed))
+    expect(healed, 'seeds in the failure budget that pass now: delete them from the list').toEqual([])
     expect(failures, 'seeds outside the failure budget that fail').toEqual([])
   }, 7_200_000)
 })

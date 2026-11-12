@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availability, AvailabilityBudget, EPOCH_LIFE_MS, share } from './groupAvailability.fixture'
+import { availability, AvailabilityBudget, EPOCH_LIFE_MS, share, SHARDS } from './groupAvailability.fixture'
 
 const at = (seconds: number, text: string) => `${seconds.toFixed(3).padStart(8)} ${text}`
 
@@ -32,7 +32,7 @@ describe('availability read from a simulator trace', () => {
   })
 
   it('flags a seed over its limit and a pool over the shard limit, and a known seed gets the wider limit', () => {
-    const run = (lostMs: number, memberMs = 1000) => ({ memberMs, noKeysMs: lostMs, lostMs, startOvers: 1, longestLostMs: lostMs, longestEpochMs: 0 })
+    const run = (lostMs: number, memberMs = 1000) => ({ memberMs, noKeysMs: lostMs, lostMs, startOvers: 1, longestLostMs: lostMs, longestEpochMs: 0, longestJoinMs: 0 })
     const budget = new AvailabilityBudget('honest')
     budget.add(1, false, run(100))
     budget.add(2, true, run(600, 10_000))
@@ -43,14 +43,22 @@ describe('availability read from a simulator trace', () => {
       'seed 3: N% of member time lost its keys (limit 30% for a seed outside the failure budget)',
       'seed 4: N% of member time lost its keys (limit 65% for a seed inside the failure budget)',
     ])
-    const pooled = new AvailabilityBudget('honest')
+    const pooled = new AvailabilityBudget('honest', [3, SHARDS])
     for (const seed of [1, 2, 3]) pooled.add(seed, false, run(250))
-    expect(pooled.breaches().map(line => line.replace(/\d+\.\d%/g, 'N%'))).toEqual(['pooled N% of member time lost its keys (limit 22%)'])
+    expect(pooled.breaches().map(line => line.replace(/\d+\.\d%/g, 'N%'))).toEqual(['shard 3: pooled N% of member time lost its keys (budget N% plus 2 points)'])
+    // A shard that does better than its number must have the number lowered.
+    const better = new AvailabilityBudget('honest', [3, SHARDS])
+    better.add(1, false, run(10))
+    expect(better.breaches()[0]).toContain('set LOST_BUDGET.honest.shardLost[3] to 0.0100')
+    // A tab that waits too long for its first keys.
+    const slow = new AvailabilityBudget('hostile')
+    slow.add(9, false, { ...run(0), longestJoinMs: 200_000 })
+    expect(slow.breaches()).toEqual(['seed 9: a tab waited 200 s for its first keys (limit 150 s)'])
   })
 
   it('flags a key held for longer than a key may live', () => {
     const budget = new AvailabilityBudget('hostile')
-    budget.add(5, false, { memberMs: 1000, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: EPOCH_LIFE_MS + 1000 })
+    budget.add(5, false, { memberMs: 1000, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: EPOCH_LIFE_MS + 1000, longestJoinMs: 0 })
     expect(budget.breaches()).toEqual([`seed 5: one epoch's keys were held for ${(EPOCH_LIFE_MS + 1000) / 1000} s (limit ${EPOCH_LIFE_MS / 1000} s)`])
   })
 
