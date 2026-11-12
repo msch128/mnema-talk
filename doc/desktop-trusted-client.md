@@ -84,7 +84,8 @@ Dotfiles, and files below a dotted directory such as `.well-known/`, are rejecte
 * `security_floor` is the oldest bundle version that is still acceptable.
   It lives in `web/desktop-compat.json` and only ever rises. The release
   workflow raises it to the release's own version when the release contains a
-  security fix (see "Security floor" below); it can also be raised by hand in
+  security fix, and every later release repeats that raise (see "Security
+  floor" below); the baseline can also be raised by hand in
   that file. A bundle's floor never exceeds its own version.
 * `key_id` is the first 8 bytes of SHA-256 over the raw public key. It only
   selects a pinned key; the signature check decides.
@@ -131,11 +132,17 @@ steps were run locally against the same Dockerfile image.
 
 `web/desktop-compat.json` carries the baseline floor. Because only the three
 release-please files may change in a release PR, the floor is raised **at
-signing time**: the `web-bundle` job runs `scripts/security-floor.sh` over the
-commits since the previous tag and, if any of them carries a
-`Security-Floor: raise` trailer (the last paragraph of the commit message, so
-for a squash merge the end of the pull request description), passes
-`-security-floor <release version>` to `webbundle build`. The flag only
+signing time**: the `web-bundle` job runs `scripts/security-floor.sh` on the
+release tag. A release raises the floor to its own version when one of its
+commits carries a `Security-Floor: raise` trailer (the last paragraph of the
+commit message, so for a squash merge the end of the pull request
+description), and every later release repeats the highest floor raised so far,
+so a client that missed the raising release still learns the floor from the
+next one. The script computes this from the git history and the release tags
+alone (a raising commit belongs to the first release tag that contains it), so
+a rebuild from the tag declares the same floor; it refuses a shallow clone,
+and the pipeline has no way to lower the floor. The job passes
+`-security-floor <that version>` to `webbundle build`. The flag only
 raises, never lowers, the value from the compat file. The commit subject plays
 no part: a `fix(security)` title alone neither raises the floor nor can a
 lookalike scope such as `docs(security-notes)` raise it by accident. A subject
@@ -143,8 +150,8 @@ with the `security` scope but no trailer only prints a warning in the job log.
 So a vulnerability fix in anything the bundle ships (the web app: markdown,
 media, auth, message rendering, crypto) must carry the trailer; the maintainer
 checklist in `AGENTS.md` repeats this. A fix without the trailer leaves the
-floor where it was, and old clients keep accepting older bundles until the next
-release that raises it.
+floor where the last raise put it, and old clients keep accepting older bundles
+down to that floor until the next release that raises it.
 
 The job builds the bundle tool in its own step without the key and passes
 the key only to the single `webbundle build` step.

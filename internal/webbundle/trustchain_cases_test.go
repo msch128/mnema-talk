@@ -41,7 +41,7 @@ func wantServed(t *testing.T, c *modelClient, label string, want map[string]stri
 }
 
 // TestFloorRaisedWhileHolding308: 3.0.9 raised the floor to itself; 3.0.10
-// (no trailer) declares the baseline floor again.
+// (no trailer) repeats it (scripts/security-floor.sh, hunt finding H-L11-02).
 func TestFloorRaisedWhileHolding308(t *testing.T) {
 	floor := func(v string) Version { return mustVersion(v) }
 	t.Run("seen 3.0.9", func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestFloorRaisedWhileHolding308(t *testing.T) {
 		if err := c.install(w.bundle(floor("3.0.9"), 1, floor("3.0.9"), 0)); err != nil {
 			t.Fatal(err)
 		}
-		if err := c.install(w.bundle(floor("3.0.10"), 1, floor(baselineFloor), 0)); err != nil {
+		if err := c.install(w.bundle(floor("3.0.10"), 1, floor("3.0.9"), 0)); err != nil {
 			t.Fatal(err)
 		}
 		c.restart()
@@ -60,18 +60,15 @@ func TestFloorRaisedWhileHolding308(t *testing.T) {
 	})
 	t.Run("offline for 3.0.9", func(t *testing.T) {
 		w, c := caseClient(t, "3.0.8")
-		if err := c.install(w.bundle(floor("3.0.10"), 1, floor(baselineFloor), 0)); err != nil {
+		// 3.0.10 repeats the 3.0.9 floor, so this client learns it without
+		// having seen 3.0.9, and 3.0.8 is shelved on every contract.
+		if err := c.install(w.bundle(floor("3.0.10"), 1, floor("3.0.9"), 0)); err != nil {
 			t.Fatal(err)
 		}
-		// The late 3.0.9 is older than what is held: refused before its
-		// floor is read, so this client never learns the 3.0.9 floor.
-		if err := c.install(w.bundle(floor("3.0.9"), 1, floor("3.0.9"), 0)); err == nil {
-			t.Fatal("a late 3.0.9 was installed over 3.0.10")
+		c.restart()
+		if fmtVersion(c.floor) != "3.0.9" || len(c.shelved) != 1 || c.shelved[0].m.Version != "3.0.8" {
+			t.Fatalf("floor %s, shelved %d: 3.0.10 must carry the 3.0.9 floor and shelve 3.0.8", fmtVersion(c.floor), len(c.shelved))
 		}
-		if fmtVersion(c.floor) != baselineFloor {
-			t.Fatalf("floor %s: expected the baseline (hunt finding H-L11-02)", fmtVersion(c.floor))
-		}
-		// Only the high-water mark keeps 3.0.8 from running on contract 1.
 		wantServed(t, c, "after 3.0.10 only", map[string]string{"3.0.8": "3.0.10", "dev": "3.0.10"})
 	})
 	t.Run("frozen before 3.0.9", func(t *testing.T) {
