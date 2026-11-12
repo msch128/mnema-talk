@@ -92,58 +92,54 @@ func CheckWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) err
 	return nil
 }
 
-// CheckLayout checks, on a state read under the permission lock, that the
-// caller sees everything a layout change names and may make its moves.
+// SeenLayout prepares a layout change on a state read under the permission
+// lock: every category and channel it names that the caller cannot see is
+// replaced by a fresh random id, and the moves are checked for the caller.
 //
-// A category the caller cannot see answers what applying the layout answers
-// for one that does not exist, and at the same point of the checks (after the
-// sort orders of its list, before the next list's): the answer does not tell
-// the two apart, whatever else is wrong with the request.
-func CheckLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error {
-	for _, c := range req.Categories {
-		if err := CheckSortOrder(c.SortOrder); err != nil {
-			return err
+// A hidden object thus takes exactly the path of one that does not exist: the
+// same checks, in the same order, with the same database work, and the answer
+// (the request's ids are never echoed) cannot tell the two apart, whatever
+// else is wrong with the request. Apply the returned request, not the given one.
+func SeenLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) (LayoutRequest, error) {
+	standIns := map[uuid.UUID]uuid.UUID{} // one per hidden id, so a repeated id stays repeated
+	standIn := func(id uuid.UUID) uuid.UUID {
+		if f, ok := standIns[id]; ok {
+			return f
+		}
+		f := uuid.New()
+		standIns[id] = f
+		return f
+	}
+	seenCategory := func(id uuid.UUID) uuid.UUID {
+		if snap.KnowsCategory(id) && !snap.CategoryVisible(sub, id) {
+			return standIn(id)
+		}
+		return id
+	}
+	out := LayoutRequest{
+		Categories: make([]CategoryOrder, len(req.Categories)),
+		Channels:   make([]ChannelPlacement, len(req.Channels)),
+	}
+	for i, c := range req.Categories {
+		c.ID = seenCategory(c.ID)
+		out.Categories[i] = c
+	}
+	for i, c := range req.Channels {
+		if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+			c.ID = standIn(c.ID)
+		}
+		if c.CategoryID != nil {
+			to := seenCategory(*c.CategoryID)
+			c.CategoryID = &to
+		}
+		out.Channels[i] = c
+	}
+	for _, c := range out.Channels {
+		if err := checkChannelMove(snap, sub, c); err != nil {
+			return LayoutRequest{}, err
 		}
 	}
-	for _, c := range req.Categories {
-		if snap.KnowsCategory(c.ID) && !snap.CategoryVisible(sub, c.ID) {
-			return core.ErrCategoryNotFound
-		}
-	}
-	hiddenTarget := false
-	for _, c := range req.Channels {
-		hidden, err := checkChannelMove(snap, sub, c)
-		if err != nil {
-			return err
-		}
-		hiddenTarget = hiddenTarget || hidden
-	}
-	if !hiddenTarget {
-		return nil
-	}
-	for _, c := range req.Channels { // as applying the layout would, before it finds the category missing
-		if err := CheckSortOrder(c.SortOrder); err != nil {
-			return err
-		}
-	}
-	return errLayoutMissing
-}
-
-// errLayoutMissing is what applying a layout answers for a channel or a target
-// category that does not exist.
-var errLayoutMissing = httpx.ErrNotFound("channel or category not found")
-
-// targetCategory returns the category a placement moves to, and whether the
-// caller cannot see it. A hidden one counts as no category at all for the
-// checks that follow, as a missing one does.
-func targetCategory(snap *perm.Snapshot, sub perm.Subject, target *uuid.UUID) (to uuid.UUID, hidden bool) {
-	if target == nil {
-		return uuid.Nil, false
-	}
-	if snap.KnowsCategory(*target) && !snap.CategoryVisible(sub, *target) {
-		return uuid.Nil, true
-	}
-	return *target, false
+	return out, nil
 }
 
 func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
@@ -154,13 +150,16 @@ func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
 }
 
 // checkChannelMove checks one placement of a layout change: the caller sees
-// the channel and may move it between categories; hiddenTarget reports a target
-// category the caller cannot see.
-func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) (hiddenTarget bool, err error) {
+// the channel (one they cannot see was replaced by an unknown id, which they do
+// not see either) and may move it between categories.
+func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
 	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
-		return false, perm.ErrChannelHidden
+		return perm.ErrChannelHidden
 	}
-	to, hiddenTarget := targetCategory(snap, sub, c.CategoryID)
+	to := uuid.Nil
+	if c.CategoryID != nil {
+		to = *c.CategoryID
+	}
 	// Moving a channel takes on the permissions of its new category and
 	// drops those of the old one, which could undo a restriction the
 	// caller may not lift: with overwrites on either side, only an
@@ -170,9 +169,9 @@ func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement)
 		from = uuid.Nil
 	}
 	if categoryOverwritesAffected(snap, from, to) && !snap.Global(sub).Has(perm.Administrator) {
-		return false, httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
+		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 	}
-	return hiddenTarget, nil
+	return nil
 }
 
 // ChannelsChanged tells everyone that a name, topic or limit changed: the list

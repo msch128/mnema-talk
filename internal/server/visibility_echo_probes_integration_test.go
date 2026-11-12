@@ -63,6 +63,15 @@ func TestWritesThatNameAHiddenObjectAnswerLikeAMissingOne(t *testing.T) {
 		{"layout: a hidden category after a bad channel order", "PUT", "/api/admin/layout", map[string]any{
 			"categories": []any{map[string]any{"id": w.staffCat.String(), "sort_order": 1}},
 			"channels":   []any{map[string]any{"id": w.open.String(), "category_id": nil, "sort_order": 2000000000}}}},
+		{"layout: unknown category in the order list, hidden target", "PUT", "/api/admin/layout", map[string]any{
+			"categories": []any{map[string]any{"id": "00000000-0000-4000-8000-000000000001", "sort_order": 1}},
+			"channels":   []any{map[string]any{"id": w.open.String(), "category_id": w.staffCat.String(), "sort_order": 1}}}},
+		{"layout: hidden category in the order list, unknown channel", "PUT", "/api/admin/layout", map[string]any{
+			"categories": []any{map[string]any{"id": w.staffCat.String(), "sort_order": 1}},
+			"channels":   []any{map[string]any{"id": "00000000-0000-4000-8000-000000000002", "category_id": nil, "sort_order": 1}}}},
+		{"layout: hidden category in the order list, hidden channel", "PUT", "/api/admin/layout", map[string]any{
+			"categories": []any{map[string]any{"id": w.staffCat.String(), "sort_order": 1}},
+			"channels":   []any{map[string]any{"id": w.staffText.String(), "category_id": nil, "sort_order": 1}}}},
 		{"rename a hidden category", "PATCH", "/api/admin/categories/" + w.staffCat.String(), map[string]any{"name": "x"}},
 		{"overwrites of a hidden category", "GET", "/api/admin/categories/" + w.staffCat.String() + "/overwrites", nil},
 		{"bulk delete in a hidden channel", "POST", "/api/channels/" + w.staffText.String() + "/messages/bulk-delete", map[string]any{"message_ids": []string{msg}}},

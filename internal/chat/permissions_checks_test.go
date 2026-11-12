@@ -32,15 +32,28 @@ func TestLayoutAndCategoryChecks(t *testing.T) {
 		{"within a plain category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(plain)}), member, true},
 		{"unknown channel", layout(channels.ChannelPlacement{ID: uuid.New()}), member, false},
 		{"hidden channel", layout(channels.ChannelPlacement{ID: inHidden, CategoryID: ptr(hidden)}), member, false},
-		{"into a hidden category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(hidden)}), member, false},
-		{"hidden category order", channels.LayoutRequest{Categories: []channels.CategoryOrder{{ID: hidden}}}, member, false},
+		{"into a hidden category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(hidden)}), member, true},
+		{"hidden category order", channels.LayoutRequest{Categories: []channels.CategoryOrder{{ID: hidden}}}, member, true},
 		{"visible category order", channels.LayoutRequest{Categories: []channels.CategoryOrder{{ID: plain}}}, member, true},
 		{"out of a restricted category", layout(channels.ChannelPlacement{ID: inRestricted}), member, false},
 		{"into a restricted category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(restricted)}), member, false},
 		{"the Owner moves anything", layout(channels.ChannelPlacement{ID: inRestricted, CategoryID: ptr(plain)}), owner, true},
 	} {
-		if err := channels.CheckLayout(snap, c.sub, c.req); (err == nil) != c.ok {
+		seen, err := channels.SeenLayout(snap, c.sub, c.req)
+		if (err == nil) != c.ok {
 			t.Errorf("%s: %v", c.what, err)
+		}
+		// What the caller cannot see never reaches the database under its own id:
+		// it is applied as an id nobody has, like a missing one.
+		for _, cat := range seen.Categories {
+			if cat.ID == hidden && c.sub == member {
+				t.Errorf("%s: the hidden category is still named", c.what)
+			}
+		}
+		for _, ch := range seen.Channels {
+			if c.sub == member && (ch.ID == inHidden || (ch.CategoryID != nil && *ch.CategoryID == hidden)) {
+				t.Errorf("%s: a hidden id is still named", c.what)
+			}
 		}
 	}
 
