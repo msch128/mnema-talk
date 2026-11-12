@@ -66,7 +66,13 @@ admin setup are needed, so it works on a fresh community. The Talk is a temporar
 Talk without a lobby (`is_temp`, `lobby_id` NULL) with `channels.dm_id` pointing
 at the conversation (migration 0079): the permission snapshot lets only the
 conversation's members see and join it, the Owner and Administrators included
-(like the conversation itself), a member added to a group gets it too, a member
+(like the conversation itself). Membership is what lets a member see it, not
+*View channels*: no role and no category or channel overwrite of the community
+grants or takes anything there, so a community that hides its channels from
+@everyone does not lock its members out of their calls; what they may do there
+(*Connect*, *Speak*, *Video*, *Send messages*, *Attach files*, *Add
+reactions*, *Disconnect members*) is what they hold server-wide, a timeout and
+the new-member speak wait included. A member added to a group gets it too, a member
 who leaves a group loses it at once (a seat in it ends as for any lost Talk
 right, and the others see them leave the call), it shows
 in the sidebar of its members only, and it is deleted when it is empty (like any

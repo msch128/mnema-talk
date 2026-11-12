@@ -44,6 +44,7 @@ func TestSnapshotAgreesWithTheReferenceModel(t *testing.T) {
 		var diffs []string
 		questions += compareMembers(m, snap, g, &diffs)
 		questions += compareViews(m, snap, g, &diffs)
+		questions += compareCalls(m, snap, g, &diffs)
 		if len(diffs) > 0 {
 			t.Fatalf("seed %d: %d disagreements, first: %v\n%s", seed, len(diffs), diffs[0], g.describe())
 		}
@@ -60,7 +61,8 @@ func TestSnapshotAgreesWithTheReferenceModel(t *testing.T) {
 }
 
 var featureNames = []string{"administrator", "owner", "bot", "bot with @everyone overwrite", "timeout running", "rules pending",
-	"wait running", "wait over for an unseen member", "member overwrite", "conversation call with a member", "conversations off"}
+	"wait running", "wait over for an unseen member", "member overwrite", "conversation call with a member", "conversations off",
+	"call member without View channels", "call with an overwrite", "call outsider with Administrator or Owner"}
 
 // features names what a community exercises, so a generator change that
 // stops producing a case fails instead of passing quietly.
@@ -86,7 +88,59 @@ func features(m refModel, g community) map[string]bool {
 	for _, dm := range m.st.DMTalks {
 		out["conversation call with a member"] = out["conversation call with a member"] || len(m.st.DMs[dm]) > 0
 	}
+	callFeatures(m, g, out)
 	return out
+}
+
+// callFeatures adds the cases of a conversation's call (H-L6-04): a member
+// whom the community's rules for that Talk would not let see it, a call
+// carrying overwrites, and the Owner or an Administrator outside the
+// conversation.
+func callFeatures(m refModel, g community, out map[string]bool) {
+	for call, dm := range m.st.DMTalks {
+		_, ov := m.st.ChannelOv[call]
+		out["call with an overwrite"] = out["call with an overwrite"] || ov
+		for _, u := range g.users {
+			privileged := m.owner(u) || m.unheld(u)&Administrator != 0
+			switch {
+			case m.st.DMs[dm][u] && !privileged && m.community(u, call)&ViewChannel == 0:
+				out["call member without View channels"] = true
+			case !m.st.DMs[dm][u] && privileged:
+				out["call outsider with Administrator or Owner"] = true
+			}
+		}
+	}
+}
+
+// compareCalls checks the rule of doc/talks.md for a conversation's call
+// directly: every member of the conversation sees it and holds there what
+// they hold server-wide for a Talk (Connect, Speak, Video, Send messages,
+// Attach files, Add reactions; the speak wait holds the call as a whole);
+// nobody else holds anything, the Owner and Administrators included, whatever
+// the overwrites say.
+func compareCalls(m refModel, snap *Snapshot, g community, diffs *[]string) int {
+	asked := 0
+	talk := Connect | Speak | Video | SendMessages | AttachFiles | AddReactions
+	for call, dm := range m.st.DMTalks {
+		for _, u := range append(slices.Clone(g.users), uuid.New()) {
+			got := snap.Channel(Subject{ID: u}, call)
+			asked++
+			if !m.st.DMs[dm][u] {
+				if got != 0 {
+					*diffs = append(*diffs, fmt.Sprintf("Channel(%s, call %s) = %b outside the conversation", u, call, got))
+				}
+				continue
+			}
+			want := talk & m.unheld(u)
+			if m.waits(u)[2] > 0 {
+				want &^= refCallWait
+			}
+			if !got.Has(ViewChannel) || got&talk != want {
+				*diffs = append(*diffs, fmt.Sprintf("Channel(%s, call %s) = %b for a member, want View channels and %b", u, call, got, want))
+			}
+		}
+	}
+	return asked
 }
 
 type community struct {

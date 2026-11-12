@@ -100,14 +100,18 @@ func (w *randomWorld) judge(ch uuid.UUID, surface string, ok, sees bool) string 
 }
 
 // say posts word in ch as its poster and returns it, or "" when the mirror
-// says the poster cannot see ch: a call's chat follows the community's View
-// channels (H-L6-04), so a call may be closed to all of its members. A
-// channel without a word is left out of the checks.
+// says the poster cannot write in ch (a timeout, no Send messages). The
+// starter of a call always sees it, whatever the community's View channels
+// (H-L6-04). A channel without a word is left out of the checks.
 func (w *randomWorld) say(t *testing.T, ch uuid.UUID, word string) string {
 	t.Helper()
 	p := w.poster[ch]
 	snap := perm.NewSnapshot(w.st, time.Now())
-	if !snap.Channel(perm.Subject{ID: p.user.ID, Owner: p == w.owner}, ch).Has(perm.SendMessages | perm.ViewChannel) {
+	got := snap.Channel(perm.Subject{ID: p.user.ID, Owner: p == w.owner}, ch)
+	if _, call := w.st.DMTalks[ch]; call && !got.Has(perm.ViewChannel) {
+		t.Fatalf("the mirror says the starter of call %s cannot see it (H-L6-04)", ch)
+	}
+	if !got.Has(perm.SendMessages | perm.ViewChannel) {
 		return ""
 	}
 	postMessage(t, p, ch, map[string]any{"content": word + " @m0 @m1 @m2 @m3"})
