@@ -9,6 +9,39 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Snippets of long messages are their plain text
+
+Places that show only the start of a message took its first 200 characters
+of Markdown, so a `||spoiler||` that closed after the cut was open in the
+snippet and its text showed: reply quotes, search thread roots, reminders
+(list, in-app notice and push) and the conversation list. A message longer
+than 200 characters is now reduced to its plain text first and cut after
+that; the snippet is that text written as Markdown, each spoiler as `||…||`
+(a shorter message is still sent as it is). This concerns `reply_to.content`
+of messages, `snippet` of search roots and reminders, and
+`last_message.text` of conversations. Clients that strip the snippet
+themselves, older web and desktop clients included, show the same text as
+before without the hidden part.
+
+For bots and outgoing webhooks (`message_create` deliveries carry
+`reply_to.content`), a snippet of a long message is escaped plain text: a
+backslash stands before every symbol that would start Markdown, and the `:`
+of `http://` and `https://` is escaped too. Rendered as Markdown it shows the
+plain text and the spoilers, but no formatting and no links, not even for an
+address the message had in a code span; a text such as `@everyone` stays
+text and is drawn the way the renderer draws it, which notifies nobody. The
+escaping makes a snippet longer than its 200 characters of text: at most
+996 characters (UTF-16 units), when every character of it is a spoiler.
+
+The server's plain text (pushes and these snippets) now reads a message
+exactly like the web renderer: it is a port of the client's Markdown parser,
+checked against messages the renderer judged. Before, the two could disagree
+about where a spoiler starts (for example around code spans), and a push
+could show the text of a spoiler. Where only a browser can tell how a link
+reads (a host with non-ASCII characters, written or percent-encoded, an
+IPv6 address, punycode) and that could move a spoiler, the server hides everything between the first
+and the last `||` of the message.
+
 ## Trusted Types in the web app's policy
 
 The web app's Content-Security-Policy now also sends

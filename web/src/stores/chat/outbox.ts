@@ -1,4 +1,5 @@
 import { caughtErrorMessage, isApiError } from '../../shared/lib/api'
+import { messageText } from '../../shared/lib/textLength'
 import { isRecord } from '../../types/validation'
 import { t } from '../../i18n'
 import type { Message } from '../../types/domain'
@@ -111,7 +112,7 @@ export function enqueue(cx: Cx, channelId: string, send: TextSend, behindOthers 
   const { cs, authStore } = cx
   commit(cx, [...cs.outbox.value, {
     nonce: send.nonce, channelId, userId: authStore.user?.id ?? '', parentId: send.parentId, replyToId: send.replyToId,
-    content: send.content.trim(), createdAt: new Date().toISOString(), status: 'waiting', error: '',
+    content: messageText(send.content), createdAt: new Date().toISOString(), status: 'waiting', error: '',
     cause: 'offline', attempts: 0, possiblyDelivered: !behindOthers, notBefore: 0
   }])
   scheduleRetry(cx)
@@ -175,7 +176,7 @@ export function editPending(cx: Cx, nonce: string, content: string) {
 }
 
 function saveEdit(cx: Cx, nonce: string, content: string) {
-  const text = content.trim()
+  const text = messageText(content)
   const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
   // After a try that may have arrived, the server would return the old text for this nonce.
   // Sent from another tab meanwhile: say so instead of dropping the change silently.

@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { beforeEach, describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import '../../shared/lib/customEmoji'
 import SearchResultItem from './SearchResultItem.vue'
 import { messageFixture } from '../../test-fixtures.fixture'
+
+// The hit asks the block list whether to fold it (blockedElsewhere.test.ts).
+beforeEach(() => setActivePinia(createPinia()))
 
 const props = { index: 0, selected: false, voice: false, terms: ['party'] }
 

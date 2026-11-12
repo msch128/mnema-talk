@@ -258,7 +258,17 @@ response, event, list or error text they can read depends on it. For the
 blocker it means:
 
 - the web app collapses the blocked member's messages to "Blocked message ·
-  show" (the client reads `GET /api/me/blocks` and the `block_updated` event);
+  show" (the client reads `GET /api/me/blocks` and the `block_updated` event)
+  wherever another member's words are shown: the message list and threads, the
+  "replied to" line, forwarded quotes, search hits and their thread roots, the
+  pin list, forum post cards and titles, event comments, saved messages and
+  reminders (their note and remove button stay). Showing one message shows it
+  everywhere until the page is reloaded; in search, Enter or a click on a folded
+  hit shows it first. Search, the forum filter and these lists are not filtered
+  by the server; the client folds them, so a hit still counts in the number of
+  results. A due
+  reminder's in-app notice leaves the text out; its push, which the blocker set
+  up themselves, still names the message;
 - the blocked member's mentions and replies create no entry in the mentions
   inbox (which excludes direct messages entirely), no mention count and no push,
   whatever the channel's notification level, and a plain message of theirs sends
@@ -268,9 +278,20 @@ blocker it means:
   counts and the conversation's last-activity time leave out messages by members
   the reader blocked, and push recipients skip blockers;
 - in a direct message conversation of two, a block stops writing in both
-  directions (the other side only sees that the member cannot be written
-  to); in a group, the conversation continues, but nobody can add a member
-  who blocked them;
+  directions: new messages (uploads, polls and commands included), edits of
+  earlier messages, reactions, poll votes, forwards into the conversation and
+  starting a Talk from it are refused with a 403 that does not say why (the
+  other side only sees that the member cannot be written to). The chat of the
+  conversation's Talk, if one was open before the block, follows the same rule
+  with the same answers, and its messages by the blocked member do not count
+  as unread for the blocker. New messages and edits in both are refused the
+  same way when the other side's account is disabled or erased. Taking back
+  stays possible in both: each side may
+  still delete their own messages, remove their own reactions and withdraw
+  their votes. The Talk itself is not touched: it stays open, and whoever sits
+  in it keeps their seat and can still be heard (removing them would tell the
+  blocked member). In a group, the conversation continues, but nobody can add
+  a member who blocked them;
 - unblocking brings the earlier inbox entries back, because nothing was
   deleted.
 
@@ -342,7 +363,7 @@ only where the server lists the `automod` feature). Code:
 | Rule | What it does |
 |---|---|
 | **Blocked words** | Words and phrases, matched as **whole words**, without regard to case. `*` in an entry stands for any run of letters and digits (`cheat*` catches *cheat* and *cheating*). Spaces inside a phrase match any white space; invisible characters (zero-width spaces, soft hyphens) are ignored, so they do not hide a word. |
-| **Links** | One mode: block **every** link, allow **only** the listed domains, or block the **listed** domains. A domain covers its subdomains. A link is anything starting with `http://`, `https://` or `www.`; the host is read after any user name and port. |
+| **Links** | One mode: block **every** link, allow **only** the listed domains, or block the **listed** domains. A domain covers its subdomains. A link is anything starting with `http://`, `https://` or `www.`, also one inside another link (`https://allowed.example/r?u=https://other.example` is judged by both hosts). The host is read the way a browser reads it: after any user name (the part before the last `@`), without the port, with percent escapes, full-width forms and accents mapped as the browser maps them, on the text as written (accents and invisible characters stay part of the host). Where the app could end a link earlier (Markdown such as `**` or `\|\|` around it, punctuation after it, the `)` of `[text](url)`), every possible host is judged and each must pass. A link whose host cannot be read exactly counts as a link for *every link* and the new-account rule, and as not allowed for an allow list; a block list blocks it when the best reading of its host falls under a listed domain. A host no resolver can answer for (`https://allowed.example's`) leads nowhere, so an allow list lets it be. Two kinds of link are refused by every mode because nobody can say where the app would lead: one whose address part is longer than 2,000 characters (the app cuts a link target there), and one in a message so tangled with links that reading it would cost more than the fixed amount of work a message gets. |
 | **Mention spam** | A message with **more than N different** mentions (`@name`, `@all` and `@here` count once each; the same name twice counts once). |
 | **New accounts** | Accounts younger than a time (1 minute to 30 days) may not post links, may not attach files, may not do either, or may not post at all. |
 | **Raid protection** | More than N accounts joining within M seconds. Every account of that window, and everyone who joins while the raid lasts, is **timed out** for the restriction time (1 minute to a day), and **one** entry in the reports queue announces the raid. A moderator lifts a timeout like any other. At most one such rule. |

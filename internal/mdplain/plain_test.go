@@ -50,6 +50,24 @@ func TestPlainNeverRevealsASpoiler(t *testing.T) {
 	}
 }
 
+// A link whose host only the browser can judge, with markup in it that the
+// answer would read differently: everything between the first and the last
+// "||" counts as hidden, the rest reads as usual.
+func TestPlainFailsClosedWhereOnlyTheBrowserKnows(t *testing.T) {
+	in := "before https://café.example/a_b ||one|| middle ||two|| after"
+	got := Plain(in, "Spoiler")
+	if strings.Contains(got, "one") || strings.Contains(got, "middle") || strings.Contains(got, "two") {
+		t.Errorf("Plain(%q) = %q shows what may be hidden", in, got)
+	}
+	if !strings.HasPrefix(got, "before ") || !strings.HasSuffix(got, " after") || !strings.Contains(got, "Spoiler") {
+		t.Errorf("Plain(%q) = %q, want the text around the spoilers", in, got)
+	}
+	// Without markup in the address both readings agree: no failing closed.
+	if got := Plain("see https://café.example/x ||one|| middle ||two||", "Spoiler"); got != "see https://café.example/x Spoiler middle Spoiler" {
+		t.Errorf("got %q", got)
+	}
+}
+
 // Hostile input must not take quadratic time: thousands of unclosed delimiters.
 func TestPlainStaysFastOnUnclosedDelimiters(t *testing.T) {
 	start := time.Now()
@@ -75,8 +93,8 @@ func TestBareURLDoesNotAllocatePerLetterH(t *testing.T) {
 	}
 }
 
-func TestHasPrefixFoldIsCaseInsensitive(t *testing.T) {
-	if !hasPrefixFold("HtTpS://x", "https://") || hasPrefixFold("http:/", "http://") || hasPrefixFold("ftp://x", "http://") {
-		t.Fatal("hasPrefixFold misjudged a prefix")
+func TestHasAtFoldIsCaseInsensitive(t *testing.T) {
+	if !hasAtFold(encode("HtTpS://x"), 0, "https://") || hasAtFold(encode("http:/"), 0, "http://") || hasAtFold(encode("ftp://x"), 0, "http://") {
+		t.Fatal("hasAtFold misjudged a prefix")
 	}
 }

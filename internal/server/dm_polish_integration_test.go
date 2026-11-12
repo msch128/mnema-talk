@@ -4,7 +4,9 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -197,7 +199,8 @@ func TestTheConversationListPreviewsTheLatestMessage(t *testing.T) {
 	}
 	wantStatus(t, "text", f.bob.dmPost(dm.ID, repeat("x", 300)), http.StatusCreated)
 	got := f.alice.polishList(t)[dm.ID].LastMessage
-	if got == nil || len(got.Text) != 200 || got.UserID != f.bob.user.ID {
+	// A long message is previewed by its first 199 characters and an ellipsis (mdplain.Snippet).
+	if got == nil || utf8.RuneCountInString(got.Text) != 200 || !strings.HasSuffix(got.Text, "\u2026") || got.UserID != f.bob.user.ID {
 		t.Fatalf("preview: %+v", got)
 	}
 	wantStatus(t, "block", f.alice.put("/api/me/blocks/"+f.bob.user.ID.String(), nil), http.StatusNoContent)

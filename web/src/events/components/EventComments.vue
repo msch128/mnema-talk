@@ -12,15 +12,19 @@ import { relative } from '../../shared/lib/time'
 import { locale, t } from '../../i18n'
 import MarkdownContent from '../../shared/components/MarkdownContent.vue'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
+import { useBlocksStore } from '../../stores/blocks'
 
 // The discussion under an event: comments oldest first (older pages on
 // request), a composer, edit and delete where the member may, and a bell that
-// switches the notices of this event's comments off.
+// switches the notices of this event's comments off. A comment of a member
+// the reader blocked is folded (BlockedFold), in the delete dialog too.
 const props = defineProps<{ eventId: string }>()
 
 const MAX = 2000
 const auth = useAuthStore()
 const permissions = usePermissionsStore()
+const blocks = useBlocksStore()
 const list = useEventComments(toRef(props, 'eventId'))
 const draft = ref('')
 const editingId = ref<string | null>(null)
@@ -59,7 +63,7 @@ async function removeComment(c: EventComment) {
   const ok = await confirm({
     title: t('events.commentDeleteTitle'),
     body: t('events.commentDeleteBody'),
-    excerpt: c.content.slice(0, 160),
+    excerpt: blocks.hides({ id: c.id, user_id: c.user.id }) ? t('blocks.collapsed') : c.content.slice(0, 160),
     confirmLabel: t('common.delete'),
     danger: true
   })
@@ -124,7 +128,9 @@ async function removeComment(c: EventComment) {
                 <button type="submit" data-testid="comment-edit-save" class="btn btn-primary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="list.busy.value || !editText.trim()">{{ $t('common.save') }}</button>
               </div>
             </form>
-            <MarkdownContent v-else :content="c.content" :previews="false" class="text-sm text-mnema-text" />
+            <BlockedFold v-else :msg="{ id: c.id, user_id: c.user.id }">
+              <MarkdownContent :content="c.content" :previews="false" class="text-sm text-mnema-text" />
+            </BlockedFold>
           </div>
         </li>
       </ul>

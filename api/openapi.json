@@ -2572,7 +2572,7 @@
             "type": "boolean"
           },
           "text": {
-            "description": "Text is the start of the message text (at most 200 characters).",
+            "description": "Text is the start of the message text (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).\nEscaped plain text holds no links or formatting, and the escaping\n(a backslash before symbols) makes it at most 996 characters long.",
             "type": "string"
           },
           "user_id": {
@@ -3867,6 +3867,7 @@
             "type": "string"
           },
           "content": {
+            "description": "Content is the start of the quoted message (the whole text when it has\nat most 200 characters, else the first 200 characters of its plain text\nas Markdown, each spoiler as ||…||).\nEscaped plain text holds no links or formatting, and the escaping\n(a backslash before symbols) makes it at most 996 characters long.",
             "type": "string"
           },
           "deleted": {
@@ -4373,7 +4374,12 @@
             "type": "string"
           },
           "snippet": {
-            "description": "Snippet is the start of the root message (at most 200 characters).",
+            "description": "Snippet is the start of the root message (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).\nEscaped plain text holds no links or formatting, and the escaping\n(a backslash before symbols) makes it at most 996 characters long.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "UserID is the root's author, so the client can fold a member the\nreader blocked (search leaves blocks to the client, see core.BlockExists).",
+            "format": "uuid",
             "type": "string"
           },
           "username": {
@@ -6310,6 +6316,11 @@
           "author": {
             "type": "string"
           },
+          "author_id": {
+            "description": "AuthorID lets the client fold a member the reader blocked.",
+            "format": "uuid",
+            "type": "string"
+          },
           "channel_id": {
             "format": "uuid",
             "type": "string"
@@ -6333,7 +6344,7 @@
             ]
           },
           "snippet": {
-            "description": "Snippet is the start of the message text (up to 200 characters).",
+            "description": "Snippet is the start of the message text (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).\nEscaped plain text holds no links or formatting, and the escaping\n(a backslash before symbols) makes it at most 996 characters long.",
             "type": "string"
           }
         },
@@ -27039,7 +27050,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: you are not the author, or cross-origin request rejected."
+            "description": "FORBIDDEN: you are not the author, the message is in a direct message conversation of two, or the chat of its Talk, that cannot be written in any more (a block, or the other account disabled; the same answer as a refused new message), or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -27730,7 +27741,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing the View channels or Add reactions permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+            "description": "FORBIDDEN: missing the View channels or Add reactions permission in the channel, a vote in a direct message conversation of two, or the chat of its Talk, after a block (withdrawing stays possible), or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
           },
           "404": {
             "content": {
@@ -30395,7 +30406,7 @@
     },
     "/api/dms/{id}/members/{user}": {
       "delete": {
-        "description": "Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.",
+        "description": "Takes the caller out of a group conversation; they lose its history and their seat in its Talk (voice_kicked reason missing_permission, and a voice_state_update leave to the others in the call). When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.",
         "operationId": "leaveDirectMessage",
         "parameters": [
           {

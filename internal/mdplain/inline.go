@@ -1,203 +1,313 @@
 package mdplain
 
-import "strings"
+import (
+	"strconv"
 
-// maxDepth is how deep formatting nests; deeper delimiters stay literal. It
-// mirrors the web client's parser (web/src/shared/lib/markdown/inline.ts).
+	"github.com/msch128/mnema-talk/internal/emojitext"
+)
+
+// The inline scanner, line for line the web client's parseInline
+// (web/src/shared/lib/markdown/inline.ts), producing the plain text directly.
+
+// maxDepth is how deep formatting nests; deeper delimiters stay literal.
 const maxDepth = 6
 
-// maxLabel bounds a link label, like the client.
-const maxLabel = 500
-
-func isSpace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\f' || b == '\v'
+type inlineCtx struct {
+	depth int
+	// noLinks: inside a link label, where no further link starts.
+	noLinks bool
 }
 
-func isWord(b byte) bool {
-	return b == '_' || (b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+// hit is what a construct at a position reads as: text that joins the
+// surrounding text, or the plain form of a node.
+type hit struct {
+	text bool
+	v    []uint16
+	end  int
 }
 
-// at is src[i], or a space when i is outside src (the client treats the edges as white space).
-func at(src string, i int) byte {
-	if i < 0 || i >= len(src) {
-		return ' '
+// run is one call of parseInline: its source, context and memo.
+type run struct {
+	p   *parser
+	src []uint16
+	ctx inlineCtx
+	// miss remembers, per delimiter, from where on no closer exists.
+	miss  map[string]int
+	label *labelIndex
+	dest  *destIndex
+	// scanned counts the units label and destination scans read without an index.
+	scanned int
+	url     *urlRun
+}
+
+// textPlain is the plain form of a text node: custom emoji tokens read :name:.
+func textPlain(buf []uint16) []uint16 {
+	for _, c := range buf {
+		if c == '<' {
+			return encode(emojitext.Plain(decode(buf)))
+		}
 	}
-	return src[i]
+	return buf
 }
 
-// escapable reports whether a backslash before b drops itself: any symbol that is not a letter, digit or space.
-func escapable(b byte) bool { return !isLetter(b) && !(b >= '0' && b <= '9') && !isSpace(b) }
-
-func isLetter(b byte) bool { return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') }
-
-// scanner remembers, per delimiter and run of text, from where on no closer
-// exists, so a run of unclosed delimiters costs linear time.
-type scanner struct {
-	spoiler string
-	miss    map[string]int
+// inline is parseInline followed by inlinePlain.
+func (p *parser) inline(src []uint16, ctx inlineCtx) []uint16 {
+	r := &run{p: p, src: src, ctx: ctx, miss: map[string]int{}}
+	var out, buf []uint16
+	for i := 0; i < len(src); {
+		p.tick()
+		if src[i] == '\\' && escapableAt(src, i+1) {
+			buf = append(buf, src[i+1])
+			i += 2
+			continue
+		}
+		h, ok := r.matchAt(i)
+		switch {
+		case !ok:
+			buf = append(buf, src[i])
+			i++
+			continue
+		case h.text:
+			buf = append(buf, h.v...)
+		default:
+			out = append(out, textPlain(buf)...)
+			buf = nil
+			out = append(out, h.v...)
+		}
+		i = h.end
+	}
+	return append(out, textPlain(buf)...)
 }
 
-// find returns the first index >= from where test passes, skipping escaped
-// characters and the given pair (e.g. "**" while looking for "*").
-func (s *scanner) find(key, src string, from int, test func(j int) bool, pair string) int {
-	if m, ok := s.miss[key]; ok && from >= m {
+// inlineString is inline for a block's text.
+func (p *parser) inlineString(text string) string {
+	return decode(p.inline(encode(text), inlineCtx{}))
+}
+
+func (r *run) matchAt(i int) (hit, bool) {
+	switch r.src[i] {
+	case '`':
+		return r.code(i), true
+	case '<':
+		return r.autolink(i)
+	case '[':
+		return r.masked(i)
+	case 'h', 'H':
+		return r.bare(i)
+	case '*', '_', '~', '|':
+		return r.format(i)
+	}
+	return hit{}, false
+}
+
+// scan is the first index >= from where test passes, skipping escapes, code
+// spans and pair; a failed search is remembered per key.
+func (r *run) scan(key string, from int, test func(int) bool, pair string) int {
+	if missed, ok := r.miss[key]; ok && from >= missed {
 		return -1
 	}
+	found := r.scanFrom(from, test, pair)
+	if found < 0 {
+		r.miss[key] = from
+	}
+	return found
+}
+
+func (r *run) scanFrom(from int, test func(int) bool, pair string) int {
+	src := r.src
+	var unclosed map[int]bool
 	for j := from; j < len(src); j++ {
+		if !r.p.tick() {
+			return -1
+		}
 		switch {
 		case src[j] == '\\':
 			j++
-		case pair != "" && strings.HasPrefix(src[j:], pair):
+		case src[j] == '`':
+			// A code span is opaque: delimiters inside it neither close nor open anything.
+			if unclosed == nil {
+				unclosed = map[int]bool{}
+			}
+			j = r.skipCodeSpan(j, unclosed)
+		case pair != "" && hasAt(src, j, pair):
 			j += len(pair) - 1
 		case test(j):
 			return j
 		}
 	}
-	if m, ok := s.miss[key]; !ok || from < m {
-		s.miss[key] = from
+	return -1
+}
+
+// skipCodeSpan is the index of the last unit of the code span (or lone backtick run) at j.
+func (r *run) skipCodeSpan(j int, unclosed map[int]bool) int {
+	n := backticks(r.src, j)
+	closeAt := -1
+	if !unclosed[n] {
+		closeAt = r.codeClose(j, n)
+	}
+	if closeAt < 0 {
+		unclosed[n] = true
+		return j + n - 1
+	}
+	return closeAt + n - 1
+}
+
+func backticks(src []uint16, i int) int {
+	n := 1
+	for unitAt(src, i+n) == '`' {
+		n++
+	}
+	return n
+}
+
+// codeClose is the index of the run of n backticks closing the code span opened at i, or -1.
+func (r *run) codeClose(i, n int) int {
+	src := r.src
+	// The body must hold more than white space: its first other unit.
+	text := i + n
+	for text < len(src) && jsSpace(src[text]) {
+		text++
+	}
+	for from := i + n; from < len(src); {
+		c := r.fenceAt(from, n)
+		if c < 0 {
+			return -1
+		}
+		runEnd := c + backticks(src, c)
+		if runEnd-c == n && text < c {
+			return c
+		}
+		from = runEnd
 	}
 	return -1
 }
 
-// inline turns a run of inline Markdown into its text.
-func (s *scanner) inline(src string, depth int, noLinks bool) string {
-	// The memo is only valid for this run of text.
-	outer := s.miss
-	s.miss = map[string]int{}
-	defer func() { s.miss = outer }()
-	var b strings.Builder
-	for i := 0; i < len(src); {
-		if src[i] == '\\' && i+1 < len(src) && escapable(src[i+1]) {
-			b.WriteByte(src[i+1])
-			i += 2
+// fenceAt is src.indexOf("`" * n, from).
+func (r *run) fenceAt(from, n int) int {
+	start, count := -1, 0
+	for k := from; k < len(r.src); k++ {
+		if !r.p.tick() {
+			return -1
+		}
+		if r.src[k] != '`' {
+			count = 0
 			continue
 		}
-		text, end, ok := s.match(src, i, depth, noLinks)
-		if !ok {
-			b.WriteByte(src[i])
-			i++
-			continue
+		if count == 0 {
+			start = k
 		}
-		b.WriteString(text)
-		i = end
+		if count++; count == n {
+			return start
+		}
 	}
-	return b.String()
+	return -1
 }
 
-func (s *scanner) match(src string, i, depth int, noLinks bool) (string, int, bool) {
-	switch src[i] {
-	case '`':
-		text, end := s.code(src, i)
-		return text, end, true
-	case '<':
-		if text, end, ok := token(src, i); ok {
-			return text, end, true
-		}
-		return autolink(src, i, noLinks)
-	case '[':
-		return s.masked(src, i, depth, noLinks)
-	case 'h', 'H':
-		return bareURL(src, i, noLinks)
-	case '*', '_', '~', '|':
-		return s.format(src, i, depth, noLinks)
+func (r *run) code(i int) hit {
+	src := r.src
+	n := backticks(src, i)
+	key := "`" + strconv.Itoa(n)
+	lone := hit{text: true, v: src[i : i+n], end: i + n}
+	if m, ok := r.miss[key]; ok && i+n >= m {
+		return lone
 	}
-	return "", i, false
-}
-
-// code reads `code` and “code with ` inside“: a run of backticks closes
-// with a run of the same length. An unclosed run stays as typed.
-func (s *scanner) code(src string, i int) (string, int) {
-	n := 1
-	for i+n < len(src) && src[i+n] == '`' {
-		n++
+	if c := r.codeClose(i, n); c >= 0 {
+		return hit{v: codeBody(src[i+n : c]), end: c + n}
 	}
-	fence := strings.Repeat("`", n)
-	for from := i + n; from < len(src); {
-		rel := strings.Index(src[from:], fence)
-		if rel < 0 {
-			break
-		}
-		closeAt := from + rel
-		runEnd := closeAt + n
-		for runEnd < len(src) && src[runEnd] == '`' {
-			runEnd++
-		}
-		if body := src[i+n : closeAt]; runEnd-closeAt == n && strings.TrimSpace(body) != "" {
-			return codeBody(body), closeAt + n
-		}
-		from = runEnd
+	if m, ok := r.miss[key]; !ok || i+n < m {
+		r.miss[key] = i + n
 	}
-	return fence, i + n
+	return lone
 }
 
 // codeBody drops one space of padding on both sides, so “ ` “ can show a backtick.
-func codeBody(body string) string {
-	if len(body) > 2 && body[0] == ' ' && body[len(body)-1] == ' ' && strings.TrimSpace(body) != "" {
+func codeBody(body []uint16) []uint16 {
+	if len(body) > 2 && body[0] == ' ' && body[len(body)-1] == ' ' && !onlySpace(body) {
 		return body[1 : len(body)-1]
 	}
 	return body
 }
 
-// nested formats the delimited run src[from:to] one level deeper.
-func (s *scanner) nested(src string, from, to, depth int, noLinks bool) string {
-	return s.inline(src[from:to], depth+1, noLinks)
-}
-
-func (s *scanner) format(src string, i, depth int, noLinks bool) (string, int, bool) {
-	if depth >= maxDepth {
-		return "", i, false
+func (r *run) format(i int) (hit, bool) {
+	// Too deep to nest further: the delimiters stay literal.
+	if r.ctx.depth >= maxDepth {
+		return hit{}, false
 	}
-	var open, closeAt, width int
-	switch {
-	case src[i] == '*' && at(src, i+1) == '*':
-		open, closeAt, width = i+2, s.find("**", src, i+3, func(k int) bool { return strings.HasPrefix(src[k:], "**") && at(src, k+2) != '*' }, ""), 2
-	case src[i] == '_' && at(src, i+1) == '_':
-		open, closeAt, width = i+2, s.find("__", src, i+3, func(k int) bool { return strings.HasPrefix(src[k:], "__") && at(src, k+2) != '_' }, ""), 2
-	case src[i] == '~' && at(src, i+1) == '~':
-		open, closeAt, width = i+2, s.find("~~", src, i+3, func(k int) bool { return strings.HasPrefix(src[k:], "~~") }, ""), 2
-		if closeAt >= 0 && (isSpace(at(src, i+2)) || isSpace(at(src, closeAt-1))) {
-			closeAt = -1
-		}
-	case src[i] == '|' && at(src, i+1) == '|':
-		return s.spoilerRun(src, i)
-	default:
-		return s.emphasis(src, i, depth, noLinks)
-	}
-	if closeAt < 0 {
-		return "", i, false
-	}
-	return s.nested(src, open, closeAt, depth, noLinks), closeAt + width, true
-}
-
-// emphasis handles *em* and _em_ (an underscore inside a word stays text).
-func (s *scanner) emphasis(src string, i, depth int, noLinks bool) (string, int, bool) {
-	var closeAt int
-	switch src[i] {
+	next := unitAt(r.src, i+1)
+	switch r.src[i] {
 	case '*':
-		if isSpace(at(src, i+1)) || at(src, i+1) == '*' {
-			return "", i, false
+		if next == '*' {
+			return r.delimited(i, "**", '*')
 		}
-		closeAt = s.find("*", src, i+2, func(k int) bool { return src[k] == '*' && at(src, k+1) != '*' && !isSpace(at(src, k-1)) }, "**")
+		return r.emStar(i)
 	case '_':
-		if (i > 0 && isWord(src[i-1])) || at(src, i+1) == '_' {
-			return "", i, false
+		if next == '_' {
+			return r.delimited(i, "__", '_')
 		}
-		closeAt = s.find("_", src, i+2, func(k int) bool { return src[k] == '_' && !(k+1 < len(src) && isWord(src[k+1])) }, "__")
+		return r.emUnderscore(i)
+	case '~':
+		if next == '~' {
+			return r.strike(i)
+		}
 	default:
-		return "", i, false
+		if next == '|' {
+			return r.spoiler(i)
+		}
 	}
-	if closeAt < 0 {
-		return "", i, false
-	}
-	return s.nested(src, i+1, closeAt, depth, noLinks), closeAt + 1, true
+	return hit{}, false
 }
 
-// spoilerRun replaces ||hidden|| by the word for "spoiler": the text must not
-// reach a lock screen.
-func (s *scanner) spoilerRun(src string, i int) (string, int, bool) {
-	closeAt := s.find("||", src, i+3, func(k int) bool { return strings.HasPrefix(src[k:], "||") }, "")
-	if closeAt < 0 {
-		return "", i, false
+// delimited reads **strong** and __underline__.
+func (r *run) delimited(i int, delim string, ch uint16) (hit, bool) {
+	src := r.src
+	j := r.scan(delim, i+3, func(k int) bool { return hasAt(src, k, delim) && unitAt(src, k+2) != ch }, "")
+	return r.nested(i+2, j, j+2)
+}
+
+func (r *run) emStar(i int) (hit, bool) {
+	src := r.src
+	if spaceAt(src, i+1) || unitAt(src, i+1) == '*' {
+		return hit{}, false
 	}
-	return s.spoiler, closeAt + 2, true
+	j := r.scan("*", i+2, func(k int) bool { return src[k] == '*' && unitAt(src, k+1) != '*' && !spaceAt(src, k-1) }, "**")
+	return r.nested(i+1, j, j+1)
+}
+
+func (r *run) emUnderscore(i int) (hit, bool) {
+	src := r.src
+	if wordAt(src, i-1) || unitAt(src, i+1) == '_' {
+		return hit{}, false
+	}
+	j := r.scan("_", i+2, func(k int) bool { return src[k] == '_' && !wordAt(src, k+1) }, "__")
+	return r.nested(i+1, j, j+1)
+}
+
+func (r *run) strike(i int) (hit, bool) {
+	src := r.src
+	if spaceAt(src, i+2) {
+		return hit{}, false
+	}
+	j := r.scan("~~", i+3, func(k int) bool { return hasAt(src, k, "~~") }, "")
+	if j >= 0 && spaceAt(src, j-1) {
+		return hit{}, false
+	}
+	return r.nested(i+2, j, j+2)
+}
+
+// spoiler replaces ||hidden|| by the spoiler word; what it hides is not read.
+func (r *run) spoiler(i int) (hit, bool) {
+	src := r.src
+	j := r.scan("||", i+3, func(k int) bool { return hasAt(src, k, "||") }, "")
+	if j < 0 {
+		return hit{}, false
+	}
+	return hit{v: r.p.spoiler, end: j + 2}, true
+}
+
+// nested is the formatted run src[from:to] read one level deeper (to < 0: no closer).
+func (r *run) nested(from, to, end int) (hit, bool) {
+	if to < 0 {
+		return hit{}, false
+	}
+	return hit{v: r.p.inline(r.src[from:to], inlineCtx{depth: r.ctx.depth + 1, noLinks: r.ctx.noLinks}), end: end}, true
 }

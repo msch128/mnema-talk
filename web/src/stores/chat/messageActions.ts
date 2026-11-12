@@ -1,4 +1,5 @@
 import type { Message } from '../../types/domain'
+import { messageText } from '../../shared/lib/textLength'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api } from '../../shared/lib/api'
 import { resolveReaction } from '../../shared/lib/reactionEmoji'
@@ -20,7 +21,7 @@ export async function sendMessage(cx: Cx, content: string, parentId: string | nu
   const { cs } = cx
   const community = cs.communityGeneration
   const channelId = targetChannelId ?? cs.activeChannel.value?.id
-  if (!channelId || (!content.trim() && !attachmentIds.length)) return null
+  if (!channelId || (!messageText(content) && !attachmentIds.length)) return null
   const send: TextSend = { content, parentId, replyToId, nonce: newNonce(), attachmentIds }
   // Files are not kept for later; a message with them fails as it always did.
   if (!attachmentIds.length && hasQueued(cx, channelId)) return enqueue(cx, channelId, send, true)
@@ -69,10 +70,10 @@ export async function uploadMedia(cx: Cx, file: File, content = '', parentId: st
 export async function editMessage(cx: Cx, channelId: string, messageId: string, content: string) {
   const { cs } = cx
   const community = cs.communityGeneration
-  if (!content.trim()) return null
+  if (!messageText(content)) return null
   const updated = await api(`/api/channels/${channelId}/messages/${messageId}`, {
     method: 'PUT',
-    json: { content: withEmojiTokens(content.trim()) }, decode: decodeMessage
+    json: { content: withEmojiTokens(messageText(content)) }, decode: decodeMessage
   })
   assertCommunity(cx, community)
   applyToMessage(cx, messageId, m => Object.assign(m, updated))

@@ -166,7 +166,7 @@ func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, er
 // @Success 200 {object} core.Message "Updated message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: you are not the author, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: you are not the author, the message is in a direct message conversation of two, or the chat of its Talk, that cannot be written in any more (a block, or the other account disabled; the same answer as a refused new message), or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."

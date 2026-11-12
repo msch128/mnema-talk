@@ -34,6 +34,31 @@ audit.
 | [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; two rounds: the should-fix findings S1 to S4 of the first were fixed in the same pull request and checked in the second |
 | [790-sweep](2026-11/790-sweep.md) | the nightly simulator sweep | the settle table of the 43 failing seeds, the sweep of seeds 1..400 with a failure budget, a test for the key package renewal rule; its two should-fix findings were fixed in the same pull request |
 
+## 2026-11: defect hunt on 3.0.8
+
+Each finding of the hunt went to two agents that had not written it (one
+reproduced it from a clean checkout, one tried to defeat it), and each fix to
+a reviewer that had written neither. These are the fix reviews; several took
+two or three rounds, and a round that ended in "do not merge" is part of the
+report.
+
+| Report | Fix for |
+|---|---|
+| [h-l1-01-04](2026-11-hunt/h-l1-01-04.md) | four gates and tests that did not check what their stated reason said (complexity gate, a false skip, the compatibility baseline, the release checks) |
+| [h-l4-01](2026-11-hunt/h-l4-01.md) | leaving a group conversation while seated in its Talk |
+| [h-l3-s1-01](2026-11-hunt/h-l3-s1-01.md) | edits and poll votes after a block in a conversation of two |
+| [h-l3-12](2026-11-hunt/h-l3-12.md) | the chat of the conversation's Talk after a block |
+| [h-l3-01-04](2026-11-hunt/h-l3-01-04.md) | link rules: the server judges every host the client could open |
+| [h-l3-05-06](2026-11-hunt/h-l3-05-06.md) | a muted channel and resolved mentions; snippets and pushes hide what the renderer hides |
+| [h-l3-09](2026-11-hunt/h-l3-09.md) | wiki titles compared by one Unicode-aware key |
+| [h-l3-10](2026-11-hunt/h-l3-10.md) | a blocked member's words folded on every surface |
+| [removal-fix](2026-11-hunt/removal-fix.md) | the removal of silent members in the media group protocol (the committer waits for newcomers; a renewal that won a conflict counts toward the limit), three rounds, with a design note: a mitigation, not a cure |
+| [h-l3-07-h-l2-01-h-l3-11](2026-11-hunt/h-l3-07-h-l2-01-h-l3-11.md) | document sentences that differed from the code; the composer's message text |
+
+One change in this set was made by the coordinator and reviewed by nobody
+else: after "Show", focus goes to the message's row in the place where it was
+pressed (`web/src/shared/lib/revealFocus.ts`).
+
 Not kept from the hardening run (lost with a temporary directory before they were copied): the
 review of #768 (permission checks refuse without a service), the first two
 rounds for #771 and the second round for #779.

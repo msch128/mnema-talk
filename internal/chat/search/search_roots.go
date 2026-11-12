@@ -6,16 +6,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/mdplain"
 )
 
 // SearchRoot is the thread root of a reply hit: enough to show where the reply
 // belongs without loading the thread.
 type SearchRoot struct {
-	ID          uuid.UUID `json:"id" format:"uuid"`
-	ChannelID   uuid.UUID `json:"channel_id" format:"uuid"`
+	ID        uuid.UUID `json:"id" format:"uuid"`
+	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
+	// UserID is the root's author, so the client can fold a member the
+	// reader blocked (search leaves blocks to the client, see core.BlockExists).
+	UserID      uuid.UUID `json:"user_id,omitempty" binding:"optional" format:"uuid"`
 	Username    string    `json:"username"`
 	DisplayName string    `json:"display_name"`
-	// Snippet is the start of the root message (at most 200 characters).
+	// Snippet is the start of the root message (the whole
+	// text when it has at most 200 characters, else the first 200 characters
+	// of its plain text as Markdown, each spoiler as ||…||).
+	// Escaped plain text holds no links or formatting, and the escaping
+	// (a backslash before symbols) makes it at most 996 characters long.
 	Snippet string `json:"snippet"`
 }
 
@@ -35,7 +43,7 @@ func searchRoots(ctx context.Context, p *db.Pool, msgs []core.Message) (map[stri
 		return roots, nil
 	}
 	rows, err := p.Query(ctx, `
-		SELECT m.id, m.channel_id, u.username, COALESCE(m.author_name, u.display_name), LEFT(m.content, 200)
+		SELECT m.id, m.channel_id, m.user_id, u.username, COALESCE(m.author_name, u.display_name), m.content
 		FROM messages m JOIN users u ON u.id = m.user_id
 		WHERE m.id = ANY($1::uuid[])`, ids)
 	if err != nil {
@@ -44,9 +52,10 @@ func searchRoots(ctx context.Context, p *db.Pool, msgs []core.Message) (map[stri
 	defer rows.Close()
 	for rows.Next() {
 		var r SearchRoot
-		if err := rows.Scan(&r.ID, &r.ChannelID, &r.Username, &r.DisplayName, &r.Snippet); err != nil {
+		if err := rows.Scan(&r.ID, &r.ChannelID, &r.UserID, &r.Username, &r.DisplayName, &r.Snippet); err != nil {
 			return nil, err
 		}
+		r.Snippet = mdplain.Snippet(r.Snippet, mdplain.SnippetLen)
 		roots[r.ID.String()] = r
 	}
 	return roots, rows.Err()

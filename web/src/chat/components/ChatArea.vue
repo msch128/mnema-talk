@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { Message } from '../../types/domain'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { Hash, ArrowDown, ArrowUp, Loader2, MessageCircle, Volume2 } from '@lucide/vue'
@@ -173,7 +174,7 @@ function isSendBlocked(text: string): boolean {
 const stillIn = (channelId: string | undefined) => chatStore.activeChannel?.id === channelId
 
 async function handleSend() {
-  const text = inputMessage.value.trim()
+  const text = messageText(inputMessage.value)
   if (isSendBlocked(text)) return
 
   isSending.value = true
@@ -283,7 +284,7 @@ const groupedIds = computed(() => {
         <span class="text-xs font-semibold text-mnema-accent uppercase tracking-wide">{{ dividerLabel() }}</span>
         <span class="flex-1 h-px bg-mnema-accent/40"></span>
       </div>
-      <BlockedMessageRow v-if="blocks.hides(msg)" :msg="msg" @show="blocks.reveal(msg.id)" />
+      <BlockedMessageRow v-if="blocks.hides(msg)" :msg="msg" />
       <MessageRow
         v-else
         :msg="msg"

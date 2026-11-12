@@ -4,6 +4,7 @@
 import { GroupChecks } from './groupSimChecks.fixture'
 import { GroupSim, SIM_START, type Fault } from './groupSim.fixture'
 import { fixtureId } from '../../test-fixtures.fixture'
+import type { MediaTiming } from './bounds'
 
 /** How long the relay interferes. */
 export const CHAOS_MS = 75_000
@@ -32,6 +33,8 @@ export interface SimPlan {
   /** How long the room may take to agree; AGREE_WITHIN_MS when left out. */
   agreeWithinMs?: number
   fault?: Fault
+  /** The lifetimes of the group (rotation, absence, heartbeat, maintenance); SIM_TIMING when left out. */
+  timing?: MediaTiming
   /**
    * 'honest' is what the server does without an attacker: one ordered socket
    * per member, nothing dropped or duplicated, only delay (and a socket that
@@ -65,7 +68,9 @@ function actions(sim: GroupSim, ids: readonly string[]): Action[] {
   if (!awake.length) return list
   list.push(['reload', 2, () => sim.reload(sim.pick(awake), sim.draw() < 0.5)])
   list.push(['sleep', 2, () => sim.sleep(sim.pick(awake), sim.between(2000, 20_000))])
-  list.push(['sleep', 1, () => sim.sleep(sim.pick(awake), sim.between(70_000, 90_000))])
+  // A long sleep is one the group notices: past its sleep limit (64 s with the default lifetimes).
+  const noticed = 2 * Math.max(10, sim.timing.maintenanceMs) + 60_000
+  list.push(['sleep', 1, () => sim.sleep(sim.pick(awake), sim.between(noticed + 6000, noticed + 26_000))])
   list.push(['reconnect', 1, () => sim.reconnect(sim.pick(awake), sim.between(200, 6000))])
   return list
 }
@@ -126,6 +131,7 @@ export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResu
     const chaosMs = plan.chaosMs ?? CHAOS_MS
     const ids = Array.from({ length: members }, (_, index) => fixtureId(index + 1))
     sim.ordered = plan.relay === 'honest'
+    sim.timing = plan.timing ?? sim.timing
     sim.fault = plan.fault ?? (sim.ordered ? HONEST : sim.pick(FAULTS))
     sim.note(`seed ${seed}: up to ${members} members, ${plan.relay ?? 'hostile'} relay, faults ${JSON.stringify(sim.fault)}`)
     schedule(sim, ids, plan, chaosMs)

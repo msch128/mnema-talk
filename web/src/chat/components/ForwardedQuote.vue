@@ -8,10 +8,12 @@ import { useForwardQuotesStore } from '../../stores/forwardQuotes'
 import { previewText } from '../lib/replies'
 import { locale } from '../../i18n'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 
 // The original under a forwarded message. The message carries a reference
 // only; the quote is what the server returns for this reader, so someone who
 // may not see the original gets a plain "not available" and nothing else.
+// An original by a member the reader blocked is folded (BlockedFold).
 const props = defineProps({
   msg: { type: Object as PropType<Message>, required: true }
 })
@@ -44,7 +46,7 @@ function open() {
       <Forward class="h-3.5 w-3.5" />{{ $t('forward.label') }}
       <span v-if="quote?.channel_name" class="flex items-center gap-0.5"><Hash class="h-3 w-3" />{{ quote.channel_name }}</span>
     </p>
-    <template v-if="quote?.available && quote.author">
+    <BlockedFold v-if="quote?.available && quote.author" :msg="{ id: quote.message_id ?? msg.id, user_id: quote.author.id }">
       <div class="mb-0.5 flex items-center gap-2">
         <UserAvatar :user="{ username: quote.author.username, display_name: quote.author.display_name, avatar_url: quote.author.avatar_url }" size="xxs" />
         <span class="truncate text-sm font-medium text-mnema-muted">{{ quote.author.display_name || quote.author.username }}</span>
@@ -55,7 +57,7 @@ function open() {
         <span v-if="quote.is_edited" class="text-xs italic text-mnema-tertiary">{{ $t('chat.edited') }}</span>
       </button>
       <p v-else class="line-clamp-4 wrap-break-word text-sm text-mnema-muted">{{ text || $t('chat.attachment') }}</p>
-    </template>
+    </BlockedFold>
     <p v-else-if="quote?.deleted" data-testid="forwarded-gone" class="text-sm italic text-mnema-tertiary">{{ $t('forward.deleted') }}</p>
     <p v-else-if="quote" data-testid="forwarded-unavailable" class="text-sm italic text-mnema-tertiary">{{ $t('forward.unavailable') }}</p>
   </div>

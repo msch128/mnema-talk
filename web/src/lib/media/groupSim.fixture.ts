@@ -129,6 +129,8 @@ export class GroupSim {
   readonly room = new Map<string, SimMember>()
   /** While set, the scheduler interferes with the relay. */
   fault: Fault | null = null
+  /** The lifetimes the members run with; SIM_TIMING unless a plan says otherwise. */
+  timing: MediaTiming = SIM_TIMING
   /**
    * The relay of an honest server: each member gets everything over one
    * socket, so in the order the server sent it, once, and only delayed.
@@ -208,7 +210,7 @@ export class GroupSim {
     Math.random = () => (this.context.getStore() ? this.jitter() : realRandom())
     const open = MediaGroup.open.bind(MediaGroup)
     const spy = vi.spyOn(MediaGroup, 'open').mockImplementation(async (userId, channelId) => {
-      const group = await open(userId, channelId, SIM_TIMING)
+      const group = await open(userId, channelId, this.timing)
       const member = this.context.getStore()
       if (member && group) this.observe(member, group)
       return group

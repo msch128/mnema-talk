@@ -26,11 +26,20 @@ export function messageMentionsMe(cx: Cx, msg: Message) {
   return mentionsUser(msg.content || '', me.username)
 }
 
-/** Whether msg is addressed to the signed-in user by name, through one of their roles or as a reply (not by @all/@here). */
+/**
+ * Whether msg is addressed to the signed-in user by name, through one of their
+ * roles or as a reply (not by @all/@here), the way the server counts it.
+ * `mentions` is whom the server notifies under the sender's mention policy (a
+ * webhook with user mentions off, a bot's allowed_mentions, the recipient
+ * cap): a name it left as plain text addresses nobody. Being on that list
+ * through @all/@here alone is not enough, so the text or a role of mine must
+ * name me as well. Only a payload without the list is read from the text.
+ */
 export function messageMentionsMeDirectly(cx: Cx, msg: Message): boolean {
   const me = cx.authStore.user
   if (!me || !msg) return false
   if (msg.reply_to?.user_id === me.id) return true
+  if (Array.isArray(msg.mentions) && !msg.mentions.includes(me.id)) return false
   if (mentionsUser(msg.content || '', me.username)) return true
   const mine = new Set(usePermissionsStore().myRoleIds)
   return (msg.mention_roles ?? []).some(id => mine.has(id))

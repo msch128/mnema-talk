@@ -223,6 +223,12 @@ branch) was waived when it landed there and is not reported again.
    (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
    version into the web app, so the app can tell browsers when a newer
    version is running.
+   `.github/workflows/release-check.yml` checks what a release really
+   published, daily and by hand (*Run workflow*, optionally with a tag): the
+   GHCR image must pass the same verification the updater runs
+   (`TestLiveReleaseImage`), and the release's `mnema-web-*.zip` must satisfy
+   the desktop clients' archive and manifest rules
+   (`TestPublishedBundlesSatisfyDesktopLayout`). A failed run is the alert.
 4. Desktop builds are published from
    [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); this
    repository's releases stopped attaching them after v0.7.3. They are unsigned

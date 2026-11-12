@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import type { VueWrapper } from '@vue/test-utils'
 import SearchResults from './SearchResults.vue'
 import { i18nPlugin, setLocale } from '../../i18n'
@@ -8,6 +9,8 @@ import { fixtureId, messageFixture } from '../../test-fixtures.fixture'
 
 let wrapper: VueWrapper
 afterEach(() => wrapper?.unmount())
+// Each hit asks the block list whether to fold it.
+beforeEach(() => setActivePinia(createPinia()))
 
 const channelId = fixtureId(7)
 

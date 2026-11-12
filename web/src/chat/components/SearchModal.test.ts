@@ -11,6 +11,7 @@ import { searchOpen, searchText } from '../lib/globalSearch'
 import { useChatStore } from '../../stores/chat'
 import { useToastStore } from '../../stores/toast'
 import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { useBlocksStore } from '../../stores/blocks'
 import { channelFixture, messageFixture, userFixture, fixtureId, requireValue } from '../../test-fixtures.fixture'
 import { i18nPlugin, setLocale, t } from '../../i18n'
 import { tooltip } from '../../directives/tooltip'
@@ -201,6 +202,32 @@ describe('SearchModal queries', () => {
     expect(chat.goToMessage).toHaveBeenCalledWith(first)
     click('#search-result-1')
     expect(chat.goToMessage).toHaveBeenLastCalledWith(second)
+  })
+
+  it('shows a folded hit of a blocked member on Enter or click, and opens it on the next one', async () => {
+    const blocked = fixtureId(90)
+    useServerFeaturesStore().list = ['blocks']
+    useBlocksStore().blocked = [{ user_id: blocked, username: 'troll', display_name: 'Troll', blocked_at: '2026-01-01T00:00:00Z' }]
+    const chat = useChatStore()
+    chat.goToMessage = vi.fn()
+    const rootId = fixtureId(91)
+    const hit = messageFixture({ id: fixtureId(92), user_id: blocked, content: 'blocked words result' })
+    const reply = messageFixture({ id: fixtureId(93), parent_id: rootId, content: 'plain reply result' })
+    mockApi.mockResolvedValue({ messages: [hit, reply], has_more: false, roots: { [rootId]: { id: rootId, channel_id: reply.channel_id, user_id: blocked, username: 'troll', display_name: 'Troll', snippet: 'blocked root words' } } })
+    await open(); await query('result')
+    const option = (i: number) => requireValue(document.querySelector<HTMLElement>(`#search-result-${i}`))
+    expect(option(0).textContent).not.toContain('blocked words')
+    key('Enter'); await nextTick()
+    expect(chat.goToMessage).not.toHaveBeenCalled()
+    expect(option(0).textContent).toContain('blocked words result')
+    key('Enter'); await nextTick()
+    expect(chat.goToMessage).toHaveBeenCalledWith(hit)
+    // A hit under a folded thread root shows the root first.
+    option(1).click(); await nextTick()
+    expect(option(1).textContent).toContain('blocked root words')
+    expect(chat.goToMessage).toHaveBeenCalledTimes(1)
+    option(1).click()
+    expect(chat.goToMessage).toHaveBeenLastCalledWith(reply)
   })
 
   it('paginates with a before cursor and keeps results after pagination failure', async () => {

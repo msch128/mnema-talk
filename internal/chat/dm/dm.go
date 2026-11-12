@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/mdplain"
 )
 
 // Direct messages are conversations of two to ten members kept in the
@@ -100,7 +101,11 @@ type DirectMessage struct {
 // DMLastMessage is the preview of a conversation's latest message.
 type DMLastMessage struct {
 	UserID uuid.UUID `json:"user_id" format:"uuid"`
-	// Text is the start of the message text (at most 200 characters).
+	// Text is the start of the message text (the whole
+	// text when it has at most 200 characters, else the first 200 characters
+	// of its plain text as Markdown, each spoiler as ||…||).
+	// Escaped plain text holds no links or formatting, and the escaping
+	// (a backslash before symbols) makes it at most 996 characters long.
 	Text          string `json:"text"`
 	HasAttachment bool   `json:"has_attachment"`
 	HasPoll       bool   `json:"has_poll"`
@@ -138,7 +143,7 @@ const DmSelect = `
 	JOIN users usr ON usr.id = me.user_id
 	LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 	LEFT JOIN LATERAL (
-	    SELECT m.user_id, left(m.content, 200) AS text,
+	    SELECT m.user_id, m.content AS text,
 	           EXISTS (SELECT 1 FROM media md WHERE md.message_id = m.id) AS has_media,
 	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll,
 	           CASE WHEN m.embeds->0->>'call' = 'missed' THEN 'missed' WHEN m.embeds->0->>'talk_id' IS NOT NULL THEN 'invite' END AS call_kind
@@ -196,6 +201,7 @@ func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 	}
 	if lastUser != nil {
 		last.UserID = *lastUser
+		last.Text = mdplain.Snippet(last.Text, mdplain.SnippetLen)
 		d.LastMessage = &last
 	}
 	return d, err

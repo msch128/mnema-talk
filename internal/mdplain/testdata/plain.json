@@ -24,5 +24,17 @@
   {"input": "<mailto:me@example.org> and `` ` ``", "plain": "mailto:me@example.org and `"},
   {"input": "see (https://example.com/a_(b)) now", "plain": "see (https://example.com/a_(b)) now"},
   {"input": "~~ not struck ~~ and a * b * c", "plain": "~~ not struck ~~ and a * b * c"},
-  {"input": "", "plain": ""}
+  {"input": "", "plain": ""},
+  {"input": "*a\n\n`b* ||` ||c d|| tail", "plain": "*a b* || Spoiler tail"},
+  {"input": "*a\n\n`b* ||` ||x|| tail*", "plain": "a b* || Spoiler tail"},
+  {"input": "||a `||` b|| c", "plain": "Spoiler c"},
+  {"input": "x ||y `` ` `` z|| w", "plain": "x Spoiler w"},
+  {"input": "[||a||](https://a.example) ||b||", "plain": "Spoiler Spoiler"},
+  {"input": "see http://a.example/x||y|| z", "plain": "see http://a.example/xSpoiler z"},
+  {"input": "**a ||b** c|| d", "plain": "a ||b c|| d"},
+  {"input": "\\||a|| b||", "plain": "||aSpoiler"},
+  {"input": "> ||a\n> b||", "plain": "Spoiler"},
+  {"input": "- ||a\n- b||", "plain": "||a b||"},
+  {"input": "```\n||a\n```\n||b||", "plain": "||a Spoiler"},
+  {"input": "_a ||b_ c|| d", "plain": "a ||b c|| d"}
 ]

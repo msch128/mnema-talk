@@ -1,0 +1,874 @@
+[
+ {
+  "href": "http://a..b/",
+  "ok": true
+ },
+ {
+  "href": "https://a..b/",
+  "ok": true
+ },
+ {
+  "href": "http://x_y.example",
+  "ok": true
+ },
+ {
+  "href": "https://x_y.example",
+  "ok": true
+ },
+ {
+  "href": "http://a!$&'()*+,;=~{}.x/",
+  "ok": true
+ },
+ {
+  "href": "https://a!$&'()*+,;=~{}.x/",
+  "ok": true
+ },
+ {
+  "href": "http://1.2.3.4/",
+  "ok": true
+ },
+ {
+  "href": "https://1.2.3.4/",
+  "ok": true
+ },
+ {
+  "href": "http://0x7f.1/",
+  "ok": true
+ },
+ {
+  "href": "https://0x7f.1/",
+  "ok": true
+ },
+ {
+  "href": "http://a.1e/",
+  "ok": true
+ },
+ {
+  "href": "https://a.1e/",
+  "ok": true
+ },
+ {
+  "href": "http://h.x:/",
+  "ok": true
+ },
+ {
+  "href": "https://h.x:/",
+  "ok": true
+ },
+ {
+  "href": "http://h.x:0080/",
+  "ok": true
+ },
+ {
+  "href": "https://h.x:0080/",
+  "ok": true
+ },
+ {
+  "href": "http://.x/",
+  "ok": true
+ },
+ {
+  "href": "https://.x/",
+  "ok": true
+ },
+ {
+  "href": "http://x./",
+  "ok": true
+ },
+ {
+  "href": "https://x./",
+  "ok": true
+ },
+ {
+  "href": "http://./",
+  "ok": true
+ },
+ {
+  "href": "https://./",
+  "ok": true
+ },
+ {
+  "href": "http://-x-.y/",
+  "ok": true
+ },
+ {
+  "href": "https://-x-.y/",
+  "ok": true
+ },
+ {
+  "href": "http://ab_.cd/",
+  "ok": true
+ },
+ {
+  "href": "https://ab_.cd/",
+  "ok": true
+ },
+ {
+  "href": "http://a.b_/",
+  "ok": true
+ },
+ {
+  "href": "https://a.b_/",
+  "ok": true
+ },
+ {
+  "href": "http://0/",
+  "ok": true
+ },
+ {
+  "href": "https://0/",
+  "ok": true
+ },
+ {
+  "href": "http://1.2.3/",
+  "ok": true
+ },
+ {
+  "href": "https://1.2.3/",
+  "ok": true
+ },
+ {
+  "href": "http://4294967295/",
+  "ok": true
+ },
+ {
+  "href": "https://4294967295/",
+  "ok": true
+ },
+ {
+  "href": "http://1.2.3.4./",
+  "ok": true
+ },
+ {
+  "href": "https://1.2.3.4./",
+  "ok": true
+ },
+ {
+  "href": "http://A.B/",
+  "ok": true
+ },
+ {
+  "href": "https://A.B/",
+  "ok": true
+ },
+ {
+  "href": "http://{x}/",
+  "ok": true
+ },
+ {
+  "href": "https://{x}/",
+  "ok": true
+ },
+ {
+  "href": "http://x.y/?a",
+  "ok": true
+ },
+ {
+  "href": "https://x.y/?a",
+  "ok": true
+ },
+ {
+  "href": "http://x#y",
+  "ok": true
+ },
+ {
+  "href": "https://x#y",
+  "ok": true
+ },
+ {
+  "href": "http://x?y",
+  "ok": true
+ },
+ {
+  "href": "https://x?y",
+  "ok": true
+ },
+ {
+  "href": "http://a.b.c.d.e.f/",
+  "ok": true
+ },
+ {
+  "href": "https://a.b.c.d.e.f/",
+  "ok": true
+ },
+ {
+  "href": "http://0x/",
+  "ok": true
+ },
+ {
+  "href": "https://0x/",
+  "ok": true
+ },
+ {
+  "href": "http://0xg/",
+  "ok": true
+ },
+ {
+  "href": "https://0xg/",
+  "ok": true
+ },
+ {
+  "href": "http://a.0xg/",
+  "ok": true
+ },
+ {
+  "href": "https://a.0xg/",
+  "ok": true
+ },
+ {
+  "href": "http://1.0x/",
+  "ok": true
+ },
+ {
+  "href": "https://1.0x/",
+  "ok": true
+ },
+ {
+  "href": "http://a.b./",
+  "ok": true
+ },
+ {
+  "href": "https://a.b./",
+  "ok": true
+ },
+ {
+  "href": "http://a..b..c",
+  "ok": true
+ },
+ {
+  "href": "https://a..b..c",
+  "ok": true
+ },
+ {
+  "href": "http://..",
+  "ok": true
+ },
+ {
+  "href": "https://..",
+  "ok": true
+ },
+ {
+  "href": "http://a...",
+  "ok": true
+ },
+ {
+  "href": "https://a...",
+  "ok": true
+ },
+ {
+  "href": "http://0.0.0.0",
+  "ok": true
+ },
+ {
+  "href": "https://0.0.0.0",
+  "ok": true
+ },
+ {
+  "href": "http://00/",
+  "ok": true
+ },
+ {
+  "href": "https://00/",
+  "ok": true
+ },
+ {
+  "href": "http://0x00000000001/",
+  "ok": true
+ },
+ {
+  "href": "https://0x00000000001/",
+  "ok": true
+ },
+ {
+  "href": "http://1.2.0x3/",
+  "ok": true
+ },
+ {
+  "href": "https://1.2.0x3/",
+  "ok": true
+ },
+ {
+  "href": "http://x.y:65535",
+  "ok": true
+ },
+ {
+  "href": "https://x.y:65535",
+  "ok": true
+ },
+ {
+  "href": "http://-/",
+  "ok": true
+ },
+ {
+  "href": "https://-/",
+  "ok": true
+ },
+ {
+  "href": "http://_/",
+  "ok": true
+ },
+ {
+  "href": "https://_/",
+  "ok": true
+ },
+ {
+  "href": "http://1.2.3.999/",
+  "ok": false
+ },
+ {
+  "href": "https://1.2.3.999/",
+  "ok": false
+ },
+ {
+  "href": "http://1.2.3.4.5/",
+  "ok": false
+ },
+ {
+  "href": "https://1.2.3.4.5/",
+  "ok": false
+ },
+ {
+  "href": "http://a.0x/",
+  "ok": false
+ },
+ {
+  "href": "https://a.0x/",
+  "ok": false
+ },
+ {
+  "href": "http://a.08/",
+  "ok": false
+ },
+ {
+  "href": "https://a.08/",
+  "ok": false
+ },
+ {
+  "href": "http://h.x:65536/",
+  "ok": false
+ },
+ {
+  "href": "https://h.x:65536/",
+  "ok": false
+ },
+ {
+  "href": "http://a|b/",
+  "ok": false
+ },
+ {
+  "href": "https://a|b/",
+  "ok": false
+ },
+ {
+  "href": "http://a^b/",
+  "ok": false
+ },
+ {
+  "href": "https://a^b/",
+  "ok": false
+ },
+ {
+  "href": "http://09/",
+  "ok": false
+ },
+ {
+  "href": "https://09/",
+  "ok": false
+ },
+ {
+  "href": "http://4294967296/",
+  "ok": false
+ },
+ {
+  "href": "https://4294967296/",
+  "ok": false
+ },
+ {
+  "href": "http://a..1/",
+  "ok": false
+ },
+ {
+  "href": "https://a..1/",
+  "ok": false
+ },
+ {
+  "href": "http://1..2/",
+  "ok": false
+ },
+ {
+  "href": "https://1..2/",
+  "ok": false
+ },
+ {
+  "href": "http://a.b:12a/",
+  "ok": false
+ },
+ {
+  "href": "https://a.b:12a/",
+  "ok": false
+ },
+ {
+  "href": "http://x:1:2/",
+  "ok": false
+ },
+ {
+  "href": "https://x:1:2/",
+  "ok": false
+ },
+ {
+  "href": "http://12345678901234567890/",
+  "ok": false
+ },
+ {
+  "href": "https://12345678901234567890/",
+  "ok": false
+ },
+ {
+  "href": "http://[[zq]]/",
+  "ok": false
+ },
+ {
+  "href": "https://[[zq]]/",
+  "ok": false
+ },
+ {
+  "href": "http://[::1]x/",
+  "ok": false
+ },
+ {
+  "href": "https://[::1]x/",
+  "ok": false
+ },
+ {
+  "href": "http://[/",
+  "ok": false
+ },
+ {
+  "href": "https://[/",
+  "ok": false
+ },
+ {
+  "href": "http://[zz]/",
+  "ok": false
+ },
+ {
+  "href": "https://[zz]/",
+  "ok": false
+ },
+ {
+  "href": "http://e.example[/",
+  "ok": false
+ },
+ {
+  "href": "https://e.example[/",
+  "ok": false
+ },
+ {
+  "href": "http://[::1]/",
+  "ok": true
+ },
+ {
+  "href": "https://[::1]/",
+  "ok": true
+ },
+ {
+  "href": "http://[::1]:80/",
+  "ok": true
+ },
+ {
+  "href": "https://[::1]:80/",
+  "ok": true
+ },
+ {
+  "href": "http://[1:2]/",
+  "ok": false
+ },
+ {
+  "href": "https://[1:2]/",
+  "ok": false
+ },
+ {
+  "href": "http://xn--caf-dma.example/",
+  "ok": true
+ },
+ {
+  "href": "https://xn--caf-dma.example/",
+  "ok": true
+ },
+ {
+  "href": "http://café.example/",
+  "ok": true
+ },
+ {
+  "href": "https://café.example/",
+  "ok": true
+ },
+ {
+  "href": "http://u:p@h.x/",
+  "ok": false
+ },
+ {
+  "href": "https://u:p@h.x/",
+  "ok": false
+ },
+ {
+  "href": "http://@h.x/",
+  "ok": false
+ },
+ {
+  "href": "https://@h.x/",
+  "ok": false
+ },
+ {
+  "href": "http://a@b@c/",
+  "ok": false
+ },
+ {
+  "href": "https://a@b@c/",
+  "ok": false
+ },
+ {
+  "href": "http://a.b@c.d/",
+  "ok": false
+ },
+ {
+  "href": "https://a.b@c.d/",
+  "ok": false
+ },
+ {
+  "href": "http://h.x@/",
+  "ok": false
+ },
+ {
+  "href": "https://h.x@/",
+  "ok": false
+ },
+ {
+  "href": "http://a:b@/",
+  "ok": false
+ },
+ {
+  "href": "https://a:b@/",
+  "ok": false
+ },
+ {
+  "href": "http://a@[::1]/",
+  "ok": false
+ },
+ {
+  "href": "https://a@[::1]/",
+  "ok": false
+ },
+ {
+  "href": "http://:@h.x/",
+  "ok": false
+ },
+ {
+  "href": "https://:@h.x/",
+  "ok": false
+ },
+ {
+  "href": "http://allowed.example@other.example/",
+  "ok": false
+ },
+ {
+  "href": "https://allowed.example@other.example/",
+  "ok": false
+ },
+ {
+  "href": "http://h.x/@path",
+  "ok": true
+ },
+ {
+  "href": "https://h.x/@path",
+  "ok": true
+ },
+ {
+  "href": "http://h.x?@q",
+  "ok": true
+ },
+ {
+  "href": "https://h.x?@q",
+  "ok": true
+ },
+ {
+  "href": "http://h.x#@f",
+  "ok": true
+ },
+ {
+  "href": "https://h.x#@f",
+  "ok": true
+ },
+ {
+  "href": "http://a%41b/",
+  "ok": true
+ },
+ {
+  "href": "https://a%41b/",
+  "ok": true
+ },
+ {
+  "href": "http://%41.example/",
+  "ok": true
+ },
+ {
+  "href": "https://%41.example/",
+  "ok": true
+ },
+ {
+  "href": "http://x%2Ey/",
+  "ok": true
+ },
+ {
+  "href": "https://x%2Ey/",
+  "ok": true
+ },
+ {
+  "href": "http://a%2541/",
+  "ok": false
+ },
+ {
+  "href": "https://a%2541/",
+  "ok": false
+ },
+ {
+  "href": "http://a%zz/",
+  "ok": false
+ },
+ {
+  "href": "https://a%zz/",
+  "ok": false
+ },
+ {
+  "href": "http://a%4/",
+  "ok": false
+ },
+ {
+  "href": "https://a%4/",
+  "ok": false
+ },
+ {
+  "href": "http://a%/",
+  "ok": false
+ },
+ {
+  "href": "https://a%/",
+  "ok": false
+ },
+ {
+  "href": "http://a%C3/",
+  "ok": false
+ },
+ {
+  "href": "https://a%C3/",
+  "ok": false
+ },
+ {
+  "href": "http://a%C3%A9.example/",
+  "ok": true
+ },
+ {
+  "href": "https://a%C3%A9.example/",
+  "ok": true
+ },
+ {
+  "href": "http://a%C0%80.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a%C0%80.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a%ED%A0%80.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a%ED%A0%80.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a%E2%80%8Bb.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a%E2%80%8Bb.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a%00b/",
+  "ok": false
+ },
+ {
+  "href": "https://a%00b/",
+  "ok": false
+ },
+ {
+  "href": "http://x%3Ay/",
+  "ok": false
+ },
+ {
+  "href": "https://x%3Ay/",
+  "ok": false
+ },
+ {
+  "href": "http://a%40b.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a%40b.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a%5Bb/",
+  "ok": false
+ },
+ {
+  "href": "https://a%5Bb/",
+  "ok": false
+ },
+ {
+  "href": "http://h.x:%38%30/",
+  "ok": false
+ },
+ {
+  "href": "https://h.x:%38%30/",
+  "ok": false
+ },
+ {
+  "href": "http://a%7Cb/",
+  "ok": false
+ },
+ {
+  "href": "https://a%7Cb/",
+  "ok": false
+ },
+ {
+  "href": "http://a%20b/",
+  "ok": false
+ },
+ {
+  "href": "https://a%20b/",
+  "ok": false
+ },
+ {
+  "href": "http://a%E2%80%AEb.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a%E2%80%AEb.example/",
+  "ok": false
+ },
+ {
+  "href": "http://A%2eB/",
+  "ok": true
+ },
+ {
+  "href": "https://A%2eB/",
+  "ok": true
+ },
+ {
+  "href": "http://a​b.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a​b.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a­b.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a­b.example/",
+  "ok": false
+ },
+ {
+  "href": "http://ab/",
+  "ok": false
+ },
+ {
+  "href": "https://ab/",
+  "ok": false
+ },
+ {
+  "href": "http://a.example‎/",
+  "ok": false
+ },
+ {
+  "href": "https://a.example‎/",
+  "ok": false
+ },
+ {
+  "href": "http://a⁠b.example/",
+  "ok": false
+ },
+ {
+  "href": "https://a⁠b.example/",
+  "ok": false
+ },
+ {
+  "href": "http://a️b.example/",
+  "ok": true
+ },
+ {
+  "href": "https://a️b.example/",
+  "ok": true
+ },
+ {
+  "href": "http://a.example/​",
+  "ok": true
+ },
+ {
+  "href": "https://a.example/​",
+  "ok": true
+ },
+ {
+  "href": "http://a.example/%E2%80%8B",
+  "ok": true
+ },
+ {
+  "href": "https://a.example/%E2%80%8B",
+  "ok": true
+ },
+ {
+  "href": "http://a.example?­",
+  "ok": true
+ },
+ {
+  "href": "https://a.example?­",
+  "ok": true
+ },
+ {
+  "href": "HTTP://A.EXAMPLE",
+  "ok": true
+ },
+ {
+  "href": "http:///x",
+  "ok": false
+ },
+ {
+  "href": "http://",
+  "ok": false
+ },
+ {
+  "href": "mailto:a@b.example",
+  "ok": true
+ },
+ {
+  "href": "mailto:?x",
+  "ok": false
+ },
+ {
+  "href": "mailto:#x",
+  "ok": false
+ },
+ {
+  "href": "mailto:a%zz",
+  "ok": true
+ },
+ {
+  "href": "ftp://a.example",
+  "ok": false
+ }
+]

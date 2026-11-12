@@ -1,0 +1,17 @@
+[
+  {"input": "short ||kept|| as typed", "limit": 200, "snippet": "short ||kept|| as typed", "plain": "short Spoiler as typed"},
+  {"input": "a b c ||the code is 4711, do not tell||", "limit": 12, "snippet": "a b c ||…||", "plain": "a b c Spoiler"},
+  {"input": "**bold** words and ||more|| words", "limit": 12, "snippet": "bold words…", "plain": "bold words…"},
+  {"input": "`a||b` and more text here", "limit": 10, "snippet": "a\\|\\|b and…", "plain": "a||b and…"},
+  {"input": "`1. x` then more and more text", "limit": 12, "snippet": "1\\. x then m…", "plain": "1. x then m…"},
+  {"input": "`# not a heading` and some more", "limit": 12, "snippet": "\\# not a hea…", "plain": "# not a hea…"},
+  {"input": "`- not an item` and some more", "limit": 12, "snippet": "\\- not an it…", "plain": "- not an it…"},
+  {"input": "`> not a quote` and some more", "limit": 12, "snippet": "\\> not a quo…", "plain": "> not a quo…"},
+  {"input": "[label](https://a.example) see https://b.example/x_y tail", "limit": 31, "snippet": "label see https\\://b.example/x\\_…", "plain": "label see https://b.example/x_…"},
+  {"input": "||unclosed and long text here", "limit": 10, "snippet": "\\|\\|unclose…", "plain": "||unclose…"},
+  {"input": "`*a* _b_ ~~c~~ <x> [y] \\z` and more", "limit": 30, "snippet": "\\*a\\* \\_b\\_ \\~\\~c\\~\\~ \\<x> \\[y] \\\\z and…", "plain": "*a* _b_ ~~c~~ <x> [y] \\z and…"},
+  {"input": "café ||π|| and more text", "limit": 14, "snippet": "café ||…|| and mo…", "plain": "café Spoiler and mo…"},
+  {"input": "line one\n> ||quoted secret that closes late||\n- item", "limit": 20, "snippet": "line one ||…|| item", "plain": "line one Spoiler item"},
+  {"input": "**bold opened here and closed only after the cut** tail", "limit": 20, "snippet": "bold opened here an…", "plain": "bold opened here an…"},
+  {"input": "`https://x.example/a` and then more words here", "limit": 20, "snippet": "https\\://x.example/a…", "plain": "https://x.example/a…"}
+]

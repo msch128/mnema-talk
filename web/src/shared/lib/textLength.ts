@@ -64,3 +64,27 @@ function regionalRun(points: string[], end: number): number {
   for (let i = end - 1; i >= 0 && isRegional(points[i]!.codePointAt(0)); i--) n++
   return n
 }
+
+// White space at the edges of a message: the union of what the server trims
+// (Go's unicode.IsSpace, which has U+0085) and what JavaScript's trim() removes
+// (which has U+FEFF). Both go, so the text that reaches the server is what is
+// counted and checked here. Two index loops, no regular expression: a long run
+// of white space costs nothing extra.
+const EDGE_SPACE = new Set<number>([
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85, 0xa0, 0x1680, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+  0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a
+])
+
+/**
+ * The text of a message as it goes on the wire, and the one rule for whether
+ * there is anything to send: NUL removed (the server refuses it and nothing
+ * renders it), then trimmed with EDGE_SPACE. An empty result means nothing to send.
+ */
+export function messageText(draft: string): string {
+  const text = draft.includes('\u0000') ? draft.replaceAll('\u0000', '') : draft
+  let start = 0
+  let end = text.length
+  while (start < end && EDGE_SPACE.has(text.charCodeAt(start))) start++
+  while (end > start && EDGE_SPACE.has(text.charCodeAt(end - 1))) end--
+  return text.slice(start, end)
+}

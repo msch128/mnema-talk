@@ -1,0 +1,157 @@
+[
+ {
+  "a": "Caf\u00e9",
+  "b": "CAF\u00c9",
+  "conflict": true
+ },
+ {
+  "a": "Caf\u00e9",
+  "b": "caf\u00e9",
+  "conflict": true
+ },
+ {
+  "a": "Caf\u00e9",
+  "b": "Cafe\u0301",
+  "conflict": true
+ },
+ {
+  "a": "Caf\u00e9",
+  "b": "CAFE\u0301",
+  "conflict": true
+ },
+ {
+  "a": "Xa\u00dfo",
+  "b": "XASSO",
+  "conflict": false
+ },
+ {
+  "a": "Xa\u00dfo",
+  "b": "xa\u00dfo",
+  "conflict": true
+ },
+ {
+  "a": "Xa\u00dfo",
+  "b": "Xasso",
+  "conflict": false
+ },
+ {
+  "a": "Xa\u00dfo",
+  "b": "Xa\u1e9eo",
+  "conflict": true
+ },
+ {
+  "a": "\u00c5ngstr\u00f6m",
+  "b": "\u00c5NGSTR\u00d6M",
+  "conflict": true
+ },
+ {
+  "a": "\u00c5ngstr\u00f6m",
+  "b": "\u00e5ngstr\u00f6m",
+  "conflict": true
+ },
+ {
+  "a": "\u00c5ngstr\u00f6m",
+  "b": "A\u030angstro\u0308m",
+  "conflict": true
+ },
+ {
+  "a": "\u00c5ngstr\u00f6m",
+  "b": "A\u030aNGSTRO\u0308M",
+  "conflict": true
+ },
+ {
+  "a": "\u00c5ngstr\u00f6m",
+  "b": "\u212bngstr\u00f6m",
+  "conflict": true
+ },
+ {
+  "a": "Istanbul",
+  "b": "ISTANBUL",
+  "conflict": true
+ },
+ {
+  "a": "Istanbul",
+  "b": "istanbul",
+  "conflict": true
+ },
+ {
+  "a": "Istanbul",
+  "b": "\u0130stanbul",
+  "conflict": false
+ },
+ {
+  "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
+  "b": "\u03a3\u039f\u03a6\u038a\u0391",
+  "conflict": true
+ },
+ {
+  "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
+  "b": "\u03c3\u03bf\u03c6\u03af\u03b1",
+  "conflict": true
+ },
+ {
+  "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
+  "b": "\u03a3\u03bf\u03c6\u03b9\u0301\u03b1",
+  "conflict": true
+ },
+ {
+  "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
+  "b": "\u03a3\u039f\u03a6\u0399\u0301\u0391",
+  "conflict": true
+ },
+ {
+  "a": "Kelvin",
+  "b": "KELVIN",
+  "conflict": true
+ },
+ {
+  "a": "Kelvin",
+  "b": "kelvin",
+  "conflict": true
+ },
+ {
+  "a": "Kelvin",
+  "b": "\u212aelvin",
+  "conflict": true
+ },
+ {
+  "a": "office",
+  "b": "OFFICE",
+  "conflict": true
+ },
+ {
+  "a": "office",
+  "b": "o\ufb03ce",
+  "conflict": false
+ },
+ {
+  "a": "Ma\u00f1ana",
+  "b": "MA\u00d1ANA",
+  "conflict": true
+ },
+ {
+  "a": "Ma\u00f1ana",
+  "b": "ma\u00f1ana",
+  "conflict": true
+ },
+ {
+  "a": "Ma\u00f1ana",
+  "b": "Man\u0303ana",
+  "conflict": true
+ },
+ {
+  "a": "Ma\u00f1ana",
+  "b": "MAN\u0303ANA",
+  "conflict": true
+ },
+ {
+  "a": "\u1e9ee",
+  "b": "\u1e9eE",
+  "conflict": true
+ },
+ {
+  "a": "\u1e9ee",
+  "b": "\u00dfe",
+  "conflict": true
+ }
+]

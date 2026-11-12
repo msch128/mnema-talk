@@ -77,6 +77,9 @@ func TestListingRemindersReadsTheirMessagesInOneQuery(t *testing.T) {
 		if r.Available {
 			available++
 			snippets[r.Message.Snippet] = true
+			if r.Message.AuthorID != f.user {
+				t.Errorf("reminder message author %s, want %s (the client folds blocked authors by it)", r.Message.AuthorID, f.user)
+			}
 		}
 	}
 	if available != 4 || len(snippets) != 4 {

@@ -1,10 +1,11 @@
 // Helpers for reply previews (message.reply_to).
 import { markdownToPlain } from '../../shared/lib/markdown'
+import { markdownSnippet } from '../../shared/lib/markdown/snippet'
 import type { Message, ReplyPreview } from '../../types/domain'
 
 export const REPLY_PREVIEW_LEN = 200
 
-/** Truncates to `max` characters (code points, like the server's LEFT()). */
+/** Truncates plain text to `max` characters (code points); Markdown is cut with markdownSnippet. */
 export function replySnippet(content: string | null | undefined, max = REPLY_PREVIEW_LEN): string {
   const chars = Array.from(content || '')
   return chars.length > max ? chars.slice(0, max).join('') : chars.join('')
@@ -42,10 +43,10 @@ export function patchReplyPreviews(lists: Array<Array<Pick<Message, 'reply_to' |
   return touched
 }
 
-/** The original was edited: refresh the cached snippet. */
+/** The original was edited: refresh the cached snippet, built like the server's (mdplain.Snippet). */
 export function markPreviewEdited(lists: Array<Array<Pick<Message, 'reply_to' | 'reply_to_id'>>>, original: Pick<Message, 'id'> & Partial<Pick<Message, 'content' | 'attachments'>>): number {
   return patchReplyPreviews(lists, original.id, preview => {
-    if (typeof original.content === 'string') preview.content = replySnippet(original.content)
+    if (typeof original.content === 'string') preview.content = markdownSnippet(original.content)
     if (Array.isArray(original.attachments)) preview.has_attachments = original.attachments.length > 0
   })
 }

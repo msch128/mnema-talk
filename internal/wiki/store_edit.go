@@ -60,7 +60,10 @@ func pruneRevisions(ctx context.Context, q db.Querier, page uuid.UUID, latest in
 // save writes the new state of a page as the next revision.
 func save(ctx context.Context, tx pgx.Tx, cur *Page, user uuid.UUID, t text, restoredFrom *int) error {
 	rev := cur.Rev + 1
-	if t.title != cur.Title {
+	// Compared by key: a page that already shares its title with another (two
+	// pages from before titles were compared this way) keeps its own title on
+	// an edit; its spelling is stored composed then.
+	if titleKey(t.title) != titleKey(cur.Title) {
 		if err := checkTitle(ctx, tx, t.title, cur.ID); err != nil {
 			return err
 		}
@@ -266,7 +269,11 @@ func (s *Store) RestoreRevision(ctx context.Context, user uuid.UUID, slug string
 		if err != nil {
 			return err
 		}
-		if err := save(ctx, tx, cur, user, text{title: target.Title, content: *target.Content, summary: summary.summary}, &rev); err != nil {
+		title, err := cleanTitle(target.Title) // a revision from before titles were stored composed
+		if err != nil {
+			return err
+		}
+		if err := save(ctx, tx, cur, user, text{title: title, content: *target.Content, summary: summary.summary}, &rev); err != nil {
 			return err
 		}
 		out, err = getPage(ctx, tx, cur.Slug, false, false)

@@ -7,6 +7,8 @@ import { locale } from '../../i18n'
 import { previewText } from '../../chat/lib/replies'
 import { shownName } from '../../shared/lib/deletedUser'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
+import { useBlocksStore } from '../../stores/blocks'
 import ForumTagChip from './ForumTagChip.vue'
 
 const props = defineProps<{
@@ -18,12 +20,19 @@ const emit = defineEmits<{
   select: [post: Message]
 }>()
 
+// A post by a member the reader blocked: the title folds (BlockedFold), and
+// the excerpt, the picture and the title in the label stay out until Show.
+// Folded, the card is not a button (its Show is the one control, not nested
+// in another); once shown it opens the post again and takes the focus.
+const blocks = useBlocksStore()
+const folded = computed(() => blocks.hides(props.post))
 const authorName = computed(() => shownName(props.post))
-const snippet = computed(() => previewText(props.post.content))
+const snippet = computed(() => (folded.value ? '' : previewText(props.post.content)))
 const replyCount = computed(() => props.post.reply_count ?? 0)
 // The first picture of the first message, as a small preview on the right.
-const thumbnail = computed(() => props.post.attachments?.find(a => !a.is_deleted && a.mime_type.startsWith('image/')))
+const thumbnail = computed(() => folded.value ? undefined : props.post.attachments?.find(a => !a.is_deleted && a.mime_type.startsWith('image/')))
 const active = computed(() => relative(props.post.last_activity_at ?? props.post.created_at, locale.value))
+const open = () => { if (!folded.value) emit('select', props.post) }
 const created = computed(() => relative(props.post.created_at, locale.value))
 </script>
 
@@ -31,25 +40,27 @@ const created = computed(() => relative(props.post.created_at, locale.value))
   <article
     data-testid="forum-post-card"
     :data-unread="unread ? 'true' : undefined"
-    tabindex="0"
-    role="button"
-    :aria-label="(post.title || $t('forum.untitled')) + (unread ? ' (' + $t('forum.unread') + ')' : '')"
+    :tabindex="folded ? undefined : 0"
+    :role="folded ? undefined : 'button'"
+    :aria-label="folded ? undefined : (post.title || $t('forum.untitled')) + (unread ? ' (' + $t('forum.unread') + ')' : '')"
     class="group flex w-full cursor-pointer gap-3 rounded-xl border border-mnema-border/70 bg-mnema-elevated p-4 text-left transition hover:border-mnema-accent/40 hover:bg-mnema-surface focus:outline-hidden focus-visible:border-mnema-accent max-sm:p-3.5"
-    @click="emit('select', post)"
-    @keydown.enter.prevent="emit('select', post)"
-    @keydown.space.prevent="emit('select', post)"
+    @click="open"
+    @keydown.enter.prevent="open"
+    @keydown.space.prevent="open"
   >
     <div class="flex min-w-0 flex-1 flex-col gap-2">
       <div class="flex min-w-0 items-start gap-2">
         <span v-if="unread" data-testid="forum-post-unread" class="mt-2 h-2 w-2 shrink-0 rounded-full bg-mnema-accent" :title="$t('forum.unread')"></span>
-        <h3
-          :class="[
-            'line-clamp-2 min-w-0 flex-1 text-base text-mnema-text transition group-hover:text-mnema-accent',
-            unread ? 'font-bold' : 'font-semibold'
-          ]"
-        >
-          {{ post.title || $t('forum.untitled') }}
-        </h3>
+        <BlockedFold :msg="post" class="mt-0.5 min-w-0 flex-1">
+          <h3
+            :class="[
+              'line-clamp-2 min-w-0 flex-1 text-base text-mnema-text transition group-hover:text-mnema-accent',
+              unread ? 'font-bold' : 'font-semibold'
+            ]"
+          >
+            {{ post.title || $t('forum.untitled') }}
+          </h3>
+        </BlockedFold>
         <div class="flex shrink-0 items-center gap-1.5 pt-0.5 text-xs">
           <span v-if="post.is_pinned" data-testid="forum-post-pinned" class="flex items-center text-mnema-accent" :title="$t('forum.pinnedBadge')">
             <Pin class="h-3.5 w-3.5" :aria-label="$t('forum.pinnedBadge')" />

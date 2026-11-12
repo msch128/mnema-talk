@@ -3,6 +3,7 @@
 import type { Message } from '../../types/domain'
 import type { ChatDMLastMessage, ChatDirectMessage } from '../../types/rest'
 import { markdownToPlain } from '../../shared/lib/markdown'
+import { markdownSnippet } from '../../shared/lib/markdown/snippet'
 import { dmPeers, nameOf } from './dm'
 import { clockTimeOptions, startOfDay } from '../../shared/lib/time'
 import { callKindOf } from './callKind'
@@ -26,7 +27,7 @@ export function splitDms(dms: readonly ChatDirectMessage[], openId: string | nul
 export function lastMessageOf(msg: Message): ChatDMLastMessage {
   return {
     user_id: msg.user_id,
-    text: (msg.content ?? '').slice(0, 200),
+    text: markdownSnippet(msg.content),
     has_attachment: (msg.attachments?.length ?? 0) > 0,
     has_poll: msg.poll !== undefined,
     ...callField(msg)

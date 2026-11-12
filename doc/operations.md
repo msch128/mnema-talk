@@ -1475,7 +1475,7 @@ the `MnemaMemoryHigh` threshold to your deployment. The rules:
 | `MnemaStorageDown` | Object storage is unreachable for 5 minutes. |
 | `MnemaHealthFailing` | The blackbox probe of `/api/health` fails for 3 minutes. |
 | `MnemaDatabasePoolExhausted` | Every database connection is busy for 5 minutes. |
-| `MnemaMemoryHigh` | Resident memory stays above 800 MB (80% of the default limit) for 15 minutes. |
+| `MnemaMemoryHigh` | Resident memory stays above 800 MB (about 75% of the default limit) for 15 minutes. |
 | `MnemaGoroutineLeak` | More than 5000 goroutines for 15 minutes. |
 | `MnemaServerErrors` | More than one 5xx every 10 seconds for 10 minutes. |
 | `MnemaSlowRequests` | The 95th percentile API latency (uploads and media excluded) is above one second for 15 minutes. |

@@ -173,7 +173,10 @@ conversations nor write in them.
   sent because of *another member* (a block in either direction, their
   `dm_policy` of `nobody`, a disabled or erased account, a bot, an unknown id)
   the answer is the same 403 text, so none can be probed. A block makes an
-  existing 1:1 conversation unwritable in both directions, silently; in a
+  existing 1:1 conversation unwritable in both directions, silently (new
+  messages, edits, reactions and poll votes alike, in the chat of the
+  conversation's Talk too; deleting one's own messages and taking a reaction
+  or vote back stay possible, and the Talk and its seats are not touched); in a
   group, a block between two members does not stop the group, and nobody can
   add a member who blocked them. In any conversation (group or two-person),
   unread and mention counts and the last-activity time leave out messages by
@@ -246,8 +249,8 @@ that name their voters) refuses a row for an anonymous poll, and an integration
 test walks every table of the schema to prove that no row mentions a voter and
 an option together. A running anonymous poll broadcasts no tally at each vote, since in a small audience the
 last vote would follow from it, and the REST and message payloads report 0 for every option until the poll ends (only the number of voters is live); the result goes out when the poll ends. Because a choice is never known, a vote cannot be changed
-or withdrawn and the data export of a member has no entry for anonymous
-polls. Erasing an account deletes its `poll_voters` rows and leaves the
+or withdrawn and the data export of a member holds only that they took part
+in an anonymous poll (the poll id, never the choice). Erasing an account deletes its `poll_voters` rows and leaves the
 counters, as a tally is not personal data. Migration 0063 converted the
 anonymous polls that existed before 1.2 the same way (see
 [upgrade.md](upgrade.md#11x--120)).
@@ -368,8 +371,8 @@ back), so it needs no public relay ports and cannot reach anything else.
    while the noise filter is Off, the setting for studio microphones and music;
    it applies from the next Talk. With sealed media the encoder's empty frames
    (one or two bytes, header only) pass the media worker, which drops them on
-   a line that uses DTX: sealed they would be 100 bytes each and go out 50
-   times a second. Sequence numbers stay consecutive and only the RTP
+   a line that uses DTX: sealed, each would be 107 bytes of overhead plus its one or two
+   payload bytes, and they would go out 50 times a second. Sequence numbers stay consecutive and only the RTP
    timestamp jumps, which the SFU forwards untouched; listeners' browsers
    fill the gap with comfort noise. Nothing on the server depends on a steady
    packet rate: speaking comes from the client's own `voice_speaking`, the
@@ -563,7 +566,7 @@ every 30 minutes, every member renews its own leaf key, members that showed no
 sign of life for 20 minutes are removed and re-admitted when they return, and
 every sealed frame is signed with its sender's leaf key. The connection
 details show a **safety code** for the current epoch so members can compare
-keys out of band. The server validates who may commit but never sees keys.
+keys out of band. The server relays the handshakes, checks their framing and that the sender is in the Talk, and never sees keys; the members validate who may commit.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 
@@ -595,6 +598,12 @@ Levels decide who is *notified* and what the mention badge counts. A mute stays
 silent except for a message addressed to the member (by name, through a role
 they hold, or as a reply); `@all` and `@here` do not break a mute. Both the
 badge (`mention_count` in `GET /api/read-state`) and the push follow this rule.
+"Addressed by name" means the server resolved the name under the sender's
+mention policy: a name a webhook or bot left as plain text (user mentions off,
+`allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
+web client decides from the message's `mentions` list, not from the text, so
+the live badge, the page's notification and the sound match the badge after a
+reload.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is

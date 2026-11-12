@@ -15,7 +15,8 @@ import (
 //
 // It guards the assumption the whole check rests on: that what release.yml
 // really publishes (cosign bundle referrer, BuildKit SLSA provenance) is what
-// Verify reads.
+// Verify reads. .github/workflows/release-check.yml runs it daily against the
+// latest release.
 func TestLiveReleaseImage(t *testing.T) {
 	image := os.Getenv("MNEMA_VERIFY_LIVE_IMAGE")
 	if image == "" {

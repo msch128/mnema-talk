@@ -32,7 +32,8 @@ func GatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) error {
 	var kind string
 	var seconds int
-	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds)
+	var talkOf *uuid.UUID
+	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds, dm_id FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds, &talkOf)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return core.ErrChannelNotFound
 	}
@@ -41,6 +42,11 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 	}
 	if kind == core.ChannelKindDM {
 		return gateDM(ctx, tx, nm, rules)
+	}
+	if talkOf != nil && nm.WebhookID == nil {
+		if err := checkPairWritable(ctx, tx, nm.ChannelID, nm.UserID); err != nil {
+			return err
+		}
 	}
 	if nm.ParentID != nil {
 		if err := gateReply(ctx, tx, *nm.ParentID, rules); err != nil {
@@ -139,17 +145,70 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) erro
 // side may have blocked the other; in a group at least one other member must
 // be active (a block between two members does not stop the group).
 func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others []uuid.UUID, group bool) error {
-	var on bool
-	var active, blocked int
-	err := tx.QueryRow(ctx, `
+	on, active, blocked, err := dmReach(ctx, tx, sender, others)
+	if err != nil {
+		return err
+	}
+	if !on || active == 0 || (!group && (active != len(others) || blocked > 0)) {
+		return core.ErrDMSend
+	}
+	return nil
+}
+
+// dmReach reads the community's direct message switch and, of others, how
+// many are active and how many blocked sender or were blocked by them.
+func dmReach(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others []uuid.UUID) (on bool, active, blocked int, err error) {
+	err = tx.QueryRow(ctx, `
 		SELECT (SELECT direct_messages_enabled FROM instance_settings),
 		       COUNT(*), COUNT(*) FILTER (WHERE EXISTS (
 		           SELECT 1 FROM user_blocks b WHERE (b.blocker_id = u.id AND b.blocked_id = $1) OR (b.blocker_id = $1 AND b.blocked_id = u.id)))
 		FROM users u WHERE u.id = ANY($2::uuid[]) AND `+auth.ActiveSQL("u")+` AND NOT u.is_bot`, sender, others).Scan(&on, &active, &blocked)
 	if err != nil {
-		return fmt.Errorf("check direct message: %w", err)
+		err = fmt.Errorf("check direct message: %w", err)
 	}
-	if !on || active == 0 || (!group && (active != len(others) || blocked > 0)) {
+	return on, active, blocked, err
+}
+
+// checkPairWritable applies the rule of a conversation with one other person
+// to channelID when it is such a conversation or the chat of its Talk: a block
+// in either direction, or the other side's account disabled or erased (then
+// no other member is left), refuses
+// the write with ErrDMSend, the refusal of a new message, which says nothing
+// more about why. Edits run it, and new messages in the Talk's chat (new
+// messages in the conversation itself go through gateDM). The Talk's chat
+// follows the channel permissions, not the community's direct message switch,
+// so the switch is only asked for the conversation. Other channels, groups and
+// their Talks are not touched: a block does not stop a group.
+func checkPairWritable(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UUID) error {
+	var dm uuid.UUID
+	var talk bool
+	err := tx.QueryRow(ctx, `
+		SELECT d.id, d.id <> c.id FROM channels c
+		JOIN channels d ON d.id = COALESCE(c.dm_id, c.id) AND d.type = $2 AND d.dm_key IS NOT NULL
+		WHERE c.id = $1`, channelID, core.ChannelKindDM).Scan(&dm, &talk)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil // neither a conversation of two nor the chat of its Talk
+	}
+	if err != nil {
+		return fmt.Errorf("load conversation: %w", err)
+	}
+	members, err := core.DMMemberIDs(ctx, tx, dm)
+	if err != nil {
+		return err
+	}
+	others := make([]uuid.UUID, 0, len(members))
+	for _, m := range members {
+		if m != userID {
+			others = append(others, m)
+		}
+	}
+	on, active, blocked, err := dmReach(ctx, tx, userID, others)
+	if err != nil {
+		return err
+	}
+	// An erased account leaves the conversation (its dm_members row goes), so
+	// nobody else left is the erased case: refused like a disabled one.
+	if (!on && !talk) || len(others) == 0 || active != len(others) || blocked > 0 {
 		return core.ErrDMSend
 	}
 	return nil
@@ -160,21 +219,33 @@ func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others [
 // block stops writing in both directions, and a reaction is writing. Taking a
 // reaction back never goes through here.
 func checkDMReactionAllowed(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID) error {
-	var blocked bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM messages m
-			JOIN channels c ON c.id = m.channel_id AND c.type = $3 AND c.dm_key IS NOT NULL
-			JOIN dm_members o ON o.channel_id = c.id AND o.user_id <> $2
-			JOIN user_blocks b ON (b.blocker_id = o.user_id AND b.blocked_id = $2) OR (b.blocker_id = $2 AND b.blocked_id = o.user_id)
-			WHERE m.id = $1)`, messageID, userID, core.ChannelKindDM).Scan(&blocked)
+	blocked, err := DMBlockedAt(ctx, tx, messageID, userID)
 	if err != nil {
-		return fmt.Errorf("check direct message block: %w", err)
+		return err
 	}
 	if blocked {
 		return core.ErrDMReact
 	}
 	return nil
+}
+
+// DMBlockedAt reports whether messageID is in a conversation with one other
+// person, or in the chat of its Talk, and either side blocked the other: the
+// condition under which neither may react to it (or vote in its poll).
+func DMBlockedAt(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID) (bool, error) {
+	var blocked bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM messages m
+			JOIN channels t ON t.id = m.channel_id
+			JOIN channels c ON c.id = COALESCE(t.dm_id, t.id) AND c.type = $3 AND c.dm_key IS NOT NULL
+			JOIN dm_members o ON o.channel_id = c.id AND o.user_id <> $2
+			JOIN user_blocks b ON (b.blocker_id = o.user_id AND b.blocked_id = $2) OR (b.blocker_id = $2 AND b.blocked_id = o.user_id)
+			WHERE m.id = $1)`, messageID, userID, core.ChannelKindDM).Scan(&blocked)
+	if err != nil {
+		return false, fmt.Errorf("check direct message block: %w", err)
+	}
+	return blocked, nil
 }
 
 // countDMMessage keeps the cap on the starter's messages before anybody

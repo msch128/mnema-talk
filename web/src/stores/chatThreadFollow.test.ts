@@ -65,7 +65,8 @@ describe('thread replies and the in-page notification', () => {
     expect(created).toHaveLength(1)
 
     chat.followKnown = true
-    chat.handleWSEvent({ type: 'message_create', payload: reply({ id: fixtureId(63), content: 'hello @me' }) })
+    // As the server sends it: the name it resolved is on the list.
+    chat.handleWSEvent({ type: 'message_create', payload: reply({ id: fixtureId(63), content: 'hello @me', mentions: [me] }) })
     expect(created).toHaveLength(2)
   })
 

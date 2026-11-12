@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
 import { computed, ref } from 'vue'
@@ -115,7 +116,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <button
         @click="emit('send')"
-        :disabled="!canSend || (!text.trim() && !tray.count.value) || sending"
+        :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending"
         class="btn btn-primary w-8 h-8 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >

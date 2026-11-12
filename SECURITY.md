@@ -793,8 +793,8 @@ details and the limits.
   the line belongs to, so neither the server nor another member can pass off
   media as someone else's; an id that holds two leaves verifies nothing. Each
   sending transform numbers its frames, and a receiver opens a frame only once
-  (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept until the
-  next rotation.
+  (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept for 30
+  seconds after a switch.
   **What a member can do.** A member of the call is inside the trust
   boundary for the media it can read, but the group's rules limit what it can
   do to the others. Every receiver checks a commit after its signature has
@@ -894,9 +894,13 @@ details and the limits.
   have not seen reach me while I am in another epoch: I start over, once per
   two such heartbeats, which it can make me do anyway. A member counts as alive only for a verified
   heartbeat or a verified commit, never for a message that merely parses.
-  **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
-  two-minute jitter per epoch, so Talks do not rotate in step): once the
-  epoch is that old, the committer (the lowest member id in the group and the
+  **Key lifetime.** An epoch lasts 30 minutes, plus or minus a random
+  two-minute jitter per epoch so Talks do not rotate in step, and the
+  committer notices an old epoch on a 30-second check, so an awake committer
+  advances the epoch at most 32.5 minutes after it began and receivers then
+  keep the old key for 30 more seconds; a committer that sleeps or is skipped
+  can extend that by a time that has not been measured. Once the
+  epoch is due, the committer (the lowest member id in the group and the
   room) advances it with a commit that carries an update path, so even with
   no joins or leaves every member gets a new exporter key, and the committer's
   own leaf secrets are replaced (post-compromise security for it).
@@ -955,7 +959,37 @@ details and the limits.
   per 30 minutes per Talk and nothing per frame. A member that showed no sign
   of life for 20 minutes is removed from the group (rekeyed out, so what it
   held no longer opens anything new) and must be let in again with a fresh
-  key package when it returns. Liveness is not media (listeners are muted): every
+  key package when it returns. The committer removes a silent member only
+  once the newest member of its group (an add of its id, or a swap of its
+  leaf, counts as coming in) has been in for the patience, the absence limit
+  plus two maintenance intervals, and one interval more; or once the silent
+  one has been silent for twice the limit, by that committer's own record. A
+  member that came in by a welcome counts everyone as alive from that moment
+  (it heard none of their heartbeats) and refuses a removal sooner (a
+  receiver's rule, unchanged: nobody present is removed early), and takes a
+  silent lowest id for the committer until the patience has passed; a
+  committer that removed by what it heard alone would be refused by every
+  newcomer, be one epoch ahead of them, and start them all over, which set
+  their clocks back so the next removal was refused again (the simulator
+  showed Talks that never settled). Waiting only delays the committer. The
+  twice-the-limit bound is each committer's own, and holds only for an
+  honest one: a new committer counts again from its own record, and a
+  malicious or hung lowest id can keep any member in by never committing, as
+  before. A member that is connected and silent (a hung tab, a frozen
+  browser, or a client that chooses to say nothing) therefore stays in the
+  group, and can decrypt the media of every epoch it holds while it is
+  connected, for up to twice the limit (40 minutes in production, where it
+  was 20), and only while newcomers keep coming in within every 20 minutes;
+  otherwise for about the limit. A member that left the Talk is removed at
+  once, as before. A receiver never accepted a removal earlier than the
+  limit. A 3.0.7 committer still removes at the limit and a new receiver
+  treats that as before; a new committer among 3.0.7 receivers waits where
+  they would have refused, which is strictly better for them. A receiver
+  that slept counts everyone alive from its wake and may still refuse one
+  removal; it then starts over and takes the group again, once per silent
+  member, and the simulator shows no loop (see groupSim.settle.test.ts). No
+  message changes.
+  Liveness is not media (listeners are muted): every
   member signs a 78-byte heartbeat (group, id, epoch, increasing time) with its
   MLS leaf key about every 5 minutes over the existing handshake channel, and
   any other handshake it sends counts too. An older copy of a heartbeat, one

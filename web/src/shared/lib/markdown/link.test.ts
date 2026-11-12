@@ -12,6 +12,24 @@ describe('safeHref', () => {
   ])('refuses %j', href => {
     expect(safeHref(href)).toBeNull()
   })
+
+  // A user name shows one host and opens another; hidden characters hide where the host ends.
+  it.each([
+    'https://allowed.example@other.example/x', "https://allowed.example'@other.example", 'https://@other.example', 'https://u:p@other.example',
+    'https://\u0085@other.example', 'https://other\u200b.example', 'https://allowed\u00ad.example', 'https://other.example\u200d/x',
+    // The same characters written as percent escapes: the URL parser decodes them before it reads the host.
+    'https://othe%E2%80%8Br.example', 'https://allowed%C2%ADexample', 'https://other.example%E2%80%8D/x', 'https://allowed.example%40other.example',
+    'https://%61llowed.example%2540other.example', 'https://other%C2.example'
+  ])('refuses the authority of %j', href => {
+    expect(safeHref(href)).toBeNull()
+  })
+
+  it.each(['https://example.com/a@b', 'https://example.com/?to=a@b.c', 'https://example.com/#\u200b', 'https://caf\u00e9.example/', 'https://%6fther.example/', 'https://example.com/%E2%80%8B'])(
+    'keeps %j: the "@" or the character is not in the authority',
+    href => {
+      expect(safeHref(href)).toBe(href)
+    }
+  )
 })
 
 describe('hrefHost', () => {
