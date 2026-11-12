@@ -330,6 +330,11 @@ export class GroupSim {
     this.hooks.epoch(member, verification)
   }
 
+  /** The handshakes on their way: to whom, what, and how long until they arrive. */
+  inFlight(): { to: string, kind: string, due: number }[] {
+    return [...this.timers.values()].filter(timer => timer.wire && timer.info).map(timer => ({ to: timer.info?.to ?? '', kind: timer.info?.kind ?? '', due: Math.max(0, timer.at - this.now) }))
+  }
+
   /** The tab whose code is running now, if any: the one a timer or a wire was handed to. */
   running(): SimMember | undefined {
     return this.context.getStore()
