@@ -236,6 +236,10 @@ func (p echoProbe) mustMatchMissing(t *testing.T, w *canaryWorld, who string, c 
 	}
 	res := c.do(p.method, p.path, p.body, nil)
 	twin := c.do(p.method, twinPath, twinBody, nil)
+	if res.status == http.StatusTooManyRequests || twin.status == http.StatusTooManyRequests {
+		// Past a rate limit both sides answer alike and the probe tests nothing.
+		t.Fatalf("%s (%s): rate limited (%d, %d): too many requests from one actor", p.what, who, res.status, twin.status)
+	}
 	if res.status < 400 {
 		t.Errorf("%s (%s): a hidden object was accepted: %d %s", p.what, who, res.status, res.body)
 	}

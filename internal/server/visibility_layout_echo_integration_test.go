@@ -11,7 +11,7 @@ import (
 )
 
 // TestALayoutThatNamesAHiddenObjectAnswersLikeAMissingOneWhateverElseIsWrong
-// builds random layout requests with one to three faults, at least one of them
+// builds 100 random layout requests with one to three faults, at least one of them
 // a hidden category or channel, and holds each to the rule of every other
 // probe: with the hidden ids swapped for fresh ones the answer is the same
 // bytes. The other faults (unknown ids, sort orders out of range, a mix of
@@ -39,7 +39,12 @@ func TestALayoutThatNamesAHiddenObjectAnswersLikeAMissingOneWhateverElseIsWrong(
 		func(c, _ *[]any) { *c = append(*c, cat(uuid.NewString(), big)) },
 		func(_, h *[]any) { *h = append(*h, place(open, nil, big)) },
 	}
-	for i := 0; i < 300; i++ {
+	// Two requests per case from one account, whose writes the server limits to
+	// apiWritesPerMinute (600) a minute: 100 cases are 200 requests, so 400 are
+	// left for building the world and whatever else the account did, and
+	// mustMatchMissing fails on a 429 instead of comparing two refusals.
+	const cases = 100
+	for i := 0; i < cases; i++ {
 		var cats, chans []any
 		picks := []int{rng.Intn(3)}
 		for n := rng.Intn(3); n > 0; n-- {
