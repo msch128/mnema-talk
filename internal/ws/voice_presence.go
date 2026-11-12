@@ -118,7 +118,21 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 	if except != nil {
 		conn = except.panics()
 	}
-	g.timer = safego.AfterFuncConn(conn, "ws_voice_grace", h.VoiceGrace, safego.Crash, func() {
+	// The seat is removed under h.mu before any listener runs (endPresence), so
+	// a panic in a listener leaves the room consistent and is abandoned. Only a
+	// panic before the seat was removed makes onPanic end the presence again,
+	// so no ghost seat stays without a grace. A panic in that second attempt
+	// is not recovered and ends the process.
+	claimed := false
+	end := func() {
+		h.endPresence(key.user, key.ch, log, func() bool { return h.seatedLocked(key.user, key.ch, nil) })
+	}
+	onPanic := func() {
+		if claimed {
+			end()
+		}
+	}
+	g.timer = safego.AfterFuncConn(conn, "ws_voice_grace", h.VoiceGrace, onPanic, func() {
 		h.mu.Lock()
 		current := h.grace[key] == g
 		if current {
@@ -126,7 +140,8 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 		}
 		h.mu.Unlock()
 		if current {
-			h.endPresence(key.user, key.ch, log, func() bool { return h.seatedLocked(key.user, key.ch, nil) })
+			claimed = true
+			end()
 		}
 	})
 	h.grace[key] = g

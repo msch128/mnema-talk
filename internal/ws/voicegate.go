@@ -157,11 +157,19 @@ func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs, public int64)
 	now := time.Now()
 	if wait := voiceTimeFlushEvery - now.Sub(p.lastWrite); wait > 0 {
 		if p.timer == nil {
-			p.timer = safego.AfterFunc("ws_voice_time", wait, safego.Crash, func() { h.flushVoiceTime(userID) })
+			p.timer = h.armVoiceTimeFlush(userID, wait)
 		}
 		return false
 	}
 	return true
+}
+
+// armVoiceTimeFlush writes userID's pending voice time after wait. The timer
+// belongs to one member, so a panic in it is abandoned and the process carries
+// on: flushVoiceTime puts the seconds it took back before the panic leaves it,
+// and its locks are released by then, so the next flush writes them again.
+func (h *Hub) armVoiceTimeFlush(userID uuid.UUID, wait time.Duration) *time.Timer {
+	return safego.AfterFunc("ws_voice_time", wait, safego.Abandon, func() { h.flushVoiceTime(userID) })
 }
 
 // flushVoiceTime writes what is pending for userID.
@@ -180,6 +188,14 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 	}
 	h.vtimes.mu.Unlock()
 
+	// Until the write succeeds the seconds are only taken out of the entry:
+	// a failed write and a panic both put them back for the next flush.
+	written := false
+	defer func() {
+		if !written {
+			h.restorePendingVoiceTime(userID, chID, secs, public)
+		}
+	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var total int64
@@ -187,9 +203,9 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 		WHERE id = $2 RETURNING public_voice_seconds`, secs, userID, public).Scan(&total)
 	if err != nil {
 		slog.Warn("record voice time", "user", userID, "err", err)
-		h.restorePendingVoiceTime(userID, chID, secs, public)
 		return
 	}
+	written = true
 	h.pruneWhenIdle(userID)
 	// Only the public total is shown, and it only grew by a stay in a Talk
 	// everyone can see; time in other Talks announces nothing.
@@ -212,7 +228,7 @@ func (h *Hub) restorePendingVoiceTime(userID, chID uuid.UUID, secs, public int64
 		p.idle = nil
 	}
 	if p.timer == nil {
-		p.timer = safego.AfterFunc("ws_voice_time", voiceTimeFlushEvery, safego.Crash, func() { h.flushVoiceTime(userID) })
+		p.timer = h.armVoiceTimeFlush(userID, voiceTimeFlushEvery)
 	}
 }
 
@@ -228,7 +244,8 @@ func (h *Hub) pruneWhenIdle(userID uuid.UUID) {
 	if p.idle != nil {
 		p.idle.Stop()
 	}
-	p.idle = safego.AfterFunc("ws_voice_time", voiceTimeFlushEvery, safego.Crash, func() {
+	// Only map bookkeeping under a deferred unlock: a panic here is abandoned.
+	p.idle = safego.AfterFunc("ws_voice_time", voiceTimeFlushEvery, safego.Abandon, func() {
 		h.vtimes.mu.Lock()
 		defer h.vtimes.mu.Unlock()
 		if h.vtimes.m[userID] == p && p.secs == 0 && p.timer == nil {
