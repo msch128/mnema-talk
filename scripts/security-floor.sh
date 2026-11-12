@@ -16,31 +16,51 @@
 # The commit subject plays no part. A commit of this release whose subject has
 # the `security` scope but no trailer only produces a warning on stderr, so a
 # forgotten mark is visible without raising the floor by accident.
-# A commit of this release (previous release tag..<rev>) with a
-# `Security-Floor: raise` line that git does not read as a trailer (another
-# paragraph follows it) fails the decision with a non-zero exit: the mark was
-# meant and would otherwise be dropped without a word. Older releases are not
-# checked again. The two --check modes apply the same check to the commits of
-# a pull request and to its description (CI), before anything reaches main.
+# A commit of this release (previous release tag..<rev>) with a line that
+# starts with `Security-Floor` but is not exactly the trailer
+# `Security-Floor: raise` in the message's trailer block (another paragraph
+# follows it, or a near miss such as `Security-Floor: raise.`) fails the
+# decision with a non-zero exit: the mark was meant and would otherwise be
+# dropped without a word. Older releases are not checked again. The two
+# --check modes apply the same check (the same function) to the commits of a
+# pull request and to its description (CI), before anything reaches main.
 set -eu
-marker='security-floor[[:space:]]*:[[:space:]]*raise'
 
-# misplaced <name> <message> <parsed trailers>: an error when the message has
-# more marker lines than parsed raise trailers.
+# raises <message>: how many `Security-Floor: raise` trailers git reads in
+# the message. --no-divider: a `---` line does not end the message here, as
+# it does not for a commit's %(trailers).
+raises() {
+  printf '%s\n' "$1" | tr -d '\r' | git interpret-trailers --parse --no-divider | grep -c '^Security-Floor: raise$' || true
+}
+
+# misplaced <name> <message>: an error unless every line starting with
+# Security-Floor (any case, after blanks) is exactly the marker and each is
+# read as a trailer.
 misplaced() {
-  marks=$(printf '%s\n' "$2" | tr -d '\r' | grep -Eic "^[[:space:]]*$marker[[:space:]]*\$" || true)
-  trailers=$(printf '%s\n' "$3" | tr -d '\r' | grep -Eic "^$marker[[:space:]]*\$" || true)
-  if [ "$marks" -gt "$trailers" ]; then
-    echo "error: $1 has a 'Security-Floor: raise' line that is not a git trailer (it must be in the last paragraph of the message); no floor decision is made" >&2
+  text=$(printf '%s\n' "$2" | tr -d '\r')
+  lines=$(printf '%s\n' "$text" | grep -ic '^[[:space:]]*security-floor' || true)
+  exact=$(printf '%s\n' "$text" | grep -c '^Security-Floor: raise[[:space:]]*$' || true)
+  if [ "$lines" -ne "$exact" ] || [ "$exact" -ne "$(raises "$text")" ]; then
+    echo "error: $1 has a Security-Floor line that is not a git trailer 'Security-Floor: raise' (spelled exactly, in the last paragraph of the message); no floor decision is made" >&2
     return 1
   fi
 }
 
+# check_commits <range>: misplaced for each commit, and the trailers git
+# reads with %(trailers) for the floor decision must be the ones raises
+# counted, so the two readings can never silently disagree.
 check_commits() {
+  shas=$(git log --format=%H "$1") || { echo "error: cannot read the commits of '$1'" >&2; return 1; }
   bad=0
-  for sha in $(git log --format=%H "$1"); do
-    misplaced "${sha%"${sha#????????}"}" "$(git log -1 --format=%B "$sha")" \
-      "$(git log -1 --format='%(trailers:key=Security-Floor)' "$sha")" || bad=1
+  for sha in $shas; do
+    short=${sha%"${sha#????????}"}
+    message=$(git log -1 --format=%B "$sha")
+    misplaced "$short" "$message" || bad=1
+    read_by_log=$(git log -1 --format='%(trailers:key=Security-Floor)' "$sha" | grep -c '^Security-Floor: raise$' || true)
+    if [ "$read_by_log" -ne "$(raises "$message")" ]; then
+      echo "error: git reads the Security-Floor trailer of $short in two ways; no floor decision is made" >&2
+      bad=1
+    fi
   done
   return "$bad"
 }
@@ -51,8 +71,7 @@ case ${1:-} in
   exit
   ;;
 --check-message)
-  message=$(cat)
-  misplaced "the message" "$message" "$(printf '%s\n' "$message" | tr -d '\r' | git interpret-trailers --parse)"
+  misplaced "the message" "$(cat)"
   exit
   ;;
 esac

@@ -147,9 +147,10 @@ raises, never lowers, the value from the compat file. The commit subject plays
 no part: a `fix(security)` title alone neither raises the floor nor can a
 lookalike scope such as `docs(security-notes)` raise it by accident. A subject
 with the `security` scope but no trailer only prints a warning in the job log.
-A `Security-Floor: raise` line that git does not read as a trailer (another
-paragraph such as `BREAKING CHANGE:` follows it) is refused instead of being
-dropped: the `backend` check of a pull request fails when the description or
+A line that starts with `Security-Floor` but is not exactly the trailer
+`Security-Floor: raise` in the last paragraph (another paragraph such as
+`BREAKING CHANGE:` follows it, or a near miss such as `Security-Floor: raise.`)
+is refused instead of being dropped: the `backend` check of a pull request fails when the description or
 one of its commits has such a line, and the release job fails when a commit of
 the release has one (only the release's own commits, since the previous tag),
 so that release gets no signed bundle until the next one carries the trailer

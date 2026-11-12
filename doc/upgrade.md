@@ -863,7 +863,7 @@ members always carry them.
   documented rollback protection, and no public API, event or bridge contract changes.
 - **Rollback.** Going back to 1.1.x is possible for the server, but desktop
   clients that already saw the 1.2.0 bundle will refuse the older one (the
-  floor is a high-water mark); web tabs reload into the older bundle.
+  high-water mark); web tabs reload into the older bundle.
 
 ### 1.0.x → 1.1.0
 

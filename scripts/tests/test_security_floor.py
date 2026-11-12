@@ -120,9 +120,57 @@ class SecurityFloor(unittest.TestCase):
             r = self.run_script('--check-message', stdin=message)
             self.assertEqual(r.returncode == 0, ok, (message, r.stderr))
 
-    def test_other_value_keeps(self):
-        self.commit('fix: x\n\nSecurity-Floor: lower')
-        self.assertEqual(self.decide()[0], 'keep')
+    # Hunt review of H-L11-01 (A-1): the pull request check and the release
+    # decision must give the same answer for the same message. Each message
+    # is committed verbatim (as a squash keeps it) and decided as a release,
+    # and passed to --check-message: both pass or both fail, and a message
+    # that passes raises the floor exactly when it has the marker.
+    AGREEMENT = {
+        'plain trailer': ('Text.\n\nSecurity-Floor: raise', True),
+        'rule before the trailer': ('Text.\n\n---\n\nMore.\n\nSecurity-Floor: raise', True),
+        'rule after the trailer': ('Text.\n\nSecurity-Floor: raise\n\n---\n\nNotes.', False),
+        'rule between paragraphs, trailer last': ('A.\n\n---\n\nB.\n\n---\n\nSecurity-Floor: raise', True),
+        'rule inside the trailer paragraph': ('Text.\n\n---\nSecurity-Floor: raise', False),
+        'CRLF': ('Text.\r\n\r\n---\r\n\r\nMore.\r\n\r\nSecurity-Floor: raise\r\n', True),
+        'CRLF, paragraph after': ('Text.\r\n\r\nSecurity-Floor: raise\r\n\r\nBREAKING CHANGE: y\r\n', False),
+        'with Co-authored-by': ('Text.\n\nSecurity-Floor: raise\nCo-authored-by: A <a@example.invalid>', True),
+        'with Signed-off-by first': ('Text.\n\nSigned-off-by: A <a@example.invalid>\nSecurity-Floor: raise', True),
+        'with Release-As': ('Text.\n\nRelease-As: 1.2.0\nSecurity-Floor: raise', True),
+        'in a fenced code block': ('Text.\n\n```\nSecurity-Floor: raise\n```\n\nMore.', False),
+        'in a fenced block and as trailer': ('Text.\n\n```\nSecurity-Floor: raise\n```\n\nSecurity-Floor: raise', False),
+        'trailing spaces': ('Text.\n\nSecurity-Floor: raise   ', True),
+        'a markdown heading before': ('## Summary\n\nText.\n\nSecurity-Floor: raise', True),
+        'quoted mid-line only': ('A fix carries a Security-Floor: raise trailer.', True),
+        'no marker': ('Text only.', True),
+        'value with a full stop': ('Text.\n\nSecurity-Floor: raise.', False),
+        'value capitalised with a bang': ('Text.\n\nSecurity-Floor: Raise!', False),
+        'key case and a blank before the colon': ('Text.\n\nSecurity-floor : raise', False),
+        'another value': ('Text.\n\nSecurity-Floor: lower', False),
+        'no blank after the colon': ('Text.\n\nSecurity-Floor:raise', False),
+        'indented': ('Text.\n\n    Security-Floor: raise', False),
+    }
+
+    def test_release_and_pull_request_checks_agree(self):
+        for name, (body, want_ok) in self.AGREEMENT.items():
+            with self.subTest(name):
+                self.git('reset', '-q', '--hard', 'v0.1.0')
+                message = 'fix: x\n\n' + body
+                self.git('commit', '-q', '--allow-empty', '--cleanup=verbatim', '-m', message)
+                release = self.run_script('HEAD', '0.2.0')
+                pr = self.run_script('--check-message', stdin=message)
+                commits = self.run_script('--check-commits', 'HEAD^..HEAD')
+                self.assertEqual((release.returncode == 0, pr.returncode == 0, commits.returncode == 0),
+                                 (want_ok,) * 3, (release.stderr, pr.stderr, commits.stderr))
+                if want_ok:
+                    raised = '\nSecurity-Floor: raise' in message.replace('\r', '')
+                    self.assertEqual(release.stdout.strip(), '0.2.0' if raised else '')
+
+    # Hunt review A-2: the gate must fail closed on a range it cannot read.
+    def test_check_commits_refuses_an_unreadable_range(self):
+        for bad in ('nonsense', '0123456789abcdef0123456789abcdef01234567..HEAD'):
+            r = self.run_script('--check-commits', bad)
+            self.assertNotEqual(r.returncode, 0, bad)
+            self.assertIn('cannot read the commits', r.stderr)
 
     def test_no_marker_keeps(self):
         self.commit('feat: something')
