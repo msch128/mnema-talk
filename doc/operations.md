@@ -1139,7 +1139,9 @@ committed statement and public key.
   `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
   1.2 adds `search.filters.v3`, `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`; later releases add `events.roles`, `events.recurrence`, `wiki`, `messages.nonce` and `reports.open_count`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
-  server sends no list. The compose
+  server sends no list. Storage is checked live, with one `HEAD` on the bucket
+  at most every 10 s; it counts as down after two failed probes in a row, so a
+  single blip does not turn the compose healthcheck `unhealthy`. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
 
