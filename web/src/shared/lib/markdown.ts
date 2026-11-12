@@ -70,3 +70,8 @@ export function markdownToPlain(content: string | null | undefined, spoiler?: st
 export function previewLinks(content: string | null | undefined): string[] {
   return content ? linksIn(parse(content)) : []
 }
+
+/** One-line plain-text preview; markdown stripped, newlines collapse to spaces. */
+export function previewText(content: string | null | undefined): string {
+  return markdownToPlain(content).replace(/\s+/g, ' ').trim()
+}

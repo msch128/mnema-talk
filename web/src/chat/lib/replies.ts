@@ -21,10 +21,8 @@ export function stripMarkdown(content: string | null | undefined): string {
   return markdownToPlain(content)
 }
 
-/** One-line plain-text preview; markdown stripped, newlines collapse to spaces. */
-export function previewText(content: string | null | undefined): string {
-  return stripMarkdown(content).replace(/\s+/g, ' ').trim()
-}
+// previewText lives with the Markdown helpers, so other features can use it.
+export { previewText } from '../../shared/lib/markdown'
 
 /**
  * Applies `patch(preview)` to every reply preview that points at `originalId`
