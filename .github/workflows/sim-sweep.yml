@@ -41,6 +41,27 @@ jobs:
           SIM_SHARD: ${{ matrix.shard }}/8
         run: npx vitest run src/lib/media/groupSim.sweep.test.ts
 
+  sfu:
+    # Deep SFU growth probes (lane 8, shape 7): env-gated tests that are too
+    # heavy for the pull request pipeline. TestUnhandledSRTCPStreamsGrowWithoutCap
+    # is a known failure (inverse assertion) that stands red the day a cap or a
+    # drain bounds Pion's unhandled SRTCP read streams; see H-L8-07. A failed run
+    # of the whole job is the alert.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Unhandled SRTCP SSRC growth probe
+        env:
+          SFU_SSRC_FLOOD_DEEP: "1"
+        run: go test ./internal/sfu/ -run TestUnhandledSRTCPStreamsGrowWithoutCap -count=1 -timeout 15m -v
+
   links:
     runs-on: ubuntu-latest
     timeout-minutes: 60
