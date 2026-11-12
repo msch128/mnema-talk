@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """TestChatCoreStaysFree must not pass when it could not look.
 
-internal/repo/boundaries_test.go skips "internal/chat/core does not exist yet"
-whenever `go list -e -deps ./internal/chat/core` fails. The package exists, and
-`go list -e` exits 0 for a missing package anyway, so the skip now fires only
-when the go tool itself fails, and the guard then passes without checking.
-The case is recorded as an expected failure: it turns red the day a failing
-go tool fails the test instead of skipping it.
+internal/repo/boundaries_test.go once skipped "internal/chat/core does not
+exist yet" whenever `go list -e -deps ./internal/chat/core` failed. The package
+exists, and `go list -e` exits 0 for a missing package anyway, so the skip
+fired only when the go tool itself failed, and the guard then passed without
+checking. A failing go tool must fail the test instead.
 """
 import os
 from pathlib import Path
@@ -45,7 +44,6 @@ class RepoGuardSkip(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn('--- PASS: TestChatCoreStaysFree', r.stdout)
 
-    @unittest.expectedFailure
     def test_guard_fails_when_the_go_tool_fails(self):
         r = self.run_guard(self.fake_path)
         self.assertNotIn('--- SKIP', r.stdout)
