@@ -93,3 +93,82 @@ func TestAnAnswerWithASecondStreamInASectionIsRefused(t *testing.T) {
 		t.Fatalf("the client's own answer after the refused one: %v", err)
 	}
 }
+
+func sdpWithMids(mids ...string) string {
+	var b strings.Builder
+	b.WriteString("v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n")
+	for _, mid := range mids {
+		b.WriteString("m=audio 9 UDP/TLS/RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=mid:" + mid + "\r\n")
+	}
+	return b.String()
+}
+
+func TestAnAnswerHasTheMediaSectionsOfItsOffer(t *testing.T) {
+	offer := &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpWithMids("0", "1", "2")}
+	for _, c := range []struct {
+		name string
+		mids []string
+		ok   bool
+	}{
+		{"the offer's sections", []string{"0", "1", "2"}, true},
+		{"one section more", []string{"0", "1", "2", "3"}, false},
+		{"one section fewer", []string{"0", "1"}, false},
+		{"another order", []string{"0", "2", "1"}, false},
+		{"another mid", []string{"0", "1", "9"}, false},
+		{"no section", nil, false},
+	} {
+		var answer sdp.SessionDescription
+		if err := answer.Unmarshal([]byte(sdpWithMids(c.mids...))); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if err := vetAnswerSections(&answer, offer); (err == nil) != c.ok {
+			t.Errorf("%s: %v, want accepted %v", c.name, err, c.ok)
+		}
+	}
+	var answer sdp.SessionDescription
+	if err := answer.Unmarshal([]byte(sdpWithMids("0", "7"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := vetAnswerSections(&answer, nil); err != nil {
+		t.Errorf("without an offer outstanding the connection decides: %v", err)
+	}
+}
+
+// A section the offer never had is refused before the connection reads the
+// answer, so the client does not choose how many sections the connection has.
+func TestAnAnswerWithASectionOfItsOwnIsRefused(t *testing.T) {
+	s := newTestSFU(t)
+	c := newClient(t)
+	c.publishAudio("mic")
+	offers := make(chan webrtc.SessionDescription, 4)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-offers
+	<-webrtc.GatheringCompletePromise(peer.PC)
+	if err := c.pc.SetRemoteDescription(*peer.PC.LocalDescription()); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := c.pc.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gathered := webrtc.GatheringCompletePromise(c.pc)
+	if err := c.pc.SetLocalDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+	<-gathered
+	honest := c.pc.LocalDescription().SDP
+	more := honest + "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=mid:own\r\na=rtpmap:111 opus/48000/2\r\na=recvonly\r\n"
+	before := peer.PC.CurrentRemoteDescription()
+	if err := peer.SetAnswer(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: more}); !errors.Is(err, errAnswerSections) {
+		t.Fatalf("an answer with a section of its own: %v, want it refused for its sections", err)
+	}
+	if peer.PC.CurrentRemoteDescription() != before {
+		t.Fatal("the refused answer reached the connection")
+	}
+	if err := peer.SetAnswer(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: honest}); err != nil {
+		t.Fatalf("the client's own answer after the refused one: %v", err)
+	}
+}

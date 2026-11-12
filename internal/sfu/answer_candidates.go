@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pion/sdp/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 // vetAnswerCandidates removes the ICE candidates an answer SDP carries that the
@@ -21,8 +22,8 @@ import (
 // endings or stray characters the sender chose. An SDP that does not parse is
 // refused. Dropped candidates are logged like trickled ones.
 //
-// The SSRC lines are vetted on the same parsed form (vetAnswerSSRCs), before
-// any candidate is counted.
+// The media sections and the SSRC lines are vetted on the same parsed form
+// (vetAnswerSections, vetAnswerSSRCs), before any candidate is counted.
 //
 // It also returns the keys it newly counted, for forgetAnswerCandidates when
 // Pion then refuses the answer.
@@ -30,6 +31,11 @@ func (p *Peer) vetAnswerCandidates(raw string) (string, []string, error) {
 	var desc sdp.SessionDescription
 	if err := desc.Unmarshal([]byte(raw)); err != nil {
 		return "", nil, err
+	}
+	if p.PC != nil {
+		if err := vetAnswerSections(&desc, p.PC.PendingLocalDescription()); err != nil {
+			return "", nil, err
+		}
 	}
 	if err := vetAnswerSSRCs(&desc); err != nil {
 		return "", nil, err
@@ -83,6 +89,38 @@ func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute, added *[]string) []sd
 		kept = append(kept, a)
 	}
 	return kept
+}
+
+// errAnswerSections refuses an answer whose media sections are not the ones of
+// the offer it answers.
+var errAnswerSections = errors.New("sfu: the answer's media sections are not the offer's")
+
+// vetAnswerSections checks that an answer has the media sections of the offer
+// the SFU made: as many, in the same order, under the same mids. An answer is
+// a reply to that offer section by section; one with sections of its own would
+// have the connection set up media the SFU never offered, and would let the
+// client choose how many sections the connection counts. Without an offer
+// outstanding there is nothing to compare with, and the connection refuses the
+// answer itself.
+func vetAnswerSections(desc *sdp.SessionDescription, offer *webrtc.SessionDescription) error {
+	if offer == nil {
+		return nil
+	}
+	var offered sdp.SessionDescription
+	if err := offered.Unmarshal([]byte(offer.SDP)); err != nil {
+		return err
+	}
+	if len(desc.MediaDescriptions) != len(offered.MediaDescriptions) {
+		return errAnswerSections
+	}
+	for i, media := range desc.MediaDescriptions {
+		mid, _ := media.Attribute("mid")
+		want, _ := offered.MediaDescriptions[i].Attribute("mid")
+		if mid != want {
+			return errAnswerSections
+		}
+	}
+	return nil
 }
 
 // errAnswerSSRCs refuses an answer whose SSRC lines do not describe one stream

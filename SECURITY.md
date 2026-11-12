@@ -462,19 +462,22 @@ details and the limits.
   counted (`mnema_sfu_ingress_dropped_total{reason="rtcp_ssrcs"}`) once it
   named more than 64 SSRCs that are neither, made more than 32 768 of the
   empty streams, or had more than 1024 buffered streams open (a cap counted
-  apart from Pion's log line). A member has one media connection at a time,
-  so it holds at most about 1.3 MB of buffered streams for arbitrary SSRCs
-  plus about 16 MB of empty ones; the second takes about 16 000 subscription
-  changes (one or two SSRCs each) in one connection, which the event budget
-  (40 a second) stretches over a quarter of an hour.
-- **Answers are checked against what the SFU offers.** Every media section
-  the SFU offers carries one stream, so a section of a client's answer may
-  name one SSRC and, tied to it by an `a=ssrc-group` line, its retransmission
-  (`FID`) and error correction (`FEC-FR`) SSRCs; no SSRC may appear in two
-  sections. An answer that names more is refused before the connection reads
-  it, logged with the member at warn, and the offer is sent again. The
-  candidates inside an answer get the same vetting and budget as trickled
-  ones.
+  apart from Pion's log line). An SSRC reported from before the answer that
+  declares it is forgiven at most once per m-line the connection gains, as
+  its stream keeps the buffer. A member has one media connection at a time,
+  so it holds at most (65 + its m-lines) buffered streams for arbitrary SSRCs
+  (about 1.3 MB plus 20 KB per line, under 3 MB for 70 lines) and about 16 MB
+  of empty ones before the connection is closed; a client can make the empty
+  ones in about two minutes.
+- **Answers are checked against what the SFU offers.** An answer must have the
+  media sections of the offer it answers: as many, in the same order, under
+  the same mids. Every section the SFU offers carries one stream, so a section
+  of the answer may name one SSRC and, tied to it by an `a=ssrc-group` line,
+  its retransmission (`FID`) and error correction (`FEC-FR`) SSRCs; no SSRC
+  may appear in two sections. An answer that does not fit is refused before
+  the connection reads it, logged with the member at warn, and the offer is
+  sent again. The candidates inside an answer get the same vetting and budget
+  as trickled ones.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
