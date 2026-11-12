@@ -303,6 +303,15 @@ export abstract class GroupEpoch extends GroupBase {
     if (!this.state) return []
     const previous = this.state
     this.added = addedIds(extraProposals)
+    try {
+      return await this.createCommitWires(previous, extraProposals, renewal)
+    } finally {
+      // Read when the epoch starts: a commit that did not start one leaves nothing behind.
+      this.added = new Set()
+    }
+  }
+
+  private async createCommitWires(previous: ClientState, extraProposals: Proposal[], renewal: boolean): Promise<Uint8Array[]> {
     let result: CommitResult
     try {
       result = await createCommit(

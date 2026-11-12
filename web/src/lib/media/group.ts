@@ -230,6 +230,9 @@ export class MediaGroup extends GroupMerge {
       this.wipeLeft(previous)
     } catch {
       return this.step()
+    } finally {
+      // The ids a commit adds are read when its epoch starts: a commit that did not start one leaves none behind.
+      this.added = new Set()
     }
     return this.step()
   }
@@ -287,6 +290,8 @@ export class MediaGroup extends GroupMerge {
       return wins ? this.overtaken() : this.step()
     } catch {
       return this.step()
+    } finally {
+      this.added = new Set()
     }
   }
 

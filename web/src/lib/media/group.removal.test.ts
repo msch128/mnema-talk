@@ -174,3 +174,35 @@ describe('a member taking over from a lowest id that went silent', () => {
     for (const group of [alice, bob, carol]) await group.close()
   }, 120_000)
 })
+
+describe('a member that starts over into a group with the same members', () => {
+  it('counts them as new from the start of that group, not from the group it left', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
+    const alice = await open(aliceId)
+    const bob = await open(bobId)
+    const carol = await open(carolId)
+    const roster = [aliceId, bobId, carolId]
+    await alice.sync([aliceId])
+    for (const joiner of [bob, carol]) {
+      await alice.sync(roster)
+      if (joiner === carol) await bob.sync(roster)
+      const offer = only(await joiner.sync(roster), 'mls_key_package')
+      if (joiner === carol) await bob.receive(carolId, offer)
+      const added = await alice.receive(joiner === bob ? bobId : carolId, offer)
+      await joiner.receive(aliceId, only(added, 'mls_welcome'))
+      if (joiner === carol) await bob.receive(aliceId, only(added, 'mls_public_message'))
+    }
+    // Bob has known Alice and Carol since the start. He loses his group and is let into a new one 100 s later.
+    vi.setSystemTime(START + 100_000)
+    ;(bob as unknown as { discard(): void }).discard()
+    const offered = await bob.sync(roster)
+    const offer = offered.wires.some(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat === 'mls_key_package') ? offered : await bob.sync([bobId, aliceId])
+    const again = await alice.receive(bobId, only(offer, 'mls_key_package'))
+    await bob.receive(aliceId, only(again, 'mls_welcome'))
+    // A removal of Carol would be refused by Alice, who came in a moment ago for Bob: he waits for her, and not for 100 s.
+    const entries = (bob as unknown as { entries: { holds(silent: ReadonlySet<string>, self: string, now: number, timing: MediaTiming): boolean } }).entries
+    expect(entries.holds(new Set([carolId]), bobId, START + 101_000, timing)).toBe(true)
+    expect(entries.holds(new Set([carolId]), bobId, START + 134_000, timing)).toBe(false)
+    for (const group of [alice, bob, carol]) await group.close()
+  }, 120_000)
+})
