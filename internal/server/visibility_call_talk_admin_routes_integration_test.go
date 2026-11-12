@@ -83,30 +83,39 @@ func (w callTalkAdminWorld) differences(c *client) []string {
 	return diff
 }
 
-// H-L6-06 (known failure). doc/talks.md: nothing about a conversation's call
-// reaches the audit log, renaming it included, and doc/architecture.md: the
-// administrative channel routes answer 404 for a conversation. For a call
-// Talk they act: a member who holds Manage channels (or is an Administrator)
-// and is in the conversation renames it (channel.update with the call's id and
-// both names), duplicates it into a permanent community Talk (channel.duplicate)
-// and so on, and the Owner and the Administrators outside the conversation read
-// the entries.
-//
-// The assertion is inverted: the test passes while the call answers other than
-// a missing channel and the audit log carries it, and turns red when it does not.
-func TestKnownFailureAdminChannelRoutesActOnACallOfAConversation(t *testing.T) {
+// H-L6-06 (guard; was a known failure). doc/talks.md: nothing about a
+// conversation's call reaches the audit log, renaming it included, and
+// doc/architecture.md: the administrative channel routes answer 404 for a
+// conversation. They used to act on a call Talk: a member who holds Manage
+// channels (or is an Administrator) and is in the conversation renamed it
+// (channel.update with the call's id and both names), duplicated it into a
+// permanent community Talk (channel.duplicate), set auto-delete on it, read its
+// overwrites, placed it in the layout and deleted it, and the Owner and the
+// Administrators outside the conversation read the entries. Now every route
+// answers for the call exactly what it answers for a channel that does not
+// exist (same status, same bytes), nothing is audited, and the leader still
+// renames the call through PATCH /api/talks/{id}.
+func TestAdminChannelRoutesAnswerACallOfAConversationLikeAMissingChannel(t *testing.T) {
 	w := newCallTalkAdminWorld(t)
-	diff := w.differences(w.adm)
-	if len(diff) == 0 {
-		t.Fatal("H-L6-06 no longer reproduces: the admin routes answer a call like a missing channel. Flip this test into a guard")
+	for name, c := range map[string]*client{"the Administrator": w.adm, "the member with Manage channels": w.mgr} {
+		for _, d := range w.differences(c) {
+			t.Errorf("%s: %s", name, d)
+		}
 	}
+	// The conversation itself and a missing channel are the reference.
+	for _, id := range []uuid.UUID{w.conv, uuid.New()} {
+		wantStatus(t, "rename "+id.String(), w.adm.patch("/api/admin/channels/"+id.String(), map[string]any{"name": "x"}), http.StatusNotFound)
+	}
+
 	log := w.owner.get("/api/admin/audit-log")
 	wantStatus(t, "the Owner reads the audit log", log, http.StatusOK)
-	if !strings.Contains(string(log.body), w.call.String()) {
-		t.Fatal("the audit log no longer names the call. Flip this test into a guard")
+	for _, word := range []string{w.call.String(), "renamed-okapi", "channel.duplicate"} {
+		if strings.Contains(string(log.body), word) {
+			t.Errorf("the audit log carries %q", word)
+		}
 	}
-	t.Logf("H-L6-06 still reproduces: %d routes differ", len(diff))
-	for _, d := range diff {
-		t.Logf("  %.110s", d)
-	}
+
+	// The call is untouched and its leader still manages it.
+	wantStatus(t, "the leader renames the call", w.adm.patch("/api/talks/"+w.call.String(), map[string]any{"name": "Our call"}), http.StatusOK)
+	wantStatus(t, "the call's chat is still there", w.mgr.get("/api/channels/"+w.call.String()+"/messages"), http.StatusOK)
 }

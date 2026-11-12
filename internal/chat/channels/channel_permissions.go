@@ -129,7 +129,11 @@ func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
 // checkChannelMove checks one placement of a layout change: the caller sees
 // the channel and its target category, and may move it between categories.
 func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
-	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+	// A conversation's call Talk is no part of the community's layout: it is as
+	// hidden as a channel that does not exist, even from its own members.
+	// A conversation's call Talk is no part of the community's layout: it is as
+	// hidden as a channel that does not exist, even from its own members.
+	if snap.IsDMTalk(c.ID) || !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
 	to, err := targetCategoryVisible(snap, sub, c.CategoryID)
