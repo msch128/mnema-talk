@@ -3,7 +3,7 @@
 // Every row says whether the seed broke an invariant, and whether it also fails without the power (the failure budget).
 import { appendFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
-import { afterAll, beforeAll, describe, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
 import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
@@ -35,6 +35,7 @@ describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more tha
   it.each(chosen.flatMap(([name, plan]) => (['honest', 'hostile'] as const).map(relay => [name, relay, plan] as const)))('%s, %s relay', async (name, relay, plan) => {
     const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
     const known = relay === 'honest' ? KNOWN_HONEST : KNOWN_HOSTILE
+    const failures: string[] = []
     for (const seed of seeds(process.env.SIM_POWERS_SEEDS ?? '1..400')) {
       if (seed % count !== index) continue
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
@@ -42,7 +43,8 @@ describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more tha
       const a = availabilityOf(result)
       const row = { power: name, relay, seed, failed: result.violations.length > 0, known: known.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 240), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
       if (process.env.SIM_POWERS_OUT) appendFileSync(process.env.SIM_POWERS_OUT, `${JSON.stringify(row)}\n`)
-      else if (row.failed && !row.known) console.log(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
+      else if (row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
     }
+    expect(failures, 'seeds outside the failure budget that fail').toEqual([])
   }, 7_200_000)
 })

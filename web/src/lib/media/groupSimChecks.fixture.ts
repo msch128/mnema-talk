@@ -156,7 +156,11 @@ export class GroupChecks implements SimHooks {
     if (message.wireformat === 'mls_key_package') return this.keyPackage(member, seen, from, wire, message.keyPackage.leafNode.signaturePublicKey, before)
     // Only a wire that gave the member other keys was taken.
     if (!after || epochKey(before) === epochKey(after)) return
-    if (message.wireformat === 'mls_welcome') this.welcome(member, seen, from, before, after)
+    if (message.wireformat === 'mls_welcome') {
+      // A group taken by welcome is a new group: the call forgets its renewal times with the old one (a rival welcome discards it without a "keys none" in between).
+      seen.renewals.clear()
+      this.welcome(member, seen, from, before, after)
+    }
     else if (message.wireformat === 'mls_public_message') this.commit(member, seen, from, message.publicMessage, before, after)
   }
 
