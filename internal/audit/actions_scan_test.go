@@ -30,9 +30,14 @@ type scanFunc struct {
 }
 
 type scanFile struct {
+	path  string
 	dir   string
 	file  *ast.File
 	funcs []scanFunc
+	// audit is the name this file gives the audit package: "audit", its
+	// import alias, "." for a dot import (and for the package itself) or ""
+	// when the file does not use it.
+	audit string
 }
 
 type actionScan struct {
@@ -60,7 +65,7 @@ func newActionScan(t *testing.T, roots ...string) *actionScan {
 			if err != nil {
 				return err
 			}
-			s.files = append(s.files, indexFile(filepath.Dir(path), f))
+			s.files = append(s.files, indexFile(path, f))
 			return nil
 		})
 		if err != nil {
@@ -70,8 +75,8 @@ func newActionScan(t *testing.T, roots ...string) *actionScan {
 	return s
 }
 
-func indexFile(dir string, f *ast.File) *scanFile {
-	sf := &scanFile{dir: dir, file: f}
+func indexFile(path string, f *ast.File) *scanFile {
+	sf := &scanFile{path: path, dir: filepath.Dir(path), file: f, audit: auditName(path, f)}
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch fn := n.(type) {
 		case *ast.FuncDecl:
@@ -129,11 +134,29 @@ func (s *actionScan) entryLiteral(f *scanFile, lit *ast.CompositeLit) {
 func isEntryType(f *scanFile, typ ast.Expr) bool {
 	switch t := typ.(type) {
 	case *ast.SelectorExpr:
-		return identName(t.X) == "audit" && t.Sel.Name == "Entry"
+		return f.audit != "" && f.audit != "." && identName(t.X) == f.audit && t.Sel.Name == "Entry"
 	case *ast.Ident:
-		return t.Name == "Entry" && filepath.Base(f.dir) == "audit"
+		return f.audit == "." && t.Name == "Entry"
 	}
 	return false
+}
+
+// auditName resolves the name the file gives the audit package from its own
+// imports, so an aliased or dot import is seen like a plain one.
+func auditName(path string, f *ast.File) string {
+	if filepath.Base(filepath.Dir(path)) == "audit" && f.Name.Name == "audit" {
+		return "."
+	}
+	for _, imp := range f.Imports {
+		if !strings.HasSuffix(imp.Path.Value, `/internal/audit"`) {
+			continue
+		}
+		if imp.Name != nil {
+			return imp.Name.Name // an alias or "."; "_" never names Entry
+		}
+		return "audit"
+	}
+	return ""
 }
 
 // fieldAssign handles e.Action = v in the files that use audit entries.
@@ -149,28 +172,29 @@ func (s *actionScan) fieldAssign(f *scanFile, as *ast.AssignStmt) {
 }
 
 func usesAudit(f *scanFile) bool {
-	if filepath.Base(f.dir) == "audit" {
-		return true
-	}
-	for _, imp := range f.file.Imports {
-		if strings.HasSuffix(imp.Path.Value, `/internal/audit"`) {
-			return true
-		}
-	}
-	return false
+	return f.audit != "" && f.audit != "_"
 }
 
-var insertAction = regexp.MustCompile(`(?s)INSERT INTO audit_log\b.*?VALUES\s*\(\s*'([^']+)'`)
+// SQL keywords are case-insensitive, so the patterns are too.
+var (
+	insertInto   = regexp.MustCompile(`(?i)\binsert\s+into\s+audit_log\b`)
+	insertAction = regexp.MustCompile(`(?is)\binsert\s+into\s+audit_log\b.*?\bvalues\s*\(\s*'([^']+)'`)
+)
 
-// rawInsert lists the action of an INSERT into audit_log written as SQL; the
-// writer's own INSERT (all values are parameters) is the one exception.
+// writerFile is the one file whose INSERT may take the action as a parameter:
+// Log.Record's own, which every audit.Entry goes through.
+const writerFile = "/internal/audit/audit.go"
+
+// rawInsert lists the action of an INSERT into audit_log written as SQL. An
+// INSERT whose action is not a literal is an error everywhere but the
+// writer's own file.
 func (s *actionScan) rawInsert(f *scanFile, lit *ast.BasicLit) {
-	if lit.Kind != token.STRING || !strings.Contains(lit.Value, "INSERT INTO audit_log") {
+	if lit.Kind != token.STRING || !insertInto.MatchString(lit.Value) {
 		return
 	}
 	if m := insertAction.FindStringSubmatch(lit.Value); m != nil {
 		s.found[m[1]] = s.fset.Position(lit.Pos()).String()
-	} else if !strings.Contains(lit.Value, "VALUES ($1") {
+	} else if !strings.HasSuffix(filepath.ToSlash(f.path), writerFile) {
 		s.errs = append(s.errs, s.fset.Position(lit.Pos()).String()+": an INSERT into audit_log whose action is not a literal")
 	}
 }
