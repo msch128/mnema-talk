@@ -21,12 +21,8 @@ import { isCapability } from './capability'
 import { isHeartbeat, openHeartbeat } from './heartbeat'
 import { mediaGroupId } from './bounds'
 import type { MediaVerification } from './verify'
-import { epochKey, memberNumber, SIM_CHANNEL, SIM_TIMING, type GroupSim, type SimHooks, type SimMember } from './groupSim.fixture'
+import { epochKey, memberNumber, SIM_CHANNEL, type GroupSim, type SimHooks, type SimMember } from './groupSim.fixture'
 
-const SLACK = Math.max(10, SIM_TIMING.maintenanceMs)
-const PATIENCE = SIM_TIMING.absentMs + 2 * SLACK
-const SLEEP_LIMIT = 2 * SLACK + 60_000
-const RENEWAL_GAP = Math.max(0, SIM_TIMING.rotateMs - SIM_TIMING.rotateJitterMs) / 2
 const GROUP_ID = mediaGroupId(SIM_CHANNEL) as Uint8Array
 
 /** What one member was shown, as far as the relay can tell. */
@@ -103,6 +99,11 @@ export class GroupChecks implements SimHooks {
 
   bind(sim: GroupSim) {
     this.sim = sim
+  }
+
+  /** One maintenance interval, which the group reads as the slack of its sleep and removal rules. */
+  private get slack(): number {
+    return Math.max(10, this.world.timing.maintenanceMs)
   }
 
   private get world(): GroupSim {
@@ -238,7 +239,7 @@ export class GroupChecks implements SimHooks {
     if (id === member.id) return true
     if (seen.restarting.has(id)) return false
     const alive = seen.alive.get(id)
-    return alive !== undefined && this.world.now - alive <= PATIENCE
+    return alive !== undefined && this.world.now - alive <= this.slack * 2 + this.world.timing.absentMs
   }
 
   /** The commit comes from the member who commits now, or holds nothing but its sender's own renewal, and that not too often. */
@@ -252,7 +253,7 @@ export class GroupChecks implements SimHooks {
     if (!effects.empty) return this.fail(member, `[4] took a commit from ${name(from)} although ${name(lower)} commits now`)
     const now = this.world.now
     const last = seen.renewals.get(from)
-    if (last !== undefined && now - last < RENEWAL_GAP) this.fail(member, `[4] took a second renewal from ${name(from)} after ${now - last} ms`)
+    if (last !== undefined && now - last < Math.max(0, this.world.timing.rotateMs - this.world.timing.rotateJitterMs) / 2) this.fail(member, `[4] took a second renewal from ${name(from)} after ${now - last} ms`)
     seen.renewals.set(from, now)
   }
 
@@ -274,11 +275,11 @@ export class GroupChecks implements SimHooks {
   /** A remove is of a member the roster no longer lists or one that was silent; a member that slept takes it on trust. */
   private checkRemoves(member: SimMember, seen: Seen, effects: Effects) {
     const now = this.world.now
-    if (now >= member.wokeAt && now - member.wokeAt <= 2 * SLEEP_LIMIT) return
+    if (now >= member.wokeAt && now - member.wokeAt <= 2 * (2 * this.slack + 60_000)) return
     for (const id of effects.removed) {
       if (!member.roster.includes(id)) continue
       const alive = seen.alive.get(id)
-      if (alive !== undefined && now - alive <= SIM_TIMING.absentMs - SLACK) this.fail(member, `[4] took the removal of ${name(id)}, who is in the room and was heard ${now - alive} ms ago`)
+      if (alive !== undefined && now - alive <= this.world.timing.absentMs - this.slack) this.fail(member, `[4] took the removal of ${name(id)}, who is in the room and was heard ${now - alive} ms ago`)
     }
   }
 
