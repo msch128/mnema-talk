@@ -12,7 +12,8 @@ schema a newer one migrated. Take a backup before every update.
 ## Nothing new may name an erased account (migration 0103)
 
 Migration 0103 adds triggers: one on every table with a foreign key to
-`users`, one on `messages` and one on `audit_log`, and tightens the trigger
+`users`, one on `messages`, one on `message_reports` (a report's copy of the
+conversation) and one on `audit_log`, and tightens the trigger
 on `users` that keeps a deleted account final. A row that names an erased
 account (a message, reaction or upload that was still under way while the
 member deleted their account) is refused, or, for another member's row about
@@ -549,7 +550,7 @@ of the pre-update backup (see "Rollback" above).
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
 | 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
-| 0103 | Triggers that refuse a row naming an erased account (or write another member's row without it), keep a deleted member's messages and profile empty, and write audit entries about an erased account without names and details. Adds functions and triggers only. |
+| 0103 | Triggers that refuse a row naming an erased account (or write another member's row without it), keep a deleted member's messages and profile empty, write report copies without an erased account's text, and write audit entries about an erased account without names and details. Adds functions and triggers only. |
 
 | 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
 

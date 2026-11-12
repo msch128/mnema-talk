@@ -80,11 +80,16 @@ type inFlightWorld struct {
 // count of that query for the member's id (a write without words); otherwise
 // it is every row that still holds the word. Any stored file left behind is a
 // leak too. prep, if set, builds what the write needs before the erasure.
+// A site with others is a write by another member about the person: it must
+// succeed. With noWait it need not wait for the erasure either; it only
+// starts while the erasure is held.
 type inFlightSite struct {
-	name  string
-	write func(f *inFlightWorld, word string) response
-	rows  string
-	prep  func(t *testing.T, f *inFlightWorld)
+	name   string
+	write  func(f *inFlightWorld, word string) response
+	rows   string
+	prep   func(t *testing.T, f *inFlightWorld, word string)
+	others bool
+	noWait bool
 }
 
 func (f *inFlightWorld) messages(content string, extra map[string]any) response {
@@ -132,7 +137,7 @@ func inFlightSites() []inFlightSite {
 	), moreInFlightSites()...)
 }
 
-// Every site must leave nothing. The guards of migration 0103 make the
+// Every site must leave nothing. The guards of the erased_person_guard migration make the
 // database refuse, drop or clear a row that names an erased account, and keep
 // the emptied tombstone row and messages empty, so the write that waited for
 // the erasure fails or writes nothing. "direct message" held before them for
@@ -163,7 +168,7 @@ func runInFlightSite(t *testing.T, s inFlightSite) inFlightOutcome {
 	f.event = a.coverEventAt(f.admin, time.Now().Add(48*time.Hour), nil).ID
 	word := "inflight" + strings.ReplaceAll(s.name, " ", "") + "x7q"
 	if s.prep != nil {
-		s.prep(t, f)
+		s.prep(t, f, word)
 	}
 
 	var out inFlightOutcome
@@ -181,7 +186,10 @@ func runInFlightSite(t *testing.T, s inFlightSite) inFlightOutcome {
 		t.Fatalf("delete: %d %s", res.status, res.body)
 	}
 	<-done
-	if out.waited < 400*time.Millisecond {
+	if s.others && out.status >= 300 {
+		t.Fatalf("another member's write answered %d: it must still go through", out.status)
+	}
+	if !s.noWait && out.waited < 400*time.Millisecond {
 		t.Fatalf("the write answered %d after %v: it did not wait for the erasure, the interleaving did not happen", out.status, out.waited)
 	}
 	if s.rows != "" {

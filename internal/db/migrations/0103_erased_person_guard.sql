@@ -134,6 +134,51 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- A report keeps a copy of the reported message and its neighbours, read
+-- before the report's transaction. A copy written after an erasure (a report
+-- that waited for it, or one that read the conversation before it committed)
+-- is stored the way the erasure's scrub of existing copies leaves it
+-- (scrubReportCopies, internal/chat/account/account_erase.go): an entry of
+-- an erased account loses its text and files and shows the tombstone name and
+-- "Deleted member". It locks each account it names FOR KEY SHARE, so it
+-- waits for an erasure in progress; a report that took the lock first makes
+-- the erasure wait, and the erasure's scrub then covers it.
+CREATE FUNCTION erased_report_entry(e jsonb, gone jsonb) RETURNS jsonb AS $$
+    SELECT CASE WHEN gone ? (e->>'user_id')
+                THEN e || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', gone->>(e->>'user_id'), 'display_name', 'Deleted member')
+                ELSE e END;
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE FUNCTION message_report_erased_people() RETURNS trigger AS $$
+DECLARE
+    entries jsonb := CASE WHEN jsonb_typeof(NEW.snapshot->'context') = 'array' THEN NEW.snapshot->'context' ELSE '[]'::jsonb END;
+    gone    jsonb;
+BEGIN
+    IF jsonb_typeof(NEW.snapshot->'message') = 'object' THEN
+        entries := entries || jsonb_build_array(NEW.snapshot->'message');
+    END IF;
+    SELECT COALESCE(jsonb_object_agg(l.id::text, l.username) FILTER (WHERE l.deleted_at IS NOT NULL), '{}'::jsonb) INTO gone
+    FROM (SELECT u.id, u.username, u.deleted_at FROM users u
+          WHERE u.id IN (SELECT (e->>'user_id')::uuid FROM jsonb_array_elements(entries) e
+                         WHERE e->>'user_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+          ORDER BY u.id FOR KEY SHARE) l;
+    IF gone = '{}'::jsonb THEN
+        RETURN NEW;
+    END IF;
+    IF jsonb_typeof(NEW.snapshot->'message') = 'object' THEN
+        NEW.snapshot := jsonb_set(NEW.snapshot, '{message}', erased_report_entry(NEW.snapshot->'message', gone));
+    END IF;
+    IF jsonb_typeof(NEW.snapshot->'context') = 'array' THEN
+        NEW.snapshot := jsonb_set(NEW.snapshot, '{context}', COALESCE((SELECT jsonb_agg(erased_report_entry(e, gone) ORDER BY ord)
+            FROM jsonb_array_elements(NEW.snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb));
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER message_report_erased_people BEFORE INSERT ON message_reports
+    FOR EACH ROW EXECUTE FUNCTION message_report_erased_people();
+
 -- The audit log has no foreign key to users (an entry outlives the account).
 -- An entry written about an erased account, or by one, is stored the way the
 -- erasure scrubs it: without names and details. It waits for an erasure in

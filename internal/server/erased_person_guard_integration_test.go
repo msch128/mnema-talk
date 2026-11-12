@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The guard of migration 0103 (H-L10-05): every foreign key to users runs
+// The guard of the erased_person_guard migration (H-L10-05): every foreign key to users runs
 // erased_person_guard, which waits for an erasure in progress and then
 // refuses, drops or clears a row that names the erased account. A new foreign
 // key to users fails here until its migration adds the trigger.
@@ -102,7 +102,7 @@ func TestEveryForeignKeyToUsersRefusesAnErasedAccount(t *testing.T) {
 			t.Errorf("%s is guarded and listed in guardSkips: drop the entry", c)
 		case skipped:
 		case !ok:
-			t.Errorf("%s: no erased_person_guard trigger names the column; add `CREATE TRIGGER erased_person_guard BEFORE INSERT OR UPDATE OF <columns> ON <table> FOR EACH ROW EXECUTE FUNCTION erased_person_guard('<column>:refuse', ...)` to its migration", c)
+			t.Errorf("%s: no erased_person_guard trigger names the column; add `CREATE OR REPLACE TRIGGER erased_person_guard BEFORE INSERT OR UPDATE OF <every person column of the table> ON <table> FOR EACH ROW EXECUTE FUNCTION erased_person_guard('<column>:<mode>', ...)` to its migration, naming the table's existing guarded columns too (the trigger replaces the old one)", c)
 		case mode != want:
 			t.Errorf("%s: mode %q, want %q (guardModes)", c, mode, want)
 		}
@@ -141,5 +141,31 @@ func TestOtherMembersStillWriteAboutAnErasedAccount(t *testing.T) {
 	wantStatus(t, "report", report, http.StatusCreated)
 	if n := a.countRows(`SELECT COUNT(*) FROM message_reports WHERE message_id = $1 AND reported_user_id IS NULL`, root); n != 1 {
 		t.Errorf("the report of the erased account's message: %d rows without the account, want 1", n)
+	}
+}
+
+// A report written before the erasure keeps the erased person's words in its
+// copy of the conversation (as the reported message or as a neighbour); the
+// erasure's scrub of existing copies blanks both, and names the tombstone.
+func TestTheErasureScrubsTheReportCopiesThatHoldThePerson(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	alice, bob := a.register(admin, "alice"), a.register(admin, "bob")
+	ch := a.createChannel(admin, "general", "text")
+	hers := a.send(alice, ch, "aliceswordsx7q")
+	admins := a.send(admin, ch, "the admin's words")
+	wantStatus(t, "report of hers", bob.post("/api/messages/"+hers.String()+"/report", map[string]any{"category": "spam"}), http.StatusCreated)
+	wantStatus(t, "report next to hers", bob.post("/api/messages/"+admins.String()+"/report", map[string]any{"category": "spam"}), http.StatusCreated)
+	if res := a.deleteAccount(alice, memberPassword, ""); res.status != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", res.status, res.body)
+	}
+	if hits := a.everyRowMentioning("aliceswordsx7q"); len(hits) > 0 {
+		t.Errorf("the erased person's words stay in %v", hits)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM message_reports WHERE snapshot::text LIKE '%"username": "alice"%'`); n != 0 {
+		t.Errorf("%d report copies still name alice", n)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM message_reports WHERE snapshot::text LIKE '%Deleted member%'`); n != 2 {
+		t.Errorf("%d report copies show the tombstone, want 2", n)
 	}
 }

@@ -426,8 +426,14 @@ details and the limits.
   behind either: a trigger on every table with a foreign key to `users` (a
   test fails for a new one without it) waits for the erasure's lock on the
   account and then refuses a row of the member's own, and writes other
-  members' rows without the member (a reply no longer makes them follow the
-  thread, a report of their message names no account). Their emptied messages
+  members' rows without the member: a reply no longer makes them follow the
+  thread, and a report no longer names them as the reported account. A role,
+  channel overwrite, block or conversation membership another member sets for
+  them in that moment is dropped (the request still answers success, as if it
+  had come a moment later, when the account no longer exists). A report's copy
+  of the conversation written after the erasure holds none of their text or
+  files, only the tombstone name and "Deleted member", like the copies the
+  erasure scrubs. Their emptied messages
   cannot get text, link cards or a title again, and an audit entry by or about
   the erased account is written without names and details. A file such a
   write had already stored is deleted when its row is refused; if that delete

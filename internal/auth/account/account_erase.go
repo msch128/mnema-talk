@@ -17,7 +17,7 @@ import (
 // order; auth sorts them with its own before running any. A test walks every
 // foreign key to users and fails when a table is forgotten. A write that
 // waits for this transaction's lock on the users row and runs after it
-// committed is stopped by the database (migration 0103): such late rows are
+// committed is stopped by the database (migration *_erased_person_guard.sql): such late rows are
 // refused, or written without the person, so this plan needs no second pass.
 //
 // What happens to what the person wrote:
