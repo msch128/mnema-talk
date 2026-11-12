@@ -388,7 +388,8 @@ anything.
 - **Rate limits shape the setup, not the capacity.** The server allows 120
   WebSocket upgrades per minute per address, so the chat test connected 100
   sessions a minute (1,000 sessions took ten minutes to connect), and the relay
-  accepts 120 allocations per minute and 256 in total. These are configured
+  accepts 120 allocation requests per minute per member and holds 256
+  allocations in total. These are configured
   limits, not what the machine could do. The test also stays under the API
   limit of 600 requests per minute per account.
 - **Synthetic media.** Voice packets are not real encoded video, and there is
