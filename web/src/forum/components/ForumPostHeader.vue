@@ -13,12 +13,14 @@ import { useButtonMenu } from '../../shared/composables/useButtonMenu'
 import type { ContextMenuItem } from '../../shared/components/menuTypes'
 import { t } from '../../i18n'
 import ContextMenu from '../../shared/components/ContextMenu.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 import ForumTagChip from './ForumTagChip.vue'
 import ForumTagPicker from './ForumTagPicker.vue'
 
 // The top of an open forum post: its title and tags (both editable by the author
 // and by moderators), its state (solved, pinned, locked), the actions on the post
-// and the way to the first unread reply.
+// and the way to the first unread reply. The title of a post by a member the
+// reader blocked folds like the post itself (BlockedFold).
 const emit = defineEmits<{ jump: [replyId: string] }>()
 
 const chatStore = useChatStore()
@@ -152,7 +154,9 @@ function jump() {
           <X class="h-4 w-4" />
         </button>
       </form>
-      <h2 v-else data-testid="forum-post-title" class="min-w-0 flex-1 break-words text-base font-bold leading-snug text-mnema-text">{{ post.title }}</h2>
+      <BlockedFold v-else :msg="post" class="min-w-0 flex-1">
+        <h2 data-testid="forum-post-title" class="min-w-0 flex-1 break-words text-base font-bold leading-snug text-mnema-text">{{ post.title }}</h2>
+      </BlockedFold>
 
       <button
         v-if="hasActions && !editingTitle"

@@ -2581,6 +2581,7 @@ export type ChatSearchRoot = {
   display_name: string
   id: string
   snippet: string
+  user_id?: string
   username: string
 }
 
@@ -2590,6 +2591,7 @@ export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "snippet") && isString(value["snippet"]))
+    && (!hasOwn(value, "user_id") || isIdentifier(value["user_id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
 }
 
@@ -3729,6 +3731,7 @@ export const decodeLaterCreateScheduledRequest = decoder("later.CreateScheduledR
 
 export type LaterMessageRef = {
   author: string
+  author_id?: string
   channel_id: string
   channel_name: string
   dm: boolean
@@ -3740,6 +3743,7 @@ export type LaterMessageRef = {
 export function isLaterMessageRef(value: unknown): value is LaterMessageRef {
   return isRecord(value)
     && (hasOwn(value, "author") && isString(value["author"]))
+    && (!hasOwn(value, "author_id") || isIdentifier(value["author_id"]))
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "channel_name") && isString(value["channel_name"]))
     && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')

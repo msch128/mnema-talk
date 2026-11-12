@@ -5,12 +5,15 @@ import { computed } from 'vue'
 import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
 import BotBadge from '../../shared/components/BotBadge.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 import { previewText } from '../lib/replies'
 import { shownName } from '../../shared/lib/deletedUser'
 import { t } from '../../i18n'
 
 // The "replied to" line above a message: curved connector into the
 // author's avatar, 16px avatar, name and a one-line snippet of the original.
+// An original by a member the reader blocked is folded (BlockedFold), so its
+// words and later edits to them stay out of sight until the reader asks.
 const props = defineProps({
   reply: { type: Object as PropType<ReplyPreview>, required: true },
   // Tailwind classes positioning the connector relative to this line
@@ -44,7 +47,7 @@ const name = computed(() => (props.reply ? shownName(props.reply) : '') || t('ch
       </button>
     </template>
 
-    <template v-else>
+    <BlockedFold v-else :msg="reply" small>
       <UserAvatar :user="reply" size="xxs" />
       <span class="font-semibold text-mnema-muted shrink-0 max-w-[40%] truncate">{{ name }}</span>
       <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
@@ -61,6 +64,6 @@ const name = computed(() => (props.reply ? shownName(props.reply) : '') || t('ch
         </template>
         <span v-else class="italic truncate">{{ $t('chat.message') }}</span>
       </button>
-    </template>
+    </BlockedFold>
   </div>
 </template>

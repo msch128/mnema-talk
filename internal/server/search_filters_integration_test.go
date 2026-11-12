@@ -70,13 +70,21 @@ func TestSearchReplyHitsCarryRootSnippets(t *testing.T) {
 
 	res := f.owner.get("/api/search?q=quokka")
 	var out struct {
+		Messages []struct {
+			UserID string `json:"user_id"`
+		} `json:"messages"`
 		Roots map[string]struct {
+			UserID  string `json:"user_id"`
 			Snippet string `json:"snippet"`
 		} `json:"roots"`
 	}
 	res.decode(t, &out)
 	if out.Roots[root.String()].Snippet != "root of the discussion" {
 		t.Fatalf("roots: %+v", out.Roots)
+	}
+	// The root names its author, so the client can fold a member the reader blocked.
+	if len(out.Messages) != 1 || out.Roots[root.String()].UserID != out.Messages[0].UserID || out.Messages[0].UserID == "" {
+		t.Fatalf("root author: %+v, hits %+v", out.Roots, out.Messages)
 	}
 	res = f.owner.get("/api/search?q=discussion")
 	out.Roots = nil

@@ -284,7 +284,7 @@ const groupedIds = computed(() => {
         <span class="text-xs font-semibold text-mnema-accent uppercase tracking-wide">{{ dividerLabel() }}</span>
         <span class="flex-1 h-px bg-mnema-accent/40"></span>
       </div>
-      <BlockedMessageRow v-if="blocks.hides(msg)" :msg="msg" @show="blocks.reveal(msg.id)" />
+      <BlockedMessageRow v-if="blocks.hides(msg)" :msg="msg" />
       <MessageRow
         v-else
         :msg="msg"

@@ -27,6 +27,8 @@ type MessageRef struct {
 	ChannelName string `json:"channel_name"`
 	DM          bool   `json:"dm"`
 	Author      string `json:"author"`
+	// AuthorID lets the client fold a member the reader blocked.
+	AuthorID uuid.UUID `json:"author_id,omitempty" binding:"optional" format:"uuid"`
 	// Snippet is the start of the message text (up to 200 characters).
 	Snippet string `json:"snippet"`
 }
@@ -42,7 +44,7 @@ func (s *Service) loadRef(ctx context.Context, id uuid.UUID) (*MessageRef, error
 // not exist is missing from the result.
 func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*MessageRef, error) {
 	rows, err := s.DB.Query(ctx, `
-		SELECT m.id, m.channel_id, m.parent_id, c.name, m.in_dm, COALESCE(m.author_name, u.display_name), m.content
+		SELECT m.id, m.channel_id, m.parent_id, c.name, m.in_dm, m.user_id, COALESCE(m.author_name, u.display_name), m.content
 		FROM messages m JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id
 		WHERE m.id = ANY($1)`, ids)
 	if err != nil {
@@ -51,7 +53,7 @@ func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]
 	refs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (*MessageRef, error) {
 		var m MessageRef
 		var content string
-		if err := row.Scan(&m.ID, &m.ChannelID, &m.ParentID, &m.ChannelName, &m.DM, &m.Author, &content); err != nil {
+		if err := row.Scan(&m.ID, &m.ChannelID, &m.ParentID, &m.ChannelName, &m.DM, &m.AuthorID, &m.Author, &content); err != nil {
 			return nil, err
 		}
 		m.Snippet = cut(content, snippetRunes)
