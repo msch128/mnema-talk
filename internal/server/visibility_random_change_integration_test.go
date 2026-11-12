@@ -74,7 +74,9 @@ func (w *randomWorld) customRole() uuid.UUID {
 
 func (w *randomWorld) anyChannel() uuid.UUID {
 	for ch := range w.word {
-		return ch
+		if !w.private(ch) {
+			return ch
+		}
 	}
 	return uuid.Nil
 }
@@ -84,8 +86,7 @@ func (w *randomWorld) freshWords(t *testing.T, round int) {
 	t.Helper()
 	for ch := range w.word {
 		word := fmt.Sprintf("zqchg%d%c%07d", round, 'a'+rune(w.r.IntN(26)), w.r.IntN(10_000_000))
-		postMessage(t, w.owner, ch, map[string]any{"content": word + " @m0 @m1 @m2 @m3"})
-		w.word[ch] = word
+		w.word[ch] = w.say(t, ch, word)
 	}
 }
 

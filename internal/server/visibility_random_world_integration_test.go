@@ -57,10 +57,11 @@ type randomWorld struct {
 	owner    *client
 	members  []*client
 	st       perm.State
-	word     map[uuid.UUID]string // channel -> its word
-	sockets  []*frameLog          // per member, opened before any channel existed
-	lastSeen map[string]bool      // member and channel -> visible at the last check
-	flips    int                  // pairs whose visibility a change turned around
+	word     map[uuid.UUID]string  // channel -> its word
+	sockets  []*frameLog           // per member, opened before any channel existed
+	lastSeen map[string]bool       // member and channel -> visible at the last check
+	poster   map[uuid.UUID]*client // who writes the words of a channel
+	flips    int                   // pairs whose visibility a change turned around
 	r        *rand.Rand
 }
 
@@ -68,11 +69,11 @@ func newRandomWorld(t *testing.T, seed uint64) *randomWorld {
 	t.Helper()
 	a := newApp(t, true)
 	owner := a.seedAdmin()
-	w := &randomWorld{a: a, owner: owner, word: map[uuid.UUID]string{}, lastSeen: map[string]bool{}, r: rand.New(rand.NewPCG(seed, seed+7))}
+	w := &randomWorld{a: a, owner: owner, word: map[uuid.UUID]string{}, lastSeen: map[string]bool{}, poster: map[uuid.UUID]*client{}, r: rand.New(rand.NewPCG(seed, seed+7))}
 	ev := everyoneID(t, owner)
 	w.st = perm.State{EveryoneID: ev, Roles: map[uuid.UUID]perm.Role{}, UserRoles: map[uuid.UUID][]uuid.UUID{},
 		Owners: map[uuid.UUID]bool{owner.user.ID: true}, Bots: map[uuid.UUID]bool{}, ChannelCat: map[uuid.UUID]uuid.UUID{},
-		Categories: map[uuid.UUID]bool{}, ChannelOv: map[uuid.UUID]perm.Scope{}, CategoryOv: map[uuid.UUID]perm.Scope{}}
+		Categories: map[uuid.UUID]bool{}, DMs: map[uuid.UUID]map[uuid.UUID]bool{}, ChannelOv: map[uuid.UUID]perm.Scope{}, CategoryOv: map[uuid.UUID]perm.Scope{}}
 	w.st.Everyone = perm.DefaultEveryone
 	if w.r.IntN(3) == 0 {
 		w.st.Everyone &^= perm.ViewChannel
@@ -84,6 +85,7 @@ func newRandomWorld(t *testing.T, seed uint64) *randomWorld {
 		w.sockets = append(w.sockets, recordFrames(t, m))
 	}
 	w.layout(t)
+	w.conversations(t)
 	waitForFrames()
 	return w
 }
@@ -173,6 +175,7 @@ func (w *randomWorld) layout(t *testing.T) {
 		w.st.ChannelCat[ch] = cat
 		w.st.ChannelOv[ch] = w.scope(t, "channels", ch)
 		w.word[ch] = word
+		w.poster[ch] = w.owner
 		postMessage(t, w.owner, ch, map[string]any{"content": word + " @m0 @m1 @m2 @m3"})
 	}
 }
@@ -190,10 +193,17 @@ func (w *randomWorld) checkAs(t *testing.T, state string) (pairs, visible int) {
 		}
 		info := myPerms(t, m)
 		for ch, word := range w.word {
+			if word == "" {
+				continue // nobody could write there (see say)
+			}
 			want := snap.Channel(sub, ch)
 			sees := want.Has(perm.ViewChannel)
 			history := m.get("/api/channels/" + ch.String() + "/messages")
-			found, _ := m.search(t, map[string]string{"q": word})
+			q := map[string]string{"q": word}
+			if _, dm := w.st.DMs[ch]; dm {
+				q["dm"] = "true" // conversations are searched on request only (doc/architecture.md)
+			}
+			found, _ := m.search(t, q)
 			got := map[string]bool{
 				"channel list or inbox": strings.Contains(listed, word),
 				"history":               history.status == http.StatusOK && strings.Contains(string(history.body), word),
@@ -201,11 +211,11 @@ func (w *randomWorld) checkAs(t *testing.T, state string) (pairs, visible int) {
 				"socket":                strings.Contains(frames.String(), word),
 			}
 			for surface, ok := range got {
-				if ok != sees {
-					t.Errorf("[%s] %s in %s: %s says %v, the snapshot of the mirror says %v (perms %b)", state, m.user.Username, word, surface, ok, sees, want)
+				if msg := w.judge(ch, surface, ok, sees); msg != "" {
+					t.Errorf("[%s] %s in %s: %s (perms %b)", state, m.user.Username, word, msg, want)
 				}
 			}
-			if gotBits := channelPerms(info, ch); gotBits != want && sees {
+			if gotBits := channelPerms(info, ch); gotBits != want && sees && !w.private(ch) {
 				t.Errorf("[%s] %s in %s: GET /api/permissions %b, the mirror %b", state, m.user.Username, word, gotBits, want)
 			}
 			pairs++
