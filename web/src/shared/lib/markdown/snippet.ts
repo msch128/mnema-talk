@@ -15,19 +15,22 @@ const SPOILER_MARKDOWN = '||…||'
 // Characters that start inline Markdown, and those that start a block at the start of a line.
 const ESCAPED_ANYWHERE = '\\`*_~|<['
 const ESCAPED_FIRST = '#>-'
+const URL_SCHEME = /https?$/i
 
 /** Plain text written as Markdown that reads back as the same text. */
 function escapePlain(plain: string): string {
   let out = ''
   let digits = true
   let first = true
+  let at = 0
   for (const ch of plain) {
     if (ch === HIDDEN) out += SPOILER_MARKDOWN
-    // "1. " would start a numbered list.
-    else if (ESCAPED_ANYWHERE.includes(ch) || (first && ESCAPED_FIRST.includes(ch)) || (!first && digits && ch === '.')) out += '\\' + ch
+    // "1. " would start a numbered list, "http://" a link.
+    else if (ESCAPED_ANYWHERE.includes(ch) || (first && ESCAPED_FIRST.includes(ch)) || (!first && digits && ch === '.') || (ch === ':' && URL_SCHEME.test(plain.slice(Math.max(0, at - 5), at)) && plain.startsWith('//', at + 1))) out += '\\' + ch
     else out += ch
     digits = digits && ch >= '0' && ch <= '9'
     first = false
+    at += ch.length
   }
   return out
 }
