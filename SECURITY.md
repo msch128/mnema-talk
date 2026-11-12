@@ -988,8 +988,9 @@ details and the limits.
   connected, for up to twice the limit (40 minutes in production, where it
   was 20), and only while newcomers keep coming in within every 20 minutes;
   otherwise for about the limit. A member that left the Talk is removed at
-  once, as before. A receiver never accepted a removal earlier than the
-  limit. A 3.0.7 committer still removes at the limit and a new receiver
+  once, as before. A receiver accepts a removal for silence from the limit
+  minus one maintenance interval (19.5 minutes in production), measured by
+  its own clock, and never earlier. A 3.0.7 committer still removes at the limit and a new receiver
   treats that as before; a new committer among 3.0.7 receivers waits where
   they would have refused, which is strictly better for them. A receiver
   that slept counts everyone alive from its wake and may still refuse one
