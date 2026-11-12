@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/mention"
 )
@@ -97,9 +98,20 @@ func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets ment
 		if !mentionVisible(policy, id) {
 			continue
 		}
-		out = append(out, MentionedUser{ID: id, Kind: kind})
+		out = append(out, MentionedUser{ID: id, Kind: allowedKind(policy, id, kind)})
 	}
 	return out
+}
+
+// allowedKind is the kind a kept mention is stored with. Under NoUsers a name
+// notifies only AllowUsers; anyone else still kept is reached by @all or
+// @here (see mentionSkipped), so their name is plain text and the group is
+// the reason they are mentioned.
+func allowedKind(policy MentionPolicy, id uuid.UUID, kind int16) int16 {
+	if kind == core.MentionKindName && policy.NoUsers && !slices.Contains(policy.AllowUsers, id) {
+		return core.MentionKindGroup
+	}
+	return kind
 }
 
 // mentionSkipped reports whether the policy turns the mention of id into plain

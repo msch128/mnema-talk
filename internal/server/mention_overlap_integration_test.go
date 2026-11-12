@@ -19,14 +19,11 @@ func mutedMember(t *testing.T, f accessFixture, ch uuid.UUID, name string) *clie
 	return m
 }
 
-// KNOWN DEFECT C-L3-N1, pinned as an inverse assertion: it passes while the
-// defect exists and fails the day it is fixed (then flip the want to 1).
-// doc/architecture.md ("A mute stays silent except for a message addressed to
-// the member (by name, through a role they hold, or as a reply)") says a role
-// mention breaks a mute, and "@Dev" alone does. "@all @Dev" does not: the
-// member is already in the set at kind group through @all, and addRoleMentions
-// skips them instead of raising the kind to role.
-func TestKnownDefectAllPlusRoleMentionKeepsTheRoleMembersMute(t *testing.T) {
+// C-L3-N1: doc/architecture.md ("A mute stays silent except for a message
+// addressed to the member (by name, through a role they hold, or as a
+// reply)") says a role mention breaks a mute, and "@Dev" alone does. So does
+// "@all @Dev": the member @all already reached is raised to a role mention.
+func TestAllPlusRoleMentionBreaksTheRoleMembersMute(t *testing.T) {
 	f := newAccessFixture(t, false)
 	ch := f.a.createChannel(f.owner, "general", "text")
 	dev := mentionableRole(t, f.owner, "Dev", true)
@@ -41,24 +38,23 @@ func TestKnownDefectAllPlusRoleMentionKeepsTheRoleMembersMute(t *testing.T) {
 		t.Fatalf("control: @Dev alone must break the mute, got %+v", rs)
 	}
 
-	// Defect: "@all @Dev" does not, for a member who holds the role. Read
-	// everything first so only this message counts.
+	// "@all @Dev" breaks it too. Read everything first so only this message
+	// counts.
 	wantStatus(t, "read all", both.post("/api/read-state/read-all", nil), http.StatusNoContent)
 	msg := postedMessage(t, f.owner, ch, "@all @Dev standup")
 	if len(msg.MentionRoles) != 1 || msg.MentionRoles[0] != dev {
 		t.Fatalf("the role is recorded as mentioned: %+v", msg.MentionRoles)
 	}
-	const wantByDocuments = 1
-	if rs := both.readState(t, ch); rs.MentionCount != 0 {
-		t.Fatalf("defect fixed? muted role member now counts %d (documents say %d): flip this test", rs.MentionCount, wantByDocuments)
+	if rs := both.readState(t, ch); rs.MentionCount != 1 {
+		t.Fatalf("@all @Dev must break the role member's mute, got %+v", rs)
 	}
 }
 
-// C-L3-N2: a webhook that may not mention members still addresses one by name
-// when the message also says @all. Pinned as an inverse assertion.
+// C-L3-N2: a webhook that may not mention members does not address one by
+// name when the message also says @all: the member is reached by @all only.
 // doc/webhooks.md: allow_user_mentions off "turns every member mention into
 // plain text".
-func TestKnownDefectWebhookWithoutUserMentionsStillNamesAMemberAfterAll(t *testing.T) {
+func TestWebhookWithoutUserMentionsDoesNotNameAMemberAfterAll(t *testing.T) {
 	f := newAccessFixture(t, false)
 	ch := f.a.createChannel(f.owner, "alerts", "text")
 	member := mutedMember(t, f, ch, "member")
@@ -82,12 +78,12 @@ func TestKnownDefectWebhookWithoutUserMentionsStillNamesAMemberAfterAll(t *testi
 	if rs := member.readState(t, ch); rs.MentionCount != 0 {
 		t.Fatalf("control: %+v", rs)
 	}
-	// @all lists everybody; what differs is the kind stored for the member,
-	// which the muted count shows: the name wins over the group.
+	// @all lists everybody; the name stays plain text, so the member is
+	// mentioned as part of @all, which does not break their mute.
 	if m := send("@all @member"); !slices.Contains(m.Mentions, member.user.ID) {
 		t.Fatalf("@all lists every member: %+v", m.Mentions)
 	}
-	if rs := member.readState(t, ch); rs.MentionCount != 1 {
-		t.Fatalf("defect fixed? the muted member's count is %d, was 1 through @all plus the name", rs.MentionCount)
+	if rs := member.readState(t, ch); rs.MentionCount != 0 {
+		t.Fatalf("@all @member counted the plain-text name for the muted member: %+v", rs)
 	}
 }

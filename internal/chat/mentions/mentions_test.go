@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 // matchRoles runs the role matching resolveMentionSet starts with.
@@ -102,5 +103,27 @@ func TestMentionSkippedUnderNoUsers(t *testing.T) {
 		if got := mentionSkipped(c.policy, c.targets, online, c.id); got != c.want {
 			t.Errorf("%s: skipped = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// Under NoUsers a name next to @all is plain text: the member stays, reached
+// by the group, unless AllowUsers lists them.
+func TestAllowedMentionsDemoteAPlainTextName(t *testing.T) {
+	bob, eve := uuid.New(), uuid.New()
+	ids := map[uuid.UUID]int16{bob: core.MentionKindName, eve: core.MentionKindName}
+	all := mentionTargets{all: true, usernames: []string{"bob", "eve"}}
+	kinds := func(policy MentionPolicy) map[uuid.UUID]int16 {
+		out := map[uuid.UUID]int16{}
+		for _, u := range allowedMentions(ids, policy, all, nil) {
+			out[u.ID] = u.Kind
+		}
+		return out
+	}
+	if got := kinds(MentionPolicy{}); got[bob] != core.MentionKindName || got[eve] != core.MentionKindName {
+		t.Errorf("names allowed: %v", got)
+	}
+	got := kinds(MentionPolicy{NoUsers: true, AllowUsers: []uuid.UUID{eve}})
+	if got[bob] != core.MentionKindGroup || got[eve] != core.MentionKindName {
+		t.Errorf("NoUsers with eve listed: bob %d (want group), eve %d (want name)", got[bob], got[eve])
 	}
 }
