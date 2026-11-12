@@ -1551,10 +1551,12 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 
 ## Orphaned media
 
-Objects in storage that no media row refers to (a failed delete, a crash
-during an upload) are invisible to members and only take space. Once a day
-the app counts those older than 24 hours under `uploads/`, `avatars/` and `banners/` and
-logs a warning when it finds any; it never deletes them on its own.
+Objects in storage that no row refers to (a failed delete, a crash during an
+upload) are invisible to members and only take space. Once a day the app
+counts those older than 24 hours under `uploads/`, `avatars/`, `banners/` and
+`covers/` (no media row) and under `exports/` (no data export row, such as
+the archive of an erased account whose file delete failed) and logs a warning
+when it finds any; it never deletes them on its own.
 
 ```sh
 # as admin (session cookie): count, then remove
@@ -1562,8 +1564,8 @@ GET  /api/admin/media/orphans           -> {"count": 2, "bytes": 150, "deleted":
 POST /api/admin/media/orphans/cleanup   -> {"count": 2, "bytes": 150, "deleted": 2}
 ```
 
-Objects with a media row, objects younger than 24 hours and anything outside
-those two prefixes are never touched.
+Objects with such a row, objects younger than 24 hours and anything outside
+those five prefixes are never touched.
 
 ## Logs
 

@@ -421,8 +421,9 @@ details and the limits.
   every administrative action treats it as missing (404), the account queries
   count it as inactive, and a database trigger refuses any update that would
   re-enable it or give it a password, name, address, avatar, role or ban. *Export* is built in the
-  background into the object store under `exports/` (not touched by the orphan
-  cleanup), limited to one per account per 24 hours by a database lock, is
+  background into the object store under `exports/` (the orphan cleanup
+  removes only an archive no export row names), limited to one per account
+  per 24 hours by a database lock, is
   streamed into storage while it is made (memory stays at one page of rows; the
   bounds are enforced while writing), can be downloaded once within 24 hours
   (the file is spent and deleted only after it was sent completely; an

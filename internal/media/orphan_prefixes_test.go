@@ -19,7 +19,7 @@ var keySpaces = map[string]string{
 	"emoji/":          "not scanned: referenced by custom_emoji, not media; a failed delete is logged with its key (internal/emoji/handler.go)",
 	"wiki/":           "not scanned: wiki pictures, swept by the wiki itself when it reaches its cap (internal/wiki/images.go)",
 	"community/icon/": "not scanned: referenced by instance_settings; a failed delete is logged with its version (internal/onboarding/icon.go)",
-	"exports/":        "not scanned: the export sweep goes by data_exports rows (H-L10-03: an erased account's export whose delete failed is never found)",
+	"exports/":        "orphan scan",
 }
 
 func TestEveryKeySpaceIsScannedOrHasAReason(t *testing.T) {
@@ -35,10 +35,8 @@ func TestEveryKeySpaceIsScannedOrHasAReason(t *testing.T) {
 	}
 }
 
-// The operations guide names the prefixes the daily count covers. It names
-// three and then says "those two"; the scan covers four (covers/ too), and
-// the cleanup deletes there. H-L10-04 records the difference: this check is
-// inverted until the guide names what the code scans.
+// The operations guide names the prefixes the daily count covers, and the
+// cleanup deletes there: it must name exactly what the code scans. H-L10-04.
 func TestTheGuideNamesThePrefixesTheOrphanScanCovers(t *testing.T) {
 	raw, err := os.ReadFile("../../doc/operations.md")
 	if err != nil {
@@ -63,7 +61,7 @@ func TestTheGuideNamesThePrefixesTheOrphanScanCovers(t *testing.T) {
 	slices.Sort(named)
 	scanned := slices.Clone(orphanPrefixes)
 	slices.Sort(scanned)
-	if slices.Equal(named, scanned) {
-		t.Errorf("H-L10-04 is fixed (the guide names %v, the scan covers %v): make this a plain assertion", named, scanned)
+	if !slices.Equal(named, scanned) {
+		t.Errorf("the guide names %v, the scan covers %v", named, scanned)
 	}
 }
