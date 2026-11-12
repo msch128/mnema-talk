@@ -229,7 +229,7 @@ answered:
 | Probe | Endpoint | Meaning |
 | --- | --- | --- |
 | Liveness (restart when it fails) | `GET /api/health/live` | `200` whenever the process serves requests; it asks neither the database nor object storage. |
-| Readiness, startup, monitoring | `GET /api/health` | `200` when the database answers and object storage is reachable, else `503` with what is down in `unavailable`. |
+| Readiness, startup, monitoring | `GET /api/health` | `200` when the database answers and object storage is reachable, else `503` with what is down in `unavailable`. Storage is checked live (one `HEAD` on the bucket, at most every 10 s), so it also reports storage that fails or returns while the server runs. |
 
 Do not use `/api/health` as a liveness probe. It answers `503` while object
 storage is down, although chat and Talks still work then; a restart would not

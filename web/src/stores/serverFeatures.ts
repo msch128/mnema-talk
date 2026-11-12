@@ -6,6 +6,13 @@ import { syncDocumentIcons } from '../shared/lib/communityIcon'
 
 /** How often the server is asked again while it reports a dependency as down. */
 export const OUTAGE_RECHECK_MS = 30000
+/**
+ * How often a visible tab asks a server that was healthy: storage that dies later is noticed within about this long. The server answers
+ * from a cache, so one small request a minute per open tab is the whole cost. A hidden tab asks nothing.
+ */
+export const HEALTHY_RECHECK_MS = 60000
+/** How long one answer may take. A request that never settles would otherwise be the last one ever made. */
+export const HEALTH_TIMEOUT_MS = 10000
 
 // The server describes itself in a 503 as well (a dependency is down). An older server sends only the error then, which is no answer.
 function decodeHealth(value: unknown): ServerHealth | ServerHealthUnavailable {
@@ -60,6 +67,8 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   const storageDown = computed(() => unavailable.value.includes('storage'))
   const names = computed(() => new Set(list.value))
   let pending: Promise<void> | null = null
+  // Whether the request behind `pending` is still on its way.
+  let asking = false
   let recheck: ReturnType<typeof setTimeout> | undefined
 
   function has(name: string): boolean {
@@ -72,20 +81,33 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     syncDocumentIcons(version)
   }
 
-  /** While a dependency is down the server is asked again, so the notice goes when the outage does. */
-  function watchOutage() {
+  /**
+   * Asks the server again later: soon while a dependency is down, so the notice goes when the outage does, and slowly while it is
+   * healthy, so an outage that starts later shows up. A failed answer keeps what is known and tries again; before the first answer
+   * the callers (the socket, a send) ask.
+   */
+  function watchServer() {
+    asking = false
     clearTimeout(recheck)
-    if (unavailable.value.length === 0) return
+    if (!loaded.value) return
     recheck = setTimeout(() => {
+      // A tab nobody looks at asks nothing; it asks when its timer next runs while shown, or at once when its socket reopens.
+      if (unavailable.value.length === 0 && typeof document !== 'undefined' && document.hidden) return watchServer()
       pending = null
       void load()
-    }, OUTAGE_RECHECK_MS)
+    }, unavailable.value.length > 0 ? OUTAGE_RECHECK_MS : HEALTHY_RECHECK_MS)
   }
 
   /** Asks the server once; later calls share the answer. */
   function load(): Promise<void> {
-    pending ??= api('/api/health', { acceptStatus: [503], decode: decodeHealth }).then(
+    if (pending) return pending
+    asking = true
+    // No more hops after the request than before: the outbox tests count microtasks.
+    const limit = new AbortController()
+    const giveUp = setTimeout(() => limit.abort(), HEALTH_TIMEOUT_MS)
+    pending = api('/api/health', { acceptStatus: [503], decode: decodeHealth, signal: limit.signal }).then(
       health => {
+        clearTimeout(giveUp)
         list.value = health.features ?? []
         communityName.value = health.community_name?.trim() ?? ''
         setCommunityIcon(health.community_icon ?? '')
@@ -93,11 +115,18 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
         loaded.value = true
       },
       () => {
+        clearTimeout(giveUp)
         // The next call asks again; nothing is shown that was not confirmed.
         pending = null
       }
-    ).then(watchOutage)
+    ).then(watchServer)
     return pending
+  }
+
+  /** Asks again although an answer is known (the socket reopened: the server may have restarted); joins a request on its way. */
+  function refresh(): Promise<void> {
+    if (!asking) pending = null
+    return load()
   }
 
   /**
@@ -113,7 +142,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   }
 
   return {
-    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load,
+    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load, refresh,
     ...featureFlags(has)
   }
 })
