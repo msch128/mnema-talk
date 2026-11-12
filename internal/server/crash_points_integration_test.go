@@ -357,6 +357,15 @@ var crashOps = []crashOp{
 			return admin.post("/api/events", map[string]any{"title": "Raid", "description": "", "start_time": time.Now().Add(48 * time.Hour), "location": "Hall"})
 		}
 	}},
+	{"comment on an event", func(a *app) func() response {
+		admin := a.seedAdmin()
+		res := admin.post("/api/events", map[string]any{"title": "Raid", "description": "", "start_time": time.Now().Add(48 * time.Hour), "location": "Hall"})
+		var ev struct{ ID string }
+		res.decode(a.t, &ev)
+		return func() response {
+			return admin.post("/api/events/"+ev.ID+"/comments", map[string]any{"content": "count me in"})
+		}
+	}},
 	{"create a role", func(a *app) func() response {
 		admin := a.seedAdmin()
 		return func() response {
