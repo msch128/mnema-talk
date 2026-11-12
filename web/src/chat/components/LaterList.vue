@@ -13,11 +13,12 @@ import { dateTime } from '../../shared/lib/time'
 import { locale, t } from '../../i18n'
 import ScheduledItem from './ScheduledItem.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 
 // The member's reminders and scheduled messages. A reminder that fell due
 // waits here, marked as due, until it is marked done or snoozed. The server
 // rechecks access on every read, so a reminder of a message the member can no
-// longer see shows no text.
+// longer see shows no text, and one of a member the reader blocked is folded.
 const emit = defineEmits<{ navigate: []; retry: [] }>()
 const chatStore = useChatStore()
 const later = useLaterStore()
@@ -78,24 +79,25 @@ async function snooze(entry: LaterReminder, preset: typeof SNOOZES[number]['pres
       <h3 class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('later.reminders') }}</h3>
       <div v-for="entry in later.reminders" :key="entry.id" data-testid="reminder-item" class="rounded-lg p-1 transition hover:bg-mnema-hover">
         <div class="flex items-start gap-1">
-          <button
-            v-if="entry.available && entry.message"
-            type="button"
-            data-testid="reminder-open"
-            class="focus-ring min-w-0 flex-1 rounded-lg p-1.5 text-left"
-            @click="openMessage(entry)"
-          >
-            <span class="mb-0.5 flex items-center gap-1.5 text-xs text-mnema-tertiary">
-              <MessageCircle v-if="entry.message.dm" class="h-3 w-3" aria-hidden="true" />
-              <Hash v-else class="h-3 w-3" aria-hidden="true" />
-              <span class="truncate">{{ entry.message.dm ? entry.message.author : entry.message.channel_name }}</span>
-              <span class="ml-auto flex shrink-0 items-center gap-1" :class="entry.delivered_at ? 'text-mnema-accent' : ''">
-                <BellRing v-if="entry.delivered_at" class="h-3 w-3" aria-hidden="true" />
-                {{ entry.delivered_at ? $t('later.due') : when(entry.remind_at) }}
+          <BlockedFold v-if="entry.available && entry.message" :msg="{ id: entry.message.id, user_id: entry.message.author_id }" class="flex-1 p-2">
+            <button
+              type="button"
+              data-testid="reminder-open"
+              class="focus-ring min-w-0 flex-1 rounded-lg p-1.5 text-left"
+              @click="openMessage(entry)"
+            >
+              <span class="mb-0.5 flex items-center gap-1.5 text-xs text-mnema-tertiary">
+                <MessageCircle v-if="entry.message.dm" class="h-3 w-3" aria-hidden="true" />
+                <Hash v-else class="h-3 w-3" aria-hidden="true" />
+                <span class="truncate">{{ entry.message.dm ? entry.message.author : entry.message.channel_name }}</span>
+                <span class="ml-auto flex shrink-0 items-center gap-1" :class="entry.delivered_at ? 'text-mnema-accent' : ''">
+                  <BellRing v-if="entry.delivered_at" class="h-3 w-3" aria-hidden="true" />
+                  {{ entry.delivered_at ? $t('later.due') : when(entry.remind_at) }}
+                </span>
               </span>
-            </span>
-            <span class="line-clamp-3 wrap-break-word text-sm text-mnema-text">{{ previewText(entry.message.snippet) || $t('chat.attachment') }}</span>
-          </button>
+              <span class="line-clamp-3 wrap-break-word text-sm text-mnema-text">{{ previewText(entry.message.snippet) || $t('chat.attachment') }}</span>
+            </button>
+          </BlockedFold>
           <p v-else data-testid="reminder-unavailable" class="min-w-0 flex-1 p-2 text-sm italic text-mnema-tertiary">
             {{ $t('later.unavailable') }}
           </p>

@@ -9,9 +9,12 @@ import { splitHighlight } from '../lib/searchHighlight'
 import { previewText } from '../lib/replies'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
 import { shownName } from '../../shared/lib/deletedUser'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 
 // One hit. The text is shown as plain text (no Markdown markers, spoilers hidden, emoji as :name:);
-// matches are highlighted by splitting it into nodes, never as HTML.
+// matches are highlighted by splitting it into nodes, never as HTML. Search
+// leaves blocks to the client: a hit or thread root by a member the reader
+// blocked is folded (BlockedFold).
 const props = defineProps<{
   msg: Message
   index: number
@@ -73,20 +76,24 @@ function formatDate(iso: string) {
       </div>
 
       <p v-if="root" data-search-root class="mb-1 flex min-w-0 items-baseline gap-1 border-l-2 border-mnema-border pl-2 text-xs text-mnema-tertiary">
-        <span class="shrink-0 font-medium">{{ shownName(root) }}:</span>
-        <span class="truncate">
-          <template v-for="(part, i) in rootParts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
-        </span>
+        <BlockedFold :msg="root" small>
+          <span class="shrink-0 font-medium">{{ shownName(root) }}:</span>
+          <span class="truncate">
+            <template v-for="(part, i) in rootParts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
+          </span>
+        </BlockedFold>
       </p>
 
-      <p class="text-sm text-mnema-muted line-clamp-2 wrap-break-word">
-        <template v-for="(part, i) in parts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
-      </p>
+      <BlockedFold :msg="msg">
+        <p class="text-sm text-mnema-muted line-clamp-2 wrap-break-word">
+          <template v-for="(part, i) in parts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
+        </p>
 
-      <div v-if="msg.attachments?.length" class="mt-1.5 flex items-center gap-1 text-xs text-mnema-accent">
-        <Paperclip class="w-3 h-3" />
-        <span>{{ msg.attachments.length }} {{ $t('chat.attachment') }}</span>
-      </div>
+        <div v-if="msg.attachments?.length" class="mt-1.5 flex items-center gap-1 text-xs text-mnema-accent">
+          <Paperclip class="w-3 h-3" />
+          <span>{{ msg.attachments.length }} {{ $t('chat.attachment') }}</span>
+        </div>
+      </BlockedFold>
     </div>
 
     <ArrowRight v-if="selected" class="mt-1 h-4 w-4 shrink-0 text-mnema-tertiary max-md:hidden" aria-hidden="true" />

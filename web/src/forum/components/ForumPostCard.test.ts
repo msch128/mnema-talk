@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import type { VueWrapper } from '@vue/test-utils'
 import ForumPostCard from './ForumPostCard.vue'
 import { setLocale } from '../../i18n'
@@ -14,7 +15,11 @@ function mountCard(overrides: Partial<Message> = {}) {
   return post
 }
 
-beforeEach(() => setLocale('en'))
+// The card asks the block list whether to fold the post (blockedElsewhere.test.ts).
+beforeEach(() => {
+  setLocale('en')
+  setActivePinia(createPinia())
+})
 afterEach(() => wrapper?.unmount())
 
 describe('ForumPostCard', () => {

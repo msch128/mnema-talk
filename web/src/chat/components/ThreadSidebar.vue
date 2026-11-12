@@ -271,7 +271,6 @@ async function handleSendReply() {
         v-if="chatStore.activeThread && blocks.hides(chatStore.activeThread)"
         :msg="chatStore.activeThread as Message"
         compact
-        @show="blocks.reveal(chatStore.activeThread.id)"
       />
       <ThreadRootCard
         v-else-if="chatStore.activeThread"
@@ -308,7 +307,7 @@ async function handleSendReply() {
 
       <!-- Replies List -->
       <template v-for="reply in chatStore.threadReplies" :key="reply.id">
-      <BlockedMessageRow v-if="blocks.hides(reply)" :msg="reply" compact @show="blocks.reveal(reply.id)" />
+      <BlockedMessageRow v-if="blocks.hides(reply)" :msg="reply" compact />
       <ThreadReply
         v-else
         :reply="reply"

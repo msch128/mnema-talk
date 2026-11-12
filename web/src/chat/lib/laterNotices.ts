@@ -4,6 +4,7 @@ import type { LaterMessageRef, LaterReminder } from '../../types/rest'
 import { useChatStore } from '../../stores/chat'
 import { useAuthStore } from '../../stores/auth'
 import { useToastStore } from '../../stores/toast'
+import { useBlocksStore } from '../../stores/blocks'
 import { isTabVisible } from '../../stores/chat/readState'
 import { platform } from '../../shared/lib/platform'
 import { pushOnThisDevice } from '../../shared/lib/webPush'
@@ -13,9 +14,14 @@ import { previewText } from './replies'
 const DUE_TOAST_MS = 12000
 const KNOWN_REASONS = ['slow_mode', 'not_allowed', 'unavailable']
 
-/** Who wrote it and where, in plain words: "Alice in #general: call mum", or "Alice wrote to you: call mum" in a conversation. */
+/**
+ * Who wrote it and where, in plain words: "Alice in #general: call mum", or
+ * "Alice wrote to you: call mum" in a conversation. A message of a member the
+ * reader blocked says only that a reminder is due (a notice has no Show).
+ */
 export function reminderText(ref: LaterMessageRef | undefined | null): string {
-  const text = ref ? previewText(ref.snippet) : ''
+  const folded = !!ref && useBlocksStore().hides({ id: ref.id, user_id: ref.author_id })
+  const text = ref && !folded ? previewText(ref.snippet) : ''
   if (!ref || !text) return t('later.reminderDue')
   if (ref.dm) return t('later.reminderDueDm', { author: ref.author, text })
   return t('later.reminderDueChannel', { author: ref.author, channel: ref.channel_name, text })

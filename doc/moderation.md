@@ -258,7 +258,15 @@ response, event, list or error text they can read depends on it. For the
 blocker it means:
 
 - the web app collapses the blocked member's messages to "Blocked message ·
-  show" (the client reads `GET /api/me/blocks` and the `block_updated` event);
+  show" (the client reads `GET /api/me/blocks` and the `block_updated` event)
+  wherever another member's words are shown: the message list and threads, the
+  "replied to" line, forwarded quotes, search hits and their thread roots, the
+  pin list, forum post cards and titles, saved messages and reminders (their
+  note and remove button stay). Showing one message shows it everywhere until
+  the page is reloaded. Search and these lists are not filtered by the server;
+  the client folds them, so a hit still counts in the number of results. A due
+  reminder's in-app notice leaves the text out; its push, which the blocker set
+  up themselves, still names the message;
 - the blocked member's mentions and replies create no entry in the mentions
   inbox (which excludes direct messages entirely), no mention count and no push,
   whatever the channel's notification level, and a plain message of theirs sends

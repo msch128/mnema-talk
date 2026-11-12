@@ -14,9 +14,11 @@ import { locale, t } from '../../i18n'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
 import HeaderPopover from '../../shared/components/HeaderPopover.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
+import BlockedFold from '../../shared/components/BlockedFold.vue'
 
 // The channel's pinned messages: a header button with a popover listing them,
 // newest pin first. A click jumps to the message; moderators can unpin here.
+// A pin by a member the reader blocked is folded (BlockedFold).
 // The list refetches while it is open when the server reports a change.
 const chatStore = useChatStore()
 const permissions = usePermissionsStore()
@@ -127,24 +129,26 @@ const when = (iso: string) => dateTime(iso, locale.value)
         {{ $t(canUnpin ? 'pins.emptyModerator' : 'pins.empty') }}
       </StatePanel>
       <div v-for="msg in items" v-else :key="msg.id" class="group/row flex items-start gap-1 rounded-lg transition hover:bg-mnema-hover">
-        <button
-          type="button"
-          data-testid="pinned-item"
-          class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-lg p-2.5 text-left"
-          @click="pick(msg)"
-        >
-          <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
-          <span class="min-w-0 flex-1">
-            <span class="mb-0.5 flex items-center gap-2">
-              <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-              <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
-              <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" aria-hidden="true" />
+        <BlockedFold :msg="msg" class="flex-1 p-2.5">
+          <button
+            type="button"
+            data-testid="pinned-item"
+            class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-lg p-2.5 text-left"
+            @click="pick(msg)"
+          >
+            <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
+            <span class="min-w-0 flex-1">
+              <span class="mb-0.5 flex items-center gap-2">
+                <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+                <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+                <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" aria-hidden="true" />
+              </span>
+              <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+              <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
+              <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
             </span>
-            <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
-            <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
-            <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
-          </span>
-        </button>
+          </button>
+        </BlockedFold>
         <button
           v-if="canUnpin"
           type="button"

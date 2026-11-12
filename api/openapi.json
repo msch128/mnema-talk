@@ -4376,6 +4376,11 @@
             "description": "Snippet is the start of the root message (at most 200 characters).",
             "type": "string"
           },
+          "user_id": {
+            "description": "UserID is the root's author, so the client can fold a member the\nreader blocked (search leaves blocks to the client, see core.BlockExists).",
+            "format": "uuid",
+            "type": "string"
+          },
           "username": {
             "type": "string"
           }
@@ -6308,6 +6313,11 @@
       "later.MessageRef": {
         "properties": {
           "author": {
+            "type": "string"
+          },
+          "author_id": {
+            "description": "AuthorID lets the client fold a member the reader blocked.",
+            "format": "uuid",
             "type": "string"
           },
           "channel_id": {
