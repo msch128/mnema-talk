@@ -248,7 +248,8 @@ func sweepCrashPoints(t *testing.T, op crashOp) []partialWrite {
 			}
 			fired++
 			moved, stayed := partialTables(before, a.tableCounts(), success)
-			if len(moved) > 0 && len(stayed) > 0 {
+			// A mix of states, or the whole change behind an error answer.
+			if len(moved) > 0 && (len(stayed) > 0 || res.status >= 400) {
 				partial = append(partial, partialWrite{
 					key: op.name + " | " + partialClass(res.status, stayed),
 					text: fmt.Sprintf("%s: statement %d (%.80s) failed, answer %d: changed %v, unchanged %v",
@@ -397,9 +398,15 @@ var knownPartial = map[string]string{
 	"create an event | audit":         "H-L7-04",
 	"create a role | audit":           "H-L7-04",
 	"assign a role | audit":           "H-L7-04",
-	// H-L7-05: the page is read back after the commit; a failed read answers
-	// 500 for a page that exists (and skips its audit entry).
-	"create a wiki page | error after commit": "H-L7-05",
+	// H-L7-05: the result is read back after the commit; a failed read
+	// answers 500 for a change that was made (a wiki page also loses its
+	// audit entry).
+	"create a wiki page | error after commit":   "H-L7-05",
+	"post a message | error after commit":       "H-L7-05",
+	"start a conversation | error after commit": "H-L7-05",
+	"edit a message | error after commit":       "H-L7-05",
+	"react to a message | error after commit":   "H-L7-05",
+	"comment on an event | error after commit":  "H-L7-05",
 }
 
 func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {

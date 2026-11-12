@@ -39,9 +39,15 @@ func TestAnEditAndADeleteOfOneMessageAgreeWithTheWebhookOrder(t *testing.T) {
 	})
 	var msg uuid.UUID
 	edits := 0
-	racetest.Sweep(t, racetest.Rounds(30, 500), 2,
+	// The deep count stays under the member's write rate (about 300 writes a
+	// minute), which would otherwise answer 429.
+	racetest.Sweep(t, racetest.Rounds(30, 250), 2,
 		func(round int) {
-			msg = a.send(admin, ch, fmt.Sprintf("round %d", round))
+			// With SQL: the message rate would refuse a sweep of many rounds.
+			if err := a.db.QueryRow(ctx, `INSERT INTO messages (channel_id, user_id, content) VALUES ($1, $2, $3) RETURNING id`,
+				ch, admin.user.ID, fmt.Sprintf("round %d", round)).Scan(&msg); err != nil {
+				t.Fatal(err)
+			}
 			a.runSQL(`DELETE FROM lane7_queue_log`)
 		},
 		func(round, i int) error {
