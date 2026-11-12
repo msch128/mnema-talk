@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { PREVIOUS_EPOCH_MS } from './lib/media/bounds'
+import { MAINTENANCE_MS, PREVIOUS_EPOCH_MS, ROTATE_JITTER_MS, ROTATE_MS } from './lib/media/bounds'
 import { FRAME_OVERHEAD_BYTES } from './lib/media/frame'
 
 const root = join(import.meta.dirname, '..', '..')
@@ -32,5 +32,15 @@ describe('numbers in the documents against the code', () => {
     const limit = /mem_limit: \$\{APP_MEM_LIMIT:-(\d+)g\}/.exec(doc('docker-compose.yml'))?.[1]
     const share = Math.round((800e6 / (Number(limit) * 2 ** 30)) * 100)
     expect(doc('doc/operations.md')).toContain(`above 800 MB (${share}% of the default limit)`)
+  })
+
+  // SECURITY.md Key lifetime: the jitter is in the sentence, the maintenance
+  // tick that notices an old epoch is not (I7 D2).
+  it.fails('SECURITY.md: the stated key lifetime bounds the longest one the code allows', () => {
+    const m = /A key never outlives (\d+) minutes \(plus or minus a random (\w+)-minute jitter/.exec(doc('SECURITY.md'))
+    expect(m).not.toBeNull()
+    const words: Record<string, number> = { one: 1, two: 2, three: 3 }
+    const stated = (Number(m?.[1]) + (words[m?.[2] ?? ''] ?? Number.NaN)) * 60_000
+    expect(ROTATE_MS + ROTATE_JITTER_MS + MAINTENANCE_MS).toBeLessThanOrEqual(stated)
   })
 })
