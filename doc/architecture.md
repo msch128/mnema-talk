@@ -633,7 +633,17 @@ a `message_create` on top of the answer only when its number is above the
 mark, and re-adds the ones it counted while the request was on its way the
 same way; a read in another session (`read_state` with counts) after the
 request began keeps the client's state, like a read in this one. Only the
-answer of the newest request is kept. `GET /api/threads/following` is ordered
+answer of the newest request is kept. This exactness has a price, accepted
+for exact counters: the posts of one channel now wait for each other from the
+lock to the commit. Measured on the insert alone (`messages.InsertMessage`, no
+HTTP, no rate limit): in one busy channel with 8 concurrent writers about 230
+to 480 posts a second instead of about 630 to 660, and a median insert of 15 to
+27 ms instead of about 8.5 ms (independent review, loaded machine); a second
+run with the erased-person guard of migration 0103 in place, on a quieter
+machine, gave about 740 to 760 posts a second instead of about 870 and a
+median of about 10.5 ms instead of 6.5 ms. Writers spread over channels show
+no difference. A channel still takes several hundred posts a second, far more
+than the per-member send limit lets members produce. `GET /api/threads/following` is ordered
 the same way without a mark: `thread_follow_updated` carries the whole state
 of a thread, so the changes that arrived while the list was on its way are
 applied to it again.
