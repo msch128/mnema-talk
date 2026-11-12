@@ -227,8 +227,8 @@ func TestRTCPStreamCapHoldsWithoutPionsLogLine(t *testing.T) {
 // track, which streams get a buffer and which count against which cap.
 func TestRTCPStreamCapSortsStreams(t *testing.T) {
 	c, sentSSRC := newTestRTCPCap(t)
-	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\na=ssrc:7 msid:a b\r\n" +
-		"a=ssrc:8 cname:x\r\na=ssrc:9 cname:x\r\na=ssrc:10 cname:x\r\na=ssrc:11 cname:x\r\n")
+	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\na=ssrc:7 msid:a b\r\n"+
+		"a=ssrc:8 cname:x\r\na=ssrc:9 cname:x\r\na=ssrc:10 cname:x\r\na=ssrc:11 cname:x\r\n", offerOf(1))
 	if _, ok := c.buffer(packetio.RTCPBufferPacket, 7).(*quietBuffer); !ok {
 		t.Error("a declared SSRC got a buffer")
 	}
@@ -247,8 +247,8 @@ func TestRTCPStreamCapSortsStreams(t *testing.T) {
 		c.unhandled(ssrc)
 	}
 	// SSRC 12 reported before the answer that adds its line.
-	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\n" +
-		"m=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:12 cname:x\r\n")
+	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\n"+
+		"m=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:12 cname:x\r\n", offerOf(2))
 	if unknown, buffered, quiet := c.counts(); unknown != 0 || buffered != 1 || quiet != 2 {
 		t.Fatalf("unknown %d, buffered %d, quiet %d; want 0, 1 (SSRC 11), 2", unknown, buffered, quiet)
 	}
@@ -292,7 +292,7 @@ func TestDeclaringReportedSSRCsDoesNotLaunderThem(t *testing.T) {
 			fmt.Fprintf(&sdp, "a=ssrc:%d cname:x\r\n", ssrc)
 			ssrc++
 		}
-		c.declare(sdp.String())
+		c.declare(sdp.String(), offerOf(lines))
 	}
 	unknown, buffered, _ := c.counts()
 	t.Logf("closed after %d rounds: %d unknown, %d buffered streams", rounds, unknown, buffered)
@@ -302,6 +302,37 @@ func TestDeclaringReportedSSRCsDoesNotLaunderThem(t *testing.T) {
 	if limit := maxUnknownRTCPStreams + lines + perRound; buffered > limit {
 		t.Fatalf("%d buffered streams before the close, over %d", buffered, limit)
 	}
+}
+
+// TestAnswerWithMoreLinesThanTheOfferForgivesNoMore is the reviewer's R3-1:
+// Pion accepts an answer with media sections the offer never had, so the
+// lines a client is forgiven for are counted in the SFU's own offer.
+func TestAnswerWithMoreLinesThanTheOfferForgivesNoMore(t *testing.T) {
+	c, _ := newTestRTCPCap(t)
+	const offered, claimed = 8, 108
+	var answer strings.Builder
+	answer.WriteString("v=0\r\n")
+	for i := range claimed {
+		ssrc := uint32(0x40000000 + i)
+		if i < maxUnknownRTCPStreams {
+			_ = c.buffer(packetio.RTCPBufferPacket, ssrc)
+			c.unhandled(ssrc)
+		}
+		fmt.Fprintf(&answer, "m=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:%d cname:x\r\n", ssrc)
+	}
+	c.declare(answer.String(), offerOf(offered))
+	unknown, _, _ := c.counts()
+	if forgiven := maxUnknownRTCPStreams - unknown; forgiven > offered {
+		t.Fatalf("an answer of %d sections to an offer of %d forgave %d reported SSRCs", claimed, offered, forgiven)
+	}
+	if _, ok := c.buffer(packetio.RTCPBufferPacket, 0x40000000+offered).(*rtcpBuffer); !ok {
+		t.Error("an SSRC of a section the offer did not have was taken as declared")
+	}
+}
+
+// offerOf is an offer of n audio lines.
+func offerOf(n int) string {
+	return "v=0\r\n" + strings.Repeat("m=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=sendonly\r\n", n)
 }
 
 // newTestRTCPCap is the cap of a connection that sends one track, with the

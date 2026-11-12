@@ -464,8 +464,9 @@ details and the limits.
   empty streams, or had more than 1024 buffered streams open (a cap counted
   apart from Pion's log line). An SSRC reported from before the answer that
   declares it is forgiven at most once per m-line the connection gains, as
-  its stream keeps the buffer. A member has one media connection at a time,
-  so it holds at most (65 + its m-lines) buffered streams for arbitrary SSRCs
+  its stream keeps the buffer; the lines are counted in the SFU's own offer,
+  never in the client's answer. A member has one media connection at a time,
+  so it holds at most (65 + the offer's m-lines) buffered streams for arbitrary SSRCs
   (about 1.3 MB plus 20 KB per line, under 3 MB for 70 lines) and about 16 MB
   of empty ones before the connection is closed; a client can make the empty
   ones in about two minutes. Every sender the SFU makes on a

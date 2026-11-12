@@ -18,7 +18,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		return err
 	}
 	answer.SDP = vetted
-	before := remoteStateOf(p.PC)
+	before, offer := remoteStateOf(p.PC), sdpOf(p.PC.PendingLocalDescription())
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
 		// Pion applies the description (and adds its candidates) before some
 		// of its later failure points; only an untouched connection gets the
@@ -28,7 +28,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		}
 		return err
 	}
-	p.rtcp.declare(answer.SDP)
+	p.rtcp.declare(answer.SDP, offer)
 	p.applyEarlyCandidates()
 	p.requestPendingSignal()
 	return nil
@@ -179,10 +179,10 @@ func removeStaleSenders(peer *Peer, desired map[string]*TrackInfo) (existing map
 		if _, ok := desired[trackID]; ok {
 			continue
 		}
+		peer.rtcp.stoppedTrack(sender) // before its stream closes: no report finds it unretired
 		if err := peer.PC.RemoveTrack(sender); err != nil {
 			continue
 		}
-		peer.rtcp.stoppedTrack(sender)
 		removed = true
 		if vt := peer.takeViewerTrack(trackID); vt != nil {
 			vt.group.removeViewer(vt)
