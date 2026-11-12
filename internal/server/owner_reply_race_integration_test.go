@@ -58,8 +58,48 @@ func TestAModeratorsDeleteThatWaitedForTheOwnersReplyKeepsIt(t *testing.T) {
 		t.Errorf("known failure H-L7-07 no longer reproduces (answer %d, reply kept %v): turn this into the plain assertion", status, kept)
 	}
 
+	bulkDeleteWhileTheOwnerReplies(t, a, owner, alice, mod, ch)
+
 	// Control: once the reply is in, the same delete is refused.
 	again := a.send(alice, ch, "another root")
 	a.runSQL(`INSERT INTO messages (channel_id, user_id, content, parent_id) VALUES ($1, $2, 'the Owner answers', $3)`, ch, owner.user.ID, again)
 	wantStatus(t, "delete after the reply", mod.delete("/api/channels/"+ch.String()+"/messages/"+again.String()), http.StatusForbidden)
+}
+
+// The bulk delete of a member's latest messages has the same rule ("the
+// Owner's messages can only go by the Owner's hand") and the same shape
+// (queryLatestMessages).
+func bulkDeleteWhileTheOwnerReplies(t *testing.T, a *app, owner, alice, mod *client, ch uuid.UUID) {
+	t.Helper()
+	ctx := context.Background()
+	root := a.send(alice, ch, "a root for the bulk delete")
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var reply uuid.UUID
+	if err := tx.QueryRow(ctx, `INSERT INTO messages (channel_id, user_id, content, parent_id) VALUES ($1, $2, 'the Owner answers', $3) RETURNING id`,
+		ch, owner.user.ID, root).Scan(&reply); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan response, 1)
+	began := time.Now()
+	go func() {
+		done <- mod.post("/api/channels/"+ch.String()+"/messages/bulk-delete", map[string]any{"user_id": alice.user.ID, "count": 1})
+	}()
+	time.Sleep(500 * time.Millisecond)
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	res := <-done
+	if took := time.Since(began); took < 400*time.Millisecond {
+		t.Fatalf("the bulk delete answered after %v: it did not wait for the reply", took)
+	}
+	kept := a.count(`SELECT COUNT(*) FROM messages WHERE id = $1`, reply) == 1
+	t.Logf("bulk delete during the Owner's reply answered %d; reply kept %v", res.status, kept)
+	// Expected failure until H-L7-07 is fixed (inverse assertion).
+	if kept {
+		t.Errorf("known failure H-L7-07 (bulk delete) no longer reproduces: turn this into the plain assertion")
+	}
 }
