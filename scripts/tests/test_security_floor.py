@@ -57,6 +57,19 @@ class SecurityFloor(unittest.TestCase):
         self.commit('fix: x\n\nSecurity-Floor: raise\n\nMore prose after it.')
         self.assertEqual(self.decide()[0], 'keep')
 
+    # Known failure (hunt finding H-L11-01): the 1.2.0 release commit carried
+    # "Security-Floor: raise" followed by a "BREAKING CHANGE:" paragraph, so
+    # git did not read it as a trailer, the floor stayed 0.7.23 and nothing
+    # warned. A marker that is not a trailer must at least warn; this test
+    # turns red (unexpected success) the day it does.
+    @unittest.expectedFailure
+    def test_marker_that_is_not_a_trailer_warns(self):
+        self.commit('feat: a release\n\nRelease-As: 1.2.0\nSecurity-Floor: raise\n\n'
+                    'BREAKING CHANGE: an optional field.')
+        decision, warnings = self.decide()
+        self.assertEqual(decision, 'keep')
+        self.assertIn('Security-Floor', warnings)
+
     def test_other_value_keeps(self):
         self.commit('fix: x\n\nSecurity-Floor: lower')
         self.assertEqual(self.decide()[0], 'keep')
