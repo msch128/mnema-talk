@@ -79,7 +79,7 @@ export const EDGE_CHARS = [
 const SCHEMES = ['https://', 'http://', 'HTTPS://', 'hTtP://', 'https:/', 'https:///', 'www.']
 const HOSTS = [
   'allowed.example', 'other.example', 'sub.allowed.example', 'allowed.example.other.example', 'other.example.allowed.example',
-  'xn--bcher-kva.example', 'b\u00fccher.example', 'ALLOWED.EXAMPLE', 'allowed.example.', '127.0.0.1', '[::1]', '[::1', '2130706433',
+  'xn--caf-dma.example', 'caf\u00e9.example', 'ALLOWED.EXAMPLE', 'allowed.example.', '127.0.0.1', '[::1]', '[::1', '2130706433',
   '0x7f.1', 'other%2eexample', '%6fther.example', 'other\uff0eexample', 'other\u3002example', 'oth\u200ber.example', '\u0430llowed.example', 'other.example\u0301'
 ]
 const PORTS = ['', ':80', ':443', ':', ':99999', ':0', ':8o', ':65535']

@@ -21,15 +21,15 @@ const file = join(import.meta.dirname, '..', '..', '..', '..', '..', VECTOR_FILE
 const AGREED = [
   'https://other.example/x', 'see https://allowed.example@other.example/x', 'https://other.example.', '(https://other.example)',
   '[docs](https://other.example)', '<https://other.example>', '**https://other.example/x**', 'HTTPS://OTHER.EXAMPLE',
-  'https://other.example​', 'https://allowed.example\\@other.example', 'https://allowed.example`@other.example',
-  'https://bücher.example', 'mailto:x@other.example', '`https://other.example`', 'https://other.example\'s page'
+  'https://other.example\u200b', 'https://allowed.example\\@other.example', 'https://allowed.example`@other.example',
+  'https://caf\u00e9.example', 'mailto:x@other.example', '`https://other.example`', 'https://other.example\'s page'
 ]
 
 /** One minimal message per known class, with the modes it gets past today. */
 const KNOWN: readonly (readonly [string, string, readonly Mode[]])[] = [
   ['H-L3-01', "https://allowed.example'@other.example/x", ['allow_list', 'block_list']],
-  ['H-L3-01', 'https://allowed.example＂@other.example/x', ['allow_list', 'block_list']],
-  ['H-L3-01', 'https://allowed.example／@other.example/x', ['allow_list', 'block_list']],
+  ['H-L3-01', 'https://allowed.example\uff02@other.example/x', ['allow_list', 'block_list']],
+  ['H-L3-01', 'https://allowed.example\uff0f@other.example/x', ['allow_list', 'block_list']],
   ['H-L3-01', "[docs](https://allowed.example'@other.example/x)", ['allow_list', 'block_list']],
   ['H-L3-01', "https://'@other.example/x", ['block_all', 'allow_list', 'block_list']],
   ['H-L3-01', 'https://\u0085@other.example/x', ['block_all', 'allow_list', 'block_list']],
@@ -37,13 +37,13 @@ const KNOWN: readonly (readonly [string, string, readonly Mode[]])[] = [
   ['H-L3-02', '||https://other.example||', ['block_list']],
   ['H-L3-02', '[docs](https://other.example)s', ['block_list']],
   ['H-L3-02', 'https://other.example\u007f@allowed.example', ['allow_list', 'block_list']],
-  ['H-L3-02', 'https://other.example﻿.allowed.example', ['allow_list', 'block_list']],
+  ['H-L3-02', 'https://other.example\ufeff.allowed.example', ['allow_list', 'block_list']],
   ['H-L3-02', 'h\u0000ttps://other.example', ['block_all', 'allow_list', 'block_list']],
   ['H-L3-02', 'http://_.other.example', ['block_list']],
   ['H-L3-03', 'https://allowed.example:99999/https://other.example', ['allow_list', 'block_list']],
   ['H-L3-03', 'https://[::1/https://other.example', ['block_list']],
-  ['H-L3-04', 'https://allowed́.example', ['allow_list']],
-  ['H-L3-04', 'https://allowed.exampl̂e', ['allow_list']]
+  ['H-L3-04', 'https://allowed\u0301.example', ['allow_list']],
+  ['H-L3-04', 'https://allowed.exampl\u0302e', ['allow_list']]
 ]
 
 const SAMPLE = 500
