@@ -35,13 +35,13 @@ describe('availability read from a simulator trace', () => {
     const run = (lostMs: number, memberMs = 1000) => ({ memberMs, noKeysMs: lostMs, lostMs, startOvers: 1, longestLostMs: lostMs, longestEpochMs: 0, longestJoinMs: 0 })
     const budget = new AvailabilityBudget('honest')
     budget.add(1, false, run(100))
-    budget.add(2, true, run(600, 10_000))
+    budget.add(2, true, run(450, 10_000))
     expect(budget.breaches()).toEqual([])
     budget.add(3, false, run(350))
     budget.add(4, true, run(700))
     expect(budget.breaches().map(line => line.replace(/\d+\.\d%/g, 'N%'))).toEqual([
       'seed 3: N% of member time lost its keys (limit 30% for a seed outside the failure budget)',
-      'seed 4: N% of member time lost its keys (limit 65% for a seed inside the failure budget)',
+      'seed 4: N% of member time lost its keys (limit 50% for a seed inside the failure budget)',
     ])
     const pooled = new AvailabilityBudget('honest', [3, SHARDS])
     for (const seed of [1, 2, 3]) pooled.add(seed, false, run(250))
@@ -53,7 +53,7 @@ describe('availability read from a simulator trace', () => {
     // A tab that waits too long for its first keys.
     const slow = new AvailabilityBudget('hostile')
     slow.add(9, false, { ...run(0), longestJoinMs: 200_000 })
-    expect(slow.breaches()).toEqual(['seed 9: a tab waited 200 s for its first keys (limit 150 s)'])
+    expect(slow.breaches()).toEqual(['seed 9: a tab waited 200 s for its first keys (limit 140 s)'])
   })
 
   it('flags a key held for longer than a key may live', () => {

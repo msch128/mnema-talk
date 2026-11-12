@@ -97,16 +97,17 @@ export function availabilityOf(result: SimResult): Availability {
 /**
  * What the nightly sweep (groupSim.sweep.test.ts) accepts of the time members spend without keys, per relay.
  * - seed / knownSeed: the most one seed may lose of its member time after it held keys, outside and inside the
- *   failure budget (measured at v3.0.8: worst 26 % and 37 % outside, 62 % and 61 % inside).
- * - joinMs: the longest a tab may wait for its first keys (worst measured 134 s; the room must agree within 240 s).
+ *   failure budget (measured at 3.0.9: worst 26 % honest and 34 % hostile; the failure budget is empty).
+ * - joinMs: the longest a tab may wait for its first keys (worst measured 97 s honest and 135 s hostile; the room
+ *   must agree within 240 s).
  * - shardLost: the share of member time lost after holding keys, pooled over the seeds of each of the 8 shards of
- *   the nightly sweep, as measured at origin/main. The run is deterministic, so a shard must land within
- *   SHARD_WINDOW of its number: above it is a regression, below it means the protocol got better and this table
- *   must be lowered to the new measurement (the removal fix takes the honest pool from 12.7 % to about 6 %).
+ *   the nightly sweep, as measured at origin/main 3.0.9 (after the removal fix; before it the honest pool was 12.7 %, now
+ *   6.2 %). The run is deterministic, so a shard must land within SHARD_WINDOW of its number: above it is a
+ *   regression, below it means the protocol got better and this table must be lowered to the new measurement.
  */
 export const LOST_BUDGET = {
-  honest: { seed: 0.3, knownSeed: 0.65, joinMs: 150_000, shardLost: [0.1317, 0.0754, 0.1014, 0.06, 0.1292, 0.1385, 0.1677, 0.1914] },
-  hostile: { seed: 0.4, knownSeed: 0.65, joinMs: 150_000, shardLost: [0.1571, 0.1621, 0.1597, 0.195, 0.1966, 0.1511, 0.2551, 0.1414] },
+  honest: { seed: 0.3, knownSeed: 0.5, joinMs: 110_000, shardLost: [0.0642, 0.0446, 0.0581, 0.0517, 0.0631, 0.0679, 0.073, 0.0714] },
+  hostile: { seed: 0.35, knownSeed: 0.5, joinMs: 140_000, shardLost: [0.1223, 0.1076, 0.1215, 0.1479, 0.1068, 0.1221, 0.167, 0.0984] },
 } as const
 export const SHARD_WINDOW = 0.02
 export const SHARDS = 8
