@@ -534,7 +534,8 @@ jobs:
         run: go build -o "$RUNNER_TEMP/webbundle" ./cmd/webbundle
 
       # A release that contains a security fix raises the floor to itself, so
-      # desktop clients stop running every older bundle. A fix says so with an
+      # desktop clients stop running every older bundle, and every later
+      # release repeats the highest floor raised so far. A fix says so with an
       # explicit `Security-Floor: raise` trailer in its commit message
       # (scripts/security-floor.sh; the commit subject plays no part).
       - name: Decide the security floor
@@ -542,11 +543,9 @@ jobs:
         id: floor
         run: |
           set -euo pipefail
-          prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
-          range=${prev:+$prev..}$TAG
-          if [ "$(sh scripts/security-floor.sh "$range")" = raise ]; then floor="$VERSION"; else floor=""; fi
+          floor=$(sh scripts/security-floor.sh "$TAG" "$VERSION")
           echo "floor=$floor" >> "$GITHUB_OUTPUT"
-          echo "Security floor raised to: ${floor:-not raised (web/desktop-compat.json applies)} (range $range)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Security floor: ${floor:-never raised (web/desktop-compat.json applies)} (highest raise up to $TAG)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Sign the bundle
         if: steps.key.outputs.present == 'true'

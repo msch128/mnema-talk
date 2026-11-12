@@ -29,8 +29,8 @@ func atoiAPI(s string) int {
 
 func itoaAPI(n int) string { return strconv.Itoa(n) }
 
-// baselineFloor is web/desktop-compat.json's floor: what a release without a
-// Security-Floor trailer declares, however high an earlier release raised it.
+// baselineFloor is web/desktop-compat.json's floor: what a release declares
+// while no release has raised it (scripts/security-floor.sh).
 const baselineFloor = "0.7.23"
 
 type release struct {
@@ -118,7 +118,8 @@ func (w *world) bundle(v Version, api int, floor Version, key int) []byte {
 func fmtVersion(v Version) string { return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2]) }
 
 // release cuts the next release with the CI key. A release with a security
-// fix raises its own floor; every other one declares the baseline floor.
+// fix raises its own floor; every other one repeats the highest floor raised
+// so far (scripts/security-floor.sh), the baseline before the first raise.
 func (w *world) release(raise bool) release {
 	if n := len(w.releases); n > 0 && w.rng.Intn(4) == 0 {
 		// The web app starts to need something the previous server lacked.
@@ -127,6 +128,9 @@ func (w *world) release(raise bool) release {
 	v := Version(w.next)
 	w.next[2]++
 	floor := mustVersion(baselineFloor)
+	for _, r := range w.releases {
+		floor = vmax(floor, r.floor)
+	}
 	if raise {
 		floor = v
 	}
