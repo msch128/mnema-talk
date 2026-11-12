@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -65,9 +66,17 @@ func TestABlockClosesTheDoorsOfAConversation(t *testing.T) {
 	})
 }
 
-// A locked forum post: only members with Manage messages reply (doc/forums.md).
-func TestALockedPostClosesTheDoorsForMembers(t *testing.T) {
+// A locked forum post (doc/forums.md): a lock stops new replies and puts the
+// title, tags and solved mark behind Manage messages; "the first message is
+// edited like any message", and a member's own replies stay theirs to edit
+// and delete (a documented decision, 2026-11 hunt review of H-L3-08). Automod
+// still screens such an edit.
+func TestALockedPostStopsRepliesAndKeepsOwnRepliesEditable(t *testing.T) {
 	f := newDMFixture(t, false)
+	wantStatus(t, "rule", f.admin.post("/api/admin/automod/rules", wordRule("No spam", "block", "spam")), http.StatusCreated)
+	if _, err := f.a.db.Exec(context.Background(), `UPDATE users SET created_at = NOW() - INTERVAL '30 days'`); err != nil {
+		t.Fatal(err)
+	}
 	forum := f.a.createChannel(f.admin, "board", "forum")
 	fb := "/api/channels/" + forum.String()
 	var post struct{ ID uuid.UUID }
@@ -83,18 +92,14 @@ func TestALockedPostClosesTheDoorsForMembers(t *testing.T) {
 		{"author edits the title", func() response {
 			return f.alice.patch(fb+"/posts/"+post.ID.String(), map[string]any{"title": "new title"})
 		}, http.StatusForbidden},
+		{"edit of an own reply, screened by automod", func() response {
+			return f.bob.put(fb+"/messages/"+reply.String(), map[string]any{"content": "now spam"})
+		}, http.StatusBadRequest},
+		{"edit of an own reply", func() response {
+			return f.bob.put(fb+"/messages/"+reply.String(), map[string]any{"content": "rewritten after the lock"})
+		}, http.StatusOK},
+		{"delete of an own reply", func() response { return f.bob.delete(fb + "/messages/" + reply.String()) }, http.StatusNoContent},
 	})
-	knownLockedEdit(t, f.bob, fb+"/messages/"+reply.String())
-}
-
-// knownLockedEdit asserts the WRONG behaviour measured by the hunt (finding
-// H-L3-08, an inverse assertion): a member rewrites their reply in a locked
-// post. It fails the day the edit is refused; then make it a cell above.
-func knownLockedEdit(t *testing.T, c *client, path string) {
-	t.Helper()
-	if res := c.put(path, map[string]any{"content": "rewritten after the lock"}); res.status != http.StatusOK {
-		t.Errorf("edit of a reply in a locked post: %d, H-L3-08 is fixed: want 403 in the table", res.status)
-	}
 }
 
 // A timeout takes Send messages and Send direct messages "so every surface
