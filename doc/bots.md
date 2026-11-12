@@ -209,7 +209,7 @@ security scheme `botAuth`).
 | `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `allowed_mentions`, `message_reference`, `parent_id` |
 | `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
-| `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works) |
+| `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`, `allowed_mentions`, `parent_id`, `reply_to_id`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
 | `GET /members`, `GET /members/{id}` | the `GUILD_MEMBERS` intent allowed; only members who can view a channel the bot can view; id, name, avatar |
 

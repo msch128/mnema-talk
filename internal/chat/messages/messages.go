@@ -115,9 +115,9 @@ func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx
 
 func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
-		SELECT message_id, emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
+		SELECT message_id, MIN(emoji), array_agg(user_id ORDER BY created_at)
 		FROM message_reactions WHERE message_id = ANY($1)
-		GROUP BY message_id, emoji ORDER BY MIN(created_at)`, ids)
+		GROUP BY message_id, `+reactionKeySQL+` ORDER BY MIN(created_at)`, ids)
 	if err != nil {
 		return fmt.Errorf("load reactions: %w", err)
 	}
@@ -125,10 +125,10 @@ func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx m
 	for rows.Next() {
 		var r core.ReactionSummary
 		var msgID uuid.UUID
-		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Users); err != nil {
+		if err := rows.Scan(&msgID, &r.Emoji, &r.Users); err != nil {
 			return err
 		}
-		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, r)
+		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, oneReaction(r))
 	}
 	return rows.Err()
 }

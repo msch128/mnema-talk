@@ -24343,7 +24343,7 @@
     },
     "/api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me": {
       "delete": {
-        "description": "Idempotent. Taking a reaction back always works.",
+        "description": "Idempotent. Taking a reaction back always works. It removes the emoji in every form it is stored in (with and without U+FE0F).",
         "operationId": "botRemoveReaction",
         "parameters": [
           {
@@ -24442,7 +24442,7 @@
         ]
       },
       "put": {
-        "description": "Idempotent. The emoji is URL-encoded. Needs Add reactions in the channel. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409).",
+        "description": "Idempotent. The emoji is URL-encoded. Needs Add reactions in the channel. One emoji with and without U+FE0F is one reaction, stored in its fully-qualified Unicode form. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409).",
         "operationId": "botAddReaction",
         "parameters": [
           {
@@ -35002,7 +35002,7 @@
     },
     "/api/messages/{messageID}/reactions": {
       "post": {
-        "description": "Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.",
+        "description": "Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). One emoji with and without U+FE0F (a red heart, a thumbs up) is one reaction, stored and returned in its fully-qualified Unicode form; skin tones and joined sequences stay separate emoji. Broadcasts message_reaction.",
         "operationId": "toggleReaction",
         "parameters": [
           {
