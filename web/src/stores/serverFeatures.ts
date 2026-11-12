@@ -16,8 +16,65 @@ function decodeHealth(value: unknown): ServerHealth | ServerHealthUnavailable {
   return isServerHealthUnavailable(value) ? value : decodeServerHealth(value)
 }
 
+type Health = ServerHealth | ServerHealthUnavailable
+
+/**
+ * Asks the server about itself and hands each answer to `adopt`. `load` asks once and later calls share the answer; `refresh` asks again
+ * although an answer is known (the socket reopened: the server may have restarted) and joins a request on its way. While `inOutage` says a
+ * dependency is down the server is asked again every OUTAGE_RECHECK_MS, so the notice goes when the outage does. A healthy server is not
+ * polled: an outage that starts later is noticed when a request fails with 503 (`listenForFailures`) or when the socket reopens.
+ */
+function healthAsker(adopt: (health: Health) => void, inOutage: () => boolean) {
+  let pending: Promise<void> | null = null
+  // Whether the request behind `pending` is still on its way.
+  let asking = false
+  let recheck: ReturnType<typeof setTimeout> | undefined
+
+  function watchServer() {
+    asking = false
+    clearTimeout(recheck)
+    if (!inOutage()) return
+    recheck = setTimeout(() => {
+      pending = null
+      void load()
+    }, OUTAGE_RECHECK_MS)
+  }
+
+  function load(): Promise<void> {
+    if (pending) return pending
+    asking = true
+    // No more promise hops than a plain request: the outbox tests count microtasks.
+    pending = api('/api/health', { acceptStatus: [503], decode: decodeHealth, signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) }).then(
+      adopt,
+      () => {
+        // The next call asks again; nothing is shown that was not confirmed.
+        pending = null
+      }
+    ).then(watchServer)
+    return pending
+  }
+
+  function refresh(): Promise<void> {
+    if (!asking) pending = null
+    return load()
+  }
+
+  return { load, refresh }
+}
+
 // Only the store of the running app listens (a second store, as in tests, replaces the first).
 let stopListening: (() => boolean) | undefined
+
+/** A request answered 503 UNAVAILABLE (an upload, say) says a dependency is down: `ask` what is, at most every few seconds. */
+function listenForFailures(ask: () => Promise<void>) {
+  let last = 0
+  stopListening?.()
+  stopListening = onUnavailable(() => {
+    if (Date.now() - last < FAILURE_RECHECK_GAP_MS) return
+    last = Date.now()
+    void ask()
+  })
+}
 
 /** One flag per optional feature the web app asks about. */
 function featureFlags(has: (name: string) => boolean) {
@@ -66,10 +123,6 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   // Without object storage uploads, attachments and pictures fail; chat and Talks do not need it.
   const storageDown = computed(() => unavailable.value.includes('storage'))
   const names = computed(() => new Set(list.value))
-  let pending: Promise<void> | null = null
-  // Whether the request behind `pending` is still on its way.
-  let asking = false
-  let recheck: ReturnType<typeof setTimeout> | undefined
 
   function has(name: string): boolean {
     return names.value.has(name)
@@ -81,46 +134,13 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     syncDocumentIcons(version)
   }
 
-  /**
-   * While a dependency is down the server is asked again, so the notice goes when the outage does. A healthy server is not polled: an
-   * outage that starts later is noticed when a request fails with 503 (below) or when the socket reopens (`refresh`).
-   */
-  function watchServer() {
-    asking = false
-    clearTimeout(recheck)
-    if (unavailable.value.length === 0) return
-    recheck = setTimeout(() => {
-      pending = null
-      void load()
-    }, OUTAGE_RECHECK_MS)
-  }
-
-  /** Asks the server once; later calls share the answer. */
-  function load(): Promise<void> {
-    if (pending) return pending
-    asking = true
-    // No more promise hops than a plain request: the outbox tests count microtasks.
-    pending = api('/api/health', { acceptStatus: [503], decode: decodeHealth, signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) }).then(
-      health => {
-        list.value = health.features ?? []
-        communityName.value = health.community_name?.trim() ?? ''
-        setCommunityIcon(health.community_icon ?? '')
-        unavailable.value = health.status === 'unavailable' ? health.unavailable : []
-        loaded.value = true
-      },
-      () => {
-        // The next call asks again; nothing is shown that was not confirmed.
-        pending = null
-      }
-    ).then(watchServer)
-    return pending
-  }
-
-  /** Asks again although an answer is known (the socket reopened: the server may have restarted); joins a request on its way. */
-  function refresh(): Promise<void> {
-    if (!asking) pending = null
-    return load()
-  }
+  const { load, refresh } = healthAsker(health => {
+    list.value = health.features ?? []
+    communityName.value = health.community_name?.trim() ?? ''
+    setCommunityIcon(health.community_icon ?? '')
+    unavailable.value = health.status === 'unavailable' ? health.unavailable : []
+    loaded.value = true
+  }, () => unavailable.value.length > 0)
 
   /**
    * Waits for the feature list when it has not been read yet (the first read may have failed, as during a server restart), but only for
@@ -134,14 +154,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     return loaded.value
   }
 
-  // An upload or another request answered 503 UNAVAILABLE says a dependency is down: ask what is (at most every few seconds).
-  let lastFailureCheck = 0
-  stopListening?.()
-  stopListening = onUnavailable(() => {
-    if (Date.now() - lastFailureCheck < FAILURE_RECHECK_GAP_MS) return
-    lastFailureCheck = Date.now()
-    void refresh()
-  })
+  listenForFailures(refresh)
 
   return {
     list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load, refresh,
