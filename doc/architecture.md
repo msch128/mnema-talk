@@ -480,7 +480,9 @@ report as lost), the browser answers with transport-wide feedback (arrival
 time of each packet) and the estimator turns both into a bitrate. It is only
 read: the pacer is a pass-through, so nothing is delayed or dropped, and
 audio, cameras and viewers who chose a layer are unaffected. The cost is the
-estimator's history of 250 packets and two small goroutines per connection.
+estimator's history of 250 packets and two small goroutines per connection,
+plus one writer per stream it sends, which is forgotten when the stream's
+sender stops.
 The estimate is compared with the bitrate each layer has at the SFU (bytes
 arriving per layer, measured once a second per share, smoothed; a layer the
 sender switched off keeps its last size). Delivery that keeps up makes the
