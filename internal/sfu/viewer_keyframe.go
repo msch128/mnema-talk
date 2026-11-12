@@ -66,3 +66,53 @@ func (vt *viewerTrack) requestKeyframe() {
 	vt.mu.Unlock()
 	vt.group.requestKeyframe(idx)
 }
+
+// sentNumbers is what the stream of a layered viewer has carried: the newest
+// sequence number and timestamp sent and, after a layer switch, the newest
+// sequence number sent before it (base). A packet can arrive late, reordered
+// on the way or repaired by a retransmission after newer ones, so the last
+// packet sent is not always the newest. A switch continues after the newest:
+// continuing after a late one would give the new layer's first packets (its
+// keyframe) numbers the viewer already holds, which a receiver drops as
+// duplicates (RFC 3550 A.1), and a timestamp older than a frame it has.
+type sentNumbers struct {
+	seq, base uint16
+	ts        uint32
+	any       bool
+	// rebased: base applies. It retires once the stream has moved on far
+	// enough that the 16-bit comparison with base would turn round.
+	rebased bool
+}
+
+// seqNewer reports whether sequence number a comes after b (RFC 1982).
+func seqNewer(a, b uint16) bool { return int16(a-b) > 0 }
+
+// tsNewer reports whether RTP timestamp a comes after b.
+func tsNewer(a, b uint32) bool { return int32(a-b) > 0 }
+
+// note records a packet sent with sequence number seq and timestamp ts.
+func (n *sentNumbers) note(seq uint16, ts uint32) {
+	if !n.any || seqNewer(seq, n.seq) {
+		n.seq = seq
+	}
+	if !n.any || tsNewer(ts, n.ts) {
+		n.ts = ts
+	}
+	n.any = true
+	if n.rebased && seq-n.base >= 1<<14 {
+		n.rebased = false
+	}
+}
+
+// rebase marks a layer switch: the new layer's packets start after seq, the
+// newest number sent.
+func (n *sentNumbers) rebase() {
+	n.base, n.rebased = n.seq, true
+}
+
+// fresh reports whether a packet of the current layer that would go out as
+// seq may be sent: one that the source sent before the keyframe the viewer
+// was switched at would take a number the layer before already used.
+func (n *sentNumbers) fresh(seq uint16) bool {
+	return !n.rebased || seqNewer(seq, n.base)
+}
