@@ -13,6 +13,7 @@
 // protocol heals a case its test turns red and must move to groupSim.test.ts.
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
 import { report, runSeed } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
@@ -44,17 +45,15 @@ describe('known: seeds that end in a split room', () => {
 })
 
 // Every failing seed among 1..400, for whoever repairs the protocol. Skipped:
-// each takes a full run, and the eight above stand for them.
+// each takes a full run, and the eight above stand for them. The list is in
+// groupSim.known.fixture.ts; groupSim.sweep.test.ts runs all of it, nightly.
 describe.skip('known: all failing seeds among 1..400', () => {
-  const HOSTILE = [30, 43, 59, 73, 89, 97, 104, 107, 133, 148, 150, 194, 199, 206, 238, 244, 292, 294, 300, 301, 310, 323, 332, 362, 378, 398]
-  const HONEST = [30, 64, 109, 116, 119, 125, 148, 162, 167, 206, 246, 254, 258, 276, 303, 344, 377]
-
-  it.each(HOSTILE)('hostile relay, seed %i', async (seed) => {
+  it.each(KNOWN_HOSTILE)('hostile relay, seed %i', async (seed) => {
     const result = await runSeed(seed, { relay: 'hostile' })
     expect(result.violations, report(result)).toEqual([])
   }, 60_000)
 
-  it.each(HONEST)('honest relay, seed %i', async (seed) => {
+  it.each(KNOWN_HONEST)('honest relay, seed %i', async (seed) => {
     const result = await runSeed(seed, { relay: 'honest' })
     expect(result.violations, report(result)).toEqual([])
   }, 60_000)

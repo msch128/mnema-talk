@@ -1,0 +1,39 @@
+name: Media group sweep
+
+# The simulator of the media group protocol on seeds 1..400, both relays, against
+# the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only
+# shrink). Too slow for the pull request pipeline. A failed run is the alert.
+on:
+  schedule:
+    - cron: "43 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Sweep shard ${{ matrix.shard }} of 8
+        env:
+          SIM_SWEEP: "1"
+          SIM_SHARD: ${{ matrix.shard }}/8
+        run: npx vitest run src/lib/media/groupSim.sweep.test.ts

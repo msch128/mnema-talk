@@ -1,0 +1,32 @@
+// The whole sweep of the simulator, seeds 1..400 on both relays, against the
+// failure budget in groupSim.known.fixture.ts. Too slow for every push: it runs
+// nightly (.github/workflows/sim-sweep.yml) and on demand, as
+//   SIM_SWEEP=1 [SIM_SHARD=<index>/<count>] npx vitest run src/lib/media/groupSim.sweep.test.ts
+// It fails when a seed outside the budget fails (a regression), and when a seed
+// inside it passes (the budget must shrink: move the seed to groupSim.test.ts
+// and delete it from the list).
+import { webcrypto } from 'node:crypto'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
+import { runSeed } from './groupSimRun.fixture'
+
+const SEEDS = 400
+const previous = globalThis.crypto
+beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
+afterAll(() => { vi.stubGlobal('crypto', previous) })
+
+const [index = 0, count = 1] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number)
+const mine = (seed: number) => seed % count === index
+
+describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget', () => {
+  it.each([['hostile', KNOWN_HOSTILE], ['honest', KNOWN_HONEST]] as const)('%s relay', async (relay, known) => {
+    const failing: number[] = []
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      if (!mine(seed)) continue
+      const result = await runSeed(seed, { relay })
+      if (result.violations.length) failing.push(seed)
+    }
+    expect(failing.filter(seed => !known.includes(seed)), `${relay} relay: seeds that fail and are not in the budget`).toEqual([])
+    expect(known.filter(seed => mine(seed) && !failing.includes(seed)), `${relay} relay: seeds in the budget that pass now; move them to groupSim.test.ts`).toEqual([])
+  }, 3_600_000)
+})
