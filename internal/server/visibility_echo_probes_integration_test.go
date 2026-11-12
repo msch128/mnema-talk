@@ -41,6 +41,8 @@ func TestWritesThatNameAHiddenObjectAnswerLikeAMissingOne(t *testing.T) {
 		{"comment a hidden event", "POST", "/api/events/" + event + "/comments", map[string]any{"content": "hi"}},
 		{"edit a hidden event", "PATCH", "/api/events/" + event, map[string]any{"title": "x"}},
 		{"cancel a hidden event", "POST", "/api/events/" + event + "/cancel", nil},
+		{"mark read up to a hidden message", "POST", open + "/read", map[string]any{"message_id": msg}},
+		{"mark unread from a hidden message", "POST", open + "/unread", map[string]any{"message_id": msg}},
 		{"forward a hidden message", "POST", "/api/messages/" + msg + "/forward", map[string]any{"channel_id": w.open.String()}},
 	}
 	mod := []echoProbe{
@@ -51,6 +53,16 @@ func TestWritesThatNameAHiddenObjectAnswerLikeAMissingOne(t *testing.T) {
 		{"open a hidden channel", "PUT", "/api/admin/channels/" + w.staffText.String() + "/overwrites", []any{}},
 		{"delete a hidden channel", "DELETE", "/api/admin/channels/" + w.staffText.String(), nil},
 		{"channel in a hidden category", "POST", "/api/admin/channels", map[string]any{"name": "x", "type": "text", "category_id": w.staffCat.String()}},
+		{"channel in a hidden category, no name", "POST", "/api/admin/channels", map[string]any{"name": "", "type": "text", "category_id": w.staffCat.String()}},
+		{"channel in a hidden category, bad type", "POST", "/api/admin/channels", map[string]any{"name": "x", "type": "nope", "category_id": w.staffCat.String()}},
+		{"channel in a hidden category, bad sort order", "POST", "/api/admin/channels", map[string]any{"name": "x", "type": "text", "sort_order": 2000000000, "category_id": w.staffCat.String()}},
+		{"layout: order a hidden category", "PUT", "/api/admin/layout", map[string]any{"categories": []any{map[string]any{"id": w.staffCat.String(), "sort_order": 1}}}},
+		{"layout: move a channel into a hidden category", "PUT", "/api/admin/layout", map[string]any{"channels": []any{map[string]any{"id": w.open.String(), "category_id": w.staffCat.String(), "sort_order": 1}}}},
+		{"layout: move into a hidden category, bad sort order", "PUT", "/api/admin/layout", map[string]any{"channels": []any{map[string]any{"id": w.open.String(), "category_id": w.staffCat.String(), "sort_order": 2000000000}}}},
+		{"layout: move a hidden channel", "PUT", "/api/admin/layout", map[string]any{"channels": []any{map[string]any{"id": w.staffText.String(), "category_id": nil, "sort_order": 1}}}},
+		{"layout: a hidden category after a bad channel order", "PUT", "/api/admin/layout", map[string]any{
+			"categories": []any{map[string]any{"id": w.staffCat.String(), "sort_order": 1}},
+			"channels":   []any{map[string]any{"id": w.open.String(), "category_id": nil, "sort_order": 2000000000}}}},
 		{"rename a hidden category", "PATCH", "/api/admin/categories/" + w.staffCat.String(), map[string]any{"name": "x"}},
 		{"overwrites of a hidden category", "GET", "/api/admin/categories/" + w.staffCat.String() + "/overwrites", nil},
 		{"bulk delete in a hidden channel", "POST", "/api/channels/" + w.staffText.String() + "/messages/bulk-delete", map[string]any{"message_ids": []string{msg}}},
@@ -185,6 +197,12 @@ func swapBody(v any, twins map[string]string) any {
 		out := make([]string, len(x))
 		for i, e := range x {
 			out[i] = swap(e, twins)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, e := range x {
+			out[i] = swapBody(e, twins)
 		}
 		return out
 	case map[string]any:

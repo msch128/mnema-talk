@@ -94,29 +94,56 @@ func CheckWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) err
 
 // CheckLayout checks, on a state read under the permission lock, that the
 // caller sees everything a layout change names and may make its moves.
+//
+// A category the caller cannot see answers what applying the layout answers
+// for one that does not exist, and at the same point of the checks (after the
+// sort orders of its list, before the next list's): the answer does not tell
+// the two apart, whatever else is wrong with the request.
 func CheckLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error {
+	for _, c := range req.Categories {
+		if err := CheckSortOrder(c.SortOrder); err != nil {
+			return err
+		}
+	}
 	for _, c := range req.Categories {
 		if snap.KnowsCategory(c.ID) && !snap.CategoryVisible(sub, c.ID) {
 			return core.ErrCategoryNotFound
 		}
 	}
+	hiddenTarget := false
 	for _, c := range req.Channels {
-		if err := checkChannelMove(snap, sub, c); err != nil {
+		hidden, err := checkChannelMove(snap, sub, c)
+		if err != nil {
+			return err
+		}
+		hiddenTarget = hiddenTarget || hidden
+	}
+	if !hiddenTarget {
+		return nil
+	}
+	for _, c := range req.Channels { // as applying the layout would, before it finds the category missing
+		if err := CheckSortOrder(c.SortOrder); err != nil {
 			return err
 		}
 	}
-	return nil
+	return errLayoutMissing
 }
 
-func targetCategoryVisible(snap *perm.Snapshot, sub perm.Subject, target *uuid.UUID) (uuid.UUID, error) {
+// errLayoutMissing is what applying a layout answers for a channel or a target
+// category that does not exist.
+var errLayoutMissing = httpx.ErrNotFound("channel or category not found")
+
+// targetCategory returns the category a placement moves to, and whether the
+// caller cannot see it. A hidden one counts as no category at all for the
+// checks that follow, as a missing one does.
+func targetCategory(snap *perm.Snapshot, sub perm.Subject, target *uuid.UUID) (to uuid.UUID, hidden bool) {
 	if target == nil {
-		return uuid.Nil, nil
+		return uuid.Nil, false
 	}
-	to := *target
-	if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
-		return uuid.Nil, core.ErrCategoryNotFound
+	if snap.KnowsCategory(*target) && !snap.CategoryVisible(sub, *target) {
+		return uuid.Nil, true
 	}
-	return to, nil
+	return *target, false
 }
 
 func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
@@ -127,15 +154,13 @@ func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
 }
 
 // checkChannelMove checks one placement of a layout change: the caller sees
-// the channel and its target category, and may move it between categories.
-func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
+// the channel and may move it between categories; hiddenTarget reports a target
+// category the caller cannot see.
+func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) (hiddenTarget bool, err error) {
 	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
-		return perm.ErrChannelHidden
+		return false, perm.ErrChannelHidden
 	}
-	to, err := targetCategoryVisible(snap, sub, c.CategoryID)
-	if err != nil {
-		return err
-	}
+	to, hiddenTarget := targetCategory(snap, sub, c.CategoryID)
 	// Moving a channel takes on the permissions of its new category and
 	// drops those of the old one, which could undo a restriction the
 	// caller may not lift: with overwrites on either side, only an
@@ -145,9 +170,9 @@ func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement)
 		from = uuid.Nil
 	}
 	if categoryOverwritesAffected(snap, from, to) && !snap.Global(sub).Has(perm.Administrator) {
-		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
+		return false, httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 	}
-	return nil
+	return hiddenTarget, nil
 }
 
 // ChannelsChanged tells everyone that a name, topic or limit changed: the list

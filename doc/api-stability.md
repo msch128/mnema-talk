@@ -83,11 +83,6 @@ renames or removes a path or a field, and every addition is optional.
 - Moderation notes (`POST`, `PUT`) answer `403` for the Owner and for a member
   the caller does not outrank.
 - A reaction in a blocked 1:1 direct message answers `403`.
-- A `reply_to_id` or `parent_id` (posting, uploading, scheduling) that names a
-  message in a channel or conversation the caller cannot see answers `400` with
-  the text of a message that does not exist. Creating a channel in a category
-  the caller cannot see answers `400` like one in a category that does not
-  exist (it was `404`). What a caller who can see the object gets is unchanged.
 
 **Delivery**
 
