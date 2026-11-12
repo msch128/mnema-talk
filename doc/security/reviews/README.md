@@ -87,6 +87,7 @@ with its later rounds appended.
 | [h-l11-01-03](2026-11-hunt/h-l11-01-03.md) | the security floor of the desktop bundle: the trailer is read the same way by the pull request check and the release; Go reads signed documents as the desktop clients do; three rounds |
 | [h-l10-06](2026-11-hunt/h-l10-06.md) | an account deletion aborted by the database as a deadlock with the member's own write is retried (found by the integration review, fixed after 3.0.10) |
 | [follow-ups](2026-11-hunt/follow-ups.md) | event comments and event texts go through automod; reactions compared in one emoji form |
+| [release-gate](2026-11-hunt/release-gate.md) | a red, stale or missing night of the deep sweeps blocks the release, with one deliberate override; more paths in CODEOWNERS; the known open defects named in SECURITY.md; two rounds |
 | [bundle-integration](2026-11-hunt/bundle-integration.md) | the collection branch as a whole: every merge with a hand resolution, the coordinator's own commits, interactions between fixes |
 
 Not kept from the hardening run (lost with a temporary directory before they were copied): the

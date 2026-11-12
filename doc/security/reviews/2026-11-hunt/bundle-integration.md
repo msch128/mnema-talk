@@ -301,7 +301,7 @@ hunt branch: retry the erasure transaction on 40P01, or lock the member's
 messages (`SELECT ... FROM messages WHERE user_id = $1 FOR UPDATE`) right
 after the users row. The second is still racy for messages the member is
 about to edit, so a retry is simpler. Severity: availability, low (S4).
-(Fixed later as H-L10-06: the erasure transaction is retried up to three times when the database aborts it as a deadlock; after that the request answers 503 "the server is busy" and the member stays signed in; fix review: [h-l10-06.md](h-l10-06.md).)
+(Fixed later as H-L10-06: the erasure transaction is run up to three times when the database aborts it as a deadlock; after that the request answers 503 "the server is busy" and the member stays signed in; fix review: [h-l10-06.md](h-l10-06.md).)
 
 **H-L6-03 together with the erasure's audit scrub** (NOTE, by design of both).
 `legacyTalkRemoval` (internal/audit/filter.go:116) classes an old per-Talk
