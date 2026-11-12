@@ -11,13 +11,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
 // Lane 8, inventory I6 row 47: the audit log's Talk presence queue against a
 // burst. doc/moderation.md:517 lists voice.join and voice.leave as recorded
 // when "a member enters or leaves a Talk"; auditPresence drops an event when
-// 1024 wait, with a log line and no metric. This fires a burst of joins at the
+// 1024 wait, with a log line and a count in mnema_ws_dropped_total (reason
+// audit_presence). This fires a burst of joins at the
 // real writer and database, then counts the rows. It measures the writer's
 // rate, so the size of a burst that loses rows can be stated.
 //
@@ -40,6 +42,7 @@ func TestAuditPresenceBurstLosesJoinsPastTheQueue(t *testing.T) {
 	for i := range users {
 		users[i] = uuid.New()
 	}
+	dropped := metrics.WSDropped.With("audit_presence").Load()
 	record := auditPresence(ctx, &audit.Log{DB: pool}, pool)
 
 	start := time.Now()
@@ -73,5 +76,8 @@ func TestAuditPresenceBurstLosesJoinsPastTheQueue(t *testing.T) {
 	}
 	if last < 1024 {
 		t.Fatalf("only %d rows: fewer than the queue holds", last)
+	}
+	if got := int(metrics.WSDropped.With("audit_presence").Load() - dropped); got != burst-last {
+		t.Fatalf("the counter says %d joins were dropped, %d are missing", got, burst-last)
 	}
 }
