@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.8](https://github.com/msch128/mnema-talk/compare/v3.0.7...v3.0.8) (2026-11-12)
+
+
+### Bug Fixes
+
+* a panic in one member's seat or voice-time timer no longer ends the server ([16fc06e](https://github.com/msch128/mnema-talk/commit/16fc06e950acbc3d913ca6aacc50d88b853b0ef3))
+* a panic while enforcing a permission change fails closed ([16fc06e](https://github.com/msch128/mnema-talk/commit/16fc06e950acbc3d913ca6aacc50d88b853b0ef3))
+* storage that fails or returns while the server runs is reported and shown ([16fc06e](https://github.com/msch128/mnema-talk/commit/16fc06e950acbc3d913ca6aacc50d88b853b0ef3))
+
+
+### Documentation
+
+* the independent review reports are kept in the repository ([16fc06e](https://github.com/msch128/mnema-talk/commit/16fc06e950acbc3d913ca6aacc50d88b853b0ef3))
+
 ## [3.0.7](https://github.com/msch128/mnema-talk/compare/v3.0.6...v3.0.7) (2026-11-11)
 
 
