@@ -39089,7 +39089,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
+            "description": "UNAVAILABLE: object storage is not available, every export slot is busy, or the server is shutting down; no export was started and none counts toward the daily limit."
           }
         },
         "security": [

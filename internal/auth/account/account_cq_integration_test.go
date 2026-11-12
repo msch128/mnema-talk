@@ -246,6 +246,26 @@ func TestExportRequestWithAllSlotsBusyIsRefusedAndNotRecorded(t *testing.T) {
 	h.DrainMail()
 }
 
+// An export asked for once shutdown began is refused with a 503 and marked
+// failed, so it does not use up the day's export (H-L7-08).
+func TestExportRequestAfterDrainIsRefusedAndMarkedFailed(t *testing.T) {
+	h, pool, member, _, _ := exportFixture(t)
+	if !h.Drain(time.Second) {
+		t.Fatal("an idle handler must drain at once")
+	}
+	w := authRequest(t, h.requestExport, member, `{"current_password":"`+testPassword+`"}`, uuid.Nil)
+	if w.Code != http.StatusServiceUnavailable || w.Header().Get("Retry-After") == "" {
+		t.Fatalf("%d %s retry-after=%q", w.Code, w.Body, w.Header().Get("Retry-After"))
+	}
+	var status string
+	if err := pool.QueryRow(context.Background(), `SELECT status FROM data_exports WHERE user_id = $1`, member.ID).Scan(&status); err != nil || status != "failed" {
+		t.Fatalf("status %q, %v", status, err)
+	}
+	if n := len(h.exportSlots); n != 0 {
+		t.Fatalf("a refused export kept its build slot: %d taken", n)
+	}
+}
+
 // stuckStore blocks an upload until its context ends.
 type stuckStore struct {
 	*memStore
@@ -269,8 +289,8 @@ func TestShutdownCancelsExportsInFlightAndWaitsForThem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !h.buildExportInBackground(id, member.ID) {
-		t.Fatal("no slot")
+	if err := h.buildExportInBackground(id, member.ID); err != nil {
+		t.Fatal(err)
 	}
 	<-stuck.started
 	if h.Drain(50 * time.Millisecond) {
