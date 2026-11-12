@@ -52,7 +52,7 @@ report.
 | [h-l3-05-06](2026-11-hunt/h-l3-05-06.md) | a muted channel and resolved mentions; snippets and pushes hide what the renderer hides |
 | [h-l3-09](2026-11-hunt/h-l3-09.md) | wiki titles compared by one Unicode-aware key |
 | [h-l3-10](2026-11-hunt/h-l3-10.md) | a blocked member's words folded on every surface |
-| [removal-fix](2026-11-hunt/removal-fix.md) | the removal of silent members in the media group protocol (the committer waits for newcomers; a renewal that won a conflict counts toward the limit), two rounds, with a design note: a mitigation, not a cure |
+| [removal-fix](2026-11-hunt/removal-fix.md) | the removal of silent members in the media group protocol (the committer waits for newcomers; a renewal that won a conflict counts toward the limit), three rounds, with a design note: a mitigation, not a cure |
 | [h-l3-07-h-l2-01-h-l3-11](2026-11-hunt/h-l3-07-h-l2-01-h-l3-11.md) | document sentences that differed from the code; the composer's message text |
 
 One change in this set was made by the coordinator and reviewed by nobody

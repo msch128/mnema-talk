@@ -462,3 +462,49 @@ experiment does cover it.
 - A second full sweep at production ratios (150 seeds per relay, two hours of virtual time each): only seed 149 was
   rerun.
 - Mixed rooms with real 3.0.7 clients.
+
+---
+
+# Third round: commit `9c36122ac` (collection branch, parent `423d61c36`)
+
+## Verdict: MERGE. Both round-2 should-fix items are closed; one small test gap is left as a note.
+
+## SHOULD-FIX 2 (no `clear()` on discard): closed
+
+The new test (`group.removal.test.ts`, "a member that starts over into a group with the same members") discards Bob's
+group, lets him into a new one 100 s later and requires that he counts the others as new from then. With
+`this.entries.clear()` removed from `discard()` in my own run it fails (`expected false to be true`); with it
+it passes. The mutant is killed.
+
+## SHOULD-FIX 1 (stale `added`): closed, no path left that I can find
+
+`added` is written in exactly three places: the start of `validator` (reset), the end of `validator` (set), and
+`commit()` (set from the proposals). `validator` is only ever handed to `processPublicMessage` from `processCommit` and
+`conflictNow`, and both now clear `added` in a `finally` that wraps everything, including the early returns
+(`removedFromGroup`, `recoverNow`, a rejected leaf rule, a thrown error). `commit()` clears it in a `finally`
+around the whole body. `startEpoch` still reads and resets it, inside the `try` in each path (`adopt` runs inside
+them), so a commit that starts an epoch still passes its ids to `Entries`, and one that does not leaves none behind.
+Group operations are serialised through the queue, so no other task can read the field between the set and the clear.
+
+The split of `commit()`: `groupEpoch.ts` changes by nine added lines only (the diff of `groupEpoch.ts` against the
+previous round is additions, no deletion); the old body of `commit()` is now `createCommitWires(previous,
+extraProposals, renewal)` with the same text, and the only code left in `commit()` is the early return, the set, and the
+`try`/`finally`. No behaviour changed.
+
+## NOTE: no test pins the clearing of `added`
+
+I removed the `finally` in `commit()`: all of `src/lib/media` still passes (394 passed). So the item is closed by
+reading, not by a test. The effect of a stale value is only a longer wait for the committer, bounded by the 2x override,
+so I do not ask for one; if one is wanted, make a commit fail after `this.added` is set (for example a failing
+`createCommit`) and check that the next epoch start, by a welcome, does not stamp the ids.
+
+## What I ran
+
+- Mutant, no `Entries.clear()` in `discard()`: the new test fails; restored, passes.
+- Mutant, no `finally` in `commit()`: not caught (above).
+- All of `src/lib/media`: 36 files passed, 1 skipped; 394 passed, 48 skipped (opt-in sweeps).
+- `SIM_SWEEP=1 SIM_SHARD=0/4 vitest run groupSim.sweep.test.ts --maxWorkers=3`: 2 of 2 passed in 98 s (that shard is
+  seeds 4, 8, ... of 1..400 on each relay, 100 per relay, against the empty budget). I did not run the other three
+  shards or the full sweep; the code change touches no protocol decision, only the lifetime of one field.
+- ESLint on `src/lib/media`: no findings; `vue-tsc --noEmit` for the app and test projects: clean. `groupEpoch.ts` 349
+  lines, `group.ts` 397 (limit 400, three lines of headroom), `group.removal.test.ts` 208.
