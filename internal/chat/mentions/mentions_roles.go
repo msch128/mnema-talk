@@ -48,7 +48,7 @@ func resolveMentionSet(ctx context.Context, q db.Querier, policy MentionPolicy, 
 		return MentionSet{}, err
 	}
 	delete(ids, authorID)
-	set := MentionSet{Users: allowedMentions(ids, policy, targets, online)}
+	set := MentionSet{Users: allowedMentions(ids, policy)}
 	if len(roles) > 0 {
 		if set, err = addRoleMentions(ctx, q, set, roles, authorID, policy); err != nil {
 			return set, err

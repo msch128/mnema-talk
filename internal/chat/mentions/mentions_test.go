@@ -82,48 +82,51 @@ func TestPhraseRoleIsMaskedBeforeUserNames(t *testing.T) {
 }
 
 func TestMentionSkippedUnderNoUsers(t *testing.T) {
-	bob, eve := uuid.New(), uuid.New()
-	online := []uuid.UUID{eve}
+	bob := uuid.New()
 	policy := MentionPolicy{NoUsers: true}
 	cases := []struct {
 		name    string
 		policy  MentionPolicy
-		targets mentionTargets
-		id      uuid.UUID
+		grouped bool
 		want    bool
 	}{
-		{"named user", policy, mentionTargets{usernames: []string{"bob"}}, bob, true},
-		{"allowed user", MentionPolicy{NoUsers: true, AllowUsers: []uuid.UUID{bob}}, mentionTargets{usernames: []string{"bob"}}, bob, false},
-		{"@all reaches everyone", policy, mentionTargets{all: true}, bob, false},
-		{"@here reaches the online", policy, mentionTargets{here: true}, eve, false},
-		{"@here does not make an offline name a mention", policy, mentionTargets{here: true, usernames: []string{"bob"}}, bob, true},
-		{"no policy", MentionPolicy{}, mentionTargets{usernames: []string{"bob"}}, bob, false},
+		{"named user", policy, false, true},
+		{"allowed user", MentionPolicy{NoUsers: true, AllowUsers: []uuid.UUID{bob}}, false, false},
+		{"reached by @all or @here as well", policy, true, false},
+		{"no policy", MentionPolicy{}, false, false},
 	}
 	for _, c := range cases {
-		if got := mentionSkipped(c.policy, c.targets, online, c.id); got != c.want {
+		if got := mentionSkipped(c.policy, bob, c.grouped); got != c.want {
 			t.Errorf("%s: skipped = %v, want %v", c.name, got, c.want)
 		}
 	}
 }
 
 // Under NoUsers a name next to @all is plain text: the member stays, reached
-// by the group, unless AllowUsers lists them.
+// by the group, unless AllowUsers lists them. A bot, which @all never
+// reaches, is dropped.
 func TestAllowedMentionsDemoteAPlainTextName(t *testing.T) {
-	bob, eve := uuid.New(), uuid.New()
-	ids := map[uuid.UUID]int16{bob: core.MentionKindName, eve: core.MentionKindName}
-	all := mentionTargets{all: true, usernames: []string{"bob", "eve"}}
+	bob, eve, bot := uuid.New(), uuid.New(), uuid.New()
+	ids := map[uuid.UUID]mentionHit{
+		bob: {ID: bob, Kind: core.MentionKindName, Grouped: true},
+		eve: {ID: eve, Kind: core.MentionKindName, Grouped: true},
+		bot: {ID: bot, Kind: core.MentionKindName},
+	}
 	kinds := func(policy MentionPolicy) map[uuid.UUID]int16 {
 		out := map[uuid.UUID]int16{}
-		for _, u := range allowedMentions(ids, policy, all, nil) {
+		for _, u := range allowedMentions(ids, policy) {
 			out[u.ID] = u.Kind
 		}
 		return out
 	}
-	if got := kinds(MentionPolicy{}); got[bob] != core.MentionKindName || got[eve] != core.MentionKindName {
+	if got := kinds(MentionPolicy{}); len(got) != 3 || got[bob] != core.MentionKindName || got[bot] != core.MentionKindName {
 		t.Errorf("names allowed: %v", got)
 	}
 	got := kinds(MentionPolicy{NoUsers: true, AllowUsers: []uuid.UUID{eve}})
 	if got[bob] != core.MentionKindGroup || got[eve] != core.MentionKindName {
 		t.Errorf("NoUsers with eve listed: bob %d (want group), eve %d (want name)", got[bob], got[eve])
+	}
+	if _, ok := got[bot]; ok {
+		t.Errorf("NoUsers: the bot named next to @all is still mentioned: %v", got)
 	}
 }

@@ -18,8 +18,9 @@ now stored by the strongest reason: a name, then a role, then `@all` or
 `@here`. The other way round, a name the sender may not use no longer counts:
 a webhook with `allow_user_mentions` off, or a bot whose `allowed_mentions`
 leaves `users` out and does not list the member, posting `@all @name` reaches
-that member through `@all` only, which a mute silences. Messages sent before
-the update keep the kinds they were stored with.
+that member through `@all` only, which a mute silences, and does not mention
+a bot it names at all (`@all` never reaches bots). Messages sent before the
+update keep the kinds they were stored with.
 
 Messages gain `direct_mentions` (REST and the `message_create` and
 `message_update` events): the members of `mentions` addressed by name or

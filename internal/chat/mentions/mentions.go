@@ -74,8 +74,17 @@ func needsMentionQuery(targets mentionTargets, online []uuid.UUID) bool {
 	return len(online) > 0
 }
 
-func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, online []uuid.UUID) (map[uuid.UUID]int16, error) {
-	ids := map[uuid.UUID]int16{}
+// mentionHit is a user the parsed names reach, before the policy: Kind is
+// name when the text names them, Grouped whether @all or @here reaches them
+// as well (never a bot).
+type mentionHit struct {
+	ID      uuid.UUID
+	Kind    int16
+	Grouped bool
+}
+
+func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, online []uuid.UUID) (map[uuid.UUID]mentionHit, error) {
+	ids := map[uuid.UUID]mentionHit{}
 	if !needsMentionQuery(targets, online) {
 		return ids, nil
 	}
@@ -84,21 +93,21 @@ func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, onlin
 		return nil, err
 	}
 	for _, u := range found {
-		ids[u.ID] = u.Kind
+		ids[u.ID] = u
 	}
 	return ids, nil
 }
 
-func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets, online []uuid.UUID) []MentionedUser {
+func allowedMentions(ids map[uuid.UUID]mentionHit, policy MentionPolicy) []MentionedUser {
 	out := make([]MentionedUser, 0, len(ids))
-	for id, kind := range ids {
-		if mentionSkipped(policy, targets, online, id) {
+	for id, hit := range ids {
+		if mentionSkipped(policy, id, hit.Grouped) {
 			continue
 		}
 		if !mentionVisible(policy, id) {
 			continue
 		}
-		out = append(out, MentionedUser{ID: id, Kind: allowedKind(policy, id, kind)})
+		out = append(out, MentionedUser{ID: id, Kind: allowedKind(policy, id, hit.Kind)})
 	}
 	return out
 }
@@ -116,15 +125,13 @@ func allowedKind(policy MentionPolicy, id uuid.UUID, kind int16) int16 {
 
 // mentionSkipped reports whether the policy turns the mention of id into plain
 // text: with NoUsers only AllowUsers and those the group mentions reach
-// (@all everyone, @here the online) are notified.
-func mentionSkipped(policy MentionPolicy, targets mentionTargets, online []uuid.UUID, id uuid.UUID) bool {
+// (grouped: @all everyone, @here the online, neither a bot) are notified. A
+// bot named next to @all is reached by its name alone, so it is skipped.
+func mentionSkipped(policy MentionPolicy, id uuid.UUID, grouped bool) bool {
 	if !policy.NoUsers || slices.Contains(policy.AllowUsers, id) {
 		return false
 	}
-	if targets.all || (targets.here && slices.Contains(online, id)) {
-		return false
-	}
-	return true
+	return !grouped
 }
 
 func mentionVisible(policy MentionPolicy, id uuid.UUID) bool {
@@ -158,9 +165,10 @@ func splitMentionTargets(names []string, policy MentionPolicy) mentionTargets {
 	return t
 }
 
-func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online []uuid.UUID) ([]MentionedUser, error) {
+func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online []uuid.UUID) ([]mentionHit, error) {
 	rows, err := q.Query(ctx, `
-		SELECT id, CASE WHEN LOWER(username) = ANY($2) THEN 0 ELSE 1 END::smallint FROM users
+		SELECT id, CASE WHEN LOWER(username) = ANY($2) THEN 0 ELSE 1 END::smallint,
+		       (NOT is_bot AND ($1 OR ($3 AND id = ANY($4::uuid[])))) FROM users
 		WHERE `+auth.ActiveSQL("")+` AND (
 		    (NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[]))))
 		    -- a bot is mentioned by name only, never by @all or @here
@@ -168,7 +176,7 @@ func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online 
 	if err != nil {
 		return nil, fmt.Errorf("resolve mentions: %w", err)
 	}
-	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[MentionedUser])
+	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[mentionHit])
 	if err != nil {
 		return nil, fmt.Errorf("resolve mentions: %w", err)
 	}

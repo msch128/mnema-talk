@@ -46,7 +46,9 @@ func expectMessageFrame(t *testing.T, ws *wsConn, id uuid.UUID) directMentionsFr
 // next to everyone the message mentions, those it addresses by name or role
 // (direct_mentions), the ones a mute lets through. A users-off webhook's
 // "@all @namedmuted" reaches the member by @all alone, so a client that
-// matches the text cannot tell; the frame must.
+// matches the text cannot tell; the frame must. The same frame shows that a
+// bot named next to @all by such a webhook is not mentioned at all, as for
+// "@bot" alone (doc/bots.md: @all never reaches a bot).
 func TestMessageCreateSaysWhoIsAddressedDirectly(t *testing.T) {
 	f := newBotFixture(t, true)
 	f.a.router.Webhooks.SetLimits(1000, 1000)
@@ -56,9 +58,13 @@ func TestMessageCreateSaysWhoIsAddressedDirectly(t *testing.T) {
 	assignRoles(t, f.owner, holder, dev)
 	wantStatus(t, "mute", named.put("/api/channels/"+f.open.String()+"/notifications", map[string]any{"level": "mute"}), http.StatusNoContent)
 	ws := named.dialLiveWS(f.a.origin())
+	var botName string
+	if err := f.a.db.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, f.bot.UserID).Scan(&botName); err != nil {
+		t.Fatal(err)
+	}
 	send := f.a.kindsHook(t, f.owner, f.open)
 
-	frame := expectMessageFrame(t, ws, send("@all @namedmuted @Dev ping"))
+	frame := expectMessageFrame(t, ws, send("@all @namedmuted @Dev @"+botName+" ping"))
 	if !slices.Contains(frame.Mentions, named.user.ID) || !slices.Contains(frame.Mentions, holder.user.ID) {
 		t.Fatalf("@all reaches both members: mentions %v", frame.Mentions)
 	}
@@ -67,6 +73,14 @@ func TestMessageCreateSaysWhoIsAddressedDirectly(t *testing.T) {
 	}
 	if direct := *frame.DirectMentions; slices.Contains(direct, named.user.ID) || !slices.Contains(direct, holder.user.ID) {
 		t.Fatalf("direct_mentions %v: want the role holder and not the plain-text name", direct)
+	}
+	if slices.Contains(frame.Mentions, f.bot.UserID) {
+		t.Fatalf("a users-off webhook mentions the bot it names next to @all: mentions %v", frame.Mentions)
+	}
+
+	frame = expectMessageFrame(t, ws, send("@"+botName+" ping"))
+	if slices.Contains(frame.Mentions, f.bot.UserID) || frame.DirectMentions == nil || len(*frame.DirectMentions) != 0 {
+		t.Fatalf("control, @bot alone: mentions %v, direct %v", frame.Mentions, frame.DirectMentions)
 	}
 
 	// A member may name members: the name addresses them, and history says
