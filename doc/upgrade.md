@@ -483,7 +483,7 @@ working and turns the built-in relay off automatically.**
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the
+Update with the procedure above and take the backup first. 1.2.0 only adds, apart from removing media frame format 2 (see "Calls and the
 security floor" below). A 1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
 a 1.1.x server lacks (it reads the `features` list of `GET /api/health`).
 Nothing in `.env` has to change. A rollback to a 1.1.x image needs the restore
@@ -850,16 +850,17 @@ members always carry them.
   an outdated Mnema client ...") when a unit in the old format arrives. Fix: reload the
   app, or update the desktop client; there is nothing to configure on the server,
   which only relays media it cannot read.
-- **Security floor raised to 1.2.0.** The release is committed with a
-  `Security-Floor: raise` trailer, so the signed web bundle of 1.2.0 carries
-  `security_floor` 1.2.0. A desktop client that has run it refuses every older
-  bundle: it will not connect to a server that still serves a 1.1.x bundle until
+- **Security floor not changed by 1.2.0.** The release commit meant to raise
+  it, but its `Security-Floor: raise` line was not a git trailer, so the signed
+  web bundle of 1.2.0 carries `security_floor` 0.7.23. The high-water mark has
+  the same effect: a desktop client that has run the 1.2 bundle refuses every
+  older bundle of `web_client_api` 1: it will not connect to a server that still serves a 1.1.x bundle until
   that server is updated, and it never runs a bundle that seals the old format.
   Update the server before (or together with) the clients. `web_client_api` is
   unchanged (still 1), so older desktop clients keep loading the 1.2 bundle.
   Why this is allowed under [API stability](api-stability.md): it is a security
-  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the floor is the documented tool
-  for it, and no public API, event or bridge contract changes.
+  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the high-water mark is the
+  documented rollback protection, and no public API, event or bridge contract changes.
 - **Rollback.** Going back to 1.1.x is possible for the server, but desktop
   clients that already saw the 1.2.0 bundle will refuse the older one (the
   floor is a high-water mark); web tabs reload into the older bundle.

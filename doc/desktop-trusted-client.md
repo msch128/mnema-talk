@@ -147,6 +147,13 @@ raises, never lowers, the value from the compat file. The commit subject plays
 no part: a `fix(security)` title alone neither raises the floor nor can a
 lookalike scope such as `docs(security-notes)` raise it by accident. A subject
 with the `security` scope but no trailer only prints a warning in the job log.
+A `Security-Floor: raise` line that git does not read as a trailer (another
+paragraph such as `BREAKING CHANGE:` follows it) is refused instead of being
+dropped: the `backend` check of a pull request fails when the description or
+one of its commits has such a line, and the release job fails when a commit of
+the release has one (only the release's own commits, since the previous tag),
+so that release gets no signed bundle until the next one carries the trailer
+as the last paragraph.
 So a vulnerability fix in anything the bundle ships (the web app: markdown,
 media, auth, message rendering, crypto) must carry the trailer; the maintainer
 checklist in `AGENTS.md` repeats this. A fix without the trailer leaves the
