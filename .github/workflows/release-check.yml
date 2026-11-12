@@ -10,12 +10,19 @@ name: Published release check
 # - TestPublishedBundlesSatisfyDesktopLayout checks the release's
 #   mnema-web-*.zip against the archive and manifest rules of the desktop
 #   clients.
-# A drift between release.yml and these checks shows here within a day. A
-# failed run is the alert. Only public artifacts are read: no secrets, and the
-# token only lists and downloads release assets.
+# A drift between release.yml and these checks shows here after the release
+# run, and within a day at the latest. A failed run is the alert. Only public
+# artifacts are read: no secrets, and the token only lists and downloads
+# release assets.
 on:
   schedule:
     - cron: "23 7 * * *"
+  # Right after a release run, so a drift shows in minutes and not the next
+  # morning. A release run that published nothing checks the latest release
+  # once more, which costs a minute.
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -28,6 +35,7 @@ permissions:
 
 jobs:
   published:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
