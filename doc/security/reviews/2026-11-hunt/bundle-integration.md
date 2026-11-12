@@ -358,3 +358,117 @@ links: hours each). Only their wiring was checked. The SFU deep probes
 not run. The web suite outside src/lib/media and src/stores was not run (the
 coordinator ran all of it on an earlier tip). The fixes themselves were not
 reviewed again; each has its own review.
+
+## Delta after 3e337bcc8 (tip c54712470)
+
+Nine first-parent commits, reviewed in a fresh worktree of the tip, which was
+removed afterwards. Nothing pushed.
+
+### Verdict: OK after one fix
+
+**MUST-FIX 1: doc/security/reviews/2026-11-hunt/h-l8-08.md must not be in the
+pull request.** H-L8-08 is the fix this branch keeps local because one
+request was enough (LEDGER: "handled with the S1 procedure anyway"). The
+brief, section 8, says that for such a finding nothing that shows the attack
+may go into a pushed branch or pull request before the fix is released. The
+fix's own code, tests and commit messages are neutral: they say an answer is
+"refused", and never that anything crashed. The report is not neutral:
+- its title is "answer SDP ends the server process";
+- it names the library's failing line (`rtpreceiver.go:544`, nil pointer in
+  the library's goroutine);
+- it lists the answer shapes that reach it (a second SSRC in a section, three
+  whitespace variants of `a=ssrc-group`, a repeated mid).
+Fix: drop h-l8-08.md and its README row (`doc/security/reviews/README.md`,
+the row starting `[h-l8-08]`) from this branch, and add both in a docs commit
+after the release that carries the fix. The other copied reports name H-L8-08
+only by id, without detail (bundle-integration.md:104 and :257), so they can
+stay.
+
+No other report holds anything private. A scan of every copied report and the
+README for local paths, user names, host names, IP addresses other than
+documentation and loopback ranges, e-mail addresses and AI attribution found:
+- generic paths only (`~/go/pkg/mod`, `/tmp/probe.txt`);
+- "OrbStack", a tool name;
+- one "the NAS" with no name or address (h-l8-07.md:236).
+The README table lists 27 reports, the same 27 files the two commits add,
+with matching links.
+
+### 00add7986: lane 5 merge, hand resolution in lockMessageForDelete
+
+The result was compared with a rerun automatic merge. Only three files
+differ, and each was read:
+- `message_mutations.go`: the final function locks the message (`FOR
+  UPDATE`), then calls `ownerWords` in a statement of its own, then
+  `newestOfThread`. `ownerWords` (moderation.go:340) holds the H-L7-07 query
+  of the first parent, with the same text and the same arguments. The lane 5
+  side had folded the Owner check back into the locking statement as a
+  subquery. That is exactly the form H-L7-07 fixed (a subquery of the
+  statement that waited for the lock does not see the reply that held it).
+  The coordinator correctly kept the H-L7-07 form.
+- `newestOfThread` (recount_inputs.go:30, `max(created_at)` over the message
+  and its replies) runs after the lock, in its own statement, so it sees
+  every reply committed before the lock. Once the root is locked no new reply
+  can join. The recount is told this value (handler_messages.go:261), so its
+  input is right.
+- `storeTrace.known.ts`: emptied from the lane 5 side.
+Runs:
+- `TestAModeratorsDeleteThatWaitedForTheOwnersReplyKeepsIt` passed 5 of 5
+  runs.
+- Revert check: with the `ownerWords` call removed, the test fails (204, the
+  Owner's reply not kept, bulk delete answers deleted 0).
+- Deep race sweep (RACE_SWEEP=1, the races pattern, five packages): all ok.
+- Empty trace list: the smoke replay (`the checked-in traces, every
+  position`) passes. A deep run with 20 newly recorded traces (seeds 7000 to
+  7019, unsharded) passes, so no key breaks any more.
+
+### dee2930d6
+
+A clean automatic merge, identical to the rerun. It brings in 1f207e6cb, the
+store split, which fixreview-H-L5-01-04 round 2 covered.
+
+### fc8649030: previewText moved
+
+`previewText` is now in `web/src/shared/lib/markdown.ts`. It computes
+`markdownToPlain(content).replace(/\s+/g, ' ').trim()`. That is the same
+function as before, because the old `stripMarkdown` returns exactly
+`markdownToPlain(content)`. `chat/lib/replies.ts` re-exports it, so the five
+chat importers are unchanged and the event comments import it from shared.
+`npm run lint` and typecheck both exit 0.
+
+### 097ab3878b and 3109606d0
+
+- 97ab3878b: `traceFrame(ev)` is a type conversion between identical
+  structs. No behaviour change.
+- 3109606d0: `overwrite: true` on `upload-artifact` for a shard's pool.
+  actionlint passes. A rerun replaces the earlier upload of the same shard
+  instead of failing on a name conflict.
+
+### 078f567c9: TestGeneratorRefusesAMemberWhoMayNotJoin
+
+It is a real behaviour test.
+- Mutation check: with the generator's own `mayJoin` refusal disabled
+  (generator.go:38), the test fails: "a member who may not join got a relay
+  socket".
+- Positive control (my probe, removed afterwards): the same call with a check
+  that allows the member gets a socket. So the refusals are not caused by a
+  malformed request.
+- It covers refusal and lookup failure and checks that no allocation is held
+  afterwards.
+
+### 28f359fc2: SHOULD-FIX 1 closed
+
+The new sentence names the hub's `voice join` and `voice leave` lines:
+`internal/ws/voice_join.go:98` Info with user and channel, and
+`internal/ws/voice_presence.go:88` Info with user and channel. They log at
+the default level and name the member and the Talk. True.
+
+### Ran on c54712470 (nice -n 10, -p 1, exit codes read)
+
+- go build 0; go vet 0; go vet -tags=integration 0.
+- make staticcheck 0; make complexity-check 0; make docs-check 0.
+- `go test ./internal/repo/` 0; English check 0; actionlint 0.
+- `go test -tags=integration ./internal/chat/... ./internal/turnrelay/` 0.
+- Full `internal/server` integration suite 0 (297 s).
+- web: `npm ci`, `npm run lint` 0, `npm run typecheck` 0.
+- `vitest run src/stores src/chat src/events --maxWorkers=3`: 211 files,
+  1984 passed, 2 skipped, exit 0.
