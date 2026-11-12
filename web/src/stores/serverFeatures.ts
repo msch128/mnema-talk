@@ -1,16 +1,23 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../shared/lib/api'
+import { api, onUnavailable } from '../shared/lib/api'
 import { decodeServerHealth, isServerHealthUnavailable, type ServerHealth, type ServerHealthUnavailable } from '../types/rest'
 import { syncDocumentIcons } from '../shared/lib/communityIcon'
 
 /** How often the server is asked again while it reports a dependency as down. */
 export const OUTAGE_RECHECK_MS = 30000
+/** How long one answer may take. A request that never settles would otherwise be the last one ever made. */
+export const HEALTH_TIMEOUT_MS = 10000
+/** A request that fails because a dependency is down makes the app ask again, but not more often than this. */
+export const FAILURE_RECHECK_GAP_MS = 5000
 
 // The server describes itself in a 503 as well (a dependency is down). An older server sends only the error then, which is no answer.
 function decodeHealth(value: unknown): ServerHealth | ServerHealthUnavailable {
   return isServerHealthUnavailable(value) ? value : decodeServerHealth(value)
 }
+
+// Only the store of the running app listens (a second store, as in tests, replaces the first).
+let stopListening: (() => boolean) | undefined
 
 /** One flag per optional feature the web app asks about. */
 function featureFlags(has: (name: string) => boolean) {
@@ -60,6 +67,8 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   const storageDown = computed(() => unavailable.value.includes('storage'))
   const names = computed(() => new Set(list.value))
   let pending: Promise<void> | null = null
+  // Whether the request behind `pending` is still on its way.
+  let asking = false
   let recheck: ReturnType<typeof setTimeout> | undefined
 
   function has(name: string): boolean {
@@ -72,8 +81,12 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     syncDocumentIcons(version)
   }
 
-  /** While a dependency is down the server is asked again, so the notice goes when the outage does. */
-  function watchOutage() {
+  /**
+   * While a dependency is down the server is asked again, so the notice goes when the outage does. A healthy server is not polled: an
+   * outage that starts later is noticed when a request fails with 503 (below) or when the socket reopens (`refresh`).
+   */
+  function watchServer() {
+    asking = false
     clearTimeout(recheck)
     if (unavailable.value.length === 0) return
     recheck = setTimeout(() => {
@@ -84,7 +97,10 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
 
   /** Asks the server once; later calls share the answer. */
   function load(): Promise<void> {
-    pending ??= api('/api/health', { acceptStatus: [503], decode: decodeHealth }).then(
+    if (pending) return pending
+    asking = true
+    // No more promise hops than a plain request: the outbox tests count microtasks.
+    pending = api('/api/health', { acceptStatus: [503], decode: decodeHealth, signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) }).then(
       health => {
         list.value = health.features ?? []
         communityName.value = health.community_name?.trim() ?? ''
@@ -96,8 +112,14 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
         // The next call asks again; nothing is shown that was not confirmed.
         pending = null
       }
-    ).then(watchOutage)
+    ).then(watchServer)
     return pending
+  }
+
+  /** Asks again although an answer is known (the socket reopened: the server may have restarted); joins a request on its way. */
+  function refresh(): Promise<void> {
+    if (!asking) pending = null
+    return load()
   }
 
   /**
@@ -112,8 +134,17 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     return loaded.value
   }
 
+  // An upload or another request answered 503 UNAVAILABLE says a dependency is down: ask what is (at most every few seconds).
+  let lastFailureCheck = 0
+  stopListening?.()
+  stopListening = onUnavailable(() => {
+    if (Date.now() - lastFailureCheck < FAILURE_RECHECK_GAP_MS) return
+    lastFailureCheck = Date.now()
+    void refresh()
+  })
+
   return {
-    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load,
+    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load, refresh,
     ...featureFlags(has)
   }
 })

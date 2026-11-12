@@ -21,6 +21,25 @@ type lazyStore struct {
 	mu    sync.RWMutex
 	store media.Store
 	err   error
+
+	// probeMu serialises the live check and guards its cached result.
+	probeMu  sync.Mutex
+	probedAt time.Time
+	probeErr error
+}
+
+// Reaching storage again after the start is checked at most once per
+// probeTTL, and one check may take probeTimeout: a health endpoint that
+// anyone can call must not become a stream of requests to object storage.
+const (
+	probeTTL     = 10 * time.Second
+	probeTimeout = 2 * time.Second
+)
+
+// prober is a store that can say whether its storage is reachable right now
+// (*s3.Client does, with one HEAD request on the bucket).
+type prober interface {
+	Probe(ctx context.Context) error
 }
 
 var errStorageStarting = errors.New("object storage not initialised yet")
@@ -75,11 +94,30 @@ func (l *lazyStore) try(ctx context.Context, init func(context.Context) (media.S
 	return true
 }
 
-// Ready returns nil once the store is usable, otherwise the last init error.
+// Ready returns nil while the store is usable, otherwise why not: the last
+// init error before the store was first reached, and afterwards the result of
+// a live check (cached for probeTTL), so storage that dies while the server
+// runs is reported and so is its return.
 func (l *lazyStore) Ready() error {
 	l.mu.RLock()
-	defer l.mu.RUnlock()
-	return l.err
+	store, err := l.store, l.err
+	l.mu.RUnlock()
+	if store == nil {
+		return err
+	}
+	p, ok := store.(prober)
+	if !ok {
+		return nil
+	}
+	l.probeMu.Lock()
+	defer l.probeMu.Unlock()
+	if l.probedAt.IsZero() || time.Since(l.probedAt) >= probeTTL {
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+		defer cancel()
+		l.probeErr = p.Probe(ctx)
+		l.probedAt = time.Now()
+	}
+	return l.probeErr
 }
 
 func (l *lazyStore) get() (media.Store, error) {
