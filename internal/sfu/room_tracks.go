@@ -252,7 +252,7 @@ func (r *Room) stopSourceTracksLocked(userID uuid.UUID, source Source) bool {
 	changed := false
 	for id, tInfo := range r.trackLocals {
 		if tInfo.SenderID == userID && matchesSource(tInfo.Source, source) {
-			tInfo.stoppedAt.Store(steadyNanos(layerNow()))
+			tInfo.resumeAt.Store(tInfo.stopUntil(layerNow()))
 			delete(r.trackLocals, id)
 			changed = true
 		}
@@ -304,6 +304,21 @@ func (r *Room) dropLostPeer(peer *Peer) {
 		peer.notifyLost()
 	}
 }
+
+// closedPeer removes a peer whose connection was closed. One that a cap of
+// the connection closed (see rtcpStreamCap) is lost to its owner, who is told.
+func (r *Room) closedPeer(peer *Peer) {
+	if peer.rtcp.tripped() {
+		r.dropLostPeer(peer)
+		return
+	}
+	r.removePeer(peer)
+}
+
+// Renew reports whether the peer was lost only because its connection made
+// as many senders as one connection may (maxSentTracks): honest use can get
+// there, so the member should get a fresh connection, not lose the call.
+func (p *Peer) Renew() bool { return p != nil && p.rtcp != nil && p.rtcp.renew.Load() }
 
 // detachPeer changes membership without closing network transports. This
 // lets the SFU atomically remove an empty room before releasing roomsMu.

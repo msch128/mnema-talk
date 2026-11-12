@@ -81,7 +81,7 @@ func (r *Room) peerStateChanged(peer *Peer, state webrtc.PeerConnectionState) {
 	case webrtc.PeerConnectionStateFailed:
 		r.dropLostPeer(peer)
 	case webrtc.PeerConnectionStateClosed:
-		r.removePeer(peer)
+		r.closedPeer(peer)
 	}
 }
 
@@ -386,11 +386,11 @@ func publisherVerdict(info *TrackInfo) packetVerdict {
 // resumeStoppedTrack re-adds a track whose publisher stopped and started the
 // same transceiver again: the browser keeps the SSRC, so no new OnTrack fires.
 func (r *Room) resumeStoppedTrack(key string, info *TrackInfo) {
-	at := info.stoppedAt.Load()
-	if at == 0 || steadyNanos(layerNow())-at <= int64(resumeHoldoff) {
+	at := info.resumeAt.Load()
+	if at == 0 || steadyNanos(layerNow()) <= at {
 		return
 	}
-	if info.stoppedAt.CompareAndSwap(at, 0) {
+	if info.resumeAt.CompareAndSwap(at, 0) {
 		r.addTrack(key, info)
 	}
 }

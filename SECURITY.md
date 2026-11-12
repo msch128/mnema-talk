@@ -487,7 +487,22 @@ details and the limits.
   so it holds at most (65 + the offer's m-lines) buffered streams for arbitrary SSRCs
   (about 1.3 MB plus 20 KB per line, under 3 MB for 70 lines) and about 16 MB
   of empty ones before the connection is closed; a client can make the empty
-  ones in about two minutes.
+  ones in about two minutes. Every sender the SFU makes on a
+  connection (one per subscription switched on, and per track that starts
+  or resumes for the viewer) leaves Pion's SRTP state for its SSRCs, about
+  160 bytes (about 240 with retransmissions), until the connection closes;
+  nothing else of a stopped sender stays. After 32 768 senders the
+  connection is renewed: the SFU closes it (counted as
+  `mnema_sfu_ingress_dropped_total{reason="senders"}`), the member's
+  WebSocket is closed with code 4002, and the client reconnects and resumes
+  the call within the grace period, so this is at most about 8 MB per
+  connection, and a member switching camera batches of 16 at the event
+  budget adds at most about 80 KB a second until then. A track whose
+  publisher stops it and sends again resumes for its viewers (a new sender
+  on each) at once ten times, then once every ten seconds, so another
+  member cannot drive a viewer's connection to that cap. The caps above
+  that only abuse reaches end the member's voice with `connection_lost`
+  instead, so no seat is left without media.
 - **Answers are checked against what the SFU offers.** An answer must have the
   media sections of the offer it answers: as many, in the same order, under
   the same mids. Every section the SFU offers carries one stream, so a section

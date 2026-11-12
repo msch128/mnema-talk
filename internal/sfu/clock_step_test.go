@@ -11,7 +11,7 @@ import (
 
 // The SFU stores the times it compares later as steadyNanos: a layer's last
 // packet (layerGroup.lastPkt), a track's last keyframe request
-// (TrackInfo.lastPLI), the moment a track was stopped (TrackInfo.stoppedAt),
+// (TrackInfo.lastPLI), the moment a stopped track may resume (TrackInfo.resumeAt),
 // a resend (nackSlot.resentAt) and a bitrate measurement (layerGroup.rateAt).
 // They used to be unix nanoseconds, which follow the wall clock (lane 9,
 // H-L9-01): a step of the host's clock by d moved every deadline by d. The

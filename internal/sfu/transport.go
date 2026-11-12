@@ -10,8 +10,11 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/ice/v4"
 	"github.com/pion/transport/v5/packetio"
+	"github.com/pion/webrtc/v4"
 )
 
 var errSFUClosed = errors.New("SFU is closed")
@@ -243,3 +246,79 @@ type closedBuffer struct{}
 func (closedBuffer) Read([]byte) (int, error)  { return 0, io.EOF }
 func (closedBuffer) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
 func (closedBuffer) Close() error              { return nil }
+
+// sentTrack records the SSRCs of a track the SFU now sends on the connection,
+// as long as there are fewer than buffered streams may be open, and closes
+// the connection past maxSentTracks senders.
+func (c *rtcpStreamCap) sentTrack(sender *webrtc.RTPSender) {
+	if c == nil {
+		return
+	}
+	encodings := sender.GetParameters().Encodings
+	c.mu.Lock()
+	for _, e := range encodings {
+		if len(c.sent) < maxBufferedRTCPStreams {
+			c.sent[uint32(e.SSRC)] = true
+		}
+		if e.RTX.SSRC != 0 && len(c.sent) < maxBufferedRTCPStreams {
+			c.sent[uint32(e.RTX.SSRC)] = false
+		}
+	}
+	c.senders++
+	senders, over := c.senders, c.senders > c.senderCap
+	c.mu.Unlock()
+	if over {
+		c.trip("senders", senders)
+	}
+}
+
+// stoppedTrack retires the SSRCs of a track the SFU no longer sends.
+func (c *rtcpStreamCap) stoppedTrack(sender *webrtc.RTPSender) {
+	if c == nil {
+		return
+	}
+	encodings := sender.GetParameters().Encodings
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, e := range encodings {
+		c.retire(uint32(e.SSRC))
+		if e.RTX.SSRC != 0 {
+			c.retire(uint32(e.RTX.SSRC))
+		}
+	}
+}
+
+// retire requires c.mu.
+func (c *rtcpStreamCap) retire(ssrc uint32) {
+	delete(c.sent, ssrc)
+	if _, ok := c.retired[ssrc]; ok {
+		return
+	}
+	delete(c.retired, c.retiredRing[c.retiredNext])
+	c.retiredRing[c.retiredNext] = ssrc
+	c.retired[ssrc] = struct{}{}
+	c.retiredNext = (c.retiredNext + 1) % rtcpRetiredSSRCs
+}
+
+// trip closes the connection once, on a goroutine of its own: Pion calls the
+// cap from the loops its SRTCP session waits for while closing. The room then
+// reports the peer lost (closedPeer), so the hub frees the seat or, after the
+// sender cap, renews the member's connection.
+func (c *rtcpStreamCap) trip(count string, n int) {
+	pc := c.pc.Load()
+	if pc == nil || !c.closing.CompareAndSwap(false, true) {
+		return
+	}
+	if count == "senders" {
+		c.renew.Store(true)
+		c.log.Info("sfu connection made too many senders, renewing it", count, n)
+		metrics.SFUIngressDropped.With("senders").Inc()
+	} else {
+		c.log.Warn("sfu connection keeps state for too many SSRCs, closing it", count, n)
+		metrics.SFUIngressDropped.With("rtcp_ssrcs").Inc()
+	}
+	safego.Go("sfu_rtcp_cap", safego.Abandon, func() { _ = pc.Close() })
+}
+
+// tripped reports whether a cap closed the connection.
+func (c *rtcpStreamCap) tripped() bool { return c != nil && c.closing.Load() }
