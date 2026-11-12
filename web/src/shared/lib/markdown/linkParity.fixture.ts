@@ -1,11 +1,11 @@
 // One rule, two implementations: which links a message holds. The server's
-// automod reads them with its own pattern (internal/automod/compile.go), the
+// automod reads them with its own scanner (internal/automod/linkscan.go), the
 // client renders them with this Markdown parser. The oracle: every host the
 // client would open is a host automod judged, and could read. The vectors are
 // shared with internal/automod/linkparity_test.go through a JSON file.
 import { renderMarkdown } from '../markdown'
 
-export interface ServerLink { host: string; ok: boolean }
+export interface ServerLink { host: string; ok: boolean; opaque?: boolean }
 export interface Vector { msg: string; server: ServerLink[] }
 
 export const VECTOR_FILE = 'internal/automod/testdata/link_parity.json'
@@ -48,7 +48,14 @@ export type Mode = 'block_all' | 'allow_list' | 'block_list'
 /** Whether the server's verdict lets the message through, as compile.go matchesLinks decides. */
 export function serverAllows(server: readonly ServerLink[], mode: Mode, domains: readonly string[]): boolean {
   const covered = (h: string) => domains.some(d => h === d || h.endsWith('.' + d))
-  return !server.some(l => mode === 'block_all' || (mode === 'allow_list' ? !l.ok || !covered(l.host) : l.ok && covered(l.host)))
+  // A host whose top-level label is no DNS label leads nowhere (compile.go reachable).
+  const leads = (h: string) => h.startsWith('[') || /^[a-z0-9_-]+$/.test(h.slice(h.lastIndexOf('.') + 1))
+  return !server.some(l => mode === 'block_all' || (mode === 'allow_list' ? !l.ok || (leads(l.host) && !covered(l.host)) : l.opaque === true || covered(l.host)))
+}
+
+/** Whether both lists of bypassModes let the message through on the server (no false alarm on allowed links). */
+export function serverPasses(v: Vector): boolean {
+  return serverAllows(v.server, 'allow_list', ['allowed.example']) && serverAllows(v.server, 'block_list', ['other.example'])
 }
 
 /** Whether a message the client renders shows a link the rule forbids. */
@@ -71,7 +78,7 @@ export function bypassModes(v: Vector): Mode[] {
 /** Characters at the edge of the two stop sets, and what NFKC turns into them. */
 export const EDGE_CHARS = [
   "'", '"', '`', '<', '>', '\\', ' ', '\t', '\n', '\r', '\f', '\v', '\u0000', '\u0001', '\u001f', '\u007f', '\u0085', '\u00a0',
-  '\u2028', '\u3000', '\u200b', '\u00ad', '\u0301', '\u200c', '\u200d', '\u034f', '\u2060', '\ufeff', '\uff02', '\uff07', '\uff1c', '\uff1e', '\uff3c', '\uff40',
+  '\u2028', '\u3000', '\u200b', '\u00ad', '\u0301', '\u030a', '\u200c', '\u200d', '\u034f', '\u2060', '\ufeff', '\u0008', '\uff02', '\uff07', '\uff1c', '\uff1e', '\uff3c', '\uff40', '\uff09',
   '\ufe64', '\ufe65', '\uff20', '\ufe6b', '\uff0f', '\uff1f', '\uff03', '\uff0e', '\u3002', '\u2024', '\uff1a', '@', '/', '?', '#',
   ':', '%', '|', '*', '_', '~', ')', ']', '}', '(', '[', '.', ',', ';', '!', '&', '='
 ]
@@ -80,10 +87,11 @@ const SCHEMES = ['https://', 'http://', 'HTTPS://', 'hTtP://', 'https:/', 'https
 const HOSTS = [
   'allowed.example', 'other.example', 'sub.allowed.example', 'allowed.example.other.example', 'other.example.allowed.example',
   'xn--caf-dma.example', 'caf\u00e9.example', 'ALLOWED.EXAMPLE', 'allowed.example.', '127.0.0.1', '[::1]', '[::1', '2130706433',
-  '0x7f.1', 'other%2eexample', '%6fther.example', 'other\uff0eexample', 'other\u3002example', 'oth\u200ber.example', '\u0430llowed.example', 'other.example\u0301'
+  '0x7f.1', 'other%2eexample', '%6fther.example', 'other\uff0eexample', 'other\u3002example', 'oth\u200ber.example', '\u0430llowed.example', 'other.example\u0301',
+  '_.other.example', 'a-.other.example', 'my_host.allowed.example', '127.1', '0177.0.0.1', '1.2.3.256', '[0:0::1]'
 ]
-const PORTS = ['', ':80', ':443', ':', ':99999', ':0', ':8o', ':65535']
-const RESTS = ['', '/', '/x', '/x?y=1', '#f', '?q', '/a(b)', '/https://other.example', '?u=https://other.example', '\\other.example', '/x.']
+const PORTS = ['', ':80', ':443', ':', ':99999', ':0', ':8o', ':65535', ':70000']
+const RESTS = ['', '/', '/x', '/x?y=1', '#f', '?q', '/a(b)', '/https://other.example', '?u=https://other.example', '\\other.example', '/x.', '/r/https://other.example/x', '**.allowed.example', '__.allowed.example']
 
 /** A small seeded generator (mulberry32), so a failing seed is a repro. */
 export function rng(seed: number): () => number {
@@ -116,9 +124,17 @@ export function linkToken(r: () => number): string {
   let s = pick(r, SCHEMES) + userInfo(r) + pick(r, HOSTS) + pick(r, PORTS) + pick(r, RESTS)
   for (let n = Math.floor(r() * 3); n > 0; n--) {
     const at = Math.floor(r() * (s.length + 1))
-    s = s.slice(0, at) + pick(r, EDGE_CHARS) + s.slice(at)
+    s = s.slice(0, at) + (r() < 0.2 ? anyChar(r) : pick(r, EDGE_CHARS)) + s.slice(at)
   }
   return s
+}
+
+/** Any character of the Basic Multilingual Plane outside ASCII: where the IDNA tables of Go and the browser could differ. */
+function anyChar(r: () => number): string {
+  for (;;) {
+    const c = 0x80 + Math.floor(r() * (0x10000 - 0x80))
+    if (c < 0xd800 || c > 0xdfff) return String.fromCharCode(c)
+  }
 }
 
 const WRAPS: ((u: string, r: () => number) => string)[] = [
@@ -130,6 +146,9 @@ const WRAPS: ((u: string, r: () => number) => string)[] = [
   u => `||${u}||`,
   u => `**${u}**`,
   u => `\`${u}\``,
+  u => `*${u}*`,
+  u => `~~${u}~~`,
+  u => `__${u}__`,
   u => `\\<${u}>`,
   u => `[x](https://allowed.example) ${u}`,
   (u, r) => `${linkToken(r)} ${u}`

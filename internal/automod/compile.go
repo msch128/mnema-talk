@@ -86,10 +86,12 @@ func phrasePart(p string) string {
 	return out
 }
 
-// fold prepares text for matching: compatibility forms (fullwidth letters,
-// no-break spaces) are normalised, every kind of space becomes a plain one and
-// invisible format characters and stray combining marks are dropped, so none of
-// them can hide a blocked word or end a link early.
+// fold prepares text for word matching: compatibility forms (fullwidth
+// letters, no-break spaces) are normalised, every kind of space becomes a
+// plain one and invisible format characters and stray combining marks are
+// dropped, so none of them can hide a blocked word. Links are read on the raw
+// text instead (linkscan.go): a browser keeps a mark in a host, and folding it
+// away would judge another domain than the one the client opens.
 func fold(s string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
@@ -107,39 +109,35 @@ func (c *compiled) matchesWords(content string) bool {
 	return c.words != nil && c.words.MatchString(fold(content))
 }
 
-var linkToken = regexp.MustCompile(`(?i)(?:https?://|\bwww\.)[^\s<>"'\x60]+`)
-
-// link is a link-like token of a message: its host, or ok false when the
-// token cannot be read (which counts against it, never for it).
+// link is a link-like token of a message: a host the client could open from
+// it (linkscan.go). ok is false when the host cannot be read exactly; host is
+// then the best reading there is (or empty), and it counts against the
+// message, never for it. opaque: a token too tangled to read at all
+// (linkends.go maxEnds), which may lead to any host.
 type link struct {
-	host string
-	ok   bool
-}
-
-// links lists the links in content.
-func links(content string) []link {
-	var out []link
-	for _, m := range linkToken.FindAllString(fold(content), -1) {
-		host, ok := hostOf(strings.TrimRight(m, ".,;:!?)]}"))
-		out = append(out, link{host, ok})
-	}
-	return out
+	host   string
+	ok     bool
+	opaque bool
 }
 
 // matchesLinks reports whether content has a link the rule forbids. A link
-// that cannot be read is forbidden whenever the rule is about which links are
-// fine (every link, an allow list); a block list only knows the hosts it lists.
+// that cannot be read exactly is forbidden whenever the rule is about which
+// links are fine (every link, an allow list); a link to a host no resolver
+// answers for ("allowed.example's") leads nowhere, and an allow list lets it
+// be. A block list only knows the hosts it lists: it forbids every reading
+// under a listed domain, exact or not, and every opaque one, and lets
+// through what it cannot read at all.
 func (c *compiled) matchesLinks(content string) bool {
 	for _, l := range links(content) {
 		switch c.Config.Mode {
 		case LinksBlockAll:
 			return true
 		case LinksAllowList:
-			if !l.ok || !coveredBy(l.host, c.domains) {
+			if !l.ok || reachable(l.host) && !coveredBy(l.host, c.domains) {
 				return true
 			}
 		case LinksBlockList:
-			if l.ok && coveredBy(l.host, c.domains) {
+			if l.opaque || coveredBy(l.host, c.domains) {
 				return true
 			}
 		}
