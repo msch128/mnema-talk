@@ -159,8 +159,10 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 		}
 		*dst = &id
 	}
-	if err := messages.ValidateTarget(ctx, h.DB, chID, t.parentID, t.replyToID); err != nil {
-		return nil, err
+	if t.parentID != nil || t.replyToID != nil {
+		if err := messages.ValidateTarget(ctx, h.DB, h.Perms, auth.UserFrom(ctx).Subject(), chID, t.parentID, t.replyToID); err != nil {
+			return nil, err
+		}
 	}
 	if fields["title"] != "" || fields["tag_ids"] != "" {
 		if t.post, err = h.prepareUploadPost(ctx, chID, t, fields); err != nil {

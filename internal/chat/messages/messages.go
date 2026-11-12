@@ -243,10 +243,16 @@ func IsSameThreadContext(refParentID, parentID, replyTo *uuid.UUID) bool {
 // ValidateReplyTarget checks that replyTo exists in the same channel and the
 // same thread context (both root messages, or both replies of one thread).
 func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, parentID, replyTo *uuid.UUID) error {
+	return ValidateReplyTargetFor(ctx, p, nil, channelID, parentID, replyTo)
+}
+
+// ValidateReplyTargetFor is ValidateReplyTarget for a caller who sees what view
+// lets them see: a message in a channel they cannot see is a missing message.
+func ValidateReplyTargetFor(ctx context.Context, p *db.Pool, view core.Viewer, channelID uuid.UUID, parentID, replyTo *uuid.UUID) error {
 	if replyTo == nil {
 		return nil
 	}
-	ref, err := core.LoadReferencedMessage(ctx, p, *replyTo, "message to reply to not found")
+	ref, err := core.LoadReferencedMessage(ctx, p, view, channelID, *replyTo, "message to reply to not found")
 	if err != nil {
 		return err
 	}

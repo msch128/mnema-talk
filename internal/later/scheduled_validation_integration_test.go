@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func scheduleVia(t *testing.T, f fixture, s *Service, channel uuid.UUID, body map[string]any) error {
@@ -58,17 +59,17 @@ func TestADatabaseFailureWhileCheckingTheTargetIsNotARefusal(t *testing.T) {
 	f := newFixture(t)
 	closed := closedPool(t, f.p)
 	parent := uuid.New()
-	err := messages.ValidateTarget(context.Background(), closed, f.channel, &parent, nil)
+	err := messages.ValidateTarget(context.Background(), closed, perm.NewService(closed), perm.Subject{}, f.channel, &parent, nil)
 	var apiErr *httpx.APIError
 	if err == nil || errors.As(err, &apiErr) {
 		t.Fatalf("parent check on a dead database: %v, want a plain error", err)
 	}
-	err = messages.ValidateTarget(context.Background(), closed, f.channel, nil, &parent)
+	err = messages.ValidateTarget(context.Background(), closed, perm.NewService(closed), perm.Subject{}, f.channel, nil, &parent)
 	if err == nil || errors.As(err, &apiErr) {
 		t.Fatalf("reply check on a dead database: %v, want a plain error", err)
 	}
 	// A message that does not exist stays a refusal.
-	err = messages.ValidateTarget(context.Background(), f.p, f.channel, &parent, nil)
+	err = messages.ValidateTarget(context.Background(), f.p, perm.NewService(f.p), perm.Subject{}, f.channel, &parent, nil)
 	if !errors.As(err, &apiErr) {
 		t.Errorf("unknown parent: %v, want an API error", err)
 	}

@@ -72,6 +72,11 @@ func cleanChannelInputs(name, topic string, chType core.ChannelType) (string, st
 	return cleanName, cleanTopic, nil
 }
 
+// errNoCategory is what creating a channel in a category answers when the
+// category does not exist and when the caller cannot see it: one answer, so a
+// hidden category cannot be told from a missing one.
+var errNoCategory = httpx.ErrInvalidInput("category not found")
+
 // lockCategory requires the category to exist and holds it until the end of
 // the transaction, so it cannot be deleted before the channel is in it.
 func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
@@ -81,7 +86,7 @@ func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 	var one int
 	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR SHARE`, *categoryID).Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrInvalidInput("category not found")
+		return errNoCategory
 	}
 	return err
 }

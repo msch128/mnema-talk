@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -32,11 +33,24 @@ func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*core.
 }
 
 // ValidateTarget checks a new message's thread parent and quoted reply target.
-func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
-	if err := core.ValidateParent(ctx, p, chID, parentID); err != nil {
+// A target in a channel sub cannot see answers like one that does not exist.
+func ValidateTarget(ctx context.Context, p *db.Pool, perms *perm.Service, sub perm.Subject, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
+	return validateTarget(ctx, p, viewerOf(perms, sub), chID, parentID, replyToID)
+}
+
+// viewerOf is what sub may see now, by the permission state.
+func viewerOf(perms *perm.Service, sub perm.Subject) core.Viewer {
+	return func(ctx context.Context, ch uuid.UUID) (bool, error) {
+		set, err := perms.Channel(ctx, sub, ch)
+		return set.Has(perm.ViewChannel), err
+	}
+}
+
+func validateTarget(ctx context.Context, p *db.Pool, view core.Viewer, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
+	if err := core.ValidateParentFor(ctx, p, view, chID, parentID); err != nil {
 		return err
 	}
-	return ValidateReplyTarget(ctx, p, chID, parentID, replyToID)
+	return ValidateReplyTargetFor(ctx, p, view, chID, parentID, replyToID)
 }
 
 // InsertMessage stores a validated message and its mentions in one

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 )
 
 func TestMediaUploadValidationAndFailedDatabaseWrite(t *testing.T) {
@@ -37,14 +38,14 @@ func TestValidateUploadTargetLoadsThreadAndRejectsMissingTarget(t *testing.T) {
 	f := mediaDB(t)
 	root := uuid.New()
 	execMedia(t, f.p, `INSERT INTO messages(id,channel_id,user_id,content) VALUES($1,$2,$3,'root')`, root, f.channel, f.user.ID)
-	target, err := f.h.validateTarget(context.Background(), f.channel, map[string]string{"parent_id": root.String(), "reply_to_id": root.String()})
+	target, err := f.h.validateTarget(auth.WithUser(context.Background(), f.user), f.channel, map[string]string{"parent_id": root.String(), "reply_to_id": root.String()})
 	if err != nil || target.parentID == nil || *target.parentID != root || target.replyToID == nil || *target.replyToID != root {
 		t.Fatalf("thread root quote=%+v %v", target, err)
 	}
-	target, err = f.h.validateTarget(context.Background(), f.channel, map[string]string{"parent_id": root.String()})
+	target, err = f.h.validateTarget(auth.WithUser(context.Background(), f.user), f.channel, map[string]string{"parent_id": root.String()})
 	if err != nil || target.parentID == nil || *target.parentID != root {
 		t.Fatalf("valid thread=%+v %v", target, err)
 	}
-	_, err = f.h.validateTarget(context.Background(), f.channel, map[string]string{"parent_id": uuid.NewString()})
+	_, err = f.h.validateTarget(auth.WithUser(context.Background(), f.user), f.channel, map[string]string{"parent_id": uuid.NewString()})
 	requireAPIError(t, err, 400)
 }

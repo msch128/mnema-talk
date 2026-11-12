@@ -66,6 +66,36 @@ func TestWritesThatNameAHiddenObjectAnswerLikeAMissingOne(t *testing.T) {
 	for _, p := range mod {
 		p.mustMatchMissing(t, w, "mod", w.mod, hidden)
 	}
+	// A former Staff member knows the ids and an outsider may know one of a
+	// conversation: neither learns more than a stranger does.
+	reply := func(field, id string) []echoProbe {
+		return []echoProbe{
+			{"reply, " + field, "POST", open + "/messages", map[string]any{"content": "re", field: id}},
+			{"scheduled, " + field, "POST", open + "/scheduled", map[string]any{"content": "re", "send_at": later, field: id}},
+		}
+	}
+	dm := w.firstOf(t, clsDM, "message")
+	for _, c := range []struct {
+		who    string
+		client *client
+		id     string
+	}{{"exstaff", w.exstaff, msg}, {"outsider", w.outsider, dm}} {
+		hidden := w.hiddenFrom(c.who)
+		for _, field := range []string{"reply_to_id", "parent_id"} {
+			for _, p := range reply(field, c.id) {
+				p.mustMatchMissing(t, w, c.who, c.client, hidden)
+			}
+		}
+	}
+	// What a caller can see keeps the helpful answer: a message of another
+	// channel they may read is named as such, not as missing.
+	other := w.firstOf(t, clsOpen, "message")
+	sibling := w.channel(t, "sibling", "text", uuid.Nil)
+	res := w.outsider.post("/api/channels/"+sibling.String()+"/messages", map[string]any{"content": "re", "reply_to_id": other})
+	wantStatus(t, "reply to a visible message of another channel", res, http.StatusBadRequest)
+	if !strings.Contains(string(res.body), "can only reply to a message in the same conversation") {
+		t.Errorf("a visible message of another channel answers %s", res.body)
+	}
 	// The same objects are reachable for Staff, so a refusal above is about the
 	// observer and not a broken probe.
 	wantStatus(t, "insider reply", w.insider.post("/api/channels/"+w.staffText.String()+"/messages",
@@ -108,17 +138,8 @@ func TestAnExportCarriesNothingOutsideTheMembersClasses(t *testing.T) {
 }
 
 // echoKnownDifferences are the probes of a recorded finding whose hidden and
-// missing answers differ today. The list may only shrink.
-var echoKnownDifferences = map[string]string{
-	// The message checks say "in the same conversation" / "in the same channel"
-	// for a message that exists elsewhere and "not found" for one that does not.
-	"reply to a hidden message":           "H-L6-02",
-	"answer in a hidden thread":           "H-L6-02",
-	"scheduled reply to a hidden message": "H-L6-02",
-	"scheduled answer in a hidden thread": "H-L6-02",
-	// 404 "category not found" for a hidden category, 400 for a missing one.
-	"channel in a hidden category": "H-L6-02",
-}
+// missing answers differ today. The list may only shrink; it is empty.
+var echoKnownDifferences = map[string]string{}
 
 type echoProbe struct {
 	what, method, path string

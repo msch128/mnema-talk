@@ -1,6 +1,7 @@
 package channels
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -107,7 +108,9 @@ func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 		req.Type = core.ChannelTypeText
 	}
 	if req.CategoryID != nil {
-		if err := a.Guard.RequireCategory(r, *req.CategoryID); err != nil {
+		if err := a.Guard.RequireCategory(r, *req.CategoryID); errors.Is(err, core.ErrCategoryNotFound) {
+			return errNoCategory
+		} else if err != nil {
 			return err
 		}
 	}
