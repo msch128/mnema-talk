@@ -24,13 +24,12 @@ func knownGap(t *testing.T, finding, property string, holds bool) {
 	}
 }
 
-// The erasure of an account leaves two tables that point at the person:
+// The erasure of an account removes the two tables that expire on their own:
 // message_nonces (one row per message sent with a retry id, kept a day) and
 // upload_usage (one row per upload, kept 24 hours). SECURITY.md says
-// everything else that refers to the person is removed in the same
-// transaction, and that a test walks every foreign key to users; that test
-// only sees rows its fixture made, and it made none here. H-L10-01.
-func TestErasureLeavesRetryIdsAndUploadBookingsOfThePerson(t *testing.T) {
+// everything that refers to the person is removed in the same transaction.
+// H-L10-01.
+func TestErasureRemovesRetryIdsAndUploadBookingsOfThePerson(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	alice := a.register(admin, "alice")
@@ -58,9 +57,9 @@ func TestErasureLeavesRetryIdsAndUploadBookingsOfThePerson(t *testing.T) {
 		t.Fatalf("the account must be erased: %v %v", deleted, err)
 	}
 	n, u := count()
-	t.Logf("after the erasure: %d message_nonces rows and %d upload_usage rows still name the person", n, u)
-	knownGap(t, "H-L10-01", "no message_nonces row names the erased person", n == 0)
-	knownGap(t, "H-L10-01", "no upload_usage row names the erased person", u == 0)
+	if n != 0 || u != 0 {
+		t.Errorf("after the erasure: %d message_nonces rows and %d upload_usage rows still name the person", n, u)
+	}
 }
 
 // The export leaves out settings the member made and words the member wrote:

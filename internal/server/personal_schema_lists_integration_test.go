@@ -18,10 +18,7 @@ var erasureKeeps = map[string]string{
 }
 
 // erasureGaps are columns the erasure should clear and does not.
-var erasureGaps = map[string]string{
-	"message_nonces.user_id": "H-L10-01",
-	"upload_usage.user_id":   "H-L10-01",
-}
+var erasureGaps = map[string]string{}
 
 // exportOmits are tables with a column about a person that the export does
 // not read.
