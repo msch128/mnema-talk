@@ -19,7 +19,7 @@ Creating, editing, cancelling events, or uploading cover images requires the **M
 - **Title**: Up to 100 characters.
 - **Description**: Up to 2,000 characters of Markdown (same formatting as chat messages).
 - **Start & End time**: ISO 8601 timestamps. Start time is required; optional end time must be at or after start time.
-- **Location**: Either a voice channel (Talk) within the server or custom free text (up to 255 characters).
+- **Location**: Either a voice channel (Talk) within the server or custom free text (up to 255 characters). A conversation's call Talk is no community channel and cannot be a location, on create or on edit: it is refused (`400`) exactly like a channel that does not exist, so that nothing about the call reaches the event lists or the audit log.
 - **Cover image**: Optional 3:1 banner image (PNG, JPEG, GIF or WebP up to 5 MB), processed through the same pipeline as profile banners (re-encoded, metadata stripped).
 
 ## RSVPs and reminders

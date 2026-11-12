@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -30,6 +31,8 @@ func validateEventTimes(start time.Time, end *time.Time) error {
 	return nil
 }
 
+var errNotATalk = httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
+
 func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *string) error {
 	hasChannel := chID != nil
 	hasLoc := loc != nil && strings.TrimSpace(*loc) != ""
@@ -47,7 +50,12 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 	return err
 }
 
-// validateEventTalk checks that chID is a Talk (voice) channel the caller may view.
+// validateEventTalk checks that chID is a Talk (voice) channel of the community
+// that the caller may view. A conversation's call Talk is no community channel:
+// an event is a community object, audited and listed for the community, and
+// the call's members are the only ones who may know it exists. It is refused
+// like a channel that does not exist (same status, same bytes), and a failed
+// lookup refuses the request instead of guessing.
 func (h *Handler) validateEventTalk(r *http.Request, chID uuid.UUID) error {
 	var kind string
 	err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, chID).Scan(&kind)
@@ -55,7 +63,12 @@ func (h *Handler) validateEventTalk(r *http.Request, chID uuid.UUID) error {
 		return err
 	}
 	if err != nil || kind != "voice" {
-		return httpx.ErrInvalidInput("channel_id must be a Talk (voice) channel")
+		return errNotATalk
+	}
+	if isCall, err := talks.IsDMTalk(r.Context(), h.DB, chID); err != nil {
+		return err
+	} else if isCall {
+		return errNotATalk
 	}
 	if !h.canViewChannel(r, chID) {
 		return httpx.ErrForbidden("you cannot view this Talk channel")
