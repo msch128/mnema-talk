@@ -32,6 +32,28 @@ apply there. The server-wide permissions (*Connect*, *Speak*, *Video*, *Send
 messages*, a timeout, the new-member speak wait) still do. Nobody outside the
 conversation gets anything, as before.
 
+## A role mention next to @all breaks a mute
+
+A message such as `@all @Dev` stored the members of the role as reached by
+`@all` only, so a member who muted the channel got no mention badge and no
+push, although `@Dev` alone breaks the mute. A member reached several ways is
+now stored by the strongest reason: a name, then a role, then `@all` or
+`@here`. The other way round, a name the sender may not use no longer counts:
+a webhook with `allow_user_mentions` off, or a bot whose `allowed_mentions`
+leaves `users` out and does not list the member, posting `@all @name` reaches
+that member through `@all` only, which a mute silences, and does not mention
+a bot it names at all (`@all` never reaches bots). Messages sent before the
+update keep the kinds they were stored with.
+
+Messages gain `direct_mentions` (REST and the `message_create` and
+`message_update` events): the members of `mentions` addressed by name or
+role, not by `@all` or `@here` alone. The web app reads it in a muted channel
+for the live badge, the desktop notification and the sound, so they match the
+badge after a reload. `mentions` is unchanged. A web app from before this
+release ignores the new field and still counts a plain-text name next to
+`@all` live in a muted channel until it reloads; against an older server the
+web app reads the text as before.
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters

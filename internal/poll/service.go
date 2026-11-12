@@ -71,7 +71,7 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 		slog.Error("load created poll message failed", "message_id", id, "err", err)
 		return &core.Message{
 			ID: id, ChannelID: channel, UserID: user.ID, Content: c.Question,
-			Attachments: []core.MediaAttachment{}, Reactions: []core.ReactionSummary{}, Mentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
+			Attachments: []core.MediaAttachment{}, Reactions: []core.ReactionSummary{}, Mentions: []uuid.UUID{}, DirectMentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
 		}, nil
 	}
 	s.Events.BroadcastChannel(channel, (*core.MessageCreate)(msg))
