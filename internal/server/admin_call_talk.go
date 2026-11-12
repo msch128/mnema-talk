@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -39,11 +40,30 @@ func hideCallTalks(q db.Querier) func(http.Handler) http.Handler {
 				return
 			}
 			if isCall {
-				rctx.RoutePath = "/channels/" + uuid.NewString() + rest
+				r = withFreshChannelID(r, rctx, rest)
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// withFreshChannelID returns r with the call's id replaced by a fresh one in
+// the route path and in the URL, so that nothing behind the middleware (the
+// audit middleware matches the URL and reads the channel's state by it, the
+// request log writes it) can see the real id.
+func withFreshChannelID(r *http.Request, rctx *chi.Context, rest string) *http.Request {
+	old := rctx.RoutePath
+	fresh := "/channels/" + uuid.NewString() + rest
+	rctx.RoutePath = fresh
+	r2 := r.Clone(r.Context())
+	full := r.URL.EscapedPath()
+	if prefix, ok := strings.CutSuffix(full, old); ok {
+		r2.URL.RawPath = prefix + fresh
+		if p, err := url.PathUnescape(r2.URL.RawPath); err == nil {
+			r2.URL.Path = p
+		}
+	}
+	return r2
 }
 
 // adminChannelPath splits "/channels/{uuid}[/rest]" into the id and the rest.

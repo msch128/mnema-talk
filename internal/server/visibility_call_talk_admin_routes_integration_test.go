@@ -4,9 +4,11 @@ package server
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -118,4 +120,31 @@ func TestAdminChannelRoutesAnswerACallOfAConversationLikeAMissingChannel(t *test
 	// The call is untouched and its leader still manages it.
 	wantStatus(t, "the leader renames the call", w.adm.patch("/api/talks/"+w.call.String(), map[string]any{"name": "Our call"}), http.StatusOK)
 	wantStatus(t, "the call's chat is still there", w.mgr.get("/api/channels/"+w.call.String()+"/messages"), http.StatusOK)
+}
+
+// R2-1: behind hideCallTalks nothing sees the call's id, neither the route
+// parameter nor the URL (the audit middleware matches the URL and reads the
+// channel's state by it).
+func TestHideCallTalksLeavesNoTraceOfTheRealID(t *testing.T) {
+	w := newCallTalkAdminWorld(t)
+	var seen []string
+	r := chi.NewRouter()
+	r.Route("/api/admin", func(adm chi.Router) {
+		adm.Use(hideCallTalks(w.a.router.Events.Store.DB))
+		adm.HandleFunc("/channels/{id}/*", func(rw http.ResponseWriter, req *http.Request) {
+			seen = append(seen, chi.URLParam(req, "id"), req.URL.Path, req.URL.RawPath, req.URL.String())
+		})
+	})
+	for _, spelling := range []string{w.call.String(), strings.ToUpper(w.call.String())} {
+		req := httptest.NewRequest(http.MethodGet, "/api/admin/channels/"+spelling+"/x", nil)
+		r.ServeHTTP(httptest.NewRecorder(), req)
+	}
+	if len(seen) != 8 {
+		t.Fatalf("the probe route ran %d times", len(seen)/4)
+	}
+	for _, s := range seen {
+		if strings.Contains(strings.ToLower(s), w.call.String()) {
+			t.Errorf("the real id is still visible: %q", s)
+		}
+	}
 }

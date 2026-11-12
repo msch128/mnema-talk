@@ -20,6 +20,18 @@ apply there. The server-wide permissions (*Connect*, *Speak*, *Video*, *Send
 messages*, a timeout, the new-member speak wait) still do. Nobody outside the
 conversation gets anything, as before.
 
+## Conversations' calls leave the community's objects
+
+A Talk started from a conversation is no community channel. It can no longer be
+the location of an event or an exemption of an automod rule, and the
+administrative channel routes (rename, delete, duplicate, auto-delete,
+overwrites, layout) answer for it what they answer for a channel that does not
+exist; its leader renames it with `PATCH /api/talks/{id}`. Nothing about such
+an event (cancelling it, its roster, deleting a comment) is audited any more.
+Audit entries written earlier (`event.talk_*`, `channel.update`,
+`channel.duplicate`, `channel.delete`, `automod.rule_*` naming a call) stay
+readable by the Owner and the Administrators: the log is immutable.
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters

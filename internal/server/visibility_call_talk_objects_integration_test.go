@@ -145,3 +145,39 @@ func TestCancellingAnEventOfACallOfAConversationWritesNoAuditEntry(t *testing.T)
 		t.Error("the cancellation of an event of a call reached the audit log")
 	}
 }
+
+// H-L6-05 (the same legacy event): deleting a comment of it and changing its
+// roles are not audited either; both entries would carry the call's id and the
+// event's title.
+func TestCommentsAndRolesOfAnEventOfACallOfAConversationWriteNoAuditEntry(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	alice, bob := a.register(owner, "alice"), a.register(owner, "bobby")
+	assignRoles(t, owner, alice, createRole(t, owner, "Planners", perm.ManageEvents))
+	conv := alice.mustDM(t, bob).ID
+	wantStatus(t, "the conversation works", alice.dmPost(conv, "hi"), http.StatusCreated)
+	res := alice.post("/api/dms/"+conv.String()+"/talk", nil)
+	wantStatus(t, "start a call", res, http.StatusCreated)
+	var call struct {
+		ID uuid.UUID `json:"channel_id"`
+	}
+	res.decode(t, &call)
+	ev, err := a.router.Events.Store.Create(context.Background(), communityevents.CreateEventRequest{
+		Title: "okapilegacy", StartTime: time.Now().Add(time.Hour), ChannelID: &call.ID}, alice.user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := "/api/events/" + ev.ID.String()
+	posted := bob.post(path+"/comments", map[string]any{"content": "hello"})
+	wantStatus(t, "bobby comments", posted, http.StatusCreated)
+	wantStatus(t, "alice removes the comment", alice.delete(path+"/comments/"+idOf(t, posted).String()), http.StatusNoContent)
+	wantStatus(t, "alice sets a role", alice.put(path+"/roles", map[string]any{"roles": []map[string]any{{"name": "Tank", "capacity": 1}}}), http.StatusOK)
+
+	got := owner.get("/api/admin/audit-log")
+	wantStatus(t, "the Owner reads the audit log", got, http.StatusOK)
+	for _, word := range []string{"okapilegacy", call.ID.String()} {
+		if strings.Contains(string(got.body), word) {
+			t.Errorf("the audit log carries %q", word)
+		}
+	}
+}
