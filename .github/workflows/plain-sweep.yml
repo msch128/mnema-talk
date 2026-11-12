@@ -1,0 +1,53 @@
+name: Plain text sweep
+
+# What a message hides, judged by the web renderer, against the plain forms
+# that show messages without rendering them: the web client's own and the
+# server's (internal/mdplain: pushes and the snippets every client shows).
+# 200,000 generated messages on a new seed every night; no leak is allowed
+# (there is no known-failure list). Too slow for the pull request pipeline.
+# A failed run is the alert; the seed is in the log.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CROSS_N: "200000"
+    steps:
+      # A seed the generator was not tuned on: 1000 and up, a new one per run.
+      - run: echo "CROSS_SEED=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - name: Web plain forms against the renderer
+        working-directory: web
+        env:
+          CROSS_SWEEP: "1"
+        run: npx vitest run src/shared/lib/markdown/plainCross.test.ts
+      - name: Write the renderer's verdicts for the server
+        working-directory: web
+        env:
+          CROSS_OUT: ${{ runner.temp }}/cross.jsonl
+        run: npx vitest run src/shared/lib/markdown/plainCross.test.ts -t "writes records"
+      - name: Server plain forms and snippets against the renderer
+        env:
+          CROSS_FILE: ${{ runner.temp }}/cross.jsonl
+        run: go test -count=1 -run TestPlainHidesWhatTheRendererHides -v ./internal/mdplain
