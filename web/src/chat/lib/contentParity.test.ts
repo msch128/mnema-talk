@@ -10,10 +10,16 @@
 //   CONTENT_PARITY_UPDATE=1 go test -run TestContentVectorsMatchTheServer ./internal/chat/core
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { describe, expect, it, vi } from 'vitest'
 import { MAX_MESSAGE_LENGTH, lengthState } from './composerLimits'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { postText } from '../../stores/chat/messagePost'
 import { messageText } from '../../shared/lib/textLength'
 import { rng } from '../../shared/lib/markdown/linkParity.fixture'
+
+const apiMock = vi.hoisted(() => vi.fn())
+vi.mock('../../shared/lib/api', async (orig) => ({ ...(await orig<object>()), api: apiMock }))
 
 const file = join(import.meta.dirname, '..', '..', '..', '..', 'internal/chat/core/testdata/content_vectors.json')
 interface Vector { sent: string; ok: boolean; runes: number }
@@ -60,9 +66,31 @@ describe('message text: the composer against the server', () => {
     expect(vectors().filter(v => !v.ok).map(v => JSON.stringify(v.sent.slice(0, 40)))).toEqual([])
   })
 
-  it('a draft of only NUL or only the server\'s white space sends nothing', () => {
-    for (const draft of ['\u0085', '\u0000', ' \u0085\u0000\n', '\u00a0\u3000'] ) expect(composerSends(draft)).toBeNull()
-    expect(composerSends('\ufeff')).toBe('\ufeff')
+  it('a draft of only NUL or only white space of either side sends nothing', () => {
+    for (const draft of ['\u0085', '\u0000', ' \u0085\u0000\n', '\u00a0\u3000', '\ufeff', '\ufeff\u0085\ufeff', '\u0000\ufeff\u0000']) expect(composerSends(draft)).toBeNull()
+  })
+
+  it('a long run of white space costs nothing', () => {
+    const run = 'a' + ' '.repeat(100_000) + 'b'
+    const t0 = performance.now()
+    expect(messageText(` ${run} `)).toBe(run)
+    expect(messageText(' '.repeat(100_000))).toBe('')
+    expect(performance.now() - t0).toBeLessThan(5)
+  })
+
+  // The store sends what it is given through messageText again; this walks the
+  // real request so the composer's verdict and the wire cannot drift apart.
+  it('postText puts on the wire exactly what the composer decided to send', async () => {
+    setActivePinia(createPinia())
+    useServerFeaturesStore().loaded = true
+    const wire: string[] = []
+    apiMock.mockImplementation((_url: string, opts: { json: { content: string } }) => {
+      wire.push(opts.json.content)
+      return Promise.resolve({})
+    })
+    const sends = drafts().map(composerSends).filter((x): x is string => x !== null)
+    for (const text of sends) await postText('c', { content: text, parentId: null, replyToId: null, nonce: 'n' }).catch(() => {})
+    expect(wire).toEqual(sends)
   })
 
   it('what the server stores is within the composer limit', () => {

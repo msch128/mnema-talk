@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { PropType } from 'vue'
 import type { LaterScheduled } from '../../types/rest'
 import { computed, ref } from 'vue'
@@ -35,12 +36,12 @@ const whenText = computed(() => dateTime(props.item.send_at, locale.value))
 const form = useSettingsDraft<{ text: string; when: string }>({
   source: () => ({ text: props.item.content, when: failed.value ? '' : toLocalInputValue(new Date(props.item.send_at)) }),
   normalisers: { text: normalise.text, when: normalise.text },
-  validate: d => (d.text.trim() ? {} : { text: t('later.editText') }),
+  validate: d => (messageText(d.text) ? {} : { text: t('later.editText') }),
   save: async ({ changes }) => {
     const at = changes.when ? fromLocalInputValue(changes.when) : null
     if (changes.when && (!at || !isAcceptableTime(at))) throw new Error(t('later.pastTime'))
     await later.updateScheduled(props.item.id, {
-      ...(changes.text !== undefined && changes.text.trim() !== props.item.content ? { content: changes.text.trim() } : {}),
+      ...(changes.text !== undefined && messageText(changes.text) !== props.item.content ? { content: messageText(changes.text) } : {}),
       ...(at && (failed.value || at.getTime() !== new Date(props.item.send_at).getTime()) ? { at } : {})
     })
   },

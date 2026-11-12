@@ -1,4 +1,5 @@
 import type { CreateMessageRequest, Message } from '../../types/domain'
+import { messageText } from '../../shared/lib/textLength'
 import { decodeMessage } from '../../types/domain'
 import { api, errorMessage, isApiError } from '../../shared/lib/api'
 import { encodeShortcodes } from '../../shared/lib/customEmoji'
@@ -70,7 +71,7 @@ export function postText(channelId: string, send: TextSend, signal?: AbortSignal
 
 function postLoaded(channelId: string, send: TextSend, signal?: AbortSignal, onStatus?: (status: number) => void): Promise<Message> {
   return postWithReplyFallback(send.replyToId, reply => {
-    const json: CreateMessageRequest = { content: withEmojiTokens(send.content.trim()) }
+    const json: CreateMessageRequest = { content: withEmojiTokens(messageText(send.content)) }
     // Servers before the nonce (no "messages.nonce" feature) reject unknown JSON fields, so it is only sent to
     // a server that lists it. Without it the outbox still sends, but a resend after a lost answer cannot be
     // de-duplicated there and may post the message twice; that is accepted on an older server.
