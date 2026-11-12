@@ -12,7 +12,23 @@ allow="scripts/complexity-allowlist.txt"
 
 # gocognit prints "<score> <pkg> <func> <path>:<line>:<col>"; exit status 1
 # means "something is over the limit", which is what we compare ourselves.
-found="$( (go run "github.com/uudashr/gocognit/cmd/gocognit@${version}" -over 15 -ignore '_test\.go' cmd internal loadtest/viewer || true) |
+# "go: downloading" lines of a cold module cache and gocognit's one-time
+# "note:" about recursion are not findings.
+finding='^[0-9]+ [^ ]+ [^ ]+ [^ ]+\.go:[0-9]+:[0-9]+$'
+raw="$( (go run "github.com/uudashr/gocognit/cmd/gocognit@${version}" -over 15 -ignore '_test\.go' cmd internal loadtest/viewer 2>&1 || true) |
+	sed -e '/^exit status 1$/d' -e '/^go: downloading /d' -e '/^gocognit: note: /d')"
+
+# A line that is not a finding is a failure of the tool itself (no network, a
+# version that does not resolve, a file that does not parse): the tool did not
+# look, so the check must not pass as "nothing over the limit".
+broken="$(printf '%s\n' "$raw" | grep -vE "$finding|^$" || true)"
+if [ -n "$broken" ]; then
+	echo "gocognit did not run cleanly:"
+	echo "$broken" | sed 's/^/  /'
+	exit 1
+fi
+
+found="$(printf '%s\n' "$raw" | sed '/^$/d' |
 	awk '{ fn = $3; sub(/^\([^)]*\)\./, "", fn); path = $4; sub(/:[0-9]+:[0-9]+$/, "", path); sub(/\/[^\/]*$/, "", path); print path " " fn }' |
 	sort -u)"
 
