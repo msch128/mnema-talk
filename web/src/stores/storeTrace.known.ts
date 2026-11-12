@@ -6,29 +6,11 @@
 // least 7 of 30 traces; the others in 1 to 6, too rare to require every
 // night). The list may shrink; it grows only with a finding.
 //
-// H-L5-02: the reconnect does not reload the later and saved lists.
-// H-L5-03: a deleted message stays in the saved list.
-// H-L5-04: an answer and the events of the same moment are not ordered (left:
-// the saved and later lists, fixed with H-L5-02 on msch128/fix-h-l5-02-03).
 // H-L5-05: the first reply under my message is decided before the follow is known.
 type Known = { finding: string; smoke: boolean; nightly: boolean }
 
 const both = (finding: string): Known => ({ finding, smoke: true, nightly: true })
-const deepOnly = (finding: string): Known => ({ finding, smoke: false, nightly: true })
-const rare = (finding: string): Known => ({ finding, smoke: false, nightly: false })
 
 export const KNOWN_BROKEN: Record<string, Known> = {
-  'clean saved': deepOnly('H-L5-03'),
-  'clean reply-follow': both('H-L5-05'),
-  'drop reminders': both('H-L5-02'),
-  'drop scheduled': both('H-L5-02'),
-  'drop saved': both('H-L5-02'),
-  'drop+early reminders': both('H-L5-02'),
-  'drop+early scheduled': both('H-L5-02'),
-  'drop+early saved': both('H-L5-02'),
-  'drop+late reminders': both('H-L5-02'),
-  'drop+late scheduled': both('H-L5-02'),
-  'drop+late saved': both('H-L5-02'),
-  'late reminders': rare('H-L5-04'),
-  'late saved': rare('H-L5-04')
+  'clean reply-follow': both('H-L5-05')
 }

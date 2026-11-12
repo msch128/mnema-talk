@@ -300,7 +300,21 @@ asked for.
 **Saved messages** (`saved_messages`, migration 0051) are the same idea: a row
 holds a reference and the member's note. `GET /api/me/saved` joins the messages
 the member may see now; a conversation's messages need membership, tested in
-SQL like search does.
+SQL like search does. A deleted message takes its saves with it (`ON DELETE
+CASCADE`).
+
+The web client keeps the saved list and the reminders and scheduled messages
+current from the events to the member's own sessions (`saved_updated`,
+`reminder_update`, `scheduled_message_update`). Those of a time the socket was
+down are lost, so every socket open reads again the lists that were already
+asked for (one never opened stays unread), and an answer older than a newer
+request of the same list, or than a change made meanwhile, does not overwrite it.
+The saved list is read again as far as it was shown (up to 100 entries; older
+entries shown behind them stay until a page replaces them), and the saved marks
+follow the list that lands last. A failed read after a reconnect keeps the
+lists shown.
+On `message_delete` the client drops the saved entry (and those of the thread's
+replies) and shows a reminder on the message as unavailable, as a reload would.
 
 ## Reminders and scheduled messages
 
