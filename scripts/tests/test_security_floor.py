@@ -111,21 +111,38 @@ class SecurityFloor(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn('not a git trailer', r.stderr)
 
+    def pr_check(self, title, body):
+        # As ci.yml calls it: the description on stdin, the title as argument.
+        return self.run_script('--check-message', title, stdin=body + '\n')
+
     def test_check_message_mode(self):
         cases = {'Body.\r\n\r\nSecurity-Floor: raise\r\n': True, 'Body only.': True, '': True,
                  'Text.\n\nRelease-As: 1.2.0\nSecurity-Floor: raise\n': True,
                  'Text.\r\n\r\nSecurity-Floor: raise\r\n\r\nBREAKING CHANGE: y\r\n': False,
-                 'Security-Floor: raise\n\nmore': False}
-        for message, ok in cases.items():
-            r = self.run_script('--check-message', stdin=message)
-            self.assertEqual(r.returncode == 0, ok, (message, r.stderr))
+                 'Security-Floor: raise\n\nmore': False,
+                 # Review round 2 (R2-1): a description that is only the
+                 # trailer block is the last paragraph of the squash commit.
+                 'Security-Floor: raise': True, 'Release-As: 3.0.10\nSecurity-Floor: raise': True}
+        for body, ok in cases.items():
+            r = self.pr_check('fix: x', body)
+            self.assertEqual(r.returncode == 0, ok, (body, r.stderr))
+        self.assertNotEqual(self.run_script('--check-message', stdin='x').returncode, 0, 'no title')
 
-    # Hunt review of H-L11-01 (A-1): the pull request check and the release
-    # decision must give the same answer for the same message. Each message
-    # is committed verbatim (as a squash keeps it) and decided as a release,
-    # and passed to --check-message: both pass or both fail, and a message
-    # that passes raises the floor exactly when it has the marker.
+    # Hunt review of H-L11-01 (A-1, R2-1): the pull request check and the
+    # release decision must give the same answer. Each case is committed as
+    # GitHub writes the squash commit (title, blank line, description,
+    # verbatim) and decided as a release, checked with --check-commits, and
+    # its description alone goes to --check-message with the title, as
+    # ci.yml does: all three pass or all fail, and a case that passes raises
+    # the floor exactly when it has the marker. An entry is (description,
+    # verdict) or (description, verdict, title).
     AGREEMENT = {
+        'description is only the trailer': ('Security-Floor: raise', True),
+        'description is Release-As and the trailer': ('Release-As: 3.0.10\nSecurity-Floor: raise', True),
+        'description is only the trailer, CRLF': ('Security-Floor: raise\r\n', True),
+        'empty description': ('', True),
+        'trailer as the title': ('Text.', False, 'Security-Floor: raise'),
+        'trailer as the title and in the description': ('Security-Floor: raise', False, 'Security-Floor: raise'),
         'plain trailer': ('Text.\n\nSecurity-Floor: raise', True),
         'rule before the trailer': ('Text.\n\n---\n\nMore.\n\nSecurity-Floor: raise', True),
         'rule after the trailer': ('Text.\n\nSecurity-Floor: raise\n\n---\n\nNotes.', False),
@@ -151,13 +168,14 @@ class SecurityFloor(unittest.TestCase):
     }
 
     def test_release_and_pull_request_checks_agree(self):
-        for name, (body, want_ok) in self.AGREEMENT.items():
+        for name, case in self.AGREEMENT.items():
+            body, want_ok, title = (*case, 'fix: x')[:3]
             with self.subTest(name):
                 self.git('reset', '-q', '--hard', 'v0.1.0')
-                message = 'fix: x\n\n' + body
+                message = title + '\n\n' + body
                 self.git('commit', '-q', '--allow-empty', '--cleanup=verbatim', '-m', message)
                 release = self.run_script('HEAD', '0.2.0')
-                pr = self.run_script('--check-message', stdin=message)
+                pr = self.pr_check(title, body)
                 commits = self.run_script('--check-commits', 'HEAD^..HEAD')
                 self.assertEqual((release.returncode == 0, pr.returncode == 0, commits.returncode == 0),
                                  (want_ok,) * 3, (release.stderr, pr.stderr, commits.stderr))

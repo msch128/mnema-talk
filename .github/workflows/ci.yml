@@ -190,16 +190,18 @@ jobs:
 
       # A `Security-Floor: raise` line that is not a trailer would fail the
       # release's bundle job after the merge (scripts/security-floor.sh), so
-      # refuse it here, in the description (the squash message) and in every
-      # commit of the branch. Runs for every pull request, code or not.
+      # refuse it here, in the title and description (checked as the squash
+      # message: title, blank line, description) and in every commit of the
+      # branch. Runs for every pull request, code or not.
       - if: ${{ github.event_name == 'pull_request' }}
         name: Security floor marker placement
         env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_RANGE: ${{ format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$PR_BODY" | sh scripts/security-floor.sh --check-message
+          printf '%s\n' "$PR_BODY" | sh scripts/security-floor.sh --check-message "$PR_TITLE"
           sh scripts/security-floor.sh --check-commits "$PR_RANGE"
 
       - if: ${{ needs.changes.outputs.code == 'true' }}

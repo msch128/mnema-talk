@@ -2,7 +2,7 @@
 # Decides the desktop bundle's security floor for a release.
 # Usage: scripts/security-floor.sh <rev> <version>
 #        scripts/security-floor.sh --check-commits <git-range>
-#        scripts/security-floor.sh --check-message < message
+#        scripts/security-floor.sh --check-message <title> < description
 # <rev> is the release commit (the release tag in the release job) and
 # <version> its version. Prints the floor the release declares: the highest
 # version of a release that raised it, or an empty line when none did (then
@@ -71,7 +71,11 @@ case ${1:-} in
   exit
   ;;
 --check-message)
-  misplaced "the message" "$(cat)"
+  # The squash commit is the title, a blank line and the description, so
+  # the description alone is checked under its title, never as a message
+  # whose first paragraph would be read as the subject.
+  title=${2:?usage: security-floor.sh --check-message <title> < description}
+  misplaced "the pull request" "$(printf '%s\n\n%s\n' "$title" "$(cat)")"
   exit
   ;;
 esac

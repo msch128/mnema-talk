@@ -150,11 +150,15 @@ with the `security` scope but no trailer only prints a warning in the job log.
 A line that starts with `Security-Floor` but is not exactly the trailer
 `Security-Floor: raise` in the last paragraph (another paragraph such as
 `BREAKING CHANGE:` follows it, or a near miss such as `Security-Floor: raise.`)
-is refused instead of being dropped: the `backend` check of a pull request fails when the description or
-one of its commits has such a line, and the release job fails when a commit of
+is refused instead of being dropped: the `backend` check of a pull request
+fails when its title, its description (read as the squash commit: title, blank
+line, description) or one of its commits has such a line, and the release job
+fails when a commit of
 the release has one (only the release's own commits, since the previous tag),
 so that release gets no signed bundle until the next one carries the trailer
-as the last paragraph.
+as the last paragraph. That includes a prose line wrapped so that it starts
+with the key, and the marker quoted on its own line in a code block: mention
+the marker inside a sentence, never at the start of a line.
 So a vulnerability fix in anything the bundle ships (the web app: markdown,
 media, auth, message rendering, crypto) must carry the trailer; the maintainer
 checklist in `AGENTS.md` repeats this. A fix without the trailer leaves the
