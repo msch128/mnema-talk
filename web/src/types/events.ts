@@ -33,6 +33,7 @@ export type VoiceStateUpdate =
   | { action: 'leave'; channel_id: string; user_id: string }
 export type ReadStateUpdate =
   | Pick<ReadState, 'channel_id' | 'last_read_at' | 'unread_count' | 'mention_count'>
+  | (Pick<ReadState, 'channel_id' | 'last_read_at' | 'unread_count' | 'mention_count'> & { last_message_number: number })
   | { channel_id: string; last_read_at: string; refresh: true }
   | { channel_id: string; refresh: true } | { refresh: true }
   | Pick<ReadState, 'channel_id' | 'notify_level'>
@@ -271,7 +272,8 @@ function isStandardReadState(payload: Record<string, unknown>): boolean {
   const validLastRead = lastReadAt === null || isTimestamp(lastReadAt)
   if (!validLastRead) return false
   if (!isInteger(payload['unread_count']) || !isInteger(payload['mention_count'])) return false
-  return onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
+  if (hasOwn(payload, 'last_message_number') && !isInteger(payload['last_message_number'])) return false
+  return onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count', 'last_message_number'])
 }
 
 function isReadStateUpdate(payload: Record<string, unknown>): boolean {

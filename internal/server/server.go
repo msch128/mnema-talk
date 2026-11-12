@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"log/slog"
 	"net/http"
 	"time"
@@ -94,6 +95,9 @@ type Router struct {
 	cancel          context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
+	// recount sends read-state counts after deletes and edits; Close waits
+	// for its worker to stop (it starts nothing once the context ended).
+	recount *readstate.Recounter
 }
 
 // Close stops background work and closes the hub's upgraded WebSockets.
@@ -110,6 +114,9 @@ func (r *Router) Close() {
 	if r.outgoing != nil {
 		// Attempts in flight finish and the queue stays in the database.
 		r.outgoing.Wait(webhookStopWait)
+	}
+	if !r.recount.Wait(jobsStopWait) {
+		slog.Warn("read state recount still running at shutdown")
 	}
 }
 
@@ -147,6 +154,7 @@ func NewRouter(d Deps) (*Router, error) {
 			cancel()
 		},
 		outgoing: c.outgoing,
+		recount:  c.recount,
 		accounts: c.authH,
 	}, nil
 }

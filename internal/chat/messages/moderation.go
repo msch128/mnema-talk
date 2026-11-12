@@ -182,6 +182,9 @@ type bulkDeleteReport struct {
 
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
+	if len(rep.gone) > 0 {
+		defer a.Recount.Tell(chID, nil, nil) // after the deletes; their replies may be newer than any root
+	}
 	for _, m := range rep.gone {
 		a.Events.BroadcastChannel(chID, wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID})
 		d := map[string]any{
@@ -326,4 +329,22 @@ func loadDeletedAttachments(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (ma
 	}
 	media.Close()
 	return byMessage, keys, nil
+}
+
+// ownerWords reports whether a message is the Owner's or has a reply of the
+// Owner in its thread: those are only the Owner's to remove. It is read after
+// the message is locked, in a statement of its own: a reply holds a key-share
+// lock on its root until it commits, and a subquery of the statement that
+// waited for it would not see it. Once the root is locked no new reply can be
+// added to it.
+func ownerWords(ctx context.Context, tx pgx.Tx, messageID, author uuid.UUID) (bool, error) {
+	var owner bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM users WHERE id = $2 AND role = 'admin')
+		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
+		               WHERE r.parent_id = $1 AND ru.role = 'admin')`, messageID, author).Scan(&owner)
+	if err != nil {
+		return false, fmt.Errorf("check the Owner's replies: %w", err)
+	}
+	return owner, nil
 }

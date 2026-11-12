@@ -152,13 +152,34 @@ func ScreenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uu
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,
 // the follows it implies.
+//
+// The channel row stays locked from before the message draws its number until
+// the commit, and the number is written to channels.last_message_number: the
+// messages of one channel commit in the order of their numbers, so a read of
+// that column sees every message up to it and none above it. That is what
+// lets GET /api/read-state say which messages its counts include.
+//
+// One lock cycle is known and left to PostgreSQL's deadlock detection: an
+// account erasure locks the user and later updates the channels that user
+// leads (a temporary Talk), while a post in such a Talk that mentions them
+// holds the channel row and waits for the user's row (the mention's foreign
+// key). One of the two is aborted and fails once; it needs the Talk's leader
+// to erase their account while being mentioned in it.
 func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage, rules sendRules) (uuid.UUID, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, nm.ChannelID); err != nil {
+		return uuid.Nil, fmt.Errorf("lock channel: %w", err)
+	}
 	if err := gatePost(ctx, tx, nm, rules); err != nil {
 		return uuid.Nil, err
 	}
 	id, err := CreateMessage(ctx, tx, nm)
 	if err != nil {
 		return uuid.Nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE channels SET last_message_number = m.number FROM messages m
+		WHERE channels.id = $1 AND m.id = $2`, nm.ChannelID, id); err != nil {
+		return uuid.Nil, fmt.Errorf("note newest message: %w", err)
 	}
 	if err := recordNonce(ctx, tx, nm, id); err != nil {
 		return uuid.Nil, err

@@ -634,7 +634,47 @@ mention policy: a name a webhook or bot left as plain text (user mentions off,
 `allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
 web client decides from the message's `mentions` list, not from the text, so
 the live badge, the page's notification and the sound match the badge after a
-reload.
+reload. The answer of `GET /api/read-state` and the live `message_create`
+events travel separately and can cross. Each answer therefore says per channel
+`last_message_number`, the number of the newest message its counts include:
+a message draws its number and commits while its transaction holds the
+channel row's lock (`messages.insertMessageTx`, `channels.last_message_number`,
+migration 0104), so a channel's messages commit in the order of their numbers
+and the counts hold exactly the messages up to that number. The client counts
+a `message_create` on top of the answer only when its number is above the
+mark, and re-adds the ones it counted while the request was on its way the
+same way; a read in another session (`read_state` with counts) after the
+request began keeps the client's state, like a read in this one. Only the
+answer of the newest request is kept. This exactness has a price, accepted
+for exact counters: the posts of one channel now wait for each other from the
+lock to the commit. Measured on the insert alone (`messages.InsertMessage`, no
+HTTP, no rate limit): in one busy channel with 8 concurrent writers about 230
+to 480 posts a second instead of about 630 to 660, and a median insert of 15 to
+27 ms instead of about 8.5 ms (independent review, loaded machine); a second
+run with the erased-person guard of migration 0103 in place, on a quieter
+machine, gave about 740 to 760 posts a second instead of about 870 and a
+median of about 10.5 ms instead of 6.5 ms. Writers spread over channels show
+no difference. A channel still takes several hundred posts a second, far more
+than the per-member send limit lets members produce. `GET /api/threads/following` is ordered
+the same way without a mark: `thread_follow_updated` carries the whole state
+of a thread, so the changes that arrived while the list was on its way are
+applied to it again.
+A client counts a new message itself; a delete (also a bulk delete or
+the auto-delete sweep, once per channel and run) or an edit that changes the
+mentions brings nothing it could count, so the server sends the members whose
+count it may have moved (online, allowed to view the channel, not read up to
+the changed messages; for an edit, those it mentioned before or after) a
+`read_state` with their `unread_count`, `mention_count` and the channel's
+`last_message_number`, which the client applies like an answer of
+`GET /api/read-state` for that channel ([`recount.go`](../internal/chat/readstate/recount.go)).
+The request only queues the recount: one worker counts after the broadcast,
+with the server's context, 500 members a statement, and merges the requests
+of a channel that is already waiting (at most 256 channels wait; beyond that
+a channel is skipped and logged, and its badges heal at the next read,
+reconnect or reload). Nothing new starts once the server shuts down. The
+worker's time grows with the members told and the channel's unread backlog:
+measured, 1,000 members take 0.04 s (50 unread), 0.2 s (500) and 2 s (5,000),
+10,000 members 0.3 s, 1.8 s and 21 s; the deleting request waits for none of it.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is

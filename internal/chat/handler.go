@@ -44,6 +44,9 @@ type Handler struct {
 	Perms *perm.Service
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// Recount tells members their counts again after a delete or an edit;
+	// nil tells nobody.
+	Recount *readstate.Recounter
 	// Automod screens the messages posted through Posts; nil screens nothing.
 	Automod *automod.Engine
 	// EditHistoryLimit caps edit-history reads per member; nil means no cap.
@@ -86,7 +89,7 @@ func (h *Handler) voiceRooms() core.VoiceRooms {
 // memory is shared, so every API built here counts the same reads.
 func (h *Handler) messages() *messages.API {
 	return &messages.API{
-		DB: h.DB, Events: h.Events, Posts: h.Posts(), Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
+		DB: h.DB, Events: h.Events, Posts: h.Posts(), Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit, Recount: h.Recount,
 		Views: &h.historyViews, EditHistoryLimit: h.EditHistoryLimit, PinLimit: h.PinLimit,
 		FollowLimit: h.FollowLimit, ForwardLimit: h.ForwardLimit,
 	}

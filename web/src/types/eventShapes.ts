@@ -123,6 +123,9 @@ export type WsPresenceUpdate = { activity?: { type: number; name: string }; stat
 /** read_state, as the server's wire.ReadStateChannelRefresh writes it. */
 export type WireReadStateChannelRefresh = { channel_id: string; refresh: true }
 
+/** read_state, as the server's wire.ReadStateCounts writes it. */
+export type WireReadStateCounts = { channel_id: string; last_message_number: number; last_read_at: string | null; mention_count: number; unread_count: number }
+
 /** read_state, as the server's wire.ReadStateMarked writes it. */
 export type WireReadStateMarked = { channel_id: string; last_read_at: string; mention_count: number; unread_count: number }
 
@@ -262,7 +265,7 @@ export interface ServerEventShapes {
   pong: WirePong
   presence_snapshot: WsPresenceSnapshot
   presence_update: WsPresenceUpdate
-  read_state: WireReadStateChannelRefresh | WireReadStateMarked | WireReadStateRefresh | WireReadStateUnread
+  read_state: WireReadStateChannelRefresh | WireReadStateCounts | WireReadStateMarked | WireReadStateRefresh | WireReadStateUnread
   reminder_update: LaterReminderEvent
   reports_open: WireReportsOpen
   roles_changed: WireRolesChanged

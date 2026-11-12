@@ -6,6 +6,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -28,6 +29,9 @@ type API struct {
 	Online mentions.OnlineSource
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// Recount tells members their counts of a channel again after a delete or
+	// an edit there (it queues; see readstate.Recounter); nil tells nobody.
+	Recount *readstate.Recounter
 	// Views remembers recent edit-history reads (see edit_history.go); it lives
 	// in the Handler so every API built from it shares one memory.
 	Views *HistoryViews

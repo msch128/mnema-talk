@@ -2244,6 +2244,7 @@ export const decodeChatReactionSummary = decoder("chat.ReactionSummary", isChatR
 
 export type ChatReadState = {
   channel_id: string
+  last_message_number?: number
   last_read_at: string | null
   mention_count: number
   notify_level: ChatNotifyLevel
@@ -2253,6 +2254,7 @@ export type ChatReadState = {
 export function isChatReadState(value: unknown): value is ChatReadState {
   return isRecord(value)
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "last_message_number") || isInteger(value["last_message_number"]))
     && (hasOwn(value, "last_read_at") && (isTimestamp(value["last_read_at"]) || value["last_read_at"] === null))
     && (hasOwn(value, "mention_count") && isInteger(value["mention_count"]))
     && (hasOwn(value, "notify_level") && isChatNotifyLevel(value["notify_level"]))

@@ -3798,6 +3798,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "last_message_number": {
+            "description": "LastMessageNumber is the number of the channel's newest message when the\ncounts were read (0: none yet). The counts include exactly the channel's\nmessages up to it: a client counts a message_create with a higher number\non top of this answer and one with a lower or equal number not again.",
+            "type": "integer"
+          },
           "last_read_at": {
             "format": "date-time",
             "type": [

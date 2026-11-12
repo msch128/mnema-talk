@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/communityevents"
@@ -41,8 +42,9 @@ func (c *components) newChat() {
 	// find it through the pool get it in newModeration, once the build can no
 	// longer fail.
 	c.engine = automod.New(d.DB, c.permSvc, c.pub, c.auditLog)
+	c.recount = readstate.NewRecounter(c.ctx, d.DB, c.permSvc, hub, c.pub)
 	c.chatH = &chat.Handler{
-		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog, Automod: c.engine,
+		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog, Automod: c.engine, Recount: c.recount,
 		EditHistoryLimit: httpx.NewRateLimiter(messages.EditHistoryRate, time.Minute).Named("edit_history"),
 		PinLimit:         httpx.NewRateLimiter(messages.PinChangesPerMinute, time.Minute).Named("pin"),
 		FollowLimit:      httpx.NewRateLimiter(messages.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
@@ -54,7 +56,7 @@ func (c *components) newChat() {
 	}
 	safego.Go("edit_history", safego.Crash, func() { messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour) })
 	safego.Go("poll_fold", safego.Crash, func() { poll.RunFold(c.ctx, d.DB, 10*time.Minute) })
-	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
+	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog, Recount: c.recount}
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}

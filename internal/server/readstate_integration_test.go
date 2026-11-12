@@ -15,6 +15,8 @@ type readState struct {
 	UnreadCount  int       `json:"unread_count"`
 	MentionCount int       `json:"mention_count"`
 	NotifyLevel  string    `json:"notify_level"`
+	// LastMessageNumber: the counts include exactly the messages up to it.
+	LastMessageNumber int64 `json:"last_message_number"`
 }
 
 func (c *client) readState(t *testing.T, ch uuid.UUID) readState {
