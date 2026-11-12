@@ -191,6 +191,14 @@ function handleUnauthorizedNotification(
   }
 }
 
+type Handlers = Set<{ readonly handler: () => void }>
+
+/** Tells the subscribers of a refusal that is not about the session: the rules are not accepted, or a dependency is down (503). */
+function notifyRefusal(status: number, error: ApiError, rules: Handlers, unavailable: Handlers) {
+  const targets = error.code === 'RULES_NOT_ACCEPTED' ? rules : status === 503 && error.code === 'UNAVAILABLE' ? unavailable : null
+  for (const { handler } of [...(targets ?? [])]) handler()
+}
+
 /** Construct once per session owner. Transport is immutable and every
  * client owns its listeners; choosing a profile never replaces global fetch. */
 export function createApiClient(transport: ApiTransport): ApiClient {
@@ -226,8 +234,7 @@ export function createApiClient(transport: ApiTransport): ApiClient {
     if (!answered) {
       const error = serverFailure(response.status, body, path, operation.method)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
-      if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
-      if (response.status === 503 && error.code === 'UNAVAILABLE') for (const { handler } of [...unavailableHandlers]) handler()
+      notifyRefusal(response.status, error, rulesHandlers, unavailableHandlers)
       throw error
     }
     options.onStatus?.(response.status)
