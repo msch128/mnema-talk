@@ -41,10 +41,11 @@ type recovery struct {
 	// resetFlood is a coarse flood guard on the anonymous reset form, keyed
 	// the same way whether or not an account has the address.
 	resetFlood *httpx.RateLimiter
-	// resetPerAccount is the exact, race-free cap on reset mails per account:
-	// the database count alone lets concurrent requests slip past together. It
-	// is a budget of its own, so reset requests of strangers never spend the
-	// confirmation mails' perAddress budget.
+	// resetPerAccount caps reset mails per account in memory, in front of the
+	// database budget (auth.TokensPerHour, counted under a lock in
+	// auth.IssueAccountToken, so it holds across restarts and parallel
+	// requests). It is a budget of its own, so reset requests of strangers
+	// never spend the confirmation mails' perAddress budget.
 	resetPerAccount *httpx.RateLimiter
 	resendPerUser   *httpx.RateLimiter
 	slots           chan struct{}

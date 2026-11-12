@@ -221,7 +221,12 @@ func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID, lang strin
 	if allowed, _ := h.rec.perAddress.Allow(addressKey(st.Address)); tooOften || !allowed {
 		return httpx.ErrRateLimited()
 	}
+	// IssueAccountToken counts again under its lock, so parallel requests
+	// cannot pass the hourly budget together.
 	token, err := auth.IssueAccountToken(ctx, h.Sessions.DB, id, auth.PurposeEmailVerify, st.Address, auth.EmailVerifyTTL)
+	if errors.Is(err, auth.ErrTooManyLinks) {
+		return httpx.ErrRateLimited()
+	}
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -44,9 +45,24 @@ func issueWithinBudget(ctx context.Context, p *db.Pool, user uuid.UUID, purpose 
 
 var errBudgetSpent = fmt.Errorf("budget spent")
 
-// sweepMailLinks races raceCallers issues for one account and purpose and
+// mailLinkCallers is four times TokensPerHour, so most callers queue behind
+// the lock and find the budget spent there.
+const mailLinkCallers = 20
+
+// spentOnly reports whether every error of the round is a refusal of the
+// hourly budget (a timeout or a pool error would be something else).
+func spentOnly(r racetest.Round) bool {
+	for _, err := range r.Errs {
+		if err != nil && !errors.Is(err, errBudgetSpent) && !errors.Is(err, ErrTooManyLinks) {
+			return false
+		}
+	}
+	return true
+}
+
+// sweepMailLinks races mailLinkCallers issues for one account and purpose and
 // returns the rounds that left more than one live link and those that issued
-// more than TokensPerHour links in the hour.
+// more or fewer than TokensPerHour links in the hour.
 func sweepMailLinks(t *testing.T, purpose string) (racetest.Result, racetest.Result) {
 	p, _, member := authFixture(t)
 	ctx := context.Background()
@@ -56,33 +72,34 @@ func sweepMailLinks(t *testing.T, purpose string) (racetest.Result, racetest.Res
 		}
 	}
 	rounds := racetest.Rounds(20, 500)
-	live := racetest.Sweep(t, rounds, raceCallers, reset,
+	live := racetest.Sweep(t, rounds, mailLinkCallers, reset,
 		func(_, _ int) error { return issueWithinBudget(ctx, p, member.ID, purpose) },
-		func(round int, _ racetest.Round) string {
-			if n := liveTokens(t, p, member.ID, purpose); n > 1 {
-				return fmt.Sprintf("round %d: %d live links", round, n)
+		func(round int, r racetest.Round) string {
+			if n := liveTokens(t, p, member.ID, purpose); n != 1 || !spentOnly(r) {
+				return fmt.Sprintf("round %d: %d live links, errors %v", round, n, r.Errs)
 			}
 			return ""
 		})
-	budget := racetest.Sweep(t, rounds, raceCallers, reset,
+	budget := racetest.Sweep(t, rounds, mailLinkCallers, reset,
 		func(_, _ int) error { return issueWithinBudget(ctx, p, member.ID, purpose) },
-		func(round int, _ racetest.Round) string {
-			if n, err := recentTokens(ctx, p, member.ID, purpose); err != nil || n > TokensPerHour {
-				return fmt.Sprintf("round %d: %d links in the hour (%v)", round, n, err)
+		func(round int, r racetest.Round) string {
+			n, err := recentTokens(ctx, p, member.ID, purpose)
+			if err != nil || n != TokensPerHour || r.Succeeded() != TokensPerHour || !spentOnly(r) {
+				return fmt.Sprintf("round %d: %d links in the hour, %d issues succeeded (%v, %v)", round, n, r.Succeeded(), err, r.Errs)
 			}
 			return ""
 		})
 	return live, budget
 }
 
+// H-L7-01: the count, the retire and the insert of IssueAccountToken run
+// under one lock per account and purpose.
 func TestParallelMailLinksLeaveOneLiveLinkWithinTheHourlyBudget(t *testing.T) {
 	for _, purpose := range []string{PurposePasswordReset, PurposeEmailVerify} {
 		t.Run(purpose, func(t *testing.T) {
 			live, budget := sweepMailLinks(t, purpose)
-			// Expected failures until H-L7-01 is fixed: the retire, the
-			// count and the insert are separate statements with no lock.
-			live.KnownFailure(t, "H-L7-01 (live links)")
-			budget.KnownFailure(t, "H-L7-01 (hourly budget)")
+			live.FailOnViolation(t)
+			budget.FailOnViolation(t)
 		})
 	}
 }
@@ -93,6 +110,11 @@ func TestParallelUsesOfOneMailLinkLetExactlyOneWin(t *testing.T) {
 	var plain string
 	racetest.Sweep(t, racetest.Rounds(20, 500), raceCallers,
 		func(int) {
+			// A fresh hourly budget per round: IssueAccountToken refuses the
+			// sixth link of the hour.
+			if _, err := p.Exec(ctx, `DELETE FROM account_tokens`); err != nil {
+				t.Fatal(err)
+			}
 			var err error
 			if plain, err = IssueAccountToken(ctx, p, member.ID, PurposePasswordReset, "", time.Hour); err != nil {
 				t.Fatal(err)

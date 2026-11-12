@@ -95,10 +95,10 @@ func TestParallelResetRequestsLeaveOnlyTheNewestLinkWorking(t *testing.T) {
 			if len(mail.sent) == 0 {
 				t.Fatalf("round %d: no reset mail was sent, the sweep tested nothing", round)
 			}
-			if working > 1 {
+			if working != 1 {
 				return fmt.Sprintf("round %d: %d mails, %d links work", round, len(mail.sent), working)
 			}
 			return ""
 		})
-	res.KnownFailure(t, "H-L7-01")
+	res.FailOnViolation(t)
 }
