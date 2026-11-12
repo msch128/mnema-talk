@@ -3,7 +3,6 @@ import {
   mlsExporter,
   zeroOutUint8Array,
   type ClientState,
-  type KeyPackage,
   type Proposal,
 } from 'ts-mls'
 import { FRAME_EPOCH_BYTES, MEDIA_EXPORTER_LABEL } from './bounds'
@@ -13,10 +12,10 @@ import { sealHeartbeat } from './heartbeat'
 import { sealCapability } from './capability'
 import { safetyCode } from './verify'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
-import { credentialIdentity, sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers } from './groupTree'
+import { sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers } from './groupTree'
 import { GroupBase } from './groupBase'
-import { vetAdds } from './groupAdds'
-import { commitMessage, dropAbsent, retainedPrevious, type AddProposal, type CommitResult, type SealedCommit } from './groupEpochCommit'
+import { addedIds } from './groupEntry'
+import { commitMessage, dropAbsent, retainedPrevious, type CommitResult, type SealedCommit } from './groupEpochCommit'
 
 type EpochMaterial = {
   aes: CryptoKey
@@ -98,7 +97,8 @@ export abstract class GroupEpoch extends GroupBase {
     // A package kept from before its sender was in my tree must not add it again once it was removed.
     for (const id of members.keys()) this.pending.delete(id)
     this.trackLeaves(state, members, now)
-    this.entries.observe(state, now)
+    this.entries.observe(state, now, this.added)
+    this.added = new Set()
     this.forgetDeparted(members)
     this.markNewMembers(members, now)
     if (this.tickTimer === null) {
@@ -253,10 +253,9 @@ export abstract class GroupEpoch extends GroupBase {
   private absentProposals(members: Map<string, number>, now: number): Proposal[] {
     const silent = [...members].filter(([id]) => id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs)
     // Members that came in lately would refuse the removal (see groupEntry.ts), unless it is long overdue.
-    const wait = this.timing.absentMs + Math.max(10, this.timing.maintenanceMs)
-    const ids = new Set([...silent.map(([id]) => id), this.userId])
-    const hold = this.entries.anyWithin(ids, now, wait)
-    return silent.filter(([id]) => !hold || now - (this.alive.get(id) as number) > 2 * this.timing.absentMs).map(([, leaf]) => ({ proposalType: 'remove', remove: { removed: leaf } }))
+    const hold = this.entries.holds(new Set(silent.map(([id]) => id)), this.userId, now, this.timing)
+    const due = silent.filter(([id]) => !hold || now - (this.alive.get(id) as number) > 2 * this.timing.absentMs)
+    return due.map(([, leaf]) => ({ proposalType: 'remove', remove: { removed: leaf } }))
   }
 
   private rotationDue(now: number): boolean {
@@ -303,6 +302,7 @@ export abstract class GroupEpoch extends GroupBase {
   protected async commit(extraProposals: Proposal[], renewal = false): Promise<Uint8Array[]> {
     if (!this.state) return []
     const previous = this.state
+    this.added = addedIds(extraProposals)
     let result: CommitResult
     try {
       result = await createCommit(
@@ -336,63 +336,5 @@ export abstract class GroupEpoch extends GroupBase {
     // A renewal may race another commit for the same epoch: keep the state it left.
     if (renewal) this.selfUpdate = { state: previous, current, previousEpoch, sender: this.userId, until: clock.now() + CONFLICT_MS, held: result.consumed }
     return wires.welcome ? [wires.welcome, wires.commit] : [wires.commit]
-  }
-
-  protected async commitAdds(others: readonly string[]): Promise<Uint8Array[]> {
-    if (!this.state) return []
-    const proposals = this.proposalsFor(others, treeMembers(this.state))
-    if (!proposals.length) return []
-    // One bad package would fail a whole batch again and again as it stays pending: try each alone, drop the failing.
-    const vetted = proposals.length > 1 ? await vetAdds(this.state, this.cs, proposals) : null
-    for (const trial of vetted?.trials ?? []) this.wipeRejected(trial)
-    if (vetted) this.dropPackages(vetted.dropped)
-    const usable = vetted ? vetted.usable : proposals
-    if (!usable.length) return []
-    const wires = await this.commit(usable)
-    if (wires.length || usable.length === 1) this.dropPackages(usable)
-    return wires
-  }
-
-  private dropPackages(proposals: readonly AddProposal[]): void {
-    for (const proposal of proposals) {
-      const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
-      if (id && this.pending.get(id) === proposal.add.keyPackage) this.pending.delete(id)
-    }
-  }
-
-  private proposalsFor(others: readonly string[], members: Map<string, number>): AddProposal[] {
-    const wanted = new Set(others)
-    const proposals: AddProposal[] = []
-    for (const [id, keyPackage] of this.pending) {
-      if (!wanted.has(id) || members.has(id)) continue
-      proposals.push({ proposalType: 'add', add: { keyPackage } })
-    }
-    return proposals
-  }
-
-  protected async commitRemoves(others: readonly string[]): Promise<Uint8Array[]> {
-    if (!this.state) return []
-    const present = new Set(others)
-    present.add(this.userId)
-    const proposals = []
-    for (const [id, leaf] of treeMembers(this.state)) {
-      if (!present.has(id)) proposals.push({ proposalType: 'remove' as const, remove: { removed: leaf } })
-    }
-    if (!proposals.length) return []
-    return this.commit(proposals)
-  }
-
-  /** One commit that swaps a member's old leaf for the new package. */
-  protected async replaceMember(id: string, keyPackage: KeyPackage): Promise<Uint8Array[]> {
-    const state = this.state as ClientState
-    const present = new Set(this.room)
-    present.add(this.userId)
-    present.delete(id)
-    const proposals: Proposal[] = []
-    for (const [member, leaf] of treeMembers(state)) {
-      if (!present.has(member)) proposals.push({ proposalType: 'remove', remove: { removed: leaf } })
-    }
-    proposals.push({ proposalType: 'add', add: { keyPackage } })
-    return this.commit(proposals)
   }
 }

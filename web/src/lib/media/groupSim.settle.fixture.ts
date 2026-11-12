@@ -10,8 +10,8 @@
 //
 // Before, of the 43 seeds: settled within 900 s: 26 (honest 10 of 17, hostile
 // 16 of 26); within 3600 s: 35; never: 8 (honest 125 and 258; hostile 107,
-// 150, 194, 292, 323, 362). After: 42 settle within 195 s; hostile seed 109,
-// which passed the default run before, settles after 415 s. They had not been
+// 150, 194, 292, 323, 362). After the committer waits for newcomers (and for
+// the patience of the committer skip): all 44 within 195 s. They had not been
 // slow, they had churned (see groupSim.settle.test.ts).
 export interface Settle {
   relay: 'honest' | 'hostile'
@@ -25,14 +25,14 @@ export interface Settle {
 
 export const SETTLE: readonly Settle[] = [
   { relay: 'honest', seed: 30, members: 11, before: 774, after: 38, startOversBefore: 214, startOversAfter: 19 },
-  { relay: 'honest', seed: 64, members: 11, before: 241, after: 40, startOversBefore: 64, startOversAfter: 11 },
+  { relay: 'honest', seed: 64, members: 11, before: 241, after: 44, startOversBefore: 64, startOversAfter: 11 },
   { relay: 'honest', seed: 109, members: 12, before: 584, after: 21, startOversBefore: 169, startOversAfter: 17 },
   { relay: 'honest', seed: 116, members: 12, before: 281, after: 17, startOversBefore: 109, startOversAfter: 17 },
   { relay: 'honest', seed: 119, members: 11, before: 3062, after: 97, startOversBefore: 725, startOversAfter: 17 },
   { relay: 'honest', seed: 125, members: 11, before: null, after: 77, startOversBefore: 855, startOversAfter: 20 },
   { relay: 'honest', seed: 148, members: 7, before: 415, after: 5, startOversBefore: 75, startOversAfter: 17 },
   { relay: 'honest', seed: 162, members: 11, before: 2277, after: 42, startOversBefore: 514, startOversAfter: 14 },
-  { relay: 'honest', seed: 167, members: 12, before: 1034, after: 56, startOversBefore: 270, startOversAfter: 21 },
+  { relay: 'honest', seed: 167, members: 12, before: 1034, after: 140, startOversBefore: 270, startOversAfter: 21 },
   { relay: 'honest', seed: 206, members: 9, before: 1070, after: 34, startOversBefore: 196, startOversAfter: 19 },
   { relay: 'honest', seed: 246, members: 9, before: 1030, after: 60, startOversBefore: 188, startOversAfter: 23 },
   { relay: 'honest', seed: 254, members: 12, before: 244, after: 27, startOversBefore: 61, startOversAfter: 19 },
@@ -49,7 +49,7 @@ export const SETTLE: readonly Settle[] = [
   { relay: 'hostile', seed: 97, members: 8, before: 253, after: 35, startOversBefore: 71, startOversAfter: 38 },
   { relay: 'hostile', seed: 104, members: 12, before: 484, after: 177, startOversBefore: 131, startOversAfter: 51 },
   { relay: 'hostile', seed: 107, members: 12, before: null, after: 193, startOversBefore: 1080, startOversAfter: 51 },
-  { relay: 'hostile', seed: 109, members: 12, before: undefined, after: 415, startOversBefore: undefined, startOversAfter: 49 },
+  { relay: 'hostile', seed: 109, members: 12, before: undefined, after: 76, startOversBefore: undefined, startOversAfter: 55 },
   { relay: 'hostile', seed: 133, members: 8, before: 488, after: 89, startOversBefore: 114, startOversAfter: 36 },
   { relay: 'hostile', seed: 148, members: 7, before: 438, after: 18, startOversBefore: 64, startOversAfter: 21 },
   { relay: 'hostile', seed: 150, members: 9, before: null, after: 83, startOversBefore: 719, startOversAfter: 41 },
@@ -59,7 +59,7 @@ export const SETTLE: readonly Settle[] = [
   { relay: 'hostile', seed: 238, members: 11, before: 835, after: 62, startOversBefore: 180, startOversAfter: 26 },
   { relay: 'hostile', seed: 244, members: 11, before: 1082, after: 22, startOversBefore: 242, startOversAfter: 26 },
   { relay: 'hostile', seed: 292, members: 9, before: null, after: 80, startOversBefore: 714, startOversAfter: 39 },
-  { relay: 'hostile', seed: 294, members: 10, before: 261, after: 51, startOversBefore: 106, startOversAfter: 44 },
+  { relay: 'hostile', seed: 294, members: 10, before: 261, after: 70, startOversBefore: 106, startOversAfter: 44 },
   { relay: 'hostile', seed: 300, members: 10, before: 400, after: 24, startOversBefore: 135, startOversAfter: 42 },
   { relay: 'hostile', seed: 301, members: 7, before: 323, after: 24, startOversBefore: 75, startOversAfter: 23 },
   { relay: 'hostile', seed: 310, members: 11, before: 2048, after: 161, startOversBefore: 563, startOversAfter: 57 },

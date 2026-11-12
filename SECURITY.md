@@ -956,22 +956,35 @@ details and the limits.
   of life for 20 minutes is removed from the group (rekeyed out, so what it
   held no longer opens anything new) and must be let in again with a fresh
   key package when it returns. The committer removes a silent member only
-  once the newest member of its group has been in for the absence limit plus
-  a maintenance interval, or the silent one has been silent for twice the
-  limit. A member that came in by a welcome counts everyone as alive from
-  that moment (it heard none of their heartbeats) and refuses a removal
-  sooner (a receiver's rule, unchanged: nobody present is removed early); a
+  once the newest member of its group (an add of its id, or a swap of its
+  leaf, counts as coming in) has been in for the patience, the absence limit
+  plus two maintenance intervals, and one interval more; or once the silent
+  one has been silent for twice the limit, by that committer's own record. A
+  member that came in by a welcome counts everyone as alive from that moment
+  (it heard none of their heartbeats) and refuses a removal sooner (a
+  receiver's rule, unchanged: nobody present is removed early), and takes a
+  silent lowest id for the committer until the patience has passed; a
   committer that removed by what it heard alone would be refused by every
   newcomer, be one epoch ahead of them, and start them all over, which set
   their clocks back so the next removal was refused again (the simulator
-  showed Talks that never settled). Waiting only delays the committer: a
-  member that is gone stays in the group, and keeps its epoch keys, for at
-  most twice the limit (40 minutes, and only while newcomers keep coming in
-  within every 20 minutes), otherwise for the limit plus one maintenance
-  interval; a receiver never accepted a removal earlier than the limit. A
-  3.0.7 committer still removes at the limit and a new receiver treats that
-  as before; a new committer among 3.0.7 receivers waits where they would
-  have refused, which is strictly better for them. No message changes.
+  showed Talks that never settled). Waiting only delays the committer. The
+  twice-the-limit bound is each committer's own, and holds only for an
+  honest one: a new committer counts again from its own record, and a
+  malicious or hung lowest id can keep any member in by never committing, as
+  before. A member that is connected and silent (a hung tab, a frozen
+  browser, or a client that chooses to say nothing) therefore stays in the
+  group, and can decrypt the media of every epoch it holds while it is
+  connected, for up to twice the limit (40 minutes in production, where it
+  was 20), and only while newcomers keep coming in within every 20 minutes;
+  otherwise for about the limit. A member that left the Talk is removed at
+  once, as before. A receiver never accepted a removal earlier than the
+  limit. A 3.0.7 committer still removes at the limit and a new receiver
+  treats that as before; a new committer among 3.0.7 receivers waits where
+  they would have refused, which is strictly better for them. A receiver
+  that slept counts everyone alive from its wake and may still refuse one
+  removal; it then starts over and takes the group again, once per silent
+  member, and the simulator shows no loop (see groupSim.settle.test.ts). No
+  message changes.
   Liveness is not media (listeners are muted): every
   member signs a 78-byte heartbeat (group, id, epoch, increasing time) with its
   MLS leaf key about every 5 minutes over the existing handshake channel, and

@@ -12,7 +12,7 @@ import { Backoff } from './backoff'
 import { type EpochKeys } from './frame'
 import { type MediaVerification } from './verify'
 import { SWAP_BASE_MS, RESET_BASE_MS, BACKOFF_MAX_MS, RIVAL_BASE_MS, RIVAL_MAX_MS, type MediaStep, type OwnPackage } from './groupParams'
-import { Entries } from './groupEntry'
+import { Entries, patienceMs } from './groupEntry'
 import { sameBytes, wipeConsumed, treeMembers, lowest, encodeWire } from './groupTree'
 
 function stateSecrets(state: ClientState, withTag = true): Uint8Array[] {
@@ -72,6 +72,8 @@ export abstract class GroupBase {
   protected readonly alive = new Map<string, number>()
   /** When each member of my tree came in: a committer waits for the newest before it removes anyone for silence. */
   protected readonly entries = new Entries()
+  /** The ids the commit being taken adds: read when its epoch starts. */
+  protected added: ReadonlySet<string> = new Set()
   /**
    * The newest time any heartbeat of each listed id carried, whatever epoch it
    * was for, and the leaf key that signed it: an older one or a copy counts for
@@ -198,7 +200,7 @@ export abstract class GroupBase {
     // removed (a hung tab) must not hold the role: the next one takes over and
     // removes it. Everyone derives this from the same signs of life.
     const now = clock.now()
-    const patience = this.timing.absentMs + 2 * Math.max(10, this.timing.maintenanceMs)
+    const patience = patienceMs(this.timing)
     for (const id of treeMembers(this.state).keys()) {
       if (!room.has(id) || this.restarting.has(id)) continue
       if (id !== this.userId && now - (this.alive.get(id) as number) > patience) continue
@@ -256,6 +258,7 @@ export abstract class GroupBase {
     this.capHeard.clear()
     this.capDue = true
     this.leaves.clear()
+    this.entries.clear()
     this.updates.clear()
     this.dropSelfUpdate()
     this.clearDiscardTimers()

@@ -22,6 +22,7 @@ import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
 import { GroupMerge } from './groupMerge'
+import { addedIds } from './groupEntry'
 
 type MlsMessage = MLSMessage
 type ProcessedPublicMessage = Awaited<ReturnType<typeof processPublicMessage>>
@@ -341,6 +342,7 @@ export class MediaGroup extends GroupMerge {
   protected validator(state: ClientState, from: string): IncomingMessageCallback {
     return (incoming) => {
       this.vetted = new Set()
+      this.added = new Set()
       if (incoming.kind !== 'commit') return 'reject'
       const members = treeMembers(state)
       const senderLeaf = members.get(from)
@@ -358,6 +360,7 @@ export class MediaGroup extends GroupMerge {
       )
       if (!removedAt) return 'reject'
       this.vetted = removedAt
+      this.added = addedIds(proposals.map(({ proposal }) => proposal))
       return 'accept'
     }
   }
