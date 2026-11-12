@@ -34,13 +34,15 @@ name: Release
 #    Releases through v0.7.3 keep the ZIP that was attached here.
 #
 # Before a release is cut or merged, the most recent completed scheduled run
-# on main of each deep nightly sweep (sim-sweep.yml, visibility-sweep.yml,
-# store-trace.yml) must have succeeded within the last 48 hours
-# (scripts/nightly-gate.py). The one way past a red, stale or missing night is
-# a manual run of this workflow on main with `nightly_override` set to the
-# reason (an urgent security fix only, doc/development.md "Releases"); it
-# releases main's tip only when CI passed for it, and the reason and the actor
-# are printed in the job summary.
+# on main of each deep nightly sweep (the list is GATED in
+# scripts/nightly-gate.py: sim-sweep, visibility-sweep, store-trace,
+# plain-sweep) must have succeeded within the last 48 hours, in its first
+# attempt, with no run deleted after it. The one way past a red, re-run, stale
+# or missing night is a manual run of this workflow on main with
+# `nightly_override` set to the reason (an urgent security fix only,
+# doc/development.md "Releases"); it releases main's tip only when CI passed
+# for it, and the reason and the actor go into the job summary and into the
+# notes of the release it cuts.
 #
 # Deploying to the self-hosted server stays manual/pull-based (see README).
 
@@ -90,6 +92,7 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created || steps.publish.outputs.release_created }}
       version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name || steps.publish.outputs.tag_name }}
+      override_note: ${{ steps.gate.outputs.override_note }}
     steps:
       # CI runs for pushes to main are never cancelled (ci.yml), so an older
       # push can finish green after a newer one landed. release-please always
@@ -140,8 +143,12 @@ jobs:
       # still in progress is no verdict yet, so the completed one before it
       # decides; a sweep that has not had its first night yet (added under 48
       # hours ago) does not block either. Stale, disabled or never-run sweeps
-      # block like red ones, so a nightly that stopped cannot look green.
+      # block like red ones, so a nightly that stopped cannot look green. The
+      # runs of every event are read so that a gap in the run numbers (a
+      # deleted run) shows, and the first attempt of a re-run is read so that
+      # re-running a red night until it is green does not pass.
       - name: Check the nightly sweeps
+        id: gate
         if: steps.tip.outputs.current == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -154,13 +161,21 @@ jobs:
             exit 1
           fi
           work=$(mktemp -d)
-          nightlies="sim-sweep.yml visibility-sweep.yml store-trace.yml"
-          for wf in $nightlies; do
+          for wf in $(python3 scripts/nightly-gate.py --list); do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" > "$work/$wf.workflow.json"
-            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?branch=main&event=schedule&per_page=20" > "$work/$wf.runs.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100" > "$work/$wf.runs.json"
+            reruns=$(jq -r '.workflow_runs[] | select(.event == "schedule" and .head_branch == "main" and .status == "completed" and .run_attempt > 1) | .id' "$work/$wf.runs.json")
+            for id in $reruns; do
+              # A first attempt that cannot be read is left out: the gate then blocks and says so.
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/attempts/1" > "$work/$wf.attempt1-$id.json" || rm -f "$work/$wf.attempt1-$id.json"
+            done
           done
-          # shellcheck disable=SC2086 # the list above is word-split on purpose
-          python3 scripts/nightly-gate.py --override "$OVERRIDE" --summary "$GITHUB_STEP_SUMMARY" "$work" $nightlies
+          python3 scripts/nightly-gate.py --override "$OVERRIDE" --summary "$GITHUB_STEP_SUMMARY" \
+            --note-file "$work/override-note.txt" "$work"
+          # One line without newlines (the script folds the reason's whitespace).
+          if [ -s "$work/override-note.txt" ]; then
+            echo "override_note=$(cat "$work/override-note.txt")" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
@@ -677,3 +692,23 @@ jobs:
             printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
           } > notes.md
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+
+      # A release cut by the nightly override keeps its reason and actor in its
+      # notes (the run summary expires with the logs). One plain line at the
+      # end, written by scripts/nightly-gate.py: the login in code marks and no
+      # '@', so nobody is linked or notified.
+      - name: Record the nightly override
+        if: needs.release-please.outputs.override_note != ''
+        env:
+          NOTE: ${{ needs.release-please.outputs.override_note }}
+        run: |
+          set -eu
+          marker='<!-- nightly-override -->'
+          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+          case "$body" in *"$marker"*) echo "override line already present"; exit 0 ;; esac
+          {
+            printf '%s\n\n' "$body"
+            printf '%s\n' "$marker"
+            printf '%s\n' "$NOTE"
+          } > override-notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file override-notes.md

@@ -208,16 +208,21 @@ branch) was waived when it landed there and is not reported again.
 
    **A red night blocks the release.** Before release-please can cut a
    release or the release PR is merged, the workflow reads the most recent
-   completed scheduled run on `main` of each deep nightly sweep
-   (`sim-sweep.yml`, `visibility-sweep.yml`, `store-trace.yml`;
-   `scripts/nightly-gate.py`) and stops with an error when one did not
-   succeed (failure, timeout, cancelled, ...), is older than 48 hours (a
-   nightly that stopped running), or is disabled. A run still in progress is
-   no verdict, so the completed one before it decides; a sweep added less
-   than 48 hours ago that has not had its first night yet does not block.
-   Manual runs of a sweep do not count. The changes wait on `main`: the next
-   push after a green night releases them (or re-run the blocked Release run
-   once a night is green).
+   completed scheduled run on `main` of each deep nightly sweep (`GATED` in
+   `scripts/nightly-gate.py`: `sim-sweep.yml`, `visibility-sweep.yml`,
+   `store-trace.yml`, `plain-sweep.yml`) and stops with an error when one did
+   not succeed (failure, timeout, cancelled, ...), is older than 48 hours (a
+   nightly that stopped running), is disabled, is a re-run whose first
+   attempt did not succeed (or cannot be read), or when a run number is
+   missing after it (a deleted run; seen once a later run of that workflow
+   exists). A run still in progress is no verdict, so the completed one
+   before it decides; a sweep added less than 48 hours ago that has not had
+   its first night yet does not block. Manual runs of a sweep do not count.
+   Every other scheduled workflow is in `NOT_GATED` with its reason, and
+   `scripts/tests/test_nightly_gate.py` fails on a scheduled workflow in
+   neither list. The changes wait on `main`: the next push after a green
+   night releases them (or re-run the blocked Release run once a night is
+   green, if `main` has not moved since).
 
    **Override, for an urgent security fix only.** When a security fix cannot
    wait for the next green night, run the Release workflow by hand on `main`
@@ -225,10 +230,23 @@ branch) was waived when it landed there and is not reported again.
    the advisory it fixes, and `mirror_version` empty. It releases `main`'s
    tip only if CI passed on a push of exactly that commit, still waits for
    and mirrors every required check, and writes the nightly table, the
-   reason and the actor into the job summary (and a warning annotation), so
-   the run in the Actions history is the record. There is no other way past
-   the gate: no commit trailer, variable or label skips it. Agents never use
-   the override on their own; it is the owner's decision.
+   reason and the actor into the job summary (and a warning annotation).
+   The reason and the actor's login also go into the notes of the release
+   it cuts, as one plain line at the end, so the record outlives the run's
+   logs. The override is the owner's decision: agents never start it on
+   their own. Nothing technical stops them, since they work with the owner's
+   credentials; it is a rule.
+
+   **Forbidden ways past the gate.** The override is the only permitted
+   one. Never delete a red scheduled run, never re-run a red night until it
+   is green, never edit `scripts/nightly-gate.py`, its lists or this gate in
+   `release.yml` to let a release through, and never add an entry to a
+   sweep's known-failure list (for example `groupSim.known.fixture.ts`,
+   `groupSweep.known.fixture.ts`, `web/src/stores/storeTrace.known.ts`,
+   `canaryKnownLeaks`) to turn a night green; those lists only shrink, or
+   grow with a recorded finding. The gate detects a deleted run and a re-run
+   cheaply, but not every edit: no commit trailer, variable or label skips
+   it, and the script and the workflow are code-owned paths.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
