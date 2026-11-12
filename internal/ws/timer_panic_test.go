@@ -198,6 +198,86 @@ func TestPanicInPermissionEnforcementFailsClosed(t *testing.T) {
 	}
 }
 
+// A panic in the grace timer BEFORE the seat is removed (here: in the keep
+// check that runs under the lock before any map is changed, a one-time fault)
+// still ends the seat: the timer's clean-up ends the presence once more.
+// Without that retry the seat stays listed with no connection and no grace.
+func TestGraceTimerPanicBeforeTheSeatIsRemovedStillEndsIt(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	h.VoiceGrace = 20 * time.Millisecond
+	t.Cleanup(h.Close)
+	ch := voiceCh()
+	bad := testClient(h, auth.User{ID: uuid.New(), Username: "bad"})
+	h.joinVoice(bad, ch)
+	var calls atomic.Int32
+	h.graceKeep = func(voiceKey) bool {
+		if calls.Add(1) == 1 {
+			panic("fault before the seat is removed")
+		}
+		return false
+	}
+	before := metrics.GoroutinePanics.With("ws_voice_grace").Load()
+
+	h.unregister(bad)
+
+	waitCounted(t, "ws_voice_grace", before+1)
+	waitSeat(t, h, ch.ID, bad.User.ID, false)
+	assertHubUsable(t, h)
+	if graces := graceCount(h); graces != 0 {
+		t.Fatalf("%d graces left", graces)
+	}
+}
+
+// One member's failing disconnect does not spare the others, and the lock the
+// failing call held is released.
+func TestFailClosedCleanUpIsolatesEachMember(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	t.Cleanup(h.Close)
+	ch := voiceCh()
+	var clients []*Client
+	for range 5 {
+		c := testClient(h, auth.User{ID: uuid.New()})
+		h.joinVoice(c, ch)
+		clients = append(clients, c)
+	}
+	// Closing a closed channel panics inside shutdown, under the hub lock.
+	broken := make(chan struct{})
+	close(broken)
+	clients[0].done = broken
+
+	h.disconnectForRecheck(nil)
+
+	assertHubUsable(t, h)
+	for _, c := range clients[1:] {
+		if !c.closed.Load() {
+			t.Fatal("a member was not disconnected because another one's disconnect panicked")
+		}
+	}
+	for _, c := range clients {
+		if inRoom(h, ch.ID, c.User.ID) {
+			t.Fatal("a member kept their seat")
+		}
+	}
+}
+
+// A seat that has no connection and no grace period (nothing else will end
+// it) is removed by the fail-closed clean-up.
+func TestFailClosedCleanUpRemovesASeatWithNoConnectionAndNoGrace(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	t.Cleanup(h.Close)
+	ch := voiceCh()
+	user := auth.User{ID: uuid.New()}
+	h.mu.Lock()
+	h.voice[ch.ID] = map[uuid.UUID]auth.User{user.ID: user}
+	h.mu.Unlock()
+
+	h.disconnectForRecheck([]uuid.UUID{user.ID})
+
+	if inRoom(h, ch.ID, user.ID) {
+		t.Fatal("the seat stayed listed")
+	}
+}
+
 func graceCount(h *Hub) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
