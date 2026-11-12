@@ -1,7 +1,6 @@
 // @vitest-environment node
-// Known failure found by the store trace (storeTrace.test.ts, "clean
-// reply-follow"), shrunk to its smallest case. It runs, must fail, and turns
-// red on the day it passes: then move it to a normal test.
+// A failure found by the store trace (storeTrace.test.ts, "clean
+// reply-follow"), shrunk to its smallest case; fixed, so a normal test now.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
