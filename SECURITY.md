@@ -894,12 +894,13 @@ details and the limits.
   have not seen reach me while I am in another epoch: I start over, once per
   two such heartbeats, which it can make me do anyway. A member counts as alive only for a verified
   heartbeat or a verified commit, never for a message that merely parses.
-  **Key lifetime.** A key lives 30 minutes, plus or minus a random
+  **Key lifetime.** An epoch lasts 30 minutes, plus or minus a random
   two-minute jitter per epoch so Talks do not rotate in step, and the
-  committer notices an old epoch on a 30-second check, so with an awake
-  committer it lasts at most 32.5 minutes, and a committer that sleeps or is
-  skipped can extend that by a time that has not been measured: once the
-  epoch is that old, the committer (the lowest member id in the group and the
+  committer notices an old epoch on a 30-second check, so an awake committer
+  advances the epoch at most 32.5 minutes after it began and receivers then
+  keep the old key for 30 more seconds; a committer that sleeps or is skipped
+  can extend that by a time that has not been measured. Once the
+  epoch is due, the committer (the lowest member id in the group and the
   room) advances it with a commit that carries an update path, so even with
   no joins or leaves every member gets a new exporter key, and the committer's
   own leaf secrets are replaced (post-compromise security for it).
