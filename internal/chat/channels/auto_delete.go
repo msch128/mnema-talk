@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -209,7 +210,8 @@ type expiredMessage struct {
 
 // selectExpired locks the next batch of expired messages. Locking them blocks
 // a concurrent reply or upload (their foreign keys need a share lock), so
-// every attachment the delete removes is in the key list.
+// every attachment the delete removes is in the key list. The thread roots
+// that must stay are then left out by dropKeptThreads.
 func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff time.Time) ([]expiredMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT m.id, m.parent_id FROM messages m
@@ -229,7 +231,35 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 	if err != nil {
 		return nil, fmt.Errorf("select expired messages: %w", err)
 	}
-	return out, nil
+	if len(out) == 0 {
+		return out, nil
+	}
+	return dropKeptThreads(ctx, tx, out, cutoff)
+}
+
+// dropKeptThreads leaves out the locked roots that now have a reply younger
+// than the cutoff or a pinned one. The NOT EXISTS of selectExpired reads the
+// statement's snapshot, so it misses a reply or pin that committed after the
+// snapshot and before the root's lock was taken; this statement starts after
+// the locks are held. Once a root is locked, neither can be added: a reply's
+// insert and a pin of a reply take a key-share lock on the root first and wait
+// for the sweep.
+func dropKeptThreads(ctx context.Context, tx pgx.Tx, removed []expiredMessage, cutoff time.Time) ([]expiredMessage, error) {
+	ids := make([]uuid.UUID, len(removed))
+	for i, g := range removed {
+		ids[i] = g.id
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT parent_id FROM messages
+		WHERE parent_id = ANY($1) AND (created_at >= $2 OR is_pinned)`, ids, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("check kept threads: %w", err)
+	}
+	kept, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("check kept threads: %w", err)
+	}
+	return slices.DeleteFunc(removed, func(g expiredMessage) bool { return slices.Contains(kept, g.id) }), nil
 }
 
 func deleteExpired(ctx context.Context, tx pgx.Tx, removed []expiredMessage, keys *[]string) error {

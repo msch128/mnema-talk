@@ -174,6 +174,16 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, t.channel); err != nil {
 		return false, fmt.Errorf("lock channel: %w", err)
 	}
+	// A pinned reply keeps its thread root from auto-delete. Like a reply's
+	// insert, the pin takes a key-share lock on the root before it changes the
+	// reply: the sweep (FOR UPDATE SKIP LOCKED) skips the root while the pin
+	// is in flight, and a pin that comes after the sweep locked the root waits
+	// for it. parent_id never changes, so the subquery's snapshot is current.
+	if _, err := tx.Exec(ctx, `
+		SELECT 1 FROM messages WHERE id = (SELECT parent_id FROM messages WHERE id = $1 AND channel_id = $2)
+		FOR KEY SHARE`, t.message, t.channel); err != nil {
+		return false, fmt.Errorf("lock thread root: %w", err)
+	}
 	var current bool
 	err := tx.QueryRow(ctx, `SELECT is_pinned FROM messages WHERE id = $1 AND channel_id = $2 FOR NO KEY UPDATE`, t.message, t.channel).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {

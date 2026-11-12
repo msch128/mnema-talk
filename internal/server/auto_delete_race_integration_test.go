@@ -19,22 +19,35 @@ import (
 )
 
 // beforeStatement runs fn once, before the first statement containing match
-// is sent, on the connection's goroutine (the statement waits for it).
+// is sent, on the connection's goroutine (the statement waits for it). With
+// after set, fn runs once that statement has ended instead (for a query: its
+// rows are closed), before the next one is sent.
 type beforeStatement struct {
 	match string
+	after bool
 	once  sync.Once
 	fn    func()
 	hit   bool
 }
 
+type matchedStatement struct{}
+
 func (b *beforeStatement) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.TraceQueryStartData) context.Context {
-	if strings.Contains(strings.Join(strings.Fields(d.SQL), " "), b.match) {
-		b.once.Do(func() { b.hit = true; b.fn() })
+	if !strings.Contains(strings.Join(strings.Fields(d.SQL), " "), b.match) {
+		return ctx
 	}
+	if b.after {
+		return context.WithValue(ctx, matchedStatement{}, true)
+	}
+	b.once.Do(func() { b.hit = true; b.fn() })
 	return ctx
 }
 
-func (*beforeStatement) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (b *beforeStatement) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryEndData) {
+	if ctx.Value(matchedStatement{}) != nil {
+		b.once.Do(func() { b.hit = true; b.fn() })
+	}
+}
 
 func hookedPool(t *testing.T, source *db.Pool, hook *beforeStatement) *db.Pool {
 	t.Helper()
@@ -54,44 +67,73 @@ func hookedPool(t *testing.T, source *db.Pool, hook *beforeStatement) *db.Pool {
 	return &db.Pool{Pool: p}
 }
 
-// Lane 7 of the defect hunt. Auto-delete keeps "a thread root that still has
-// a reply younger than the cutoff or a pinned one" (sweepBatch). A reply that
-// is pinned after the sweep chose its root and before the root's delete
-// cascades to it must stay, or the pin must wait for the sweep.
+// Lane 7 of the defect hunt (H-L7-09). Auto-delete keeps "a thread root that
+// still has a reply younger than the cutoff or a pinned one" (sweepBatch). The
+// pin goes through the route and is in flight when the sweep selects: it has
+// changed the reply and holds its row lock, but has not committed (its foreign
+// key check on pinned_by waits for the user row the test holds). It commits
+// after the sweep chose its rows and before it deletes them. The pinned reply
+// and its root must stay; an unrelated old message shows that the sweep ran.
 func TestAReplyPinnedDuringTheSweepIsNotDeletedWithItsRoot(t *testing.T) {
 	f := newAutoDeleteFixture(t)
 	wantStatus(t, "auto-delete", f.set(f.owner, f.channel, 7), http.StatusOK)
 	root := f.a.send(f.alice, f.channel, "old root")
-	res := f.bob.post(f.base()+"/messages", map[string]any{"content": "old reply", "parent_id": root})
-	wantStatus(t, "reply", res, http.StatusCreated)
-	var reply struct{ ID string }
-	res.decode(t, &reply)
-	replyID := uuid.MustParse(reply.ID)
-	f.age(t, root, 30)
-	f.age(t, replyID, 30)
+	reply := f.replyTo(t, root)
+	other := f.a.send(f.alice, f.channel, "old message")
+	for _, id := range []uuid.UUID{root, reply, other} {
+		f.age(t, id, 30)
+	}
 
+	ctx := t.Context()
+	hold, err := f.a.db.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = hold.Rollback(ctx) }()
+	if _, err := hold.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR UPDATE`, f.owner.user.ID); err != nil {
+		t.Fatal(err)
+	}
 	pinned := make(chan int, 1)
+	go func() {
+		pinned <- f.owner.do(http.MethodPut, f.base()+"/messages/"+reply.String()+"/pin", nil, nil).status
+	}()
+	f.waitForThePinsUpdate(t)
+
+	status := 0
 	hook := &beforeStatement{match: "DELETE FROM messages WHERE id = ANY", fn: func() {
-		go func() {
-			pinned <- f.owner.do(http.MethodPut, f.base()+"/messages/"+replyID.String()+"/pin", nil, nil).status
-		}()
+		if err := hold.Commit(ctx); err != nil {
+			t.Error(err)
+		}
 		select {
-		case status := <-pinned:
-			pinned <- status
-		case <-time.After(3 * time.Second):
-			// The pin waits for the sweep: serialised, which is fine.
+		case status = <-pinned:
+		case <-time.After(10 * time.Second):
+			t.Error("the pin did not answer once the user row was free")
 		}
 	}}
 	d := &channels.AutoDeleter{DB: hookedPool(t, f.a.db, hook), Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
-	if err := d.Sweep(t.Context()); err != nil {
+	if err := d.Sweep(ctx); err != nil {
 		t.Fatal(err)
 	}
-	status := <-pinned
-	t.Logf("pin during the sweep answered %d; reply kept %v, root kept %v", status, f.exists(replyID), f.exists(root))
-	if status == http.StatusOK && !f.exists(replyID) {
-		t.Errorf("the pin answered 200 during the sweep, and the pinned reply was deleted with its root")
+	if status != http.StatusOK {
+		t.Fatalf("the pin answered %d, want 200", status)
 	}
-	if status == http.StatusOK && !f.exists(root) {
-		t.Logf("root deleted although a reply of it is pinned")
+	if f.exists(other) {
+		t.Fatal("the unrelated old message was not deleted: the sweep did not run")
 	}
+	kept := f.a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1 AND is_pinned`, reply) == 1
+	if !kept || !f.exists(root) {
+		t.Errorf("the pin answered 200 during the sweep: pinned reply kept %v, root kept %v", kept, f.exists(root))
+	}
+}
+
+// waitForThePinsUpdate waits until the pin's UPDATE waits for a lock: the
+// reply's row is then changed and locked by the uncommitted pin.
+func (f autoDeleteFixture) waitForThePinsUpdate(t *testing.T) {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if f.a.countRows(`SELECT COUNT(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%UPDATE messages SET is_pinned%'`) == 1 {
+			return
+		}
+	}
+	t.Fatal("the pin never reached its UPDATE")
 }

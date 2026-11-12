@@ -22,11 +22,17 @@ import (
 // transaction the test holds open and proves that the statement waited.
 
 // Auto-delete keeps a thread root that has a pinned reply (sweepBatch). The
-// pin of a reply does not lock the root, and the sweep skips (SKIP LOCKED) the
-// reply the pin holds, so the sweep chooses the root while the pin is still
-// uncommitted. When the pin commits before the root's delete cascades to the
-// reply, the pinned reply is deleted. H-L7-09.
-func TestAReplyPinnedDuringTheSweepSelectIsDeletedWithItsRoot(t *testing.T) {
+// sweep's selection decides on its statement's snapshot and skips (SKIP
+// LOCKED) the reply an uncommitted pin holds. Here the pin is the bare UPDATE
+// of writePin without the key-share lock on the root that the route takes, so
+// the sweep locks the root, and the pin commits right after the selection.
+// For the sweep this is the state a real pin leaves when it commits between
+// the selection's snapshot and its lock attempt on the root: root locked, pin
+// committed, the selection blind to it. The sweep must see the pin after its
+// locks are held and keep the root, so the cascade does not take the pinned
+// reply. H-L7-09; the pin through the route is
+// TestAReplyPinnedDuringTheSweepIsNotDeletedWithItsRoot.
+func TestAReplyPinnedAfterTheSweepSelectIsKeptWithItsRoot(t *testing.T) {
 	f := newAutoDeleteFixture(t)
 	wantStatus(t, "auto-delete", f.set(f.owner, f.channel, 7), http.StatusOK)
 	root := f.a.send(f.alice, f.channel, "old root")
@@ -40,13 +46,13 @@ func TestAReplyPinnedDuringTheSweepSelectIsDeletedWithItsRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = pin.Rollback(ctx) }()
-	// The statement of writePin (internal/chat/messages/pins.go), held open.
+	// The UPDATE of writePin (internal/chat/messages/pins.go), held open.
 	if _, err := pin.Exec(ctx, `UPDATE messages SET is_pinned = TRUE, pinned_at = NOW(), pinned_by = $2 WHERE id = $1`, reply, f.owner.user.ID); err != nil {
 		t.Fatal(err)
 	}
-	// The pin commits after the sweep chose its rows and before it deletes them.
+	// The pin commits once the sweep's selection (which locks the root) ended.
 	var commitErr error
-	hook := &beforeStatement{match: "DELETE FROM messages WHERE id = ANY", fn: func() { commitErr = pin.Commit(ctx) }}
+	hook := &beforeStatement{match: "FOR UPDATE OF m SKIP LOCKED", after: true, fn: func() { commitErr = pin.Commit(ctx) }}
 	d := &channels.AutoDeleter{DB: hookedPool(t, f.a.db, hook), Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
 	if err := d.Sweep(ctx); err != nil {
 		t.Fatal(err)
@@ -55,10 +61,8 @@ func TestAReplyPinnedDuringTheSweepSelectIsDeletedWithItsRoot(t *testing.T) {
 		t.Fatal(commitErr)
 	}
 	pinned := f.a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1 AND is_pinned`, reply) == 1
-	t.Logf("pin committed during the sweep; pinned reply kept %v, root kept %v", pinned, f.exists(root))
-	// Expected failure until H-L7-09 is fixed (inverse assertion).
-	if pinned || f.exists(reply) {
-		t.Errorf("known failure H-L7-09 no longer reproduces (pinned reply kept %v): turn this into the plain assertion", pinned)
+	if !pinned || !f.exists(root) {
+		t.Errorf("pin committed during the sweep: pinned reply kept %v, root kept %v", pinned, f.exists(root))
 	}
 
 	// Control: a pin that is committed before the sweep starts is respected.
@@ -78,7 +82,8 @@ func TestAReplyPinnedDuringTheSweepSelectIsDeletedWithItsRoot(t *testing.T) {
 // does not choose the root while the reply is in flight. The next pass sees the
 // young reply and keeps the root. (A reply that commits between the statement's
 // snapshot and its lock attempt on the root, microseconds, cannot be forced
-// from outside the statement.)
+// from outside the statement; the sweep's re-check after its locks covers it,
+// as TestAReplyPinnedAfterTheSweepSelectIsKeptWithItsRoot shows for a pin.)
 func TestARootWithAReplyInFlightIsSkippedBySweepAndKeptAfterwards(t *testing.T) {
 	f := newAutoDeleteFixture(t)
 	wantStatus(t, "auto-delete", f.set(f.owner, f.channel, 7), http.StatusOK)
