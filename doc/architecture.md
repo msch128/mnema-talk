@@ -246,8 +246,8 @@ that name their voters) refuses a row for an anonymous poll, and an integration
 test walks every table of the schema to prove that no row mentions a voter and
 an option together. A running anonymous poll broadcasts no tally at each vote, since in a small audience the
 last vote would follow from it, and the REST and message payloads report 0 for every option until the poll ends (only the number of voters is live); the result goes out when the poll ends. Because a choice is never known, a vote cannot be changed
-or withdrawn and the data export of a member has no entry for anonymous
-polls. Erasing an account deletes its `poll_voters` rows and leaves the
+or withdrawn and the data export of a member holds only that they took part
+in an anonymous poll (the poll id, never the choice). Erasing an account deletes its `poll_voters` rows and leaves the
 counters, as a tally is not personal data. Migration 0063 converted the
 anonymous polls that existed before 1.2 the same way (see
 [upgrade.md](upgrade.md#11x--120)).
@@ -368,7 +368,7 @@ back), so it needs no public relay ports and cannot reach anything else.
    while the noise filter is Off, the setting for studio microphones and music;
    it applies from the next Talk. With sealed media the encoder's empty frames
    (one or two bytes, header only) pass the media worker, which drops them on
-   a line that uses DTX: sealed they would be 100 bytes each and go out 50
+   a line that uses DTX: sealed they would be 107 bytes of overhead plus the one or two bytes of payload, each and go out 50
    times a second. Sequence numbers stay consecutive and only the RTP
    timestamp jumps, which the SFU forwards untouched; listeners' browsers
    fill the gap with comfort noise. Nothing on the server depends on a steady

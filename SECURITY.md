@@ -793,8 +793,8 @@ details and the limits.
   the line belongs to, so neither the server nor another member can pass off
   media as someone else's; an id that holds two leaves verifies nothing. Each
   sending transform numbers its frames, and a receiver opens a frame only once
-  (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept until the
-  next rotation.
+  (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept for 30
+  seconds after a switch.
   **What a member can do.** A member of the call is inside the trust
   boundary for the media it can read, but the group's rules limit what it can
   do to the others. Every receiver checks a commit after its signature has
@@ -894,8 +894,11 @@ details and the limits.
   have not seen reach me while I am in another epoch: I start over, once per
   two such heartbeats, which it can make me do anyway. A member counts as alive only for a verified
   heartbeat or a verified commit, never for a message that merely parses.
-  **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
-  two-minute jitter per epoch, so Talks do not rotate in step): once the
+  **Key lifetime.** A key lives 30 minutes, plus or minus a random
+  two-minute jitter per epoch so Talks do not rotate in step, and the
+  committer notices an old epoch on a 30-second check, so with an awake
+  committer it lasts at most 32.5 minutes, and a committer that sleeps or is
+  skipped can extend that by a time that has not been measured: once the
   epoch is that old, the committer (the lowest member id in the group and the
   room) advances it with a commit that carries an update path, so even with
   no joins or leaves every member gets a new exporter key, and the committer's

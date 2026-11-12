@@ -37,7 +37,7 @@ groups:
         expr: process_resident_memory_bytes > 800e6
         for: 15m
         labels: {severity: warn}
-        annotations: {summary: "Resident memory above 800 MB (80% of the default 1g container limit) for 15 minutes"}
+        annotations: {summary: "Resident memory above 800 MB (about 75% of the default 1g container limit) for 15 minutes"}
 
       - alert: MnemaGoroutineLeak
         expr: go_goroutines > 5000
