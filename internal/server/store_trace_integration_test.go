@@ -110,7 +110,7 @@ func (w *traceWorld) record(ws *wsConn) {
 	go func() {
 		for ev := range ws.events {
 			w.mu.Lock()
-			w.frames = append(w.frames, traceFrame{Type: ev.Type, Payload: ev.Payload})
+			w.frames = append(w.frames, traceFrame(ev))
 			w.last = time.Now()
 			w.mu.Unlock()
 		}
