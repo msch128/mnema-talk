@@ -6,6 +6,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -64,4 +65,10 @@ func (a *API) Mount(r chi.Router) {
 	follow.Delete("/threads/{threadID}/follow", httpx.Handle(a.deleteThreadFollow))
 	r.Get("/threads/following", httpx.Handle(a.ListFollowedThreads))
 	r.Get("/messages/by-number/{number}", httpx.Handle(a.ServeGetMessageByNumber))
+}
+
+// recount tells members their counts of a channel again after a delete or an
+// edit there (see readstate.Recount).
+func (a *API) recount() readstate.Recount {
+	return readstate.Recount{DB: a.DB, Perms: a.Guard.Perms, Online: a.Online, Events: a.Events}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,21 +22,37 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
+	_, err := editMessage(ctx, p, online, messageID, userID, content)
+	return err
+}
+
+// editMessage is EditMessage that also returns the members the message
+// mentioned before the edit.
+func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) ([]uuid.UUID, error) {
 	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var before []uuid.UUID
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1`, messageID)
+		if err != nil {
+			return fmt.Errorf("mentions before the edit: %w", err)
+		}
+		if before, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID]); err != nil {
+			return fmt.Errorf("mentions before the edit: %w", err)
+		}
 		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
 		if err != nil {
 			return err
 		}
 		return RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil)
 	})
-	if err == nil {
-		pending.Commit(ctx, messageID)
+	if err != nil {
+		return nil, err
 	}
-	return err
+	pending.Commit(ctx, messageID)
+	return before, nil
 }
 
 // EditMessageTx checks that userID may edit the message, keeps the replaced
@@ -101,7 +118,16 @@ func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 // the storage keys of the media that went with it; their rows are removed by
 // cascade, the caller deletes the objects.
 func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
+	keys, _, err := deleteMessage(ctx, p, messageID, user, canManage)
+	return keys, err
+}
+
+// deleteMessage is DeleteMessageAs that also returns when the newest of the
+// removed messages (the message or one of its replies) was written: members
+// who had read the channel up to then were not counting any of them.
+func deleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, time.Time, error) {
 	var keys []string
+	var newest time.Time
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Locking the message first blocks a concurrent thread reply or
 		// upload (their foreign keys need a share lock on it) until we are
@@ -118,15 +144,18 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
 			return err
 		}
+		if err := tx.QueryRow(ctx, `SELECT max(created_at) FROM messages WHERE id = $1 OR parent_id = $1`, messageID).Scan(&newest); err != nil {
+			return fmt.Errorf("newest removed message: %w", err)
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID); err != nil {
 			return fmt.Errorf("delete message: %w", err)
 		}
 		return RecordMessageDelete(ctx, p, tx, m.channel, messageID, m.parent)
 	})
 	if err != nil {
-		return nil, err
+		return nil, newest, err
 	}
-	return keys, nil
+	return keys, newest, nil
 }
 
 // lockedMessage is what deleting a message needs to know about it.

@@ -603,7 +603,13 @@ mention policy: a name a webhook or bot left as plain text (user mentions off,
 `allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
 web client decides from the message's `mentions` list, not from the text, so
 the live badge, the page's notification and the sound match the badge after a
-reload.
+reload. A client counts a new message itself; a delete (also a bulk delete or
+the auto-delete sweep) or an edit that changes the mentions brings nothing it
+could count, so the server sends the members whose count it may have moved
+(online, allowed to view the channel, not read up to the changed messages;
+for an edit, those it mentioned before or after) a `read_state` with their
+`unread_count` and `mention_count` of that channel, right after the
+`message_delete` or `message_update` ([`recount.go`](../internal/chat/readstate/recount.go)).
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is

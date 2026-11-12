@@ -6,7 +6,6 @@
 // least 7 of 30 traces; the others in 1 to 6, too rare to require every
 // night). The list may shrink; it grows only with a finding.
 //
-// H-L5-01: counters follow message_create only, not deletes or edits.
 // H-L5-02: the reconnect does not reload the later and saved lists.
 // H-L5-03: a deleted message stays in the saved list.
 // H-L5-04: an answer and the events of the same moment are not ordered.
@@ -18,8 +17,6 @@ const deepOnly = (finding: string): Known => ({ finding, smoke: false, nightly: 
 const rare = (finding: string): Known => ({ finding, smoke: false, nightly: false })
 
 export const KNOWN_BROKEN: Record<string, Known> = {
-  'clean unread': both('H-L5-01'),
-  'clean mentions': both('H-L5-01'),
   'clean saved': deepOnly('H-L5-03'),
   'clean reply-follow': both('H-L5-05'),
   'drop reminders': both('H-L5-02'),

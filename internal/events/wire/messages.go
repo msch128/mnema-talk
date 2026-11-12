@@ -70,6 +70,19 @@ type ReadStateUnread struct {
 
 func (ReadStateUnread) EventName() string { return events.ReadState }
 
+// ReadStateCounts gives the member's counts of one channel after a message
+// there was deleted or edited: the counts follow the messages that exist now
+// and their current mentions, and neither change brings a message a client
+// could count. last_read_at is null before the member's first read.
+type ReadStateCounts struct {
+	ChannelID    uuid.UUID  `json:"channel_id" format:"uuid"`
+	LastReadAt   *time.Time `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
+	MentionCount int        `json:"mention_count"`
+	UnreadCount  int        `json:"unread_count"`
+}
+
+func (ReadStateCounts) EventName() string { return events.ReadState }
+
 // ReadStateChannelRefresh asks the sessions to fetch one channel's counts
 // again (refresh is always true).
 type ReadStateChannelRefresh struct {
