@@ -21,7 +21,7 @@ import { isCapability, openCapability, sealCapability } from './capability'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
-import { GroupMerge } from './groupMerge'
+import { GroupBehind } from './groupBehind'
 import { addedIds } from './groupEntry'
 
 type MlsMessage = MLSMessage
@@ -50,7 +50,7 @@ export type { MediaStep } from './groupParams'
  * committer, or the next one if it was the committer who reloaded, swaps the
  * old leaf. A member who leaves is removed by whoever remains.
  */
-export class MediaGroup extends GroupMerge {
+export class MediaGroup extends GroupBehind {
   static async open(userId: string, channelId: string, timing: MediaTiming = mediaTiming()): Promise<MediaGroup | null> {
     const id = mediaUserId(userId)
     const groupId = mediaGroupId(channelId)
@@ -203,7 +203,7 @@ export class MediaGroup extends GroupMerge {
       const processed = await processPublicMessage(previous, publicMessage, emptyPskIndex, this.cs, this.validator(previous, from))
       // Rejected by the rules above (or a proposal, which this group never
       // uses): the sender is not trusted with it, and nothing is thrown away.
-      if (processed.actionTaken === 'reject') return this.step()
+      if (processed.actionTaken === 'reject') return await this.refused(from, publicMessage)
       // Only a commit that verified against this group's tree shows its member alive.
       this.alive.set(from, clock.now())
       // Every commit funnels through this: nobody's identity or signature key may change, and no
@@ -352,6 +352,7 @@ export class MediaGroup extends GroupMerge {
     return (incoming) => {
       this.vetted = new Set()
       this.added = new Set()
+      this.clearUnseen()
       if (incoming.kind !== 'commit') return 'reject'
       const members = treeMembers(state)
       const senderLeaf = members.get(from)
