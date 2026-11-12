@@ -639,7 +639,12 @@ threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
 unfollow is kept and a later reply does not undo it, but a reply that mentions
 the member by name or quotes their message still reaches them. A change, and
 a reply that makes someone follow, is sent to that member's own sessions as
-`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/messages/thread_follow_sync.go)), and
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/messages/thread_follow_sync.go));
+the tap runs before the hub hands the reply to any connection (taps never
+run under the hub's lock, and this one is the first tap, ahead of outgoing
+webhooks and the bot gateway), so a new follower's sessions have the update
+before the reply they decide it by; the lookup is bounded to a second, after
+which the reply goes out without the update, and
 `GET /api/threads/following` lists the followed threads for clients. The
 in-page OS notification shows the message text only when the member's
 "show message text" setting is on and the operator has not set
