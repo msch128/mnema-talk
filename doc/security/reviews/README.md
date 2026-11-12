@@ -85,6 +85,7 @@ with its later rounds appended.
 | [h-l7-04-05](2026-11-hunt/h-l7-04-05.md), [h-l7-08](2026-11-hunt/h-l7-08.md) | audit entries inside the change's transaction; answers read inside it; no background job after the shutdown drain began |
 | [h-l10-01-04](2026-11-hunt/h-l10-01-04.md), [h-l10-05](2026-11-hunt/h-l10-05.md) | account erasure and export: what was left out; nothing new may name an erased account (migration 0103), with a dump and restore comparison |
 | [h-l11-01-03](2026-11-hunt/h-l11-01-03.md) | the security floor of the desktop bundle: the trailer is read the same way by the pull request check and the release; Go reads signed documents as the desktop clients do; three rounds |
+| [h-l10-06](2026-11-hunt/h-l10-06.md) | an account deletion aborted by the database as a deadlock with the member's own write is retried (found by the integration review, fixed after 3.0.10) |
 | [follow-ups](2026-11-hunt/follow-ups.md) | event comments and event texts go through automod; reactions compared in one emoji form |
 | [bundle-integration](2026-11-hunt/bundle-integration.md) | the collection branch as a whole: every merge with a hand resolution, the coordinator's own commits, interactions between fixes |
 
