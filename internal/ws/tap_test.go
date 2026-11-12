@@ -42,3 +42,29 @@ func TestTapHearsOnlyRealPublications(t *testing.T) {
 		t.Fatalf("broadcast was not tapped: %v", tapped)
 	}
 }
+
+// A tap may block and publish (Hub.Tap): that is only safe while the hub's
+// lock is not held, since a publish takes h.mu again and would wait behind a
+// waiting writer forever. Every path that runs a tap must run it outside h.mu.
+func TestTapsRunOutsideTheHubLock(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	t.Cleanup(h.Close)
+	var calls, locked int
+	check := func(uuid.UUID, events.Event) {
+		calls++
+		if !h.mu.TryLock() {
+			locked++
+			return
+		}
+		h.mu.Unlock()
+	}
+	h.Tap, h.DMTap = check, check
+	ch := uuid.New()
+	web := testClient(h, auth.User{ID: uuid.New()})
+	web.emitApplicationEvent(eventstest.Named("typing", nil), true, nil, ch)
+	h.Broadcast(eventstest.Named("member_joined", map[string]any{}))
+	h.BroadcastChannel(ch, eventstest.Named("typing", nil))
+	if calls < 3 || locked != 0 {
+		t.Fatalf("%d of %d taps ran with the hub's lock held", locked, calls)
+	}
+}

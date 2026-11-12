@@ -174,10 +174,13 @@ func assemble(d Deps) (*components, context.CancelFunc, error) {
 		cancel()
 		return nil, nil, err
 	}
+	// The follow tap comes first: it holds a thread reply for its lookup, and
+	// a tap before it (outgoing webhooks, the bot gateway) would hand the
+	// reply out that long before the web clients get it.
+	c.tapThreadFollows()
 	c.newWebhooks()
 	c.newTalks()
 	c.newBots()
-	c.tapThreadFollows()
 	if err := c.newPush(); err != nil {
 		cancel()
 		return nil, nil, err

@@ -6,11 +6,7 @@
 // least 7 of 30 traces; the others in 1 to 6, too rare to require every
 // night). The list may shrink; it grows only with a finding.
 //
-// H-L5-05: the first reply under my message is decided before the follow is known.
+// H-L5-01 to H-L5-05 are fixed: nothing is known broken.
 type Known = { finding: string; smoke: boolean; nightly: boolean }
 
-const both = (finding: string): Known => ({ finding, smoke: true, nightly: true })
-
-export const KNOWN_BROKEN: Record<string, Known> = {
-  'clean reply-follow': both('H-L5-05')
-}
+export const KNOWN_BROKEN: Record<string, Known> = {}
