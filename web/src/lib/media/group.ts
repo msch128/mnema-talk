@@ -1,6 +1,5 @@
 import {
   defaultCapabilities,
-  defaultLifetime,
   emptyPskIndex,
   generateKeyPackage,
   joinGroup,
@@ -22,6 +21,7 @@ import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
 import { GroupMerge } from './groupMerge'
+import { freshLifetime } from './groupFresh'
 
 type MlsMessage = MLSMessage
 type ProcessedPublicMessage = Awaited<ReturnType<typeof processPublicMessage>>
@@ -56,7 +56,7 @@ export class MediaGroup extends GroupMerge {
     if (!id || !groupId) return null
     const cs = await suite()
     const credential: Credential = { credentialType: 'basic', identity: new TextEncoder().encode(id) }
-    const own = await generateKeyPackage(credential, defaultCapabilities(), defaultLifetime, [], cs)
+    const own = await generateKeyPackage(credential, defaultCapabilities(), freshLifetime(), [], cs)
     return new MediaGroup(id, groupId, own, cs, credential, timing)
   }
 
@@ -127,6 +127,8 @@ export class MediaGroup extends GroupMerge {
     // groupMerge.ts): that id alone answers, where an old leaf of the member is
     // left over. To everyone else, its own committer included, it says nothing.
     if (same && this.listed().some(id => id < this.userId)) return this.step()
+    // A package of a tab that the member's leaf has replaced, delivered late, is no reload either.
+    if (!same && this.ages.stale(from, keyPackage)) return this.step()
     if (!same && from === this.committer(this.room)) this.restarting.add(from)
     if (!this.canCommit(this.room) || !this.swaps.allow(from)) return this.step()
     this.remember(from, wire)

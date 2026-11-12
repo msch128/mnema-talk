@@ -1,7 +1,6 @@
 import {
   createGroup,
   defaultCapabilities,
-  defaultLifetime,
   generateKeyPackage,
   generateKeyPackageWithKey,
   type ClientState,
@@ -10,6 +9,7 @@ import { clock } from './clock'
 import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type MediaStep, type OwnPackage } from './groupParams'
 import { clientConfig, wipeBytes, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
 import { GroupEpoch } from './groupEpoch'
+import { freshLifetime } from './groupFresh'
 
 function roomKey(others: readonly string[]): string {
   return others.slice().sort().join(',')
@@ -245,7 +245,7 @@ export abstract class GroupSync extends GroupEpoch {
   protected async rekey() {
     const old = this.own
     // Jobs run one at a time, so the group cannot be closed meanwhile.
-    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
+    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), freshLifetime(), [], this.cs)
     this.offeredFor = null
     wipeBytes(old.privatePackage.initPrivateKey)
     wipeBytes(old.privatePackage.hpkePrivateKey)
@@ -267,7 +267,7 @@ export abstract class GroupSync extends GroupEpoch {
     // Callers hold a group, and a group I hold has exactly one leaf of mine.
     const state = this.state as ClientState
     const keys = { signKey: state.signaturePrivateKey.slice(), publicKey: treeLeafSigner(state, this.userId) as Uint8Array }
-    this.own = await generateKeyPackageWithKey(this.credential, defaultCapabilities(), defaultLifetime, [], keys, this.cs)
+    this.own = await generateKeyPackageWithKey(this.credential, defaultCapabilities(), freshLifetime(), [], keys, this.cs)
     this.offeredFor = null
     wipeBytes(old.initPrivateKey)
     const unused = state.signaturePrivateKey !== old.signaturePrivateKey
@@ -289,7 +289,7 @@ export abstract class GroupSync extends GroupEpoch {
     if (!state || state.groupContext.epoch === 0n || treeMembers(state).size !== 1) return
     if (this.lone?.own === this.own && this.lone.epoch === state.groupContext.epoch) return
     const old = this.own.privatePackage
-    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
+    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), freshLifetime(), [], this.cs)
     this.offeredFor = null
     wipeBytes(old.initPrivateKey)
     if (state.signaturePrivateKey === old.signaturePrivateKey) this.leafKeys.push(old.hpkePrivateKey, old.signaturePrivateKey)

@@ -855,7 +855,14 @@ details and the limits.
   is answered or not: the package is signed with the key of the member's own
   leaf, and the members of its group, the one who commits there included, take
   a package under a leaf's own key for a duplicate (only a package under a new
-  signature key is a member coming back, whose leaf is swapped). A second offer
+  signature key is a member coming back, whose leaf is swapped, unless it was
+  made before the package of the leaf in the committer's tree: every package
+  carries the time it was made as the notBefore of its lifetime, less a margin
+  of 400 days, so a package of the member's old tab that the relay delivers
+  only after the member reloaded and was swapped in does not swap the new leaf
+  for a dead one. A package without that time, from a client that predates it,
+  is judged as before; such a client ignores the lifetime of a package it
+  receives, so the change is invisible to it). A second offer
   follows only after a wait (one minute, doubling to ten) and only once that id
   has shown its group again, so an id that is merely listed is never asked, and
   one that fell silent is asked once; leaving the Talk and coming back does not

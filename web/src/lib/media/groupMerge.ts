@@ -5,6 +5,7 @@ import { openHeartbeat } from './heartbeat'
 import { ASK_BASE_MS, ASK_MAX_MS, OTHER_STATE_BEATS, OTHER_STATE_MS, type MediaStep, type OwnPackage } from './groupParams'
 import { lowest, sameBytes, treeLeafSigner, treeMembers } from './groupTree'
 import { GroupSync } from './groupSync'
+import { PackageAges } from './groupFresh'
 
 /**
  * How two groups in one Talk become one. Everyone ends up in the group of the
@@ -36,6 +37,8 @@ export abstract class GroupMerge extends GroupSync {
    * back, and goes when the id is in my tree or has been gone for long.
    */
   private readonly asks = new Map<string, { own: OwnPackage, at: number, wait: number }>()
+  /** When the package of each member's leaf was made: a package from before it is no reload (see groupFresh.ts). */
+  protected readonly ages = new PackageAges()
   /** The lowest id's first signed heartbeat for an epoch that is not mine: its time, when it came, and the state I held. */
   private elsewhere: { state: ClientState, at: number, seenAt: number } | null = null
 
@@ -54,6 +57,7 @@ export abstract class GroupMerge extends GroupSync {
 
   protected override startEpoch(state: ClientState) {
     super.startEpoch(state)
+    this.ages.observe(state)
     // Whoever is in my tree is no other group to me, and what it showed before says nothing about later.
     for (const id of treeMembers(state).keys()) {
       this.groupSigns.delete(id)
@@ -65,6 +69,8 @@ export abstract class GroupMerge extends GroupSync {
     const step = await super.tickNow()
     const now = clock.now()
     for (const id of [...this.groupSigns.keys()]) if (!this.hinted.has(id)) this.groupSigns.delete(id)
+    const inTree = this.state ? treeMembers(this.state) : new Map<string, number>()
+    this.ages.keepOnly(id => this.hinted.has(id) || inTree.has(id))
     for (const [id, ask] of [...this.asks]) if (!this.hinted.has(id) && now > ask.at + ask.wait + ASK_MAX_MS) this.asks.delete(id)
     const offer = await this.mergeOffer(now)
     return offer ? { ...step, wires: [...step.wires, offer] } : step
