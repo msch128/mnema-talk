@@ -8,25 +8,37 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
-import { runSeed } from './groupSimRun.fixture'
+import { report, runSeed } from './groupSimRun.fixture'
 
 const SEEDS = 400
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-const [index = 0, count = 1] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number)
+// A shard setting that selects no seed would let the sweep pass without a run.
+function shard(setting: string): readonly [number, number] {
+  const match = /^(\d+)\/(\d+)$/.exec(setting)
+  const [index, count] = match ? [Number(match[1]), Number(match[2])] : [Number.NaN, Number.NaN]
+  if (!(count >= 1 && index >= 0 && index < count)) throw new Error(`SIM_SHARD must be <index>/<count> with index below count, got "${setting}"`)
+  return [index, count]
+}
+const [index, count] = shard(process.env.SIM_SHARD ?? '0/1')
 const mine = (seed: number) => seed % count === index
 
 describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget', () => {
   it.each([['hostile', KNOWN_HOSTILE], ['honest', KNOWN_HONEST]] as const)('%s relay', async (relay, known) => {
     const failing: number[] = []
+    const reports: string[] = []
     for (let seed = 1; seed <= SEEDS; seed++) {
       if (!mine(seed)) continue
-      const result = await runSeed(seed, { relay })
-      if (result.violations.length) failing.push(seed)
+      // A run that throws counts as a failing seed and the sweep goes on.
+      const outcome = await runSeed(seed, { relay }).then(result => (result.violations.length ? report(result) : ''), (err: unknown) => `threw: ${String(err)}`)
+      if (!outcome) continue
+      failing.push(seed)
+      if (!known.includes(seed)) reports.push(`seed ${seed}: ${outcome}`)
     }
-    expect(failing.filter(seed => !known.includes(seed)), `${relay} relay: seeds that fail and are not in the budget`).toEqual([])
-    expect(known.filter(seed => mine(seed) && !failing.includes(seed)), `${relay} relay: seeds in the budget that pass now; move them to groupSim.test.ts`).toEqual([])
+    const regressions = failing.filter(seed => !known.includes(seed))
+    const healed = known.filter(seed => mine(seed) && !failing.includes(seed))
+    expect({ regressions, healed }, `${relay} relay: "regressions" fail outside the budget, "healed" are in the budget and pass now (move them to groupSim.test.ts)\n${reports.join('\n')}`).toEqual({ regressions: [], healed: [] })
   }, 3_600_000)
 })
