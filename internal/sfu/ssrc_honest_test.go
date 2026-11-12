@@ -130,28 +130,38 @@ func TestSubscriptionTogglesMakeQuietStreams(t *testing.T) {
 	for range toggles {
 		retired = append(retired, toggleScreen(t, r, viewer, publisher)...)
 	}
-	// What the toggles cost without reports is the SFU's and Pion's per
-	// sender state (H-L8-05); what the reports add is the streams'.
+	// The toggles themselves leave per-sender state (H-L8-05) that the
+	// SFU and Pion settle over the next moments. A control window of the
+	// same length without reports measures that drift; the reports' window
+	// minus it is what the streams cost.
 	time.Sleep(300 * time.Millisecond)
+	controlBase := heapAfterGC()
+	time.Sleep(time.Second)
+	drift := int64(heapAfterGC()) - int64(controlBase)
 	heapBase := heapAfterGC()
+	start := time.Now()
 	for range 100 { // 200 reports on each stopped SSRC, more than a buffer holds
 		for i := 0; i < len(retired); i += 31 {
 			fillReports(viewer, retired[i:min(i+31, len(retired))], 2)
 		}
 	}
-	time.Sleep(500 * time.Millisecond)
-	grew := int64(heapAfterGC()) - int64(heapBase)
+	time.Sleep(max(0, time.Second-time.Since(start)))
+	grew := int64(heapAfterGC()) - int64(heapBase) - max(0, drift)
 	unknown, buffered, quiet := peer.rtcp.counts()
-	t.Logf("%d toggles, %d stopped SSRCs reported on: %d unknown, %d buffered, %d quiet streams, heap +%d bytes (%d per SSRC)",
-		toggles, len(retired), unknown, buffered, quiet, grew, grew/int64(max(1, len(retired))))
+	t.Logf("%d toggles, %d stopped SSRCs reported on: %d unknown, %d buffered, %d quiet streams, "+
+		"heap +%d bytes beyond a drift of %d (%d per SSRC)",
+		toggles, len(retired), unknown, buffered, quiet, grew, drift, grew/int64(max(1, len(retired))))
 	if peer.PC.ConnectionState() != webrtc.PeerConnectionStateConnected {
 		t.Fatal("the toggling viewer was disconnected")
 	}
-	if unknown != 0 || quiet == 0 {
-		t.Fatalf("%d unknown and %d quiet streams; want 0 and the stopped tracks' streams quiet", unknown, quiet)
+	// Every stopped SSRC reported on got a stream without a buffer.
+	if unknown != 0 || buffered != 0 || quiet < len(retired) {
+		t.Fatalf("%d unknown, %d buffered and %d quiet streams for %d stopped SSRCs; want 0, 0 and all quiet",
+			unknown, buffered, quiet, len(retired))
 	}
-	// About 0.5 KB measured (2.3 KB under -race); a buffered one is 19 KB.
-	if perSSRC := grew / int64(len(retired)); perSSRC > 4<<10 {
+	// A quiet stream keeps about 0.5 KB; a buffered one filled like this
+	// keeps about 19 KB. The margin covers -race and GC noise.
+	if perSSRC := grew / int64(len(retired)); perSSRC > 8<<10 {
 		t.Fatalf("each stopped SSRC reported on keeps %d bytes; a quiet stream keeps about 0.5 KB", perSSRC)
 	}
 }

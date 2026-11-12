@@ -225,18 +225,31 @@ func (c *rtcpStreamCap) retire(ssrc uint32) {
 	c.retiredNext = (c.retiredNext + 1) % rtcpRetiredSSRCs
 }
 
-// declare takes the SSRCs of the client's answer, at most
-// rtcpDeclaredPerLine for each of its m-lines (which mirror the SFU's offer).
-// Firefox, for one, sends the receiver reports of each line it only receives
-// on from an SSRC it declares there; nothing on the SFU reads those.
-func (c *rtcpStreamCap) declare(sdp string) {
+// sdpOf is the SDP of a description, or "" for none.
+func sdpOf(d *webrtc.SessionDescription) string {
+	if d == nil {
+		return ""
+	}
+	return d.SDP
+}
+
+// declare takes the SSRCs of the client's answer to the SFU's offer, at most
+// rtcpDeclaredPerLine for each m-line, and only from as many m-lines as the
+// offer has: Pion accepts an answer with more, and the client must not choose
+// how many lines it is forgiven for. Firefox, for one, sends the receiver
+// reports of each line it only receives on from an SSRC it declares there;
+// nothing on the SFU reads those.
+func (c *rtcpStreamCap) declare(answer, offer string) {
 	if c == nil {
 		return
 	}
+	offered := strings.Count(offer, "\nm=")
 	declared := map[uint32]struct{}{}
 	lines, budget := 0, 0
-	for line := range strings.Lines(sdp) {
+	for line := range strings.Lines(answer) {
 		switch {
+		case strings.HasPrefix(line, "m=") && lines == offered:
+			budget = 0
 		case strings.HasPrefix(line, "m="):
 			lines++
 			budget = rtcpDeclaredPerLine
