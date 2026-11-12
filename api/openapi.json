@@ -3380,6 +3380,14 @@
             "format": "date-time",
             "type": "string"
           },
+          "direct_mentions": {
+            "description": "DirectMentions are the users of Mentions this message addresses by\nname or through a role, not only by @all or @here: those a mute lets\nthrough. A name the sender's mention policy left as plain text is not\nin it. The server always sends it; it is optional so that a client can\ntell an older server (no field: read the text) from an empty list.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
           "display_name": {
             "type": "string"
           },

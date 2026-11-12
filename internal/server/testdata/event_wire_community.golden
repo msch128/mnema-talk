@@ -36,7 +36,7 @@
 @ internal/chat/dm.(*DMCalls).Begin.func2
 {"type":"dm_call_ring","payload":{"conversation_id":"<id-1>","talk_id":"<id-2>","message_id":"<id-3>","caller_id":"<id-4>","talk_name":"Talk 1","ring_seconds":45}}
 @ internal/chat/talks.(*API).StartDMTalk
-{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"first","display_name":"first","content":"","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","embeds":[{"title":"Talk 1","talk_id":"<id-4>"}]}}
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"first","display_name":"first","content":"","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"direct_mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","embeds":[{"title":"Talk 1","talk_id":"<id-4>"}]}}
 
 # event created
 @ internal/communityevents.(*Handler).broadcast

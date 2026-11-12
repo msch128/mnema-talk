@@ -634,7 +634,10 @@ in `message_role_mentions` (migration 0036), so a pill survives a role rename.
 A member reached several ways gets the strongest kind: a name, then a role,
 then `@all`/`@here`. A name only counts when the sender may name members (not
 a webhook with `allow_user_mentions` off, nor a bot whose `allowed_mentions`
-leaves `users` out and does not list the member).
+leaves `users` out and does not list the member). A message carries every notified
+member in `mentions` and those of a kind other than `@all`/`@here` in
+`direct_mentions`: a muted channel's live badge, desktop notification and
+sound read that list, as the badge after a reload and push read the kinds.
 Webhooks and bots mention roles too, subject to `allowed_mentions`. An author
 without the right to mention everyone notifies at most 50 members per message
 ([`mentions_cap.go`](../internal/chat/mentions/mentions_cap.go)).

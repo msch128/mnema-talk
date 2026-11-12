@@ -55,6 +55,12 @@ type Message struct {
 	Reactions   []ReactionSummary `json:"reactions"`
 	// Mentions are the users this message mentions (@username, @all, @here).
 	Mentions []uuid.UUID `json:"mentions" format:"uuid"`
+	// DirectMentions are the users of Mentions this message addresses by
+	// name or through a role, not only by @all or @here: those a mute lets
+	// through. A name the sender's mention policy left as plain text is not
+	// in it. The server always sends it; it is optional so that a client can
+	// tell an older server (no field: read the text) from an empty list.
+	DirectMentions []uuid.UUID `json:"direct_mentions" binding:"optional" format:"uuid"`
 	// MentionRoles are the roles this message mentions (@Role); the client
 	// draws them as role pills. A role that was deleted since drops out. The
 	// server always sends it; it is optional for clients that build messages

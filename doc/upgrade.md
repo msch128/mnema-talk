@@ -21,6 +21,15 @@ leaves `users` out and does not list the member, posting `@all @name` reaches
 that member through `@all` only, which a mute silences. Messages sent before
 the update keep the kinds they were stored with.
 
+Messages gain `direct_mentions` (REST and the `message_create` and
+`message_update` events): the members of `mentions` addressed by name or
+role, not by `@all` or `@here` alone. The web app reads it in a muted channel
+for the live badge, the desktop notification and the sound, so they match the
+badge after a reload. `mentions` is unchanged. A web app from before this
+release ignores the new field and still counts a plain-text name next to
+`@all` live in a muted channel until it reloads; against an older server the
+web app reads the text as before.
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters

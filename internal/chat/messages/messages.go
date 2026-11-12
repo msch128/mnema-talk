@@ -42,7 +42,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 	defer rows.Close()
 	msgs := make([]core.Message, 0)
 	for rows.Next() {
-		m := core.Message{Attachments: make([]core.MediaAttachment, 0), Reactions: make([]core.ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
+		m := core.Message{Attachments: make([]core.MediaAttachment, 0), Reactions: make([]core.ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), DirectMentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
 		var avatar *string
 		var r rawReplyFields
 		var embeds []byte
@@ -134,17 +134,22 @@ func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx m
 }
 
 func loadMentions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
+	rows, err := p.Query(ctx, `SELECT message_id, user_id, kind <> $2 FROM message_mentions WHERE message_id = ANY($1)`, ids, core.MentionKindGroup)
 	if err != nil {
 		return fmt.Errorf("load mentions: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var msgID, userID uuid.UUID
-		if err := rows.Scan(&msgID, &userID); err != nil {
+		var direct bool
+		if err := rows.Scan(&msgID, &userID, &direct); err != nil {
 			return err
 		}
-		msgs[idx[msgID]].Mentions = append(msgs[idx[msgID]].Mentions, userID)
+		m := &msgs[idx[msgID]]
+		m.Mentions = append(m.Mentions, userID)
+		if direct {
+			m.DirectMentions = append(m.DirectMentions, userID)
+		}
 	}
 	return rows.Err()
 }
