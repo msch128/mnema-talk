@@ -20,23 +20,12 @@ import (
 )
 
 // knownDifferences are the inputs on which this package and the desktop
-// clients disagree today (hunt finding H-L11-03): Go accepts a signed manifest
-// without "commit", a statement time before 1970, JSON keys in another case,
-// duplicate keys and missing or null lists, which the clients refuse; the
-// clients accept the cap keys "01" and "+1", which Go refuses. Each must
-// still differ; the test turns red the day one agrees, and the entry is then
-// removed.
-var knownDifferences = map[string]bool{
-	"bundle a missing field":         true,
-	"time 1969-12-31T23:59:59Z":      true,
-	"statement upper-case key":       true,
-	"statement duplicate serial":     true,
-	"statement duplicate cap":        true,
-	"statement missing revoked list": true,
-	"statement null revoked list":    true,
-	"statement cap api 01":           true,
-	"statement cap api +1":           true,
-}
+// clients disagree. Hunt finding H-L11-03 listed nine (a manifest without
+// "commit", a time before 1970, keys in another case, duplicate keys, missing
+// or null lists, the cap keys "01" and "+1"); strictjson.go closed them. The
+// list may only shrink: the test turns red when a listed input agrees, and
+// when an unlisted one disagrees.
+var knownDifferences = map[string]bool{}
 
 // agree reports a disagreement unless it is a known one, and a known one that
 // no longer disagrees.
@@ -179,6 +168,39 @@ func TestDesktopTrustVectorsAgreeWithGo(t *testing.T) {
 		t.Fatal("no vectors read")
 	}
 	t.Logf("%d times, %d statements compared", len(v.Times), len(v.Statements))
+}
+
+// TestDesktopJSONVectorsAgreeWithGo: json.json holds signed manifests and
+// statements that differ only in JSON spelling (repeated and escaped keys,
+// null, numbers as 1.0 or "1", trailing data, invalid UTF-8, ...).
+func TestDesktopJSONVectorsAgreeWithGo(t *testing.T) {
+	dir := vectorsDir(t)
+	var v struct {
+		Root       string            `json:"root"`
+		Bundles    []vectorBundle    `json:"bundles"`
+		Statements []vectorStatement `json:"statements"`
+	}
+	readVectors(t, dir, "json.json", &v)
+	root, err := hex.DecodeString(v.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range v.Bundles {
+		checkBundleVector(t, c)
+	}
+	for _, c := range v.Statements {
+		doc, err := base64.StdEncoding.DecodeString(c.Doc)
+		if err != nil {
+			t.Fatalf("%s: doc is not base64", c.Name)
+		}
+		_, err = VerifyTrust(doc, []byte(c.Sig), root)
+		_, desktopOK := c.Verify["ok"]
+		agree(t, "json statement "+c.Name, (err == nil) == desktopOK, fmt.Sprintf("Go err=%v, desktop ok=%v", err, desktopOK))
+	}
+	if len(v.Bundles) == 0 || len(v.Statements) == 0 {
+		t.Fatal("no vectors read")
+	}
+	t.Logf("%d bundles, %d statements compared", len(v.Bundles), len(v.Statements))
 }
 
 func checkTimeVector(t *testing.T, input string, secs *int64) {
