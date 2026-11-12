@@ -17,7 +17,7 @@ const file = join(import.meta.dirname, '..', '..', '..', '..', '..', 'internal/m
 interface MentionVector { msg: string; server: string[] }
 
 const NAMES = ['max', 'Max', 'a_b', 'old-timer.x', 'all', 'here', 'x', 'ab', 'a'.repeat(32), 'a'.repeat(33), 'b'.repeat(40) + 'c']
-const BEFORE = ['', ' ', '(', ',', '.', '*', '_', '~', '|', '"', "'", '`', '\\', '-', 'a', '1', '\n', '[', '>', '/', ':', ' ', '　', '​']
+const BEFORE = ['', ' ', '(', ',', '.', '*', '_', '~', '|', '"', "'", '`', '\\', '-', 'a', '1', '\n', '[', '>', '/', ':', '\u00a0', '\u3000', '\u200b']
 const AFTER = ['', ' ', '.', '..', '-', ',', '!', ')', '*', '`', "'", '\n', 'x', '@']
 const WRAPS: ((s: string) => string)[] = [s => s, s => `\`${s}\``, s => '```\n' + s + '\n```', s => `||${s}||`, s => `**${s}**`, s => `> ${s}`, s => `[${s}](https://a.example)`, s => `\\${s}`, s => `# ${s}`, s => `- ${s}`]
 
