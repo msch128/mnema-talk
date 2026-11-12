@@ -258,12 +258,15 @@ func checkImporter(t *testing.T, tree layered, from, to, toSub string) {
 // application layer, however indirectly.
 func TestChatCoreStaysFree(t *testing.T) {
 	root := repoRoot(t)
-	cmd := exec.Command("go", "list", "-e", "-deps", "./internal/chat/core")
+	// Without -e, a missing package or one that does not load is an error,
+	// not an empty dependency list that passes without looking.
+	cmd := exec.Command("go", "list", "-deps", "./internal/chat/core")
 	cmd.Dir = root
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		// Not created yet (the split adds it); nothing to check.
-		t.Skip("internal/chat/core does not exist yet")
+		t.Fatalf("go list -deps ./internal/chat/core: %v\n%s", err, stderr.String())
 	}
 	var bad []string
 	for _, dep := range strings.Fields(string(out)) {
