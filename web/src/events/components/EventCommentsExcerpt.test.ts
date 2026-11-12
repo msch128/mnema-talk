@@ -26,12 +26,11 @@ beforeEach(() => {
 })
 afterEach(() => wrapper?.unmount())
 
-// C-L3-N4 (S4). The message, forum and reminder dialogs show previewText(...)
-// ("||x||" reads "Spoiler"); the comment dialog cuts the raw Markdown source,
-// so a spoiler is read out in the confirmation. Expected failure: it turns red
-// the day the dialog shows the plain preview.
+// C-L3-N4. Like the message, forum and reminder dialogs, the comment delete
+// dialog shows the plain preview (previewText: "||x||" reads "Spoiler"), not
+// the Markdown source, cut by characters (clampChars).
 describe('the comment delete dialog excerpt', () => {
-  it.fails('does not show the text of a spoiler or the Markdown marks', async () => {
+  it('does not show the text of a spoiler or the Markdown marks', async () => {
     const mine = commentFixture(1, { content: 'the **butler** ||did it||' })
     vi.mocked(api.fetchComments).mockResolvedValue({ comments: [mine], has_more: false, muted: false })
     wrapper = mount(EventComments, { props: { eventId: fixtureId(1) } })
@@ -40,5 +39,15 @@ describe('the comment delete dialog excerpt', () => {
     const excerpt = pendingConfirm.value?.excerpt ?? ''
     expect(excerpt).not.toContain('did it')
     expect(excerpt).not.toContain('**')
+  })
+
+  it('does not cut a character in half', async () => {
+    const mine = commentFixture(1, { content: 'a' + '\u{1F642}'.repeat(200) })
+    vi.mocked(api.fetchComments).mockResolvedValue({ comments: [mine], has_more: false, muted: false })
+    wrapper = mount(EventComments, { props: { eventId: fixtureId(1) } })
+    await flushPromises()
+    await wrapper.get('[data-testid="comment-delete"]').trigger('click')
+    const excerpt = pendingConfirm.value?.excerpt ?? ''
+    expect(excerpt).toBe('a' + '\u{1F642}'.repeat(159))
   })
 })
