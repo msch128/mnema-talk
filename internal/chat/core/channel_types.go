@@ -61,3 +61,13 @@ type Channel struct {
 	// first. Old links resolve through them; no other channel ever takes one.
 	PreviousSlugs []string `json:"previous_slugs" binding:"optional"`
 }
+
+// PrivateChannelSQL is the SQL condition, for the channels row called alias,
+// that holds for a conversation and for the call Talk of one. Both are as
+// private as the conversation: hidden from the administrative lists, never
+// audited, never swept. A call Talk is a voice channel with a dm_id, not a row
+// of type 'dm', so a condition on the type alone forgets it (H-L6-04 to 07):
+// use this one wherever a conversation is told from a community channel in SQL.
+func PrivateChannelSQL(alias string) string {
+	return "(" + alias + ".type = '" + ChannelKindDM + "' OR " + alias + ".dm_id IS NOT NULL)"
+}

@@ -49,30 +49,29 @@ func newCallChatWorld(t *testing.T) callChatWorld {
 	return callChatWorld{a: a, owner: owner, alice: alice, bob: bob, mod: mod, conv: conv, call: call.ID, message: idOf(t, msg)}
 }
 
-// H-L6-07 row "report kind" (known failure). A report of a message in a
-// conversation is filed as kind dm and names no channel; one of a message in
-// the conversation's call chat is filed as a channel report that names the
-// call, so the moderators read its name and id.
-//
-// The assertion is inverted and turns red when the fix lands.
-func TestKnownFailureAReportOfACallChatNamesTheCall(t *testing.T) {
+// H-L6-07 row "report kind" (guard; was a known failure). A report of a message
+// in a conversation is filed as kind dm and names no channel; one of a message
+// in the conversation's call chat used to be filed as a channel report that
+// named the call, so the moderators read its name and id. It is a dm report now.
+func TestAReportOfACallChatIsFiledLikeOneOfTheConversation(t *testing.T) {
 	w := newCallChatWorld(t)
 	wantStatus(t, "alice reports", w.alice.post("/api/messages/"+w.message.String()+"/report", map[string]any{"category": "spam"}), http.StatusCreated)
 	list := w.mod.get("/api/admin/reports")
 	wantStatus(t, "the moderator lists reports", list, http.StatusOK)
-	if !strings.Contains(string(list.body), "okapicall") {
-		t.Fatal("H-L6-07 (reports) no longer reproduces: the report names no call. Flip this test into a guard")
+	if strings.Contains(string(list.body), "okapicall") {
+		t.Errorf("the report names the call: %s", list.body)
 	}
-	t.Logf("H-L6-07 still reproduces: %s", list.body)
+	if !strings.Contains(string(list.body), `"kind":"dm"`) {
+		t.Errorf("the report is not a dm report: %s", list.body)
+	}
 }
 
-// H-L6-07 row "auto-delete sweep" (known failure). A call Talk that kept an
-// auto-delete setting from before the admin routes refused it is swept like a
-// channel, and the run is audited (channel.auto_delete_run) with the call's id
-// and name, which the Owner reads. Conversations are never swept.
-//
-// The assertion is inverted and turns red when the fix lands.
-func TestKnownFailureTheAutoDeleteSweepAuditsACallTalk(t *testing.T) {
+// H-L6-07 row "auto-delete sweep" (guard; was a known failure). A call Talk that
+// kept an auto-delete setting from before the admin routes refused it was swept
+// like a channel, and the run was audited (channel.auto_delete_run) with the
+// call's id and name, which the Owner reads. Like a conversation it is never
+// swept now.
+func TestTheAutoDeleteSweepLeavesACallTalkAlone(t *testing.T) {
 	w := newCallChatWorld(t)
 	if _, err := w.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_days = 1 WHERE id = $1`, w.call); err != nil {
 		t.Fatal(err)
@@ -84,9 +83,12 @@ func TestKnownFailureTheAutoDeleteSweepAuditsACallTalk(t *testing.T) {
 	if err := d.Sweep(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+	if n := w.a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1`, w.message); n != 1 {
+		t.Errorf("the sweep removed the call's message (%d left)", n)
+	}
 	log := w.owner.get("/api/admin/audit-log")
 	wantStatus(t, "the Owner reads the log", log, http.StatusOK)
-	if !strings.Contains(string(log.body), w.call.String()) {
-		t.Fatal("H-L6-07 (auto-delete) no longer reproduces: the sweep leaves the call alone. Flip this test into a guard")
+	if strings.Contains(string(log.body), w.call.String()) {
+		t.Error("the sweep of a call reached the audit log")
 	}
 }

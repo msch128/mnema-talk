@@ -50,7 +50,7 @@ func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*co
 	}
 	var ch core.Channel
 	err := p.QueryRow(ctx, `
-		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND type <> 'dm'
+		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND NOT `+core.PrivateChannelSQL("channels")+`
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, days).
 		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -108,7 +108,7 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 // Sweep runs one pass over all channels that have auto-delete on.
 func (a *AutoDeleter) Sweep(ctx context.Context) error {
 	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
-	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND type <> 'dm'`)
+	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND NOT `+core.PrivateChannelSQL("channels"))
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)
 	}
@@ -215,7 +215,7 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 		SELECT m.id, m.parent_id FROM messages m
 		WHERE m.channel_id = $1 AND m.created_at < $2 AND NOT m.is_pinned
 		  AND NOT EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND (r.created_at >= $2 OR r.is_pinned))
-		  AND EXISTS (SELECT 1 FROM channels c WHERE c.id = m.channel_id AND c.auto_delete_days = $3 AND c.type <> 'dm')
+		  AND EXISTS (SELECT 1 FROM channels c WHERE c.id = m.channel_id AND c.auto_delete_days = $3 AND NOT `+core.PrivateChannelSQL("c")+`)
 		ORDER BY m.created_at
 		LIMIT $4
 		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, c.days, autoDeleteBatch)
