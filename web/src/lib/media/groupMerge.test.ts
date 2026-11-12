@@ -198,6 +198,23 @@ describe('a member whose group lacks the room\'s lowest id', () => {
     await closeAll(alice, bob, carol, dave)
   }, 60_000)
 
+  it('never gives a new lowest id a package that an earlier lowest id has already seen', async () => {
+    const { alice, bob, carol, dave } = await twoGroups()
+    vi.setSystemTime(START + 1000)
+    const first = only(await carol.maintain(), 'mls_key_package')
+    // Alice leaves the Talk; Bob, now the lowest id, removes her and shows a commit of his group.
+    const rest = [bobId, carolId, daveId]
+    const shown = only(await bob.sync(rest), 'mls_public_message')
+    await carol.receive(bobId, shown)
+    await carol.sync(rest)
+    vi.setSystemTime(START + 2000)
+    const second = only(await carol.maintain(), 'mls_key_package')
+    // The package Alice saw may have a leaf over there: the one for Bob is a new one under the same signature key.
+    expect([...second]).not.toEqual([...first])
+    expect(signerOf(second)).toEqual(signerOf(first))
+    await closeAll(alice, bob, carol, dave)
+  }, 60_000)
+
   it('is let in by the lowest id although that id still holds a leaf of it from a welcome that was lost', async () => {
     const { alice, bob, carol, dave } = await twoGroups()
     vi.setSystemTime(START + 1000)
