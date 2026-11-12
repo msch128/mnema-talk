@@ -24,6 +24,7 @@ import { browserMediaCall, mediaSettled } from './browserCall'
 import { decodeWire } from './callEngine'
 import { isCapability } from './capability'
 import type { EpochKeys } from './frame'
+import { clock } from './clock'
 import { MediaGroup } from './group'
 import type { FrameStats, MediaGuard } from './guard'
 import { isHeartbeat } from './heartbeat'
@@ -50,10 +51,34 @@ export function seededRandom(seed: number): () => number {
   }
 }
 
+/**
+ * How one machine keeps time. Every member runs on the simulator's virtual
+ * clock plus this: its own offset, a rate error, a step of the wall clock
+ * (the monotonic clock that clock.now reads does not follow it), and the
+ * time the monotonic clock stood still while the machine slept. All zero is
+ * the simulator's single clock.
+ */
+export interface ClockSkew {
+  /** Both clocks run this far ahead of virtual time, in ms. */
+  offset: number
+  /** The monotonic clock gains this many ms per ms of virtual time since SIM_START (0.001 is 1000 ppm). */
+  drift: number
+  /** The wall clock was stepped by this much in total (NTP, a manual change). */
+  wallStep: number
+  /** Time spent asleep that the monotonic clock did not count. */
+  monoLost: number
+  /** Whether the monotonic clock stands still while the machine sleeps. */
+  monoStops: boolean
+}
+
+export const NO_SKEW: Readonly<ClockSkew> = { offset: 0, drift: 0, wallStep: 0, monoLost: 0, monoStops: false }
+
 /** One browser tab in the call: a reload is a new one with the same user id. */
 export interface SimMember {
   readonly id: string
   readonly label: string
+  /** The machine's clocks: shared by every tab of this user. */
+  readonly skew: ClockSkew
   readonly call: MediaCall
   group: MediaGroup | null
   /** The barrier on the group's queue, set once the group is open. */
@@ -139,16 +164,21 @@ export class GroupSim {
   events = 0
   private readonly random: () => number
   private readonly jitter: () => number
+  /** Draws for the machines' clocks only, so that giving them clocks leaves the rest of a seed's run alone. */
+  readonly clockDraw: () => number
   private readonly context = new AsyncLocalStorage<SimMember>()
   private readonly timers = new Map<number, Timer>()
   private readonly touched = new Set<SimMember>()
   private readonly restore: (() => void)[] = []
   private timerSeq = TIMER_ID_BASE
   private memberSeq = 0
+  /** The clocks of each user's machine, by user id; zero until set. */
+  readonly skews = new Map<string, ClockSkew>()
 
   constructor(readonly seed: number, private readonly hooks: SimHooks) {
     this.random = seededRandom(seed)
     this.jitter = seededRandom(seed ^ 0x5bd1e995)
+    this.clockDraw = seededRandom(seed ^ 0x2545f491)
     this.install()
   }
 
@@ -195,6 +225,12 @@ export class GroupSim {
     const realClear = globalThis.clearTimeout
     const realRandom = Math.random
     vi.useFakeTimers({ toFake: ['Date'], now: SIM_START })
+    // What the code of a member reads as the time: the virtual one through that member's clocks.
+    const virtual = Date.now.bind(Date)
+    const realMono = clock.now
+    const mine = () => this.context.getStore()?.skew ?? NO_SKEW
+    Date.now = () => virtual() + mine().offset + mine().wallStep
+    clock.now = () => virtual() + mine().offset + mine().drift * (virtual() - SIM_START) - mine().monoLost
     const setTimer = (run: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
       const owner = this.context.getStore()
       if (!owner) return realSet(run, delay, ...args)
@@ -214,6 +250,7 @@ export class GroupSim {
       return group
     })
     this.restore.push(() => {
+      clock.now = realMono
       spy.mockRestore()
       Math.random = realRandom
       Object.assign(globalThis, { setTimeout: realSet, clearTimeout: realClear })
@@ -250,8 +287,10 @@ export class GroupSim {
       onStats: (listener) => { member.stats = listener },
       reset: () => undefined,
     }
+    const skew = this.skews.get(id) ?? { ...NO_SKEW }
+    this.skews.set(id, skew)
     const member: SimMember = {
-      id, label: `m${memberNumber(id)}#${++this.memberSeq}`, call: null as unknown as MediaCall, group: null, probe: null,
+      id, skew, label: `m${memberNumber(id)}#${++this.memberSeq}`, call: null as unknown as MediaCall, group: null, probe: null,
       gone: false, wakeAt: 0, wokeAt: -Infinity, roster: [], previousRoster: [], linkDueAt: 0, rosterDueAt: 0, offlineUntil: 0,
       current: null, staleAt: null, opens: new Map(), keys: [], stats: () => undefined,
     }
@@ -321,12 +360,25 @@ export class GroupSim {
     this.note(`sleep ${member.label} for ${ms} ms`)
     member.wakeAt = this.now + ms
     if (ms > 60_000) member.wokeAt = member.wakeAt
+    // A monotonic clock that stands still in sleep never saw this time: only the wall clock did.
+    if (member.skew.monoStops) member.skew.monoLost += ms
+  }
+
+  /** The wall clock of the member's machine is set by `ms` (negative: back). The monotonic clock does not follow. */
+  stepWall(id: string, ms: number) {
+    const member = this.room.get(id)
+    if (!member) return
+    this.note(`step ${member.label} wall clock by ${ms} ms`)
+    member.skew.wallStep += ms
+    // Forward by more than a sleep is long, the call takes it for one: a removal then is taken on trust.
+    if (ms > 60_000) member.wokeAt = this.now
   }
 
   /** Every sleeper wakes now. */
   wakeAll() {
     for (const member of this.live()) {
       if (!this.asleep(member)) continue
+      if (member.skew.monoStops) member.skew.monoLost -= member.wakeAt - this.now
       member.wakeAt = this.now
       if (member.wokeAt > this.now) member.wokeAt = this.now
     }

@@ -2,7 +2,7 @@
 // interferes and the room changes, then a quiet phase in which the invariants
 // must come to hold.
 import { GroupChecks } from './groupSimChecks.fixture'
-import { GroupSim, SIM_START, type Fault } from './groupSim.fixture'
+import { GroupSim, SIM_START, type ClockSkew, type Fault } from './groupSim.fixture'
 import { fixtureId } from '../../test-fixtures.fixture'
 
 /** How long the relay interferes. */
@@ -25,7 +25,23 @@ const FAULTS: readonly Fault[] = [
   { drop: 0.12, duplicate: 0.1, slow: 0.3, stall: 0.08 },
 ]
 
+/** How far the machines' clocks may part (see ClockSkew); each member's are drawn from the seed. */
+export interface ClockPlan {
+  /** Offsets are drawn in +-offsetMs. */
+  offsetMs: number
+  /** Rate errors are drawn in +-driftPpm. */
+  driftPpm: number
+  /** Wall clock steps while the relay interferes are drawn in +-stepMs. */
+  stepMs: number
+  /** The share of machines whose monotonic clock stops in sleep. */
+  monoStops: number
+}
+
 export interface SimPlan {
+  /** Looks at the room after every event of the quiet phase, until it agrees (see groupCycle.fixture.ts). */
+  watch?: (sim: GroupSim) => void
+  /** Per-member clocks; every member on the one virtual clock when left out. */
+  clocks?: ClockPlan
   /** The most members the room holds, 2 to 12; drawn from the seed when left out. */
   members?: number
   chaosMs?: number
@@ -47,16 +63,18 @@ export interface SimResult {
   seed: number
   members: number
   events: number
+  /** Virtual ms the run lasted, from the first instant. */
+  endMs: number
   /** Virtual ms from the end of the interference until the room agreed; null if it never did. */
   agreedAfterMs: number | null
   violations: string[]
   trace: string[]
 }
 
-export type ActionKind = 'join' | 'leave' | 'reload' | 'sleep' | 'reconnect'
+export type ActionKind = 'join' | 'leave' | 'reload' | 'sleep' | 'reconnect' | 'step'
 type Action = [kind: ActionKind, weight: number, run: () => void]
 
-function actions(sim: GroupSim, ids: readonly string[]): Action[] {
+function actions(sim: GroupSim, ids: readonly string[], clocks: ClockPlan | undefined): Action[] {
   const absent = ids.filter(id => !sim.room.has(id))
   const awake = sim.live().filter(member => !sim.asleep(member)).map(member => member.id)
   const list: Action[] = []
@@ -67,11 +85,16 @@ function actions(sim: GroupSim, ids: readonly string[]): Action[] {
   list.push(['sleep', 2, () => sim.sleep(sim.pick(awake), sim.between(2000, 20_000))])
   list.push(['sleep', 1, () => sim.sleep(sim.pick(awake), sim.between(70_000, 90_000))])
   list.push(['reconnect', 1, () => sim.reconnect(sim.pick(awake), sim.between(200, 6000))])
+  if (clocks?.stepMs) {
+    const step = () => Math.round((sim.clockDraw() * 2 - 1) * (clocks as ClockPlan).stepMs)
+    list.push(['step', 1, () => sim.stepWall(sim.pick(awake).id, step())])
+  }
   return list
 }
 
-function act(sim: GroupSim, ids: readonly string[], allowed: readonly ActionKind[] | undefined) {
-  const list = actions(sim, ids).filter(([kind]) => !allowed || allowed.includes(kind)).map(([, weight, run]) => [weight, run] as const)
+function act(sim: GroupSim, ids: readonly string[], plan: SimPlan) {
+  const allowed = plan.actions
+  const list = actions(sim, ids, plan.clocks).filter(([kind]) => !allowed || allowed.includes(kind)).map(([, weight, run]) => [weight, run] as const)
   if (!list.length) return
   let roll = sim.draw() * list.reduce((sum, [weight]) => sum + weight, 0)
   for (const [weight, run] of list) {
@@ -85,7 +108,7 @@ function schedule(sim: GroupSim, ids: readonly string[], plan: SimPlan, chaosMs:
   for (const id of ids.slice(0, first)) sim.after(null, sim.between(0, 3000), () => sim.join(id))
   const next = () => {
     if (sim.now - SIM_START >= chaosMs) return
-    act(sim, ids, plan.actions)
+    act(sim, ids, plan)
     sim.after(null, sim.between(500, 8000), next)
   }
   sim.after(null, sim.between(3000, 8000), next)
@@ -99,9 +122,12 @@ function calm(sim: GroupSim, ids: readonly string[]) {
   for (const id of ids) if (sim.room.size < 2 && !sim.room.has(id)) sim.join(id)
 }
 
-async function quietPhase(sim: GroupSim, checks: GroupChecks, within: number): Promise<number | null> {
+async function quietPhase(sim: GroupSim, checks: GroupChecks, within: number, watch?: (sim: GroupSim) => void): Promise<number | null> {
   const quietAt = sim.now
-  await sim.runUntil(quietAt + within, () => checks.agreed())
+  await sim.runUntil(quietAt + within, () => {
+    watch?.(sim)
+    return checks.agreed()
+  })
   if (!checks.agreed()) {
     sim.violation(`[1] the room did not agree within ${within} ms: ${checks.describe()}`)
     return null
@@ -117,6 +143,11 @@ async function quietPhase(sim: GroupSim, checks: GroupChecks, within: number): P
   return agreedAfterMs
 }
 
+function drawSkew(sim: GroupSim, plan: ClockPlan): ClockSkew {
+  const spread = (limit: number) => (sim.clockDraw() * 2 - 1) * limit
+  return { offset: Math.round(spread(plan.offsetMs)), drift: spread(plan.driftPpm) * 1e-6, wallStep: 0, monoLost: 0, monoStops: sim.clockDraw() < plan.monoStops }
+}
+
 export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResult> {
   const checks = new GroupChecks()
   const sim = new GroupSim(seed, checks)
@@ -125,14 +156,15 @@ export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResu
     const members = plan.members ?? sim.between(2, 12)
     const chaosMs = plan.chaosMs ?? CHAOS_MS
     const ids = Array.from({ length: members }, (_, index) => fixtureId(index + 1))
+    if (plan.clocks) for (const id of ids) sim.skews.set(id, drawSkew(sim, plan.clocks))
     sim.ordered = plan.relay === 'honest'
     sim.fault = plan.fault ?? (sim.ordered ? HONEST : sim.pick(FAULTS))
     sim.note(`seed ${seed}: up to ${members} members, ${plan.relay ?? 'hostile'} relay, faults ${JSON.stringify(sim.fault)}`)
     schedule(sim, ids, plan, chaosMs)
     await sim.runUntil(SIM_START + chaosMs)
     calm(sim, ids)
-    const agreedAfterMs = await quietPhase(sim, checks, plan.agreeWithinMs ?? AGREE_WITHIN_MS)
-    return { seed, members, events: sim.events, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
+    const agreedAfterMs = await quietPhase(sim, checks, plan.agreeWithinMs ?? AGREE_WITHIN_MS, plan.watch)
+    return { seed, members, events: sim.events, endMs: sim.now - SIM_START, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
   } finally {
     await sim.dispose()
   }
@@ -188,7 +220,7 @@ export async function runScript(script: Script): Promise<SimResult> {
     await sim.runUntil(SIM_START + script.quietAt)
     sim.note('the script is over')
     const agreedAfterMs = await quietPhase(sim, checks, script.agreeWithinMs ?? AGREE_WITHIN_MS)
-    return { seed: 0, members: Object.keys(script.latency).length, events: sim.events, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
+    return { seed: 0, members: Object.keys(script.latency).length, events: sim.events, endMs: sim.now - SIM_START, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
   } finally {
     await sim.dispose()
   }
