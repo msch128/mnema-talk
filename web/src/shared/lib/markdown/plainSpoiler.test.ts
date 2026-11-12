@@ -1,15 +1,17 @@
 // One rule, two implementations: what of a message is hidden. The renderer
 // hides ||spoilers||; every plain form (reply previews, search thread roots,
-// saved items and reminders, notifications) must hide the same text. Several
-// of them cut the raw Markdown to 200 characters first (LEFT(content, 200) in
-// internal/chat/messages/messages.go and internal/chat/search/search_roots.go,
-// cut() in internal/later/visibility.go) and strip afterwards: a spoiler
-// closed after the cut is open in the snippet, and its text shows.
-// Finding H-L3-06 of the 2026-11 hunt. Deep run: PLAIN_SWEEP=1 [PLAIN_SWEEP_N=<n>].
+// reminders, the conversation list, notifications) must hide the same text.
+// The snippets of the first four used to be the raw Markdown cut to 200
+// characters and stripped afterwards, so a spoiler closed after the cut was
+// open in the snippet and its text showed (finding H-L3-06 of the 2026-11
+// hunt). They are now markdownSnippet here and mdplain.Snippet on the server,
+// one rule checked against internal/mdplain/testdata/snippet.json on both
+// sides. Deep run: PLAIN_SWEEP=1 [PLAIN_SWEEP_N=<n>].
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderMarkdown } from '../markdown'
 import { setLocale } from '../../../i18n'
-import { previewText, replySnippet } from '../../../chat/lib/replies'
+import { previewText } from '../../../chat/lib/replies'
+import { markdownSnippet } from './snippet'
 import { rng } from './linkParity.fixture'
 
 beforeEach(() => setLocale('en'))
@@ -57,8 +59,8 @@ function message(r: () => number, n: number): string {
 /** The plain forms the client builds, keyed by where they appear. */
 const CONSUMERS: Record<string, (msg: string) => string> = {
   'message preview': msg => previewText(msg),
-  'reply preview (server LEFT 200)': msg => previewText(replySnippet(msg)),
-  'reminder and saved item (server cut 200)': msg => previewText(Array.from(msg).length > 200 ? Array.from(msg).slice(0, 199).join('') + '\u2026' : msg)
+  // The server's mdplain.Snippet builds the same Markdown (shared fixtures).
+  'snippet (reply preview, search root, reminder, conversation list)': msg => previewText(markdownSnippet(msg))
 }
 
 describe('plain forms hide what the renderer hides', () => {
@@ -68,16 +70,13 @@ describe('plain forms hide what the renderer hides', () => {
     expect(hiddenShownBy(minimal, previewText(minimal))).toEqual([])
   })
 
-  // Expected failures: they turn red the day the cut happens after stripping.
-  it.fails('a reply preview hides a spoiler that the 200-character cut leaves open', () => {
-    expect(hiddenShownBy(minimal, CONSUMERS['reply preview (server LEFT 200)']?.(minimal) ?? '')).toEqual([])
+  it('a snippet hides a spoiler that closes after the 200th character', () => {
+    const plain = CONSUMERS['snippet (reply preview, search root, reminder, conversation list)']?.(minimal) ?? ''
+    expect(plain).toContain('Spoiler')
+    expect(hiddenShownBy(minimal, plain)).toEqual([])
   })
 
-  it.fails('a reminder or saved item hides a spoiler that the 200-character cut leaves open', () => {
-    expect(hiddenShownBy(minimal, CONSUMERS['reminder and saved item (server cut 200)']?.(minimal) ?? '')).toEqual([])
-  })
-
-  it('generated messages: only the cut forms show hidden text, and they do', () => {
+  it('generated messages: no plain form shows hidden text', () => {
     const n = Number(process.env.PLAIN_SWEEP ? process.env.PLAIN_SWEEP_N ?? '100000' : '2000')
     const r = rng(7)
     const leaks: Record<string, number> = {}
@@ -92,6 +91,6 @@ describe('plain forms hide what the renderer hides', () => {
     }
     console.log(`plain forms: ${n} messages, leaks ${JSON.stringify(leaks)}`)
     expect(examples, 'the full plain form showed hidden text').toEqual([])
-    expect(Object.keys(leaks).sort(), JSON.stringify(leaks)).toEqual(['reminder and saved item (server cut 200)', 'reply preview (server LEFT 200)'])
+    expect(leaks).toEqual({})
   }, 3_600_000)
 })

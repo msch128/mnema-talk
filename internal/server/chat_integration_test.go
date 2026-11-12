@@ -317,3 +317,21 @@ func TestRepliesQuoteTheOriginal(t *testing.T) {
 	}
 	t.Fatal("reply vanished with its original")
 }
+
+// The quote is built from the whole original, so a spoiler that closes after
+// the 200th character stays hidden (finding H-L3-06 of the 2026-11 hunt).
+func TestAReplyQuoteHidesASpoilerThatClosesAfterTheCut(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "general", "text")
+	original := a.send(admin, ch, strings.Repeat("x", 180)+" ||the code is 4711, do not tell||")
+	res := admin.post("/api/channels/"+ch.String()+"/messages", map[string]any{"content": "noted", "reply_to_id": original})
+	if res.status != http.StatusCreated {
+		t.Fatalf("reply: %d %s", res.status, res.body)
+	}
+	var reply pageMsg
+	res.decode(t, &reply)
+	if reply.ReplyTo == nil || strings.Contains(reply.ReplyTo.Content, "4711") || !strings.HasSuffix(reply.ReplyTo.Content, "||…||") {
+		t.Fatalf("reply preview: %+v", reply.ReplyTo)
+	}
+}

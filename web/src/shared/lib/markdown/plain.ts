@@ -13,7 +13,8 @@ function plainText(text: string): string {
   return out
 }
 
-export function inlinePlain(nodes: readonly Inline[]): string {
+/** spoiler: the word shown instead of hidden text (default: the reader's language). */
+export function inlinePlain(nodes: readonly Inline[], spoiler = t('chat.spoiler')): string {
   return nodes
     .map(node => {
       switch (node.t) {
@@ -22,29 +23,29 @@ export function inlinePlain(nodes: readonly Inline[]): string {
         case 'code':
           return node.v
         case 'fmt':
-          return node.k === 'spoiler' ? t('chat.spoiler') : inlinePlain(node.c)
+          return node.k === 'spoiler' ? spoiler : inlinePlain(node.c, spoiler)
         default:
-          return inlinePlain(node.c)
+          return inlinePlain(node.c, spoiler)
       }
     })
     .join('')
 }
 
-function blockPlain(block: Block): string {
+function blockPlain(block: Block, spoiler: string): string {
   switch (block.t) {
     case 'quote':
-      return blocksPlain(block.c)
+      return blocksPlain(block.c, spoiler)
     case 'list':
-      return block.items.map(item => [inlinePlain(item.c), blocksPlain(item.sub)].filter(Boolean).join('\n')).join('\n')
+      return block.items.map(item => [inlinePlain(item.c, spoiler), blocksPlain(item.sub, spoiler)].filter(Boolean).join('\n')).join('\n')
     case 'code':
       return block.v
     default:
-      return inlinePlain(block.c)
+      return inlinePlain(block.c, spoiler)
   }
 }
 
-export function blocksPlain(blocks: readonly Block[]): string {
-  return blocks.map(blockPlain).join('\n')
+export function blocksPlain(blocks: readonly Block[], spoiler = t('chat.spoiler')): string {
+  return blocks.map(block => blockPlain(block, spoiler)).join('\n')
 }
 
 function inlineLinks(nodes: readonly Inline[], out: string[]): void {

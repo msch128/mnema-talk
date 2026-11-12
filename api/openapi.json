@@ -2572,7 +2572,7 @@
             "type": "boolean"
           },
           "text": {
-            "description": "Text is the start of the message text (at most 200 characters).",
+            "description": "Text is the start of the message text (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).",
             "type": "string"
           },
           "user_id": {
@@ -3867,6 +3867,7 @@
             "type": "string"
           },
           "content": {
+            "description": "Content is the start of the quoted message (the whole text when it has\nat most 200 characters, else the first 200 characters of its plain text\nas Markdown, each spoiler as ||…||).",
             "type": "string"
           },
           "deleted": {
@@ -4373,7 +4374,7 @@
             "type": "string"
           },
           "snippet": {
-            "description": "Snippet is the start of the root message (at most 200 characters).",
+            "description": "Snippet is the start of the root message (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).",
             "type": "string"
           },
           "user_id": {
@@ -6343,7 +6344,7 @@
             ]
           },
           "snippet": {
-            "description": "Snippet is the start of the message text (up to 200 characters).",
+            "description": "Snippet is the start of the message text (the whole\ntext when it has at most 200 characters, else the first 200 characters\nof its plain text as Markdown, each spoiler as ||…||).",
             "type": "string"
           }
         },

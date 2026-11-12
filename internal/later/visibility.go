@@ -4,18 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/mdplain"
 	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/textcut"
 )
-
-// snippetRunes bounds the text of a message shown in a reminder.
-const snippetRunes = 200
 
 // MessageRef is what a reminder shows of its message. It is only sent while the
 // owner may still see the message (the check runs on every read).
@@ -29,7 +25,9 @@ type MessageRef struct {
 	Author      string `json:"author"`
 	// AuthorID lets the client fold a member the reader blocked.
 	AuthorID uuid.UUID `json:"author_id,omitempty" binding:"optional" format:"uuid"`
-	// Snippet is the start of the message text (up to 200 characters).
+	// Snippet is the start of the message text (the whole
+	// text when it has at most 200 characters, else the first 200 characters
+	// of its plain text as Markdown, each spoiler as ||…||).
 	Snippet string `json:"snippet"`
 }
 
@@ -56,7 +54,7 @@ func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]
 		if err := row.Scan(&m.ID, &m.ChannelID, &m.ParentID, &m.ChannelName, &m.DM, &m.AuthorID, &m.Author, &content); err != nil {
 			return nil, err
 		}
-		m.Snippet = cut(content, snippetRunes)
+		m.Snippet = mdplain.Snippet(content, mdplain.SnippetLen)
 		if m.DM {
 			m.ChannelName = ""
 		}
@@ -70,13 +68,6 @@ func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]
 		out[ref.ID] = ref
 	}
 	return out, nil
-}
-
-func cut(s string, limit int) string {
-	if utf8.RuneCountInString(s) <= limit {
-		return s
-	}
-	return textcut.Runes(s, limit-1) + "…"
 }
 
 // canView reports whether the member may see the channel right now. A

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/mdplain"
 )
 
 // The pieces scanMessages reads besides the message row itself: the quoted
@@ -31,7 +32,7 @@ func buildReplyPreview(replyToID uuid.UUID, r rawReplyFields) *core.ReplyPreview
 		p.Username = Deref(r.username)
 		p.DisplayName = Deref(r.displayName)
 		p.AvatarURL = auth.AvatarURL(r.avatar)
-		p.Content = Deref(r.content)
+		p.Content = mdplain.Snippet(Deref(r.content), mdplain.SnippetLen)
 		p.HasAttachments = r.hasMedia
 		p.IsBot = r.isBot != nil && *r.isBot
 		p.IsWebhook = r.isWebhook != nil && *r.isWebhook

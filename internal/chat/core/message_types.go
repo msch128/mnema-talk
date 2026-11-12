@@ -162,14 +162,17 @@ type EmbedField struct {
 // ReplyPreview is the quoted header of a reply. Deleted is true when the
 // original message no longer exists.
 type ReplyPreview struct {
-	ID             uuid.UUID `json:"id" format:"uuid"`
-	Deleted        bool      `json:"deleted"`
-	UserID         uuid.UUID `json:"user_id,omitempty" binding:"optional" format:"uuid"`
-	Username       string    `json:"username,omitempty" binding:"optional"`
-	DisplayName    string    `json:"display_name,omitempty" binding:"optional"`
-	AvatarURL      string    `json:"avatar_url,omitempty" binding:"optional"`
-	Content        string    `json:"content,omitempty" binding:"optional"`
-	HasAttachments bool      `json:"has_attachments,omitempty" binding:"optional"`
+	ID          uuid.UUID `json:"id" format:"uuid"`
+	Deleted     bool      `json:"deleted"`
+	UserID      uuid.UUID `json:"user_id,omitempty" binding:"optional" format:"uuid"`
+	Username    string    `json:"username,omitempty" binding:"optional"`
+	DisplayName string    `json:"display_name,omitempty" binding:"optional"`
+	AvatarURL   string    `json:"avatar_url,omitempty" binding:"optional"`
+	// Content is the start of the quoted message (the whole text when it has
+	// at most 200 characters, else the first 200 characters of its plain text
+	// as Markdown, each spoiler as ||…||).
+	Content        string `json:"content,omitempty" binding:"optional"`
+	HasAttachments bool   `json:"has_attachments,omitempty" binding:"optional"`
 	// IsBot and IsWebhook describe the quoted author like Message does.
 	IsBot     bool `json:"is_bot,omitempty" binding:"optional"`
 	IsWebhook bool `json:"is_webhook,omitempty" binding:"optional"`
