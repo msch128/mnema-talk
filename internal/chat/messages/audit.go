@@ -2,6 +2,7 @@ package messages
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -34,36 +35,34 @@ type auditSnapshot struct {
 	edits []map[string]any
 }
 
-// snapshotMessage reads what the audit log needs to know about a message. A
-// failure only costs detail: the action itself must not fail because of it.
-func (a *API) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies bool) *auditSnapshot {
+// snapshotMessage reads, through q, what the audit log needs to know about a
+// message. Callers read it in the transaction of the change, so a failure
+// fails the change too: a change is never left without its entry. Only the
+// reply ids and edit versions are detail whose failure is tolerated.
+func (a *API) snapshotMessage(ctx context.Context, q db.Querier, id uuid.UUID, withReplies bool) (*auditSnapshot, error) {
 	if a.Audit == nil {
-		return nil
+		return nil, nil
 	}
-	msg, err := GetMessage(ctx, a.DB, id)
+	msg, err := GetMessage(ctx, q, id)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	s := &auditSnapshot{msg: msg}
 	// Fail closed: when the channel cannot be read, a direct message must not
 	// end up in the log with its text.
-	if s.channel, s.dm, err = channelAuditName(ctx, a.DB, msg.ChannelID); err != nil {
-		return nil
+	if s.channel, s.dm, err = channelAuditName(ctx, q, msg.ChannelID); err != nil {
+		return nil, err
 	}
 	if s.dm {
-		return &auditSnapshot{dm: true, msg: &core.Message{UserID: msg.UserID}}
+		return &auditSnapshot{dm: true, msg: &core.Message{UserID: msg.UserID}}, nil
 	}
 	if withReplies && msg.ReplyCount > 0 {
-		s.replies = a.fetchAuditedReplyIDs(ctx, id)
+		s.replies = ReplyIDsForAudit(ctx, q, []uuid.UUID{id})[id]
 	}
 	if withReplies && msg.IsEdited {
-		s.edits = editVersionsForAuditDetail(ctx, a.DB, []uuid.UUID{id})[id]
+		s.edits = editVersionsForAuditDetail(ctx, q, []uuid.UUID{id})[id]
 	}
-	return s
-}
-
-func (a *API) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) []uuid.UUID {
-	return ReplyIDsForAudit(ctx, a.DB, []uuid.UUID{parentID})[parentID]
+	return s, nil
 }
 
 // ReplyIDsForAudit reads, per message, the ids of its first maxAuditedReplies
@@ -134,38 +133,43 @@ func (s *auditSnapshot) details() map[string]any {
 }
 
 // auditDelete records the deletion of a message, by its author or by a
-// moderator.
-func (a *API) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID, s *auditSnapshot, reason string) {
-	if s != nil && s.dm {
-		return
+// moderator, through tx, the transaction of the deletion. It returns the
+// snapshot for the notice to the author.
+func (a *API) auditDelete(ctx context.Context, tx pgx.Tx, user *auth.User, id uuid.UUID, reason string) (*auditSnapshot, error) {
+	s, err := a.snapshotMessage(ctx, tx, id, true)
+	if err != nil || s == nil || s.dm {
+		return s, err
 	}
-	e := audit.Entry{Action: "message.delete", TargetType: "message", TargetID: id.String(), Details: map[string]any{}}
-	if s != nil {
-		e.Details = s.details()
-		e.Details["moderator"] = s.msg.UserID != user.ID
-		e.Details["reply_ids"] = s.replies
-		if len(s.edits) > 0 {
-			e.Details["edit_versions"] = s.edits
-		}
-		if reason != "" {
-			e.Details["reason"] = reason
-		}
-		e.TargetName = s.channel
-		e.ChannelID = &s.msg.ChannelID
+	e := audit.Entry{Action: "message.delete", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID}
+	e.Details = s.details()
+	e.Details["moderator"] = s.msg.UserID != user.ID
+	e.Details["reply_ids"] = s.replies
+	if len(s.edits) > 0 {
+		e.Details["edit_versions"] = s.edits
 	}
-	a.Audit.RecordOrLog(ctx, e)
+	if reason != "" {
+		e.Details["reason"] = reason
+	}
+	return s, a.Audit.RecordTx(ctx, tx, e)
 }
 
-// auditEdit records an edit with the text before and after.
-func (a *API) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot, after string) {
-	if s == nil || s.dm {
-		return
+// auditEdit records an edit with the text before and after, through tx, the
+// transaction of the edit, after the new text is stored: the text before is
+// the version the edit just kept in message_edits.
+func (a *API) auditEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	s, err := a.snapshotMessage(ctx, tx, id, false)
+	if err != nil || s == nil || s.dm {
+		return err
+	}
+	var before string
+	if err := tx.QueryRow(ctx, `SELECT content FROM message_edits WHERE message_id = $1 ORDER BY id DESC LIMIT 1`, id).Scan(&before); err != nil {
+		return fmt.Errorf("read the replaced version: %w", err)
 	}
 	d := s.details()
 	delete(d, "content")
-	d["before"] = audit.Content(s.msg.Content)
-	d["after"] = audit.Content(after)
-	a.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID, Details: d})
+	d["before"] = audit.Content(before)
+	d["after"] = audit.Content(s.msg.Content)
+	return a.Audit.RecordTx(ctx, tx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID, Details: d})
 }
 
 // DeleteMessageRequest is the optional body of DELETE

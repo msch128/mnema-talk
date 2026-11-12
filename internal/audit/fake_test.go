@@ -88,6 +88,35 @@ func TestRecordAndRetentionAgainstFakeDB(t *testing.T) {
 	}
 }
 
+// ctxDB fails a statement whose context has ended, as pgx does.
+type ctxDB struct{ fakeDB }
+
+func (f *ctxDB) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	if err := ctx.Err(); err != nil {
+		return pgconn.CommandTag{}, err
+	}
+	return f.fakeDB.Exec(ctx, sql, args...)
+}
+
+// An entry written after its change committed is not lost because the
+// client disconnected: the request context is already cancelled then.
+func TestAnEntryAfterTheCommitSurvivesADisconnectedClient(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	f := &ctxDB{}
+	(&Log{DB: f}).RecordOrLog(ctx, Entry{Action: "a"})
+	if f.execs != 1 {
+		t.Fatalf("RecordOrLog with a cancelled request context wrote %d entries, want 1", f.execs)
+	}
+
+	m := &ctxDB{}
+	h := (&Log{DB: m}).Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/api/admin/brand-new", nil).WithContext(ctx))
+	if m.execs != 1 {
+		t.Fatalf("the admin middleware with a cancelled request context wrote %d entries, want 1", m.execs)
+	}
+}
+
 func TestSnapshotScanFailure(t *testing.T) {
 	f := &fakeDB{row: errRow{}}
 	if m, _ := Snapshot(context.Background(), f, ResRole, uuid.NewString()); m != nil {

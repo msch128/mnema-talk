@@ -64,16 +64,17 @@ func (pp *PreparedPost) Store(ctx context.Context, userID uuid.UUID) func(tx pgx
 
 // ServeCreateForumPost creates a root post in channelID with title, message content, and tags.
 // canManage says whether the author holds Manage messages, which moderated tags need.
-func CreateForumPost(ctx context.Context, p *db.Pool, online mentions.OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
+// The stored post is returned as read in the transaction that stores it.
+func CreateForumPost(ctx context.Context, p *db.Pool, online mentions.OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (*core.Message, error) {
 	validContent, err := core.ValidateContent(content, false)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
 	post, err := PreparePost(ctx, p, channelID, canManage, title, tagIDs)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
-	return messages.InsertMessage(ctx, p, online, messages.NewMessage{
+	return messages.InsertStoredMessage(ctx, p, online, messages.NewMessage{
 		ChannelID: channelID,
 		UserID:    userID,
 		Content:   validContent,

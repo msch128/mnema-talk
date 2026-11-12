@@ -139,8 +139,12 @@ func (l *Log) serve(next http.Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e := l.finalizeEntry(ctx, r, m, before, name, req, reqMark, resp.buf.Bytes())
-	l.RecordOrLog(ctx, e)
+	// The change is done: the "after" snapshot and the entry must not fail
+	// because the client disconnected meanwhile.
+	after, cancel := afterCommit(ctx)
+	defer cancel()
+	e := l.finalizeEntry(after, r, m, before, name, req, reqMark, resp.buf.Bytes())
+	l.RecordOrLog(after, e)
 }
 
 func shouldSkipBody(r *http.Request, noBody bool) bool {

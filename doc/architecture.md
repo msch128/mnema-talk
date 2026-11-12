@@ -80,6 +80,11 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
    staged files, joins the same transaction).
 3. [`messages.PublishMessage`](../internal/chat/messages/post.go) loads the stored message,
    broadcasts `message_create` through the `events.Publisher` and answers 201.
+   A typed message and a new forum post are read inside the transaction of
+   step 2 instead (`InsertStoredMessage`, `PublishStored`), so an error answer
+   means nothing was stored; an edit, a reaction, a new conversation, an event
+   comment or answer and a new webhook answer from inside their transaction
+   the same way.
 4. The hub writes the event to every open WebSocket; the
    [chat store](../web/src/stores/chat.ts) inserts it, updates unread and
    mention counters and plays the notification according to the channel's

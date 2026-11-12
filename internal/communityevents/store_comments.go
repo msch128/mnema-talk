@@ -72,31 +72,42 @@ func (s *Store) CreateComment(ctx context.Context, eventID, userID uuid.UUID, co
 	if err != nil {
 		return EventComment{}, err
 	}
-	var id uuid.UUID
+	var c EventComment
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
-		status, err := openEvent(ctx, tx, eventID, true)
+		id, err := insertComment(ctx, tx, eventID, userID, text)
 		if err != nil {
 			return err
 		}
-		if status == StatusCancelled {
-			return httpx.ErrConflict("this event is cancelled and takes no more comments")
-		}
-		var n, mine int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*), COUNT(*) FILTER (WHERE user_id = $2) FROM event_comments WHERE event_id = $1`, eventID, userID).Scan(&n, &mine); err != nil {
-			return err
-		}
-		if n >= MaxEventComments {
-			return httpx.ErrConflict(fmt.Sprintf("an event keeps at most %d comments", MaxEventComments))
-		}
-		if mine >= MaxCommentsPerMember {
-			return httpx.ErrConflict(fmt.Sprintf("one member leaves at most %d comments under an event", MaxCommentsPerMember))
-		}
-		return tx.QueryRow(ctx, `INSERT INTO event_comments (event_id, user_id, content) VALUES ($1, $2, $3) RETURNING id`, eventID, userID, text).Scan(&id)
+		// Read in the transaction: an error means no comment was stored, so a
+		// retry does not post it twice.
+		c, err = scanComment(tx.QueryRow(ctx, commentSelect+` WHERE c.id = $1`, id))
+		return err
 	})
+	return c, err
+}
+
+// insertComment checks the event and the comment limits and stores the comment.
+func insertComment(ctx context.Context, tx pgx.Tx, eventID, userID uuid.UUID, text string) (uuid.UUID, error) {
+	status, err := openEvent(ctx, tx, eventID, true)
 	if err != nil {
-		return EventComment{}, err
+		return uuid.Nil, err
 	}
-	return s.GetComment(ctx, eventID, id)
+	if status == StatusCancelled {
+		return uuid.Nil, httpx.ErrConflict("this event is cancelled and takes no more comments")
+	}
+	var n, mine int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*), COUNT(*) FILTER (WHERE user_id = $2) FROM event_comments WHERE event_id = $1`, eventID, userID).Scan(&n, &mine); err != nil {
+		return uuid.Nil, err
+	}
+	if n >= MaxEventComments {
+		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("an event keeps at most %d comments", MaxEventComments))
+	}
+	if mine >= MaxCommentsPerMember {
+		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("one member leaves at most %d comments under an event", MaxCommentsPerMember))
+	}
+	var id uuid.UUID
+	err = tx.QueryRow(ctx, `INSERT INTO event_comments (event_id, user_id, content) VALUES ($1, $2, $3) RETURNING id`, eventID, userID, text).Scan(&id)
+	return id, err
 }
 
 // GetComment returns one comment of an event.

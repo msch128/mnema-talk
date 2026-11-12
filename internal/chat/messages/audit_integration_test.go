@@ -14,26 +14,26 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
-func TestAuditSnapshotOfAMissingMessageIsEmpty(t *testing.T) {
+// The snapshot is read in the transaction of the change it describes, so a
+// failed read fails the change instead of leaving it without its entry
+// (H-L7-04).
+func TestAuditSnapshotOfAMissingMessageFails(t *testing.T) {
 	f := newFixture(t)
 	h := &API{DB: f.p, Audit: &audit.Log{DB: f.p}}
-	if h.snapshotMessage(context.Background(), uuid.New(), true) != nil {
-		t.Fatal("snapshot of a message that does not exist")
+	if _, err := h.snapshotMessage(context.Background(), f.p, uuid.New(), true); !errors.Is(err, core.ErrMessageNotFound) {
+		t.Fatalf("snapshot of a message that does not exist: %v", err)
 	}
-	if (&API{DB: f.p}).snapshotMessage(context.Background(), f.msg, true) != nil {
-		t.Fatal("snapshot without an audit log")
+	if s, err := (&API{DB: f.p}).snapshotMessage(context.Background(), f.p, f.msg, true); s != nil || err != nil {
+		t.Fatalf("snapshot without an audit log: %+v %v", s, err)
 	}
-	// An edit or delete without a snapshot is simply not described further.
-	h.auditEdit(context.Background(), f.msg, nil, "x")
-	h.auditDelete(context.Background(), f.u, f.msg, nil, "")
 }
 
-func TestAuditSnapshotIsEmptyWhenTheChannelCannotBeRead(t *testing.T) {
+func TestAuditSnapshotFailsWhenTheChannelCannotBeRead(t *testing.T) {
 	f := newFixture(t)
 	broken := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
 	h := &API{DB: broken, Audit: &audit.Log{DB: f.p}}
-	if s := h.snapshotMessage(context.Background(), f.msg, false); s != nil {
-		t.Fatalf("snapshot without a channel lookup: %+v", s)
+	if s, err := h.snapshotMessage(context.Background(), broken, f.msg, false); s != nil || err == nil {
+		t.Fatalf("snapshot without a channel lookup: %+v %v", s, err)
 	}
 }
 

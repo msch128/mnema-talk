@@ -18,6 +18,12 @@ import (
 
 // Register creates a regular user, consuming one use of a valid invite code.
 func Register(ctx context.Context, p *db.Pool, username, displayName, password, inviteCode string) (*User, error) {
+	return RegisterAudited(ctx, p, username, displayName, password, inviteCode, nil)
+}
+
+// RegisterAudited is Register with audited, if set, run in the transaction
+// that creates the account (its audit entry, so no account exists without it).
+func RegisterAudited(ctx context.Context, p *db.Pool, username, displayName, password, inviteCode string, audited func(pgx.Tx, *User) error) (*User, error) {
 	username, displayName, inviteCode, err := cleanRegistration(username, displayName, password, inviteCode)
 	if err != nil {
 		return nil, err
@@ -54,15 +60,8 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	}
 
 	var user *User
-	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := raid.LockSignup(ctx, tx); err != nil {
-			return err
-		}
-		inviteID, err := claimCode(ctx, tx, inviteCode)
-		if err != nil {
-			return err
-		}
-		user, err = insertInvitedUser(ctx, tx, username, displayName, hash, inviteID)
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) (err error) {
+		user, err = createInvitedUser(ctx, tx, username, displayName, hash, inviteCode, audited)
 		return err
 	})
 	if err != nil {
@@ -71,6 +70,23 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	// Raid protection counts the join and may restrict the newcomer.
 	automod.Of(p).OnJoin(ctx, user.ID)
 	return user, nil
+}
+
+// createInvitedUser claims a use of the invite and creates the account in tx,
+// then runs audited, if set.
+func createInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, hash, inviteCode string, audited func(pgx.Tx, *User) error) (*User, error) {
+	if err := raid.LockSignup(ctx, tx); err != nil {
+		return nil, err
+	}
+	inviteID, err := claimCode(ctx, tx, inviteCode)
+	if err != nil {
+		return nil, err
+	}
+	user, err := insertInvitedUser(ctx, tx, username, displayName, hash, inviteID)
+	if err != nil || audited == nil {
+		return user, err
+	}
+	return user, audited(tx, user)
 }
 
 // cleanRegistration validates the sign-up fields and returns the username
