@@ -509,8 +509,18 @@ The entries of a message deletion or edit, a report, a registration, an
 account deletion, a new wiki page and a new event (not a series) are written
 in the same database transaction as the change: the change and its entry
 exist together or not at all, and a failed entry fails the change. Every other
-entry, including all of the `/api/admin` middleware's, is written right after
-the change committed, in a statement of its own. When that write fails (a
+entry is written right after the change committed, in a statement of its own:
+all of the `/api/admin` middleware's, and the entries of a bulk delete
+(`message.delete` per message and `moderation.bulk_delete`), pins, ending a
+poll, the forum (post updates, settings, tags), Talks (`voice.join` and
+`voice.leave`, Talk settings, the removal of a temporary Talk), event edits,
+cancellations, series, covers, roles, role templates and comment removals,
+wiki edits, moves, deletions, restores, locks and images, role
+self-assignment, auto-delete settings and runs, automod timeouts and raid
+mode, expired bans, removed avatars, the moderation slash commands, the
+edit-history view, and the auth events (sign-in and failed sign-in, password
+change and reset mail, e-mail, second factor, sessions, data export). When
+that write fails (a
 database error or restart, or the server dying in that moment) the change
 stays, its request still answers success, the entry is missing, and the
 server logs `audit log write failed` with the action. A deploy shuts the
