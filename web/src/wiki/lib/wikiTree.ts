@@ -54,19 +54,43 @@ export function breadcrumbs(pages: readonly WikiPageSummary[], slug: string): Wi
   return trail
 }
 
+/** Finds the slug a `[[Title]]` or `[[slug]]` points to, or null when no page matches. */
+export type WikiLinkResolver = (target: string) => string | null
+
+const resolvers = new WeakMap<readonly WikiPageSummary[], WikiLinkResolver>()
+
 /**
- * The slug a `[[Title]]` or `[[slug]]` points to, or null when no page matches.
- * Titles compare by wikiTitleKey, as the server does. Two pages from before
- * that rule may share a key: the first in the server's tree order wins.
+ * The resolver for one page list. Titles compare by wikiTitleKey, as the
+ * server does; a title match wins over an address. Two pages from before that
+ * rule may share a key: the first in the server's tree order wins. Each
+ * page's key is computed once per list (a page may hold thousands of links,
+ * and the editor preview renders on every keystroke). The store replaces the
+ * list on every change and never edits it in place, so a list's resolver is kept.
  */
+export function wikiLinkResolver(pages: readonly WikiPageSummary[]): WikiLinkResolver {
+  const known = resolvers.get(pages)
+  if (known) return known
+  const byKey = new Map<string, string>()
+  const slugs = new Set<string>()
+  for (const p of pages) {
+    if (p.deleted_at) continue
+    const key = wikiTitleKey(p.title)
+    if (!byKey.has(key)) byKey.set(key, p.slug)
+    slugs.add(p.slug)
+  }
+  const resolve: WikiLinkResolver = target => {
+    const trimmed = target.trim()
+    if (!trimmed) return null
+    const slug = trimmed.toLowerCase()
+    return byKey.get(wikiTitleKey(trimmed)) ?? (slugs.has(slug) ? slug : null)
+  }
+  resolvers.set(pages, resolve)
+  return resolve
+}
+
+/** The slug a `[[Title]]` or `[[slug]]` points to, or null when no page matches (wikiLinkResolver). */
 export function resolveWikiLink(pages: readonly WikiPageSummary[], target: string): string | null {
-  const trimmed = target.trim()
-  if (!trimmed) return null
-  const wanted = wikiTitleKey(trimmed)
-  const slug = trimmed.toLowerCase()
-  const live = pages.filter(p => !p.deleted_at)
-  const hit = live.find(p => wikiTitleKey(p.title) === wanted) ?? live.find(p => p.slug === slug)
-  return hit?.slug ?? null
+  return wikiLinkResolver(pages)(target)
 }
 
 /** The slugs of a page and everything below it (a page cannot move under these). */

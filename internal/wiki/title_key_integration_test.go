@@ -26,6 +26,10 @@ func TestPagesThatAlreadyShareATitleKeyStayEditable(t *testing.T) {
 	if err != nil || len(tree) != 2 {
 		t.Fatalf("both pages are listed: %+v, %v", tree, err)
 	}
+	// A decomposed query finds the composed title (the query is composed too).
+	if hits, err := w.s.Search(ctx, "Cafe\u0301"); err != nil || len(hits) == 0 || hits[0].Slug != composed.Slug {
+		t.Fatalf("search in the other form: %+v, %v", hits, err)
+	}
 	if _, err := w.s.Create(ctx, w.alice, PageInput{Title: "CAF\u00c9"}); !is(err, errTitleTaken) {
 		t.Fatalf("a third page with the title: %v", err)
 	}

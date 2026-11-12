@@ -3,18 +3,19 @@
 // a rename. A name that matches no page stays as text with a dotted underline.
 import type { TextRule } from '../../shared/lib/markdown'
 import type { WikiPageSummary } from './wikiApi'
-import { resolveWikiLink } from './wikiTree'
+import { wikiLinkResolver } from './wikiTree'
 
 const group = (m: RegExpMatchArray, index: number): string => m[index] ?? ''
 
 /** The rule for the pages the reader can see. Linear: no nested quantifiers. */
 export function wikiLinkRule(pages: readonly WikiPageSummary[]): TextRule {
+  const resolve = wikiLinkResolver(pages)
   return {
     re: /\[\[([^[\]|\n]{1,100})(?:\|([^[\]\n]{1,100}))?\]\]/g,
     build(m) {
       const target = group(m, 1).trim()
       const label = (m[2] === undefined ? target : group(m, 2)).trim() || target
-      const slug = resolveWikiLink(pages, target)
+      const slug = resolve(target)
       if (!slug) return [{ t: 'el', tag: 'span', attrs: { class: 'md-wikilink md-wikilink-missing' }, c: [{ t: 'text', v: label }] }]
       return [{ t: 'el', tag: 'span', attrs: { class: 'md-wikilink', 'data-wiki': slug, role: 'button', tabindex: '0' }, c: [{ t: 'text', v: label }] }]
     },
