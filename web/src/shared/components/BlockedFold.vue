@@ -2,7 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { EyeOff } from '@lucide/vue'
 import { useBlocksStore } from '../../stores/blocks'
-import { focusRevealed } from '../lib/revealFocus'
+import { focusRevealed, placeOf } from '../lib/revealFocus'
 
 // The one way a blocked member's words are folded: wherever a message of
 // another member is shown (the message list, a reply line, a quote, a search
@@ -28,11 +28,12 @@ const shownHere = ref(false)
 const start = ref<HTMLElement | null>(null)
 const end = ref<HTMLElement | null>(null)
 
-async function show() {
+async function show(event: Event) {
+  const around = placeOf(event.currentTarget instanceof Element ? event.currentTarget : null)
   shownHere.value = true
   blocks.reveal(props.msg.id)
   await nextTick()
-  focusRevealed(start.value, end.value, props.msg.id)
+  focusRevealed(start.value, end.value, props.msg.id, around)
 }
 </script>
 
