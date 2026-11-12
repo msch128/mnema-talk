@@ -48,23 +48,28 @@ func FuzzCleanDomain(f *testing.F) {
 }
 
 // FuzzLinkRules checks the rules fail closed: any link-like token breaks a
-// block-all rule and an allow-list that lists nothing, however the rest of the
-// message looks, and a blocked host stays blocked when text follows it after
-// a space of any kind.
+// block-all rule, and an allow list that lists nothing unless every link in
+// the message is a host read exactly that no resolver can answer for ("www.$":
+// it leads nowhere, see reachable), however the rest of the message looks; and
+// a blocked host stays blocked when text follows it after a space of any kind.
 func FuzzLinkRules(f *testing.F) {
-	for _, s := range []string{"see https://evil.example now", "https://evil.example now", "https://evil.example　x", "WWW.evil.example", "http://évil.example/x", "\u200bhttps://evil.example", "x\u200bhttps://evil.example", "x\u0301https://evil.example", "xhttps://evil.example", "no link here"} {
+	for _, s := range []string{"see https://evil.example now", "https://evil.example now", "https://evil.example　x", "WWW.evil.example", "http://évil.example/x", "\u200bhttps://evil.example", "x\u200bhttps://evil.example", "x\u0301https://evil.example", "xhttps://evil.example", "no link here", "WWW.$", "https://allowed.example's page"} {
 		f.Add(s)
 	}
 	blockAll := &compiled{Rule: Rule{Config: Settings{Mode: LinksBlockAll}}}
 	allowNone := &compiled{Rule: Rule{Config: Settings{Mode: LinksAllowList}}}
 	blockList := &compiled{Rule: Rule{Config: Settings{Mode: LinksBlockList, Domains: []string{"evil.example"}}}, domains: []string{"evil.example"}}
 	f.Fuzz(func(t *testing.T, content string) {
-		linky := len(links(content)) > 0
-		if linky && (!blockAll.matchesLinks(content) || !allowNone.matchesLinks(content)) {
-			t.Fatalf("a link in %q passed a strict rule", content)
+		ls := links(content)
+		linky, leads := len(ls) > 0, false
+		for _, l := range ls {
+			leads = leads || !l.ok || reachable(l.host)
 		}
-		if !linky && (blockAll.matchesLinks(content) || allowNone.matchesLinks(content)) {
-			t.Fatalf("%q has no link but broke a rule", content)
+		if linky != blockAll.matchesLinks(content) {
+			t.Fatalf("%q: has a link is %v, but block-all says %v", content, linky, !linky)
+		}
+		if leads != allowNone.matchesLinks(content) {
+			t.Fatalf("%q: has a link that may lead somewhere is %v, but an empty allow list says %v", content, leads, !leads)
 		}
 		for _, space := range []string{" ", " ", " ", "　", " ", "\t"} {
 			msg := "https://evil.example" + space + content
