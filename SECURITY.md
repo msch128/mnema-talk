@@ -475,7 +475,8 @@ details and the limits.
   stream a buffer only for an SSRC it might read, and caps that buffer (128
   packets, 16 KB; about 20 KB of heap when full). A stream for an SSRC the
   client declared in its answer, or that the SFU sent and stopped (the late
-  reports of an ended track, RTX included), keeps nothing (about 0.5 KB). A
+  reports of an ended track, RTX included), keeps nothing (about 0.5 KB); a report that arrives in the moment a sender is made or stopped can
+  leave that one stream with its capped buffer, which the buffered limit counts. A
   member's media connection is closed, logged with the member at warn and
   counted (`mnema_sfu_ingress_dropped_total{reason="rtcp_ssrcs"}`) once it
   named more than 64 SSRCs that are neither, made more than 32 768 of the
