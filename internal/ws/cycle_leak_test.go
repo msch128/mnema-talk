@@ -192,10 +192,9 @@ func TestHubConnectTypeDisconnectCycleReturnsToBaseline(t *testing.T) {
 	if done != rounds {
 		t.Fatalf("only %d of %d rounds ran", done, rounds)
 	}
-	// H-L8-04: an account that went idle before it disconnected leaves
-	// active[user] = 0 behind for good (setIdle decrements without deleting,
-	// forget skips an idle client's counter).
-	checkBaseline(t, h, base, goBase, heapBase, 4<<20, map[string]bool{"active": true})
+	// An account that went idle before it disconnected must not leave
+	// active[user] = 0 behind (H-L8-04).
+	checkBaseline(t, h, base, goBase, heapBase, 4<<20, nil)
 	t.Logf("rounds=%d connections=%d", rounds, done)
 }
 
@@ -233,10 +232,9 @@ func TestHubVoiceJoinLeaveCycleReturnsToBaseline(t *testing.T) {
 	t.Logf("rounds=%d joins=%d leaves=%d drops=%d", rounds, joins, leaves, drops)
 }
 
-// TestIdleThenOfflineLeavesActiveEntry is the minimal case of H-L8-04, as an
-// inverse assertion: it passes while the leak exists and turns red when the
-// zero counter is deleted.
-func TestIdleThenOfflineLeavesActiveEntry(t *testing.T) {
+// TestIdleThenOfflineLeavesNoActiveEntry: a client that goes idle and then
+// disconnects leaves no active entry behind (H-L8-04).
+func TestIdleThenOfflineLeavesNoActiveEntry(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "idle"})
@@ -249,8 +247,7 @@ func TestIdleThenOfflineLeavesActiveEntry(t *testing.T) {
 	if online {
 		t.Fatal("setup: the user is still online")
 	}
-	if !kept {
-		t.Fatal("H-L8-04 is fixed: an offline account no longer leaves an active entry; invert this test into a guard")
+	if kept {
+		t.Fatalf("offline account keeps active[user] = %d", n)
 	}
-	t.Logf("offline account keeps active[user] = %d", n)
 }
