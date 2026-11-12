@@ -1,9 +1,13 @@
+import { clock as lifecycle } from './clock'
+
 /**
  * Lets an action happen once per key, then again only after a wait that
  * doubles each time it is used, up to a ceiling. Used for everything that can
  * throw group state away or swap a member's leaf, so a flood of messages (or a
  * misbehaving member) cannot turn into a reset loop. Quiet for a while
- * restarts the wait from the base.
+ * restarts the wait from the base. The waits are measured on the monotonic
+ * clock of the key lifecycle (clock.ts): on the wall clock a step back would
+ * keep an open wait shut for the size of the step.
  */
 export class Backoff {
   private readonly entries = new Map<string, { next: number, wait: number }>()
@@ -11,7 +15,7 @@ export class Backoff {
   constructor(
     private readonly baseMs: number,
     private readonly maxMs: number,
-    private readonly clock: () => number = () => Date.now(),
+    private readonly clock: () => number = () => lifecycle.now(),
   ) {}
 
   allow(key: string): boolean {

@@ -53,12 +53,12 @@ export abstract class GroupBase {
   protected hinted = new Set<string>()
   /** The leaves removed by the commit the rules last accepted: all others must keep identity and signature key. */
   protected vetted: ReadonlySet<number> = new Set()
-  protected readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS)
+  protected readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS, () => clock.now())
   protected closed = false
   /** Private keys of the package this group was joined with. The package itself is replaced after the join; these go when the group does. */
   protected leafKeys: Uint8Array[] = []
-  protected readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
-  protected readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS)
+  protected readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS, () => clock.now())
+  protected readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS, () => clock.now())
   protected notice: (notice: MediaNotice) => void = () => {}
   protected stepListener: (step: MediaStep) => void = () => {}
   protected deferTimer: ReturnType<typeof setTimeout> | null = null

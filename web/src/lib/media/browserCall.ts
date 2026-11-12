@@ -2,6 +2,7 @@ import { mediaUserId } from './bounds'
 import { createMediaGuard, type MediaGuard } from './guard'
 import { mediaSealingSupported } from './support'
 import { WirePacer } from './pacer'
+import { clock } from './clock'
 import type { MediaCall } from './api'
 import { work, newCallState, rosterIds, track, flush, startCall, stopCall, handleStats } from './callEngine'
 
@@ -11,7 +12,7 @@ export function mediaSettled(call: MediaCall): Promise<void> {
 
 /** The call the browser actually runs. Tests install a double in front of it. */
 export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaCall {
-  const s = newCallState(guard, new WirePacer())
+  const s = newCallState(guard, new WirePacer(() => clock.now()))
 
   const call: MediaCall = {
     start(nextChannel, nextUser) { startCall(s, nextChannel, nextUser) },
