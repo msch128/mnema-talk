@@ -1,6 +1,9 @@
 package automod
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Where the client can end the host of a link, and which hosts that gives.
 // The client's bare link (inline.ts matchBare) runs to the first character
@@ -18,16 +21,23 @@ const maxEnds = 16
 const clientTrailing = ".,:;!?'\"*_~|"
 
 // authorityLinks judges every host the client could open from one token:
-// token runs to the first character that ends every link, authority is its
-// start up to / ? # (where a browser's authority ends). A reading the URL
-// Standard rejects is left out when another reading exists: the client
-// cannot link it. When every reading is rejected, the token is one link
-// nobody can read.
-func authorityLinks(token, authority string, framed bool) []link {
+// token runs to the first character that ends every link (it starts at
+// offset at of the message), authority is its start up to / ? # (where a
+// browser's authority ends). A reading the URL Standard rejects is left out
+// when another reading exists: the client cannot link it. When every reading
+// is rejected, the token is one link nobody can read. false: the work budget
+// ran out.
+func (sc *scan) authorityLinks(token, authority string, at int, framed bool) ([]link, bool) {
 	var out []link
 	fallback := link{}
-	ends, overflow := clientEnds(token, authority, framed)
+	ends, overflow, ok := sc.clientEnds(token, authority, at, framed)
+	if !ok {
+		return nil, false
+	}
 	for _, end := range ends {
+		if !sc.spendReading(authority[:end]) {
+			return out, false
+		}
 		r := readAuthority(authority[:end])
 		if fallback.host == "" {
 			fallback.host = r.host
@@ -35,7 +45,7 @@ func authorityLinks(token, authority string, framed bool) []link {
 		if r.rejected {
 			continue
 		}
-		if l := (link{host: r.host, ok: r.exact}); !containsLink(out, l) {
+		if l := (link{host: r.host, ok: r.exact}); !slices.Contains(out, l) {
 			out = append(out, l)
 		}
 	}
@@ -43,49 +53,79 @@ func authorityLinks(token, authority string, framed bool) []link {
 		out = append(out, link{opaque: true})
 	}
 	if len(out) == 0 {
-		return []link{fallback}
+		return []link{fallback}, true
 	}
-	return out
-}
-
-func containsLink(ls []link, l link) bool {
-	for _, x := range ls {
-		if x == l {
-			return true
-		}
-	}
-	return false
+	return out, true
 }
 
 // clientEnds lists where the client could end the host inside authority, at
-// most maxEnds of them (overflow: there were more).
-func clientEnds(token, authority string, framed bool) (ends []int, overflow bool) {
-	bare := token
-	if i := strings.Index(bare, "||"); i >= 0 {
-		bare = bare[:i]
+// most maxEnds of them (overflow: there were more), each once.
+func (sc *scan) clientEnds(token, authority string, at int, framed bool) (ends []int, overflow, ok bool) {
+	bare, ok := sc.bareLink(token, at)
+	if !ok {
+		return nil, false, false
 	}
-	ends = []int{min(len(trimClient(bare)), len(authority))}
+	ends = []int{min(len(bare), len(authority))}
 	if framed {
-		ends = append(ends, len(authority))
+		ends = addEnd(ends, len(authority))
 	}
 	a := authority
-	for i := 0; i < len(a); i++ {
+	for i := 0; i < len(a) && !overflow; i++ {
 		switch {
 		case framed && a[i] == ')':
-			ends = append(ends, i) // the end of [text](url)
+			ends = addEnd(ends, i) // the end of [text](url)
 		case closerAt(a, i):
-			ends = append(ends, len(trimClient(a[:i])))
+			if !sc.spend(i/8 + 1) {
+				return nil, false, false
+			}
+			ends = addEnd(ends, len(trimClient(a[:i])))
 			// A cut anywhere in a run of trailing characters reads the same
 			// host as one at its start ("]" is not one: it may stay).
 			for strings.IndexByte(clientTrailing, a[i]) >= 0 && i+1 < len(a) && strings.IndexByte(clientTrailing, a[i+1]) >= 0 {
 				i++
 			}
 		}
-		if len(ends) > maxEnds {
-			return ends[:maxEnds], true
+		overflow = len(ends) > maxEnds
+	}
+	if overflow {
+		ends = ends[:maxEnds]
+	}
+	return ends, overflow, true
+}
+
+// addEnd adds an end once: each host is read once.
+func addEnd(ends []int, end int) []int {
+	if slices.Contains(ends, end) {
+		return ends
+	}
+	return append(ends, end)
+}
+
+// bareLink is the client's bare link of the token at offset at: cut at the
+// first "||", then trimmed (trimUrl). Nested schemes share their token, so
+// the "||" and the run of trailing characters at its end are found once.
+func (sc *scan) bareLink(token string, at int) (string, bool) {
+	end := at + len(token)
+	if sc.barEnd != end || sc.barFrom > at || sc.barAt >= 0 && sc.barAt < at {
+		sc.barFrom, sc.barEnd, sc.barAt = at, end, -1
+		if i := strings.Index(token, "||"); i >= 0 {
+			sc.barAt = at + i
 		}
 	}
-	return ends, false
+	if sc.barAt >= 0 {
+		end = sc.barAt
+	}
+	if sc.tailEnd != end {
+		sc.tailEnd, sc.tailStart = end, end
+		for sc.tailStart > 0 && strings.IndexByte(clientTrailing, sc.s[sc.tailStart-1]) >= 0 {
+			sc.tailStart--
+		}
+	}
+	u := sc.s[at:max(at, sc.tailStart)]
+	if u != "" && (u[len(u)-1] == ')' || u[len(u)-1] == ']') && !sc.spend(len(u)/8+1) {
+		return "", false // trimClient counts brackets over all of u
+	}
+	return trimClient(u), true
 }
 
 // closerAt reports whether a Markdown closer can stand at a[i]: ** or *, __

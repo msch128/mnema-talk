@@ -155,6 +155,17 @@ type Pending struct {
 	post Post
 	dm   bool
 	hits []*compiled
+	// The links of the post, read once for every rule that asks (linkscan.go).
+	linkList  []link
+	linksRead bool
+}
+
+// links reads the links of the post the first time a rule needs them.
+func (p *Pending) links() []link {
+	if !p.linksRead {
+		p.linkList, p.linksRead = links(p.post.Content), true
+	}
+	return p.linkList
 }
 
 // Check applies the message rules to a post. It returns an error (400, the
@@ -194,7 +205,7 @@ func (e *Engine) evaluate(ctx context.Context, set *ruleSet, pend *Pending, role
 		if pend.dm && r.Kind != KindLinks && r.Kind != KindMentions {
 			continue // in a direct message only links and mention spam are checked
 		}
-		if exempt(r, pend.post.ChannelID, roles) || !e.hit(ctx, r, pend.post) {
+		if exempt(r, pend.post.ChannelID, roles) || !e.hit(ctx, r, pend) {
 			continue
 		}
 		if r.Action == ActionBlock {
@@ -218,24 +229,26 @@ func exempt(r *compiled, channel uuid.UUID, roles []uuid.UUID) bool {
 }
 
 // hit reports whether the post breaks the rule.
-func (e *Engine) hit(ctx context.Context, r *compiled, p Post) bool {
+func (e *Engine) hit(ctx context.Context, r *compiled, pend *Pending) bool {
+	p := pend.post
 	switch r.Kind {
 	case KindWords:
 		return r.matchesWords(p.Content)
 	case KindLinks:
-		return r.matchesLinks(p.Content)
+		return r.forbidsLinks(pend.links())
 	case KindMentions:
 		return distinctMentions(p.Content) > r.Config.MaxMentions
 	case KindNewAccount:
-		return e.newAccountHit(ctx, r, p)
+		return e.newAccountHit(ctx, r, pend)
 	}
 	return false
 }
 
-func (e *Engine) newAccountHit(ctx context.Context, r *compiled, p Post) bool {
+func (e *Engine) newAccountHit(ctx context.Context, r *compiled, pend *Pending) bool {
+	p := pend.post
 	switch r.Config.Restrict {
 	case RestrictLinks:
-		if len(links(p.Content)) == 0 {
+		if len(pend.links()) == 0 {
 			return false
 		}
 	case RestrictAttachments:
@@ -243,7 +256,7 @@ func (e *Engine) newAccountHit(ctx context.Context, r *compiled, p Post) bool {
 			return false
 		}
 	case RestrictLinksAndFiles:
-		if !p.HasAttachment && len(links(p.Content)) == 0 {
+		if !p.HasAttachment && len(pend.links()) == 0 {
 			return false
 		}
 	}
