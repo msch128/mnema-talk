@@ -155,11 +155,53 @@ func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others [
 	return nil
 }
 
+// checkDMEditAllowed refuses an edit in a conversation with one other person
+// that a new message would not get into: a block in either direction, or the
+// other side's account disabled or erased. An edit puts new words in front of
+// the other side like a message does. It answers ErrDMSend, the refusal of a
+// message, so it says nothing more about why. Channels and groups are not
+// touched: there an edit follows the rules of writing as before.
+func checkDMEditAllowed(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UUID) error {
+	var pair bool
+	err := tx.QueryRow(ctx, `SELECT type = $2 AND dm_key IS NOT NULL FROM channels WHERE id = $1`, channelID, core.ChannelKindDM).Scan(&pair)
+	if err != nil {
+		return fmt.Errorf("load channel: %w", err)
+	}
+	if !pair {
+		return nil
+	}
+	members, err := core.DMMemberIDs(ctx, tx, channelID)
+	if err != nil {
+		return err
+	}
+	others := make([]uuid.UUID, 0, len(members))
+	for _, m := range members {
+		if m != userID {
+			others = append(others, m)
+		}
+	}
+	return checkDMReachable(ctx, tx, userID, others, false)
+}
+
 // checkDMReactionAllowed refuses a new reaction under a message of a
 // conversation with one other person when either side blocked the other: a
 // block stops writing in both directions, and a reaction is writing. Taking a
 // reaction back never goes through here.
 func checkDMReactionAllowed(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID) error {
+	blocked, err := DMBlockedAt(ctx, tx, messageID, userID)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return core.ErrDMReact
+	}
+	return nil
+}
+
+// DMBlockedAt reports whether messageID is in a conversation with one other
+// person and either side blocked the other, the condition under which neither
+// may react to it (or vote in its poll).
+func DMBlockedAt(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID) (bool, error) {
 	var blocked bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -169,12 +211,9 @@ func checkDMReactionAllowed(ctx context.Context, tx pgx.Tx, messageID, userID uu
 			JOIN user_blocks b ON (b.blocker_id = o.user_id AND b.blocked_id = $2) OR (b.blocker_id = $2 AND b.blocked_id = o.user_id)
 			WHERE m.id = $1)`, messageID, userID, core.ChannelKindDM).Scan(&blocked)
 	if err != nil {
-		return fmt.Errorf("check direct message block: %w", err)
+		return false, fmt.Errorf("check direct message block: %w", err)
 	}
-	if blocked {
-		return core.ErrDMReact
-	}
-	return nil
+	return blocked, nil
 }
 
 // countDMMessage keeps the cap on the starter's messages before anybody

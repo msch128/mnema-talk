@@ -60,6 +60,9 @@ func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource,
 	if isPoll {
 		return uuid.Nil, httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
 	}
+	if err := checkDMEditAllowed(ctx, tx, channel, userID); err != nil {
+		return uuid.Nil, err
+	}
 	if content == "" && !hasMedia && !forwarded {
 		_, err := core.ValidateContent(content, false)
 		return uuid.Nil, err

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/worker"
@@ -18,6 +19,9 @@ var (
 	errPollNotFound = httpx.ErrNotFound("poll not found")
 	errPollEnded    = httpx.ErrConflict("the poll has ended")
 	errAlreadyVoted = httpx.ErrConflict("you have already voted in this anonymous poll; a vote there cannot be changed")
+	// errDMVote refuses a vote in a conversation of two after a block, like a
+	// reaction there, without saying why.
+	errDMVote = httpx.ErrForbidden("Couldn't vote in this poll.")
 )
 
 // insertPoll stores the poll and its options for a message created in tx.
@@ -98,6 +102,9 @@ func Vote(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, optionID
 		if ended {
 			return errPollEnded
 		}
+		if err := checkDMVote(ctx, tx, messageID, userID, optionIDs); err != nil {
+			return err
+		}
 		if err := checkChoice(ctx, tx, messageID, multiple, optionIDs); err != nil {
 			return err
 		}
@@ -106,6 +113,24 @@ func Vote(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, optionID
 		}
 		return replaceVotes(ctx, tx, messageID, userID, optionIDs)
 	})
+}
+
+// checkDMVote refuses a vote in a poll of a conversation of two when either
+// side blocked the other: a block stops writing in both directions, and a vote
+// is a reaction to the poll. Withdrawing one's votes (no options) stays open,
+// like taking a reaction back.
+func checkDMVote(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, optionIDs []uuid.UUID) error {
+	if len(optionIDs) == 0 {
+		return nil
+	}
+	blocked, err := messages.DMBlockedAt(ctx, tx, messageID, userID)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return errDMVote
+	}
+	return nil
 }
 
 // castAnonymousVote counts a vote in an anonymous poll without recording what

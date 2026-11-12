@@ -46,12 +46,26 @@ func msgID(t *testing.T, res response) uuid.UUID {
 func TestABlockClosesTheDoorsOfAConversation(t *testing.T) {
 	f := newDMFixture(t, false)
 	dm := f.alice.mustDM(t, f.bob)
-	msgID(t, f.alice.dmPost(dm.ID, "hello bob"))
+	mine := msgID(t, f.alice.dmPost(dm.ID, "hello bob"))
 	theirs := msgID(t, f.bob.dmPost(dm.ID, "hi alice"))
+	poll, option := dmPoll(t, f.bob, dm.ID)
 	general := f.a.createChannel(f.admin, "general", "text")
 	public := f.a.send(f.admin, general, "something to forward")
 	wantStatus(t, "block", f.bob.put("/api/me/blocks/"+f.alice.user.ID.String(), nil), http.StatusNoContent)
+	base := "/api/channels/" + dm.ID.String() + "/messages/"
 	runCells(t, []doorCell{
+		{"blocked member edits an old message", func() response {
+			return f.alice.put(base+mine.String(), map[string]any{"content": "any words, up to 4000 characters, after the block"})
+		}, http.StatusForbidden},
+		{"blocker edits an old message", func() response {
+			return f.bob.put(base+theirs.String(), map[string]any{"content": "words to the member I blocked"})
+		}, http.StatusForbidden},
+		{"blocked member votes in the blocker's poll", func() response {
+			return f.alice.put(base+poll.String()+"/poll/votes", map[string]any{"option_ids": []uuid.UUID{option}})
+		}, http.StatusForbidden},
+		{"blocker votes in their own poll", func() response {
+			return f.bob.put(base+poll.String()+"/poll/votes", map[string]any{"option_ids": []uuid.UUID{option}})
+		}, http.StatusForbidden},
 		{"blocked member posts", func() response { return f.alice.dmPost(dm.ID, "still there?") }, http.StatusForbidden},
 		{"blocked member reacts", func() response {
 			return f.alice.post("/api/messages/"+theirs.String()+"/reactions", map[string]string{"emoji": "👍"})
@@ -64,6 +78,26 @@ func TestABlockClosesTheDoorsOfAConversation(t *testing.T) {
 		}, http.StatusForbidden},
 		{"blocker posts", func() response { return f.bob.dmPost(dm.ID, "one more thing") }, http.StatusForbidden},
 	})
+	var list []struct{ ID, Content string }
+	f.bob.get("/api/channels/"+dm.ID.String()+"/messages").decode(t, &list)
+	for _, m := range list {
+		if m.ID == mine.String() && m.Content != "hello bob" {
+			t.Errorf("the blocker now reads %q from the member they blocked", m.Content)
+		}
+	}
+}
+
+// dmPoll has c post a poll in the conversation and returns it with its first option.
+func dmPoll(t *testing.T, c *client, dm uuid.UUID) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+	res := c.post("/api/channels/"+dm.String()+"/polls", map[string]any{"question": "lunch?", "options": []string{"pizza", "soup"}})
+	wantStatus(t, "poll", res, http.StatusCreated)
+	var m struct {
+		ID   uuid.UUID
+		Poll struct{ Options []struct{ ID uuid.UUID } }
+	}
+	res.decode(t, &m)
+	return m.ID, m.Poll.Options[0].ID
 }
 
 // A locked forum post (doc/forums.md): a lock stops new replies and puts the

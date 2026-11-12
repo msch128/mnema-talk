@@ -250,6 +250,7 @@
       "srvCouldnTReactToThisMessage": "Couldn’t react to this message.",
       "srvCouldnTSendThisMessage": "Couldn’t send this message.",
       "srvCouldnTStartThisDirect": "Couldn’t start this direct message.",
+      "srvCouldnTVoteInThisPoll": "Couldn’t vote in this poll.",
       "srvDiscordCouldNotBeReached": "Discord couldn’t be reached. Try again later.",
       "srvDiscordSentSomethingThatIs": "Discord sent something that isn’t a server template.",
       "srvMissingAccessTheBotMay": "The bot isn’t allowed to ask for the member list.",
