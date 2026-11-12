@@ -106,6 +106,15 @@ export class GroupChecks implements SimHooks {
     return Math.max(10, this.world.timing.maintenanceMs)
   }
 
+  /**
+   * The real time in which `member`'s own monotonic clock counts `ms`. The group measures silence and patience on its
+   * own clock, so a clock that runs fast (a drift plan) reaches a limit early in real time; a slow one late, which the
+   * checks need no allowance for.
+   */
+  private ownClock(member: SimMember, ms: number): number {
+    return ms / (1 + Math.max(0, member.skew.drift))
+  }
+
   private get world(): GroupSim {
     if (!this.sim) throw new Error('checks are not bound to a simulation')
     return this.sim
@@ -243,7 +252,7 @@ export class GroupChecks implements SimHooks {
     if (id === member.id) return true
     if (seen.restarting.has(id)) return false
     const alive = seen.alive.get(id)
-    return alive !== undefined && this.world.now - alive <= this.slack * 2 + this.world.timing.absentMs
+    return alive !== undefined && this.world.now - alive <= this.ownClock(member, this.slack * 2 + this.world.timing.absentMs)
   }
 
   /** The commit comes from the member who commits now, or holds nothing but its sender's own renewal, and that not too often. */
@@ -283,7 +292,8 @@ export class GroupChecks implements SimHooks {
     for (const id of effects.removed) {
       if (!member.roster.includes(id)) continue
       const alive = seen.alive.get(id)
-      if (alive !== undefined && now - alive <= this.world.timing.absentMs - this.slack) this.fail(member, `[4] took the removal of ${name(id)}, who is in the room and was heard ${now - alive} ms ago`)
+      // The receiver's rule (groupVet.ts, prematureRemoval): it accepts from the limit minus one interval by its own clock.
+      if (alive !== undefined && now - alive <= this.ownClock(member, this.world.timing.absentMs - this.slack)) this.fail(member, `[4] took the removal of ${name(id)}, who is in the room and was heard ${now - alive} ms ago`)
     }
   }
 
