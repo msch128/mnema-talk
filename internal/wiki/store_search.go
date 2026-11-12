@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/unicode/norm"
 )
 
 const snippetRunes = 160
@@ -18,9 +19,10 @@ func likePattern(q string) string {
 }
 
 // Search finds pages whose title or text contains q (at least MinSearchRunes characters),
-// titles first, then the most recently changed.
+// titles first, then the most recently changed. The query is composed (NFC) as
+// titles are when they are written, so a decomposed query finds them.
 func (s *Store) Search(ctx context.Context, q string) ([]SearchHit, error) {
-	q = strings.TrimSpace(q)
+	q = norm.NFC.String(strings.TrimSpace(q))
 	if utf8.RuneCountInString(q) < MinSearchRunes {
 		return []SearchHit{}, nil
 	}

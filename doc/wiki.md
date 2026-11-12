@@ -42,8 +42,9 @@ This page covers using the wiki and running it. The API is in the
   the wiki*: a caller who may not read gets no page back.
 - A title is one line (no line breaks, no invisible or direction-changing
   characters) and unique among the pages, ignoring case, so `[[Title]]` names
-  one page. Titles are stored in Unicode NFC, so one visible title has one
-  spelling.
+  one page. From this release on, titles are stored in Unicode NFC when they
+  are written, so one visible title has one spelling; a search query is
+  composed the same way.
 - **Same title** means the same *title key*, on the server (refusing a title
   another page has) and in the app (finding the page a `[[Title]]` names): the
   title decomposed (NFD), each character lower-cased on its own with the
