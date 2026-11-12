@@ -57,12 +57,12 @@ func TestExportsWhoseUploadFailsLeaveNothingBehind(t *testing.T) {
 		if err != nil || wait > 0 {
 			t.Fatalf("cut %d: claim refused (wait %v, %v): a failed export counted toward the daily limit", cut, wait, err)
 		}
-		if !h.buildExportInBackground(id, member.ID) {
+		if h.buildExportInBackground(id, member.ID) != nil {
 			t.Fatalf("cut %d: no build slot free: an earlier build kept its slot", cut)
 		}
-		if !h.Drain(30 * time.Second) {
-			t.Fatalf("cut %d: the build did not finish", cut)
-		}
+		// Not Drain: from its start on it refuses every new job, and the next
+		// cut needs another build.
+		h.DrainMail()
 		var status string
 		if err := pool.QueryRow(ctx, `SELECT status FROM data_exports WHERE id = $1`, id).Scan(&status); err != nil {
 			t.Fatal(err)
@@ -94,7 +94,7 @@ func TestExportsWhoseUploadFailsLeaveNothingBehind(t *testing.T) {
 	if err != nil || wait > 0 {
 		t.Fatalf("claim after the failures: wait %v, %v", wait, err)
 	}
-	if !h.buildExportInBackground(id, member.ID) || !h.Drain(30*time.Second) {
+	if h.buildExportInBackground(id, member.ID) != nil || !h.Drain(30*time.Second) {
 		t.Fatal("the working build did not run")
 	}
 	var status string
