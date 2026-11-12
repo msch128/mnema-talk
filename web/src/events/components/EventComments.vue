@@ -6,7 +6,8 @@ import { useEventComments } from '../composables/useEventComments'
 import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { confirm } from '../../shared/lib/confirm'
-import { charCount } from '../../shared/lib/textLength'
+import { charCount, clampChars } from '../../shared/lib/textLength'
+import { previewText } from '../../chat/lib/replies'
 import { eventAvatar } from '../lib/eventAvatar'
 import { relative } from '../../shared/lib/time'
 import { locale, t } from '../../i18n'
@@ -63,7 +64,7 @@ async function removeComment(c: EventComment) {
   const ok = await confirm({
     title: t('events.commentDeleteTitle'),
     body: t('events.commentDeleteBody'),
-    excerpt: blocks.hides({ id: c.id, user_id: c.user.id }) ? t('blocks.collapsed') : c.content.slice(0, 160),
+    excerpt: blocks.hides({ id: c.id, user_id: c.user.id }) ? t('blocks.collapsed') : clampChars(previewText(c.content), 160),
     confirmLabel: t('common.delete'),
     danger: true
   })
