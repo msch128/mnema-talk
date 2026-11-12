@@ -208,5 +208,39 @@ func (w *canaryWorld) busyInStaff(t *testing.T, insiderWS *wsConn) int {
 	if !slices.Contains(w.a.router.Hub.VoiceMembers(w.staffTalk), w.insider.user.ID) {
 		t.Fatal("insider could not take a seat in the Staff Talk")
 	}
-	return n + 2
+	// A stay in a hidden Talk ends: its talk time is not public (doc: only
+	// Talks @everyone can see count), so nothing may tell the others.
+	time.Sleep(1100 * time.Millisecond)
+	insiderWS.send("voice_leave", map[string]any{})
+	deadline = time.Now().Add(3 * time.Second)
+	for slices.Contains(w.a.router.Hub.VoiceMembers(w.staffTalk), w.insider.user.ID) && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	return n + 3 + w.tempTalk(t, insiderWS)
+}
+
+// tempTalk opens a temporary Talk from a Staff lobby, the way a member does by
+// joining the lobby, and renames it as its leader.
+func (w *canaryWorld) tempTalk(t *testing.T, insiderWS *wsConn) int {
+	t.Helper()
+	res := w.owner.post("/api/admin/channels", map[string]any{"name": "lobby-quiet", "type": "voice", "category_id": w.staffCat})
+	wantStatus(t, "lobby", res, http.StatusCreated)
+	lobby := idOf(t, res)
+	w.private(t, "channels", lobby)
+	wantStatus(t, "make lobby", w.owner.patch("/api/admin/channels/"+lobby.String(), map[string]any{"is_lobby": true}), http.StatusOK)
+	insiderWS.send("voice_join", map[string]any{"channel_id": lobby})
+	raw, ok := insiderWS.expect("talk_moved", 3*time.Second)
+	if !ok {
+		t.Fatal("joining the Staff lobby opened no Talk")
+	}
+	var moved struct {
+		ChannelID string `json:"channel_id"`
+	}
+	if err := json.Unmarshal(raw, &moved); err != nil || moved.ChannelID == "" {
+		t.Fatalf("talk_moved: %s", raw)
+	}
+	insiderWS.send("voice_join", map[string]any{"channel_id": moved.ChannelID})
+	time.Sleep(300 * time.Millisecond)
+	wantStatus(t, "rename temp", w.insider.patch("/api/talks/"+moved.ChannelID, map[string]any{"name": "quiet-temp"}), http.StatusOK)
+	return 3
 }

@@ -211,10 +211,14 @@ func (s *canarySweep) queryVariants(params []string) []string {
 			vals = s.searchTerms()
 		case p == "channel_id" || p == "channel":
 			vals = s.w.pool["channel"]
-		case p == "around" || p == "before" || p == "after" || p == "message_id" || p == "anchor":
+		case p == "around" || p == "before" || p == "after" || p == "message_id" || p == "anchor" || p == "before_id":
 			vals = s.w.pool["message"]
-		case p == "user_id" || p == "author_id" || p == "author":
+		case p == "user_id" || p == "author_id" || p == "author" || p == "mentions" || p == "actor":
 			vals = s.w.pool["user"]
+		case p == "target_id":
+			vals = s.values("any")
+		case p == "dm" || p == "deleted":
+			vals = []string{"1", "true"}
 		case p == "url":
 			vals = s.internalLinks()
 		}
@@ -412,7 +416,14 @@ var canaryKnownLeaks = map[string]string{
 	"mod /api/admin/audit-log staff moderated post":                "H-L6-01",
 	"mod /api/admin/audit-log staff post first title":              "H-L6-01",
 	"mod /api/admin/audit-log staff post title set by a moderator": "H-L6-01",
+	// The same entries found by target_id: a forum id lists them, a missing id
+	// lists nothing. Smoke samples the target ids, so only the deep run must hit it.
+	"mod /api/admin/audit-log existence": "H-L6-01",
 }
+
+// canaryKnownDeepOnly are rows of canaryKnownLeaks that only the deep run is
+// sure to reach.
+var canaryKnownDeepOnly = map[string]bool{"mod /api/admin/audit-log existence": true}
 
 func (s *canarySweep) leak(who, route, what, msg string) {
 	if key := who + " " + route + " " + what; canaryKnownLeaks[key] != "" {
@@ -492,7 +503,7 @@ func (s *canarySweep) report(t *testing.T) {
 		t.Errorf("the control reached too few Staff words")
 	}
 	for key, id := range canaryKnownLeaks {
-		if !s.known[key] {
+		if !s.known[key] && (s.deep || !canaryKnownDeepOnly[key]) {
 			t.Errorf("known leak %s (%s) did not happen: drop it from canaryKnownLeaks", key, id)
 		}
 	}
