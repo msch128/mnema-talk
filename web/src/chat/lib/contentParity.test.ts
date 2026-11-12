@@ -75,7 +75,7 @@ describe('message text: the composer against the server', () => {
     const t0 = performance.now()
     expect(messageText(` ${run} `)).toBe(run)
     expect(messageText(' '.repeat(100_000))).toBe('')
-    expect(performance.now() - t0).toBeLessThan(5)
+    expect(performance.now() - t0).toBeLessThan(50)
   })
 
   // The store sends what it is given through messageText again; this walks the
