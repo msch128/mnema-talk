@@ -72,6 +72,8 @@ const (
 	OrderDiscordImportCreatedBy
 	OrderDiscordImportUndoneBy
 	OrderLoginUnlock
+	OrderMessageNonces
+	OrderUploadUsage
 	OrderAuditFlag
 	OrderScrubAudit
 )

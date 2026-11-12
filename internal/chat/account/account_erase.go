@@ -55,5 +55,10 @@ func chatEraseSteps() []userdata.Step {
 		{Order: userdata.OrderTalkLeader, SQL: `UPDATE channels SET leader_id = NULL WHERE leader_id = $1`},
 		{Order: userdata.OrderPinnedBy, SQL: `UPDATE messages SET pinned_by = NULL WHERE pinned_by = $1`},
 		{Order: userdata.OrderScrubReports, SQL: scrubReportCopies, Arg: userdata.ArgIDAndName},
+		// Retry ids and upload bookings expire on their own within a day; the
+		// erasure removes them at once, like slow_mode_posts. The account cannot
+		// sign in again, so no retry or upload needs them afterwards.
+		{Order: userdata.OrderMessageNonces, SQL: `DELETE FROM message_nonces WHERE user_id = $1`},
+		{Order: userdata.OrderUploadUsage, SQL: `DELETE FROM upload_usage WHERE user_id = $1`},
 	}
 }
