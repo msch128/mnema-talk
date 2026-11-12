@@ -544,7 +544,8 @@ jobs:
           set -euo pipefail
           prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
           range=${prev:+$prev..}$TAG
-          if [ "$(sh scripts/security-floor.sh "$range")" = raise ]; then floor="$VERSION"; else floor=""; fi
+          decision=$(sh scripts/security-floor.sh "$range")
+          if [ "$decision" = raise ]; then floor="$VERSION"; else floor=""; fi
           echo "floor=$floor" >> "$GITHUB_OUTPUT"
           echo "Security floor raised to: ${floor:-not raised (web/desktop-compat.json applies)} (range $range)" >> "$GITHUB_STEP_SUMMARY"
 

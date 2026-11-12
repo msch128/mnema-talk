@@ -1075,9 +1075,11 @@ details and the limits.
   Ed25519 signature over group, id and bits, with the member's leaf key) when they
   join or meet a member they have not told, and with each heartbeat; older clients
   decide their format by it, and a 1.2 member answers it like any other. The security floor of the signed web
-  bundle is raised to 1.2.0 with this change (`Security-Floor: raise`), so a
-  desktop client that has run a 1.2 bundle never falls back to an older bundle
-  that still sealed version 2. The server cannot enforce this: it relays media it
+  bundle was not raised by this change (its `Security-Floor: raise` line was not
+  a git trailer, so the signed 1.2.0 manifest declares `security_floor` 0.7.23);
+  a desktop client that has run a 1.2 bundle still never falls back to an older
+  bundle that sealed version 2, because the high-water mark of its
+  `web_client_api` keeps it at 1.2 or newer. The server cannot enforce this: it relays media it
   cannot read, and the format is checked by the receiving clients.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened
