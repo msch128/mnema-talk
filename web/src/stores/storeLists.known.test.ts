@@ -92,19 +92,19 @@ async function mountedThenDropped() {
   await settle()
 }
 
-// H-L5-02: the resync after a reconnect (stores/chat/socket.ts resyncState)
-// reads channels, read state, followed threads and more, but not the saved
-// list or the reminders and scheduled messages; their events from the time
-// the socket was down are lost.
+// H-L5-02 (fixed): the resync after a reconnect (stores/chat/socket.ts
+// resyncState) reads the saved list and the reminders and scheduled messages
+// again when they were loaded; their events from the time the socket was down
+// are lost.
 describe('lists the member keeps, after a reconnect', () => {
-  it.fails('a reminder made in another session while the socket was down is listed', async () => {
+  it('a reminder made in another session while the socket was down is listed', async () => {
     await mountedThenDropped()
     server['/api/me/reminders'] = { items: [reminder] }
     await connect(false)
     expect(useLaterStore().reminders.map(r => r.id)).toEqual([reminder.id])
   })
 
-  it.fails('a reminder that fell due while the socket was down counts as due', async () => {
+  it('a reminder that fell due while the socket was down counts as due', async () => {
     server['/api/me/reminders'] = { items: [reminder] }
     await mountedThenDropped()
     server['/api/me/reminders'] = { items: [{ ...reminder, delivered_at: FIXTURE_TIMESTAMP }] }
@@ -112,7 +112,7 @@ describe('lists the member keeps, after a reconnect', () => {
     expect(useLaterStore().dueCount).toBe(1)
   })
 
-  it.fails('a message saved in another session while the socket was down is listed', async () => {
+  it('a message saved in another session while the socket was down is listed', async () => {
     await mountedThenDropped()
     server['/api/me/saved'] = { items: [savedEntry], has_more: false }
     await connect(false)
@@ -120,16 +120,26 @@ describe('lists the member keeps, after a reconnect', () => {
   })
 })
 
-// H-L5-03: the server forgets a saved message when the message is deleted;
-// the open client keeps showing it in the saved list.
-describe('saved list against a deletion', () => {
-  it.fails('a saved message that is deleted leaves the list', async () => {
+// H-L5-03 (fixed): the server forgets a saved message when the message is
+// deleted; the open client drops it on message_delete.
+describe('saved list and reminders against a deletion', () => {
+  it('a saved message that is deleted leaves the list', async () => {
     server['/api/me/saved'] = { items: [savedEntry], has_more: false }
     await connect(true)
     await useSavedStore().ensureLoaded()
     frame('message_delete', { id: savedEntry.message_id, channel_id: X, parent_id: null })
     await settle()
     expect(useSavedStore().items).toEqual([])
+  })
+
+  it('a reminder on a deleted message stays, as one for a message no longer available', async () => {
+    server['/api/me/reminders'] = { items: [reminder] }
+    await connect(true)
+    await useLaterStore().load({ reminders: true, scheduled: false })
+    frame('message_delete', { id: reminder.message.id, channel_id: X, parent_id: null })
+    await settle()
+    // What GET /api/me/reminders answers now (ON DELETE SET NULL): the reminder, without its message.
+    expect(useLaterStore().reminders).toEqual([{ id: reminder.id, remind_at: reminder.remind_at, created_at: reminder.created_at, delivered_at: null, available: false }])
   })
 })
 

@@ -15,20 +15,21 @@ export function createSavedList(onEntries: (entries: ChatSavedMessage[]) => void
   // Whether a page has been shown since the last reset.
   let loaded = false
 
-  /** Loads the newest page, replacing what was shown. */
-  async function load() {
+  /** Loads the newest page, replacing what was shown; true when this answer is the one shown. */
+  async function load(): Promise<boolean> {
     const mine = ++seq
     loading.value = true
     failed.value = false
     try {
       const page = await api(`/api/me/saved?limit=${PAGE}`, { decode: decodeChatSavedPage })
-      if (mine !== seq) return
+      if (mine !== seq) return false
       items.value = page.items
       hasMore.value = page.has_more
       loaded = true
       onEntries(page.items)
+      return true
     } catch (error) {
-      if (mine !== seq) return
+      if (mine !== seq) return false
       console.warn('Failed to load saved messages:', error)
       // A list already on screen stays: a refresh that failed does not make it wrong.
       if (!loaded) {
@@ -36,6 +37,7 @@ export function createSavedList(onEntries: (entries: ChatSavedMessage[]) => void
         hasMore.value = false
       }
       failed.value = true
+      return false
     } finally {
       if (mine === seq) loading.value = false
     }

@@ -186,6 +186,9 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   refreshMemberStats(cx)
   cs.threadReplies.value = cs.threadReplies.value.filter(m => m.id !== p.id)
   onOriginalDeleted(cx, p.id)
+  // The server drops the saves of the message (and of its replies) and keeps reminders on it as unavailable.
+  useSavedStore().onMessageDeleted(p.id)
+  useLaterStore().onMessageDeleted(p.id)
   if (p.parent_id) bumpReplyCount(cx, p.parent_id, -1)
   noteDmMessageChanged(cx, p.channel_id)
   signalForumPosts(cx, p.channel_id)

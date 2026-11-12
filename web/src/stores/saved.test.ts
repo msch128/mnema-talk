@@ -124,4 +124,30 @@ describe('saved store', () => {
     expect(saved.items).toHaveLength(0)
     expect(saved.isSaved(fixtureId(1))).toBe(false)
   })
+
+  it('keeps what changed while a page was on its way: the page was read before', async () => {
+    const saved = useSavedStore()
+    let resolve: (value: unknown) => void = () => undefined
+    apiMock.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    const late = saved.load()
+    // A removal in another session and a save here, both after the page was read.
+    saved.onUpdated({ message_id: fixtureId(1), saved: false })
+    apiMock.mockResolvedValueOnce(entry(2))
+    await saved.save(fixtureId(2))
+    resolve(page([entry(1)]))
+    await late
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(2)])
+    expect(saved.isSaved(fixtureId(1))).toBe(false)
+    expect(saved.isSaved(fixtureId(2))).toBe(true)
+  })
+
+  it('drops a deleted message and the saved replies of a deleted thread root', async () => {
+    const saved = useSavedStore()
+    const reply = { ...entry(2), message: { parent_id: fixtureId(1) } }
+    apiMock.mockResolvedValueOnce(page([entry(1), reply, entry(3)]))
+    await saved.load()
+    saved.onMessageDeleted(fixtureId(1))
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(3)])
+    expect(saved.isSaved(fixtureId(2))).toBe(false)
+  })
 })

@@ -55,10 +55,19 @@ async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId:
 // Bumped by reset(): a list asked for before must not fill the next account's store.
 let generation = 0
 
-async function latest<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
-  const mine = generation
-  const list = await fetch()
-  if (mine === generation) apply(list)
+/**
+ * A loader whose answer is kept only if no newer request of the same list was
+ * made meanwhile: an older answer that lands last would bring back what a
+ * newer one (asked after an event or a reconnect) already left out.
+ */
+function newestOf<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
+  let seq = 0
+  return async () => {
+    const mine = generation
+    const request = ++seq
+    const list = await fetch()
+    if (mine === generation && request === seq) apply(list)
+  }
 }
 
 // The member's reminders and scheduled messages (both private, both kept by
@@ -70,15 +79,18 @@ export const useLaterStore = defineStore('later', () => {
   const loading = ref(false)
   const failed = ref(false)
   const loaded = ref(false)
+  // The lists asked for so far: a reconnect reads those again, and only those.
+  let wanted = { reminders: false, scheduled: false }
 
   const { dueCount, failedCount, attention } = attentionCounts(reminders, scheduled)
 
-  const loadReminders = () => latest(fetchReminders, list => { reminders.value = list })
-  const loadScheduled = () => latest(fetchScheduled, list => { scheduled.value = list })
+  const loadReminders = newestOf(fetchReminders, list => { reminders.value = list })
+  const loadScheduled = newestOf(fetchScheduled, list => { scheduled.value = list })
 
   /** Loads the lists of the features the server has. */
   async function load(want: { reminders: boolean; scheduled: boolean }) {
     const mine = generation
+    wanted = { reminders: wanted.reminders || want.reminders, scheduled: wanted.scheduled || want.scheduled }
     loading.value = true
     try {
       await Promise.all([want.reminders ? loadReminders() : null, want.scheduled ? loadScheduled() : null])
@@ -133,13 +145,31 @@ export const useLaterStore = defineStore('later', () => {
     if (loaded.value) await loadScheduled().catch(() => undefined)
   }
 
+  /**
+   * The socket opened: events from before it are lost, so the lists asked
+   * for so far are read again. Lists never asked for stay unread.
+   */
+  async function refresh() {
+    if (wanted.reminders || wanted.scheduled) await load(wanted)
+  }
+
+  /** A message was deleted: a reminder on it stays, as one for a message the member can no longer see (as the server lists it). */
+  function onMessageDeleted(messageId: string) {
+    const gone = (r: LaterReminder) => r.message !== undefined && (r.message.id === messageId || r.message.parent_id === messageId)
+    if (!reminders.value.some(gone)) return
+    reminders.value = reminders.value.map(r => gone(r)
+      ? { id: r.id, remind_at: r.remind_at, created_at: r.created_at, delivered_at: r.delivered_at, available: false }
+      : r)
+  }
+
   const reset = () => {
     ++generation; reminders.value = []; scheduled.value = []
     loading.value = false; loaded.value = false; failed.value = false
+    wanted = { reminders: false, scheduled: false }
   }
 
   return {
     reminders, scheduled, loading, failed, loaded, dueCount, failedCount, attention,
-    load, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
+    load, refresh, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, onMessageDeleted, reset
   }
 })

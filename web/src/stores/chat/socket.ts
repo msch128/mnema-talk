@@ -8,6 +8,8 @@ import { usePermissionsStore } from '../permissions'
 import { useBlocksStore } from '../blocks'
 import { useReportsOpenStore } from '../reportsOpen'
 import { useServerFeaturesStore } from '../serverFeatures'
+import { useLaterStore } from '../later'
+import { useSavedStore } from '../saved'
 import { closeSocket, installSocketRetry, openSocket, retrySocketNow, sendSocketEvent, type SocketHost, type SocketState } from '../socket'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../chat/lib/globalSearch'
 import type { Cx } from './state'
@@ -46,6 +48,10 @@ function resyncState(cx: Cx) {
   // Blocks only reach this member's own sessions; a first open follows the sign-in snapshot by an instant.
   if (cs.reconnectCount.value > 0) void useBlocksStore().load()
   void fetchFollowedThreads(cx)
+  // The member's own lists change only through events to their sessions. Lists already asked for are read
+  // again (one never opened is not), each with a request of its own: a shared GET may predate the open.
+  void useLaterStore().refresh()
+  void useSavedStore().refresh()
   void loadNotifyPreview()
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) void refreshLatest(cx, channel.id)
