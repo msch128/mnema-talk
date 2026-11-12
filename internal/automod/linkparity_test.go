@@ -26,8 +26,9 @@ import (
 const linkParityFile = "testdata/link_parity.json"
 
 type parityLink struct {
-	Host string `json:"host"`
-	OK   bool   `json:"ok"`
+	Host   string `json:"host"`
+	OK     bool   `json:"ok"`
+	Opaque bool   `json:"opaque,omitempty"`
 }
 
 type parityVector struct {
@@ -38,7 +39,7 @@ type parityVector struct {
 func serverLinks(msg string) []parityLink {
 	out := []parityLink{}
 	for _, l := range links(msg) {
-		out = append(out, parityLink{Host: l.host, OK: l.ok})
+		out = append(out, parityLink{Host: l.host, OK: l.ok, Opaque: l.opaque})
 	}
 	return out
 }

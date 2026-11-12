@@ -1,18 +1,21 @@
 // The deep run of the link parity check: generated messages, judged by the
 // real automod code (go test, internal/automod/linkparity_test.go) and
 // rendered by the real client parser. Needs Go; too slow for every push:
-//   LINK_SWEEP=1 [LINK_SWEEP_N=<messages>] [LINK_SHARD=<index>/<count>] npx vitest run src/shared/lib/markdown/linkParity.sweep.test.ts
-// It fails when a message outside the known classes (linkParity.known.fixture.ts)
-// reaches readers with a link automod did not judge, and when a known class no
-// longer occurs (the list must shrink).
+//   LINK_SWEEP=1 [LINK_SWEEP_N=<messages>] [LINK_SHARD=<index>/<count>] [LINK_SWEEP_CLIENT=current] npx vitest run src/shared/lib/markdown/linkParity.sweep.test.ts
+// It fails when a message reaches readers with a link a rule forbids. By
+// default it renders as the older bundles of installed desktop clients did
+// (links with user info and hidden characters in the host, see
+// linkParity.test.ts); LINK_SWEEP_CLIENT=current renders with this bundle.
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { bypassModes, messages, unjudged } from './linkParity.fixture'
 import type { Vector } from './linkParity.fixture'
-import { KNOWN_CLASSES, knownClass } from './linkParity.known.fixture'
+
+vi.mock('./linkAuthority', async original =>
+  process.env.LINK_SWEEP_CLIENT === 'current' ? await original() : { plainAuthority: () => true })
 
 const repoRoot = join(import.meta.dirname, '..', '..', '..', '..', '..')
 const N = Number(process.env.LINK_SWEEP_N ?? '100000')
@@ -40,26 +43,23 @@ function judge(msgs: string[]): Vector[] {
   }
 }
 
-describe.skipIf(!process.env.LINK_SWEEP)('generated messages against the known classes', () => {
+describe.skipIf(!process.env.LINK_SWEEP)('generated messages against the link rules', () => {
   it('every opened host was judged by automod', () => {
     const [index, count] = shard(process.env.LINK_SHARD ?? '0/1')
     const per = Math.ceil(N / (SEEDS_PER_SHARD * count))
-    const regressions: string[] = []
-    const seen = new Map<string, number>()
+    const through: string[] = []
     const modes = new Map<string, number>()
+    let linked = 0
     for (let s = 0; s < SEEDS_PER_SHARD; s++) {
       const seed = index * SEEDS_PER_SHARD + s + 1
       for (const v of judge(messages(seed, per))) {
+        if (v.server.length > 0) linked++
         const bypass = bypassModes(v)
-        if (bypass.length === 0) continue
         for (const m of bypass) modes.set(m, (modes.get(m) ?? 0) + 1)
-        const cls = knownClass(v, bypass)
-        if (cls) seen.set(cls, (seen.get(cls) ?? 0) + 1)
-        else if (regressions.length < 40) regressions.push(`${JSON.stringify(v.msg)} opens ${unjudged(v).join(', ')}; server read ${JSON.stringify(v.server)}; bypasses ${bypass.join(', ')}`)
+        if (bypass.length > 0 && through.length < 40) through.push(`seed ${seed}: ${JSON.stringify(v.msg)} opens ${unjudged(v).join(', ')}; server read ${JSON.stringify(v.server)}; bypasses ${bypass.join(', ')}`)
       }
     }
-    console.log(`link parity: shard ${index}/${count}, seeds ${index * SEEDS_PER_SHARD + 1}..${(index + 1) * SEEDS_PER_SHARD}, ${per * SEEDS_PER_SHARD} messages, known classes hit ${JSON.stringify(Object.fromEntries(seen))}, bypasses by mode ${JSON.stringify(Object.fromEntries(modes))}`)
-    const healed = KNOWN_CLASSES.map(c => c.name).filter(name => !seen.has(name))
-    expect({ regressions, healed }, '"regressions" are outside every known class, "healed" classes no longer occur (delete them)').toEqual({ regressions: [], healed: [] })
+    console.log(`link parity: shard ${index}/${count}, seeds ${index * SEEDS_PER_SHARD + 1}..${(index + 1) * SEEDS_PER_SHARD}, ${per * SEEDS_PER_SHARD} messages, ${linked} with a link for the server, client ${process.env.LINK_SWEEP_CLIENT ?? 'older bundle'}, bypasses by mode ${JSON.stringify(Object.fromEntries(modes))}`)
+    expect(through, 'messages that reach readers with a link a rule forbids').toEqual([])
   }, 3_600_000)
 })

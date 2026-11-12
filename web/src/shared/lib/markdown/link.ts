@@ -1,16 +1,17 @@
 // Which link targets may be rendered, and when opening one needs a
 // confirmation because the visible text says something else.
+import { plainAuthority } from './linkAuthority'
 
 // eslint-disable-next-line no-control-regex
 const SAFE_HREF = /^(?:https?:\/\/(?!\/)|mailto:)[^\s<>"`\\\u0000-\u001f\u007f]+$/i
 
-/** The URL when it is http(s) or mailto and parses; otherwise null. */
+/** The URL when it is http(s) or mailto and parses, an http(s) one with a plain authority (linkAuthority.ts); otherwise null. */
 export function safeHref(raw: string): string | null {
   if (!SAFE_HREF.test(raw)) return null
   try {
     const url = new URL(raw)
     if (url.protocol === 'mailto:') return url.pathname ? raw : null
-    return url.hostname ? raw : null
+    return url.hostname && plainAuthority(raw) ? raw : null
   } catch {
     return null
   }

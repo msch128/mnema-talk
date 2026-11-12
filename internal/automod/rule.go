@@ -11,7 +11,6 @@ package automod
 
 import (
 	"fmt"
-	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"golang.org/x/net/idna"
 )
 
 // Rule kinds.
@@ -276,9 +274,10 @@ var schemePrefix = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*://`)
 
 // hostOf reads the host a browser would connect to from a link or bare
 // domain: the part after the last "@" of the authority (so
-// http://allowed.com@evil.com is evil.com), without port, percent-decoded,
-// mapped by UTS-46 to punycode (full-width and ideographic dots become dots),
-// lower case, without a trailing dot. ok is false when it cannot be read.
+// http://allowed.com@evil.com is evil.com), without port, read by the URL
+// Standard's host parser (readAuthority: percent-decoded, UTS #46 to
+// punycode, full-width and ideographic dots become dots, lower case), without
+// a trailing dot. ok is false when it cannot be read exactly.
 func hostOf(link string) (string, bool) {
 	l := strings.TrimSpace(link)
 	if loc := schemePrefix.FindStringIndex(l); loc != nil {
@@ -287,24 +286,6 @@ func hostOf(link string) (string, bool) {
 	if i := strings.IndexAny(l, "/?#\\"); i >= 0 {
 		l = l[:i]
 	}
-	if i := strings.LastIndex(l, "@"); i >= 0 {
-		l = l[i+1:]
-	}
-	if strings.HasPrefix(l, "[") { // an IP literal: never a listed domain
-		return strings.ToLower(l), strings.HasSuffix(l, "]")
-	}
-	if i := strings.LastIndex(l, ":"); i >= 0 {
-		port := l[i+1:]
-		if strings.Trim(port, "0123456789") != "" {
-			return "", false
-		}
-		l = l[:i]
-	}
-	l, err := url.PathUnescape(l)
-	if err != nil {
-		return "", false
-	}
-	l, err = idna.Lookup.ToASCII(l)
-	l = strings.TrimRight(strings.ToLower(l), ".")
-	return l, err == nil && l != ""
+	r := readAuthority(l)
+	return r.host, r.exact && r.host != ""
 }

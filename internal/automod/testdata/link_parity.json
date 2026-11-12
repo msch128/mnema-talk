@@ -41,6 +41,10 @@
    {
     "host": "other.example",
     "ok": true
+   },
+   {
+    "host": "other.example)",
+    "ok": true
    }
   ]
  },
@@ -124,7 +128,25 @@
   "msg": "https://other.example's page",
   "server": [
    {
-    "host": "other.example",
+    "host": "other.example's",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\"@other.example/y",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\u3000@other.example/x",
+  "server": [
+   {
+    "host": "allowed.example",
     "ok": true
    }
   ]
@@ -133,7 +155,7 @@
   "msg": "https://allowed.example'@other.example/x",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "other.example",
     "ok": true
    }
   ]
@@ -142,7 +164,16 @@
   "msg": "https://allowed.example\uff02@other.example/x",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff07@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
     "ok": true
    }
   ]
@@ -151,7 +182,61 @@
   "msg": "https://allowed.example\uff0f@other.example/x",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff1c@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff1e@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff1f@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff03@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff3c@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example\uff40@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
     "ok": true
    }
   ]
@@ -160,25 +245,53 @@
   "msg": "[docs](https://allowed.example'@other.example/x)",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u003chttps://allowed.example'@other.example/x\u003e",
+  "server": [
+   {
+    "host": "other.example",
     "ok": true
    }
   ]
  },
  {
   "msg": "https://'@other.example/x",
-  "server": []
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
  },
  {
   "msg": "https://\u0085@other.example/x",
-  "server": []
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see https://\uff02@other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
  },
  {
   "msg": "**https://other.example**",
   "server": [
    {
-    "host": "other.example**",
-    "ok": false
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
@@ -186,8 +299,44 @@
   "msg": "||https://other.example||",
   "server": [
    {
-    "host": "other.example||",
-    "ok": false
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "~~https://other.example~~",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "__https://other.example__",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "*https://other.example*",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://other.example|",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
@@ -196,7 +345,72 @@
   "server": [
    {
     "host": "other.example)s",
-    "ok": false
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "**https://other.example**.allowed.example",
+  "server": [
+   {
+    "host": "other.example**.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "__https://other.example__.allowed.example",
+  "server": [
+   {
+    "host": "other.example__.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "~~https://other.example~~.allowed.example",
+  "server": [
+   {
+    "host": "other.example~~.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "||https://other.example||.allowed.example",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[docs](https://other.example).allowed.example",
+  "server": [
+   {
+    "host": "other.example).allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
@@ -204,7 +418,16 @@
   "msg": "https://other.example\u007f@allowed.example",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://other.example\b@allowed.example/y",
+  "server": [
+   {
+    "host": "other.example",
     "ok": true
    }
   ]
@@ -213,21 +436,44 @@
   "msg": "https://other.example\ufeff.allowed.example",
   "server": [
    {
-    "host": "other.example.allowed.example",
+    "host": "other.example",
     "ok": true
    }
   ]
  },
  {
   "msg": "h\u0000ttps://other.example",
-  "server": []
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
  },
  {
   "msg": "http://_.other.example",
   "server": [
    {
     "host": "_.other.example",
-    "ok": false
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "http://a-.other.example/x",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "http://-a.other.example/x",
+  "server": [
+   {
+    "host": "-a.other.example",
+    "ok": true
    }
   ]
  },
@@ -236,6 +482,23 @@
   "server": [
    {
     "host": "allowed.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example:70000/https://other.example/z",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
     "ok": true
    }
   ]
@@ -246,6 +509,36 @@
    {
     "host": "[::1",
     "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "www.allowed.example/r/https://other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example/r?u=https://other.example/x",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
@@ -253,7 +546,7 @@
   "msg": "https://allowed\u0301.example",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "xn--allowed-zge.example",
     "ok": true
    }
   ]
@@ -262,142 +555,22 @@
   "msg": "https://allowed.exampl\u0302e",
   "server": [
    {
-    "host": "allowed.example",
+    "host": "allowed.xn--example-6ge",
     "ok": true
    }
   ]
  },
  {
-  "msg": "'||www.x\u2060n--caf-dma.e\uff3cxample@2130706433:0#f||",
+  "msg": "https://allowed\u030a.example/q",
   "server": [
    {
-    "host": "www.xn--caf-dma.e",
+    "host": "xn--allowed-1ie.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "see ||https://user@other\uff0eexample:443/x|| now",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\\\u003cHTTPS://user@0x7f.1:99999?u=https://other.example\u003e'",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003cwww.user\f@%6fther.example:80/x?y=1\u003e!",
-  "server": [
-   {
-    "host": "www.user",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003chttp:/\uff1a/0x7f.1\u2060:8o/x\u003e'",
-  "server": []
- },
- {
-  "msg": "a\n`www.\u0430llowed.example@sub.allowed.example\\other.example`||",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nHTTPS://[::1]\ufe65other.example:8o\\other.example htt\u2060p\u034fs:/other%2eexample:65535/!",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see [x](https://allowed.example) HTTPS://0x7f.1:99999/x?y=1.",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003chttps:/sub.allowed.example\uff40[::1]:80?u=https://other.example\u003e)",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://allowed.example) https://a}llowed.example:65535/x ?y=1||",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "a}llowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[allowed.example](https://all.owed.example.:99999/\uff0ex?y=1)\n",
-  "server": [
-   {
-    "host": "all.owed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003chttp://user@\u0430llowed.example:65535/\u003e))",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\\\u003cHTTPS://user@allowed.exampl\uff02e.other.\u0301example:8o/x?y=1\u003e",
-  "server": [
-   {
-    "host": "allowed.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see \\\u003chttps:///other.example.allowed.example:0/https://other.example\u003e!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x[x](https://allowed.example) https:/user@ALLOWE\ufe6bD.E\nXAMPLE:99999)",
+  "msg": "https://allowed\u00ad.example",
   "server": [
    {
     "host": "allowed.example",
@@ -406,175 +579,25 @@
   ]
  },
  {
-  "msg": "\u003cht\ttp\uff1as:/user@0x7f.1:443/a(b)\u003e\n",
-  "server": []
- },
- {
-  "msg": "[x](https:///user@other.example:65535/x. \"t\")!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](https:/allowed.example.?@sub`.allowed.example:443/x. \"t\") now",
-  "server": []
- },
- {
-  "msg": "see [allowed.example](http://2130706433\"othe\uff1a*r.example#f)'",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "https:/user@allowed.example:99\u003e999\uff3c/a(b) https://[::1@[::1:443/\n",
-  "server": [
-   {
-    "host": "[::1:443",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([https://allowed.example](www.sub.allowed.examp.le\u0000other%2eexample?u=https://othe\uff0er.example)\"",
-  "server": [
-   {
-    "host": "allowed.example](www.sub.allowed.examp.le\u0000other.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](http://0x7f.1@allowed.example:99999/a(b)))",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nhTtP://user@other.example\u0301:0?q.",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003cwww.0x7f\uff03.1:65535/a(b)\u003e",
-  "server": [
-   {
-    "host": "www.0x7f",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) HTTPS://%6fther.example\u007fall\towed\u3002.example.other.example:65535#f\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.example\u007fall",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003chttps://other\uff0eexample:8o/x\u003e'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[https://allowed.example](https\u3002://user@\u0430llowed.exampl\u2024e:443#f)",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "HTTPS://other.ex*ample@127.0.0.1:80 hTtP://other.example\u0301@2130706433:8[0/https://other.example)",
+  "msg": "https://0x7f.1/x",
   "server": [
    {
     "host": "127.0.0.1",
     "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
    }
   ]
  },
  {
-  "msg": "x[x](https://allowed.example) HTTPS://[:`:1:\ufe6499999#f\n",
+  "msg": "https://2130706433/x",
   "server": [
    {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(**https://ALLOWED.EXAMPLE\ufe6b@other.example.allowed.example:80/x?y=1** now",
-  "server": [
-   {
-    "host": "other.example.allowed.example",
+    "host": "127.0.0.1",
     "ok": true
    }
   ]
  },
  {
-  "msg": "x**https://user@allowed.example.other.example:8o?q**'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\u003cHT\uff1fTPS://other.example\u0301\u200d@2130706433:99999#f\u003e",
-  "server": []
- },
- {
-  "msg": "'HTTPS://0x7f.1:6553\uff3c5/x.!",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "http://[::1]\uff40127.0.0.1:443\\/\uff20a(b) https\u003c://user@other\u3002example\uff0e:8o#f.",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x||HTTPS://user@other\u3002example:99999\\other.example||\n",
+  "msg": "https://other%2eexample/x",
   "server": [
    {
     "host": "other.example",
@@ -583,77 +606,7 @@
   ]
  },
  {
-  "msg": "a\n\\\u003chttps://user@c\u0301af\u00e9.example:0#f\u003e)",
-  "server": [
-   {
-    "host": "xn--af-cja1j.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'https:/%6fther.example@sub.allowed.example:443/x?y=1 https://caf\u00e9.example@sub.allowed.\u200dexample:/https://other.example\"",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"HTTPS://xn--caf-dma.example\uff1a@other.example.allowed.example/https://other.exampl*e",
-  "server": [
-   {
-    "host": "other.example.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(**https:/0x7f.1:4(43\u0301/x**!",
-  "server": []
- },
- {
-  "msg": "a\n[x](https://allowed.example) \u3002hTtP://other.example.allowed.exampl%e[@%6fther.example/x\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[allowed.example](https://other.example(other.example.}allowed.example:)",
-  "server": [
-   {
-    "host": "other.example(other.example.}allowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "`https:/user@;other.example:8\u3000o/x`||",
-  "server": []
- },
- {
-  "msg": "\u200b\\\u003chttps:;//ALLOWED.EXAMPLE\f@sub.allowed.example:80#f\u003e now",
-  "server": []
- },
- {
-  "msg": "x[x](http://*user@allow\u0085ed.example:0/x. \"t\")",
-  "server": [
-   {
-    "host": "allow",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nhttps://user@ot\u034fher\u3002example:0/x?y=1",
+  "msg": "https://%6fther.example/x",
   "server": [
    {
     "host": "other.example",
@@ -662,166 +615,7 @@
   ]
  },
  {
-  "msg": "\"\\\u003chttps:/othe!r.example\uff07allowed.example..:\\other.example\u003e!",
-  "server": []
- },
- {
-  "msg": "see hTtP://0x7f.1/a(b)||",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](http://other.example\rxn--caf-dm=a.example:0?u=https://other.example \"t\"))",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bHTTPS://other%2eexample\u0301[::1:0:/x. https://user@[::1:99999/a(b)",
-  "server": [
-   {
-    "host": "other.xn--exampl[::1:0-geb",
-    "ok": false
-   },
-   {
-    "host": "[::1:99999",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](https://allowed.example) https:\ufeff///ALLOWED.EXAMPL\u2060E_@\u0430llowed.example:65535.",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(||www.allowed.example=@[|::1[:0||.",
-  "server": [
-   {
-    "host": "[|::1[:0||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'`hTtP://[::1@0x7f.1:80?u=https://other.example`",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[https://allowed.example](HTTP\u3000S://allowed.example:).",
-  "server": [
-   {
-    "host": "allowed.example](http",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200bhttps://user@[::1/ HTTPS://use\uff3cr@[::1]:443#f!",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   },
-   {
-    "host": "use",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"www.other.example:8o/)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'\\\u003chttp://ALLOWED.EXAMPLE!%6fther.example:80/x\u003e'",
-  "server": [
-   {
-    "host": "allowed.example!other.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xhttp://127.0.0.1@caf\u00e9.example:0?u=https://other.example'",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'`https://xn--caf-dma.example\uff1eallowed.example.:65535\u003e?q`||",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(https:/user@allowed.examp=l\uff20e:443#f https://xn--caf-dma.example!sub.allowed.example/a(b)\n",
-  "server": [
-   {
-    "host": "xn--caf-dma.example!sub.allowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x[x](https:/user@other\uff0eexample:?u=https_://other.example \"t\")||",
-  "server": []
- },
- {
-  "msg": "x[x](\u003chttps:///A%LLOWED.EXAMPLE*other%2eexample/http\u2060s://other.example\u003e))",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x[https://allowed.example](https:///other%2eexample/x?y=1)\n",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](hTtP://user@other%2eexample:80/x. \"t\")",
+  "msg": "https://other\uff0eexample/x",
   "server": [
    {
     "host": "other.example",
@@ -830,21 +624,17 @@
   ]
  },
  {
-  "msg": "a\n\\\u003cHTTPS://us\u2024er@sub.allowed.example:\\other.example\u003e'",
+  "msg": "https://other\u3002example/x",
   "server": [
    {
-    "host": "sub.allowed.example",
+    "host": "other.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\".http://user@other\u3002example:80/x hTtP://oth\u200ber.example\uff0fother%2eexampl\uff07e:0\\other.exa]mple)",
+  "msg": "https://OTHER.example:/x",
   "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
    {
     "host": "other.example",
     "ok": true
@@ -852,50 +642,7 @@
   ]
  },
  {
-  "msg": "\u200b**HTTPS://allowed.e/xample.other.exampl(e@0x7f.1/https://other.example**\n",
-  "server": [
-   {
-    "host": "allowed.e",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](\u003chttps://\f/other%2eexample\"oth\u200ber.example:8o/x\u003e).",
-  "server": []
- },
- {
-  "msg": "x\u003chttps:/user@allowed.example.:0\\other.example\u003e",
-  "server": []
- },
- {
-  "msg": "a\n||www.\u0430llowed.\ufe64example\ufe65@allowed.example.#f||!",
-  "server": [
-   {
-    "host": "www.xn--llowed-2nf",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](\u003chttps://other.example\roth\u200ber.example:65535?u=https://other.exampl'e\u003e)||",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "other.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003chTt\"P://user@\u3002[::1:8o/x?y=1\u003e",
-  "server": []
- },
- {
-  "msg": "'hTtP://other\u3002example@[::1]/)",
+  "msg": "https://[0:0::1]/x",
   "server": [
    {
     "host": "[::1]",
@@ -904,47 +651,181 @@
   ]
  },
  {
-  "msg": "\"||hTtP://other.example.allowed.example*ALLOWED.EXAMPLE:99\u200c999#f|| now",
+  "msg": "https://user:pw@other.example:443/x",
   "server": [
    {
-    "host": "other.example.allowed.example*allowed.example",
-    "ok": false
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
  {
-  "msg": "([x](https://allowed.example) https:///other\u3002example\u200bother\u3002example:8o/a(b)!",
+  "msg": "__http://ALLOWED.EXAMPLE_@[::1]__.allowed.example__",
   "server": [
    {
     "host": "allowed.example",
     "ok": true
    },
    {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "**https:///[::1]\ufe6both\u200ber.example:443?q**\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(||http://user@127.0.0.1:\u003e65535/x?y=1||!",
-  "server": [
-   {
-    "host": "127.0.0.1",
+    "host": "[::1]",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\u200b||www.ALLOWED.EXAMPLE:65535\\other.example||\n",
+  "msg": "x*HTTPS://[0:0::1]'*@allowed.example.:443/a(b)* now",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'__http://1.@2.3.25)6_@[::1]:__.allowed.example__",
+  "server": [
+   {
+    "host": "2.3.25)6",
+    "ok": true
+   },
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example/x",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see https://docs.allowed.example/guide?a=1#b.",
+  "server": [
+   {
+    "host": "docs.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(https://allowed.example)",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[docs](https://allowed.example/x)",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u003chttps://allowed.example\u003e",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "**https://allowed.example**",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "*https://allowed.example*",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "||https://allowed.example||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "~~https://allowed.example~~",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "__https://allowed.example__",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example:8080/x",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://ALLOWED.EXAMPLE./x",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "https://allowed.example's page",
+  "server": [
+   {
+    "host": "allowed.example's",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "www.allowed.example",
   "server": [
    {
     "host": "www.allowed.example",
@@ -953,47 +834,7 @@
   ]
  },
  {
-  "msg": "\u200b**https://xn--caf-dma.example\uff40xn--caf-dma.example:80?q**)",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](https://allowed.example) https://other\uff0eexa\uff0fm:ple\rother.example.allowed.example:65535 now",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.exa",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(**hTtP://a[llowed.exampl\u2024e.other.example\u001f@other\u3002example:99999/x.**.",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "https:///other.example\u0301\uff03@caf\u00e9.example:80/https://ot[her.example now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](https://allowed.example) #https:/other.example\u0301:8o?q\n",
+  "msg": "https://allowed.example/a_(b)",
   "server": [
    {
     "host": "allowed.example",
@@ -1002,96 +843,38 @@
   ]
  },
  {
-  "msg": "\\\u003chttps:///allowed.example.\u200bother\u3002example:65535?u=https://other.example\u003e\"",
+  "msg": "https://my_host.allowed.example/x",
   "server": [
    {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see www.user@caf\u00e9.example:80/x?y=1",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
+    "host": "my_host.allowed.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\u200b\\\u003cwww.user@other\uff0eexample:80\u00ad?q\u003e.",
+  "msg": "https://caf\u00e9.allowed.example/x",
   "server": [
    {
-    "host": "other.example",
+    "host": "xn--caf-dma.allowed.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\"[x](https://allowed.example) hTtP://other.example\u0301:99999?u=https://other}.example now",
+  "msg": "[https://allowed.example](https://allowed.example/x).",
   "server": [
    {
     "host": "allowed.example",
     "ok": true
    },
    {
-    "host": "other.xn--exampl-gva",
+    "host": "allowed.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\"HTTPS://ALLOWED.EXAMPLE\u2024allowed.example.:443/a(b\u3002) www.user@sub.allowed.\uff02/example:80/x.'",
-  "server": [
-   {
-    "host": "allowed.example.allowed.example",
-    "ok": true
-   },
-   {
-    "host": "sub.allowed",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b`https://ALLOWED.EXAMPLE@%6fther.example?u=https://other.example`\"",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see **HTTPS://2130706433\u00adxn--caf-dma.example:#f**!",
-  "server": [
-   {
-    "host": "2130706433xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](\u003chttps:/sub.a.llowed.example\u0085@sub.allowed.example:8o?u=https://other.example\u003e)",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x\\\u003chttps://user@sub.allowed.example:443#f\u003e'",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([allowed.example](https://\u0430llowed.example@ALLOWED.EXAMPLE:655\uff0735?q))",
+  "msg": "https://allowed.example?",
   "server": [
    {
     "host": "allowed.example",
@@ -1100,29 +883,7 @@
   ]
  },
  {
-  "msg": "\"[x](https:/sub.allowed\\.example@213\u200d0706433:80/)\"",
-  "server": []
- },
- {
-  "msg": "'\u003chttps:///xn--caf-dma.example\uff3c127.0.0.1:80/a(b\u200b)\u003e||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'**https://0x7f.1@127.0.0.1:0#f**)",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003chttps://allowed.example/https://other.example\u003e",
+  "msg": "\"https://allowed.example\", he said",
   "server": [
    {
     "host": "allowed.example",
@@ -1131,2806 +892,65 @@
   ]
  },
  {
-  "msg": "\"[x](HTTPS://sub.allowed.example\u2060oth\u200ber.example\u2060:65535/a(b) \"t\")\n",
+  "msg": "'`www.ALLOWED.EXAM\fP\rLE@other\u3002example:8o?q`",
   "server": [
    {
-    "host": "sub.allowed.exampleother.example",
+    "host": "www.allowed.exam",
     "ok": true
    }
   ]
  },
  {
-  "msg": "\\\u003chttps:///127.0.0.1_@[::1]:65535/x?y=1\u003e||",
+  "msg": "(||https:///user@xn--caf-dma.ex\u001fample?q||",
   "server": [
    {
-    "host": "",
+    "host": "xn--caf-dma.ex",
     "ok": false
    }
   ]
  },
  {
-  "msg": "[allowed.example](http://127.0.0.1@allowed.example.:999\u200b99) now",
+  "msg": "'__http://2130706433%[0:0::1]:443/x.__!",
   "server": [
    {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x||https:/allowed.example.other.ex\u003cample\\@oth\u200ber.example:0\\other.exampl\te||\"",
-  "server": []
- },
- {
-  "msg": "a\nwww.ALLOWED.EXAMPLE@othe\ufe64r%2eexample:99999#f!",
-  "server": [
-   {
-    "host": "othe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(`h\u2060ttps://%6fther.example@allowed.example.:80/x.`\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x\u003cHTTPS://other%2eexample:80/x?y=\u20241\u003e)",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([x](\u003cwww.[::1\uff07allowed.example.:8o/https://ot\u2024her.example\u003e)\"",
-  "server": [
-   {
-    "host": "www.[:",
-    "ok": false
-   },
-   {
-    "host": "ot.her.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x**HTTPS://use\uff1cr@127.0.0.1\u0001:8o**'",
-  "server": [
-   {
-    "host": "use",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'||http://other%2eexample\uff02@other%2eexampl\fe:8o/x\u00a0?y=1||\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[x](\u003cwww.o\ufe65ther.example.allowed.example@caf\u00e9.example:99999/x?y=1\u003e))",
-  "server": [
-   {
-    "host": "www.o",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see \u003chttp://oth\u200ber.example?@\u0430llowed\ufeff.example:80\u003e",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](https://allowed.example) https://other.example\u200d@2130706433:0/a(b).",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u003chttps:/other.example=sub.a\u034fllowed.example:80#f\u003e",
-  "server": []
- },
- {
-  "msg": "x[x](https://allowed.example) hTtP://%6fther.example@allowed.\uff03example.:0/%a(b))",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "allowed",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bhttps:///\u0430l\uff1flowed.example`other.examp!le:8o/x.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) hTtP://0x7f.1\\2130706433:0/x.)",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003chttps:/[::1]\u034f%6fther.example:80/x?y=1\u003e now",
-  "server": []
- },
- {
-  "msg": "\"[x](https://allowed.example) http://xn--caf-dma.example|@allowed.example.other.example:99999?q now",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](HTTPS://caf\u00e9.example\u034fother.example\u0301:0?u=https://other.exa\u3002mple \"t\")",
-  "server": [
-   {
-    "host": "xn--caf-dma.exampleother.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'https:///other%2eexample\u00a0[::1]:99999/x. hTtP://other\u3002example\fcaf\u00e9.example:99999/\uff40x)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\\\u003cwww.user@sub.allowed.example:65535#f\u003e)",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](https://allowed.example) HTTPS://sub.allowed.example\ufe65allowed.example:/x?y=1!",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](http://user@0x7f.1:443/https://other.example \"t\")\"",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](https://allowed.example) https:/other%2eexampl\u0301e other%2eexample:8o/x. now",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"**ht:tps://other\u3002example:0//x**",
-  "server": []
- },
- {
-  "msg": "([x](https://allowed.example) https:/other.example.allowed.example\uff1eother\u3002example:99999/x?y=1\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([x](https:///other.example@[::1:8o/ \"t\").",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x[x](\u003cwww.\u0430llowed.examp\u007fle:80_/a(b)\u003e)!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n||HTTPS://ALLOWED.EXAMPLE:8o/x||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see https://user@other.example.allowed.exam\u0000ple:443/ HTTPS://[::1]\uff0e@[::1:443/a(b))",
-  "server": [
-   {
-    "host": "other.example.allowed.exam\u0000ple",
-    "ok": false
-   },
-   {
-    "host": "[::1:443",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"https:/[::1]\u30022130706433:65535 www.2130706433\"@other%2eexample:65535/https://othe\u000b\tr.example!",
-  "server": [
-   {
-    "host": "www.2130706433",
-    "ok": true
-   },
-   {
-    "host": "othe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](hTtP://allowed.example\t@al]lowed.example.:#f))",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003cwww.user@127.0.0.1/a(b)\u003e",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](https:/allowed.example@other.example\u0301:443)||",
-  "server": []
- },
- {
-  "msg": "\u200b`hTtP://user@other\u3002exam\uff02ple:`",
-  "server": [
-   {
-    "host": "other.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"https:///127.0.0.\uff0e1:/\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\u003cHTTPS://xn`--caf-dma.example@other.example\u0301\\other.example\u003e)",
-  "server": [
-   {
-    "host": "xn",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n`https:///\u0430ll\fowed.example\u3002other.example:443?u=https://other.example`",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](\u003cHTTPS://user@[::\uff1e1]:8=0/x?y=1\u003e).",
-  "server": [
-   {
-    "host": "[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](HTTPS\u2024://2130706433:80?u=https://othe\uff03r.example).",
-  "server": [
-   {
-    "host": "othe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[x](hTtP://caf\u00e9.example@other%2eexample:/x?y=1).",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\u003cwww.\u0430llowed.example\u00ad[::1:0/https://other.example\u003e.",
-  "server": [
-   {
-    "host": "www.xn--llowed-2nf.example[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](https://allowed.example) http://other.example/sub.allowed.e_xample:443/https://other.example\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n\\\u003chttps://other.exam)ple\u0301\u000b@allowed.example.other.e\u003example:80#f\u003e.",
-  "server": [
-   {
-    "host": "other.xn--exam)pl-hya",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://allowed.example) https:/other.example.allowed.example[allowed.example:8o/a(b)!",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "https\uff0f://user@allowed.example./x?y=1 hTtP://user@[:\uff20:1:99999/x\n",
-  "server": [
-   {
-    "host": ":1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'\u003chttps:///%6fther.exampl\u2060e@[::1\u00a0:443\u003e now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xwww.ALL\u00a0OWED.EXAMPLE@other%2eexample:99999}/x?y=1 www.allowed.example.!@other\uff0eexample:/\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nhttp://user@other.ex\uff3cample.allowed.example:65535\"",
-  "server": [
-   {
-    "host": "other.ex",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(https://other%2eexample\u000b%6fther.example:99999/)",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([https://allowed.example](http://AL[LOWED.EXAM\u0085PLE\u0001127.0.0.1/x))",
-  "server": [
-   {
-    "host": "allowed.example](http",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'**www.caf\u00e9.example\uff1foth\u200ber.example:80?q** now",
-  "server": [
-   {
-    "host": "www.xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003cHTTPS://2130706433\uff40other.example.allowed.example:99999?u=https://other.example\u003e\n",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'http://allowed.example@sub.allowed.example:80/https://other.example https:/oth\uff1aer.example\u0301#@other\u3002example:99999\\other.example",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[https://allowed.example](HTTPS://oth\u200ber.example\ufe6b@[::1:0) now",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](\u003chttps:/other.example.allowed.example\n%6fther.example:0/x\u003e).",
-  "server": []
- },
- {
-  "msg": "a\n`htt\u000bps:///[::1\uff07]:0\\other.example`.",
-  "server": []
- },
- {
-  "msg": "\u200b[x](\\http\u2060s:///other\u3002example:?u=https://other.example \"t\")!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x**www.xn--caf-dma.example@allowed.example.:8o** now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](hTtP://user@othe\uff1cr\u3002example:99999/x. \"t\") now",
-  "server": [
-   {
-    "host": "othe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u003cwww.xn--caf-dma.example\uff1a@[::1:0/x\u003e)",
-  "server": [
-   {
-    "host": "[::1:0",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'\u003cwww.ALLOWED.EXAMPLE\uff20other\uff07.example:8o/a(b)\u003e||",
-  "server": [
-   {
-    "host": "other",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x`https://0x7f.1?u=https://other.example`)",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\u003chttps:///other.example\u0301(0x7f.1/\u003e.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200bhttps:///user@0x7f.1:8o hTtP://user@other\u3002example:443/x\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nhttp://xn--caf-dma.example:/x\n",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://allowed.example) HTTPS://[::1]_@A\tLLOWED.EXAMPLE:0/x.\uff07\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "a",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b`https://oth\u200ber.example:\\other.example`\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) www.%6fther.example\uff02[::1:99999#f'",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "www.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "xhttp://user@ALLOWED.EXAMPLE:99999/x!",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([x](https://allowed.example) http://\u0430llowed.example:99999/x?y=1 now",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"`HTTPS://other\u3002example:8o/a(b)`\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x**https:/other%2eexample:80\\other.example**\"",
-  "server": []
- },
- {
-  "msg": "x[https://allowed.example](HTTPS://[::1@s\rub.allowed.example:/https://other.example) now",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"||https:/xn--caf-dma.example:?q||||",
-  "server": []
- },
- {
-  "msg": "http://[::1\uff1fother.example\u0301?}\u0301q",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b||https:/other.example.allowed.example:443?q`|| now",
-  "server": []
- },
- {
-  "msg": "\"\\\u003chttps:/user@xn--caf-dma`.exa\u0000mple:443#f\u003e)",
-  "server": []
- },
- {
-  "msg": "||http://ALLOWED.EXAMPLE,@allowed.example:99999/https://other.example||||",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"||https://0x7f.1~@\uff40ALLOWED.EXAMP\u034fLE:99999/a(b)||\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see **https://allowed.example:65535?u=https://other.example**||",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bhttps://%6fther.example\uff02allowed.example.other.example/x?y=1 https:///[::1\u001f@other%2eexample:\uff0f443/\u2060x?y=1.",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x`www.[:\ufe64:1]@sub.allowed.example:65535\\other.example`)",
-  "server": [
-   {
-    "host": "www.[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'`https:///ALLO,WED.EXAMPLE:0/a(b)`'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](\u2060www.2130706433:\u00a080/ \"t\")!",
-  "server": [
-   {
-    "host": "www.2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"HTTPS://[::1\uff02]@\u0430llowe.d.example:80/https://other.example||",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   },
-   {
-    "host": "other.example||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([https://allowed.example](https://caf\u00e9.example\f@allowed.example.?u=https://other.example).",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003cwww.user@ALLOWE\tD.EXAMPLE:65535/x\u003e!",
-  "server": [
-   {
-    "host": "allowe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n\\\u003chttps:/\u0430llowed.example\u007fsub.allowed.example:80?u=https:/\ufeff/other.example\u003e'",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](http\u3000://other\uff0eexample\\allowed.example:8o#@f \"t\") now",
-  "server": []
- },
- {
-  "msg": "\u200bhttps:/user@%6fther.example:80/a(b) https://\"/\u0430llowed.example\ufe64\uff1a@xn--caf-dma.example:443/x now",
-  "server": []
- },
- {
-  "msg": "x**hTtP://other\u3002example;other\u3002example:99999#f**\n",
-  "server": [
-   {
-    "host": "other.example;other.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b**https:/%6fther.example|0x7f.1:80**)",
-  "server": []
- },
- {
-  "msg": "x[x](https://2130706433:65535/a(b) \"t\").",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](HTTPS\t://allowed.example.other.example\u200c@21307\u003c06433:443#f \"t\"))",
-  "server": []
- },
- {
-  "msg": "\"HTTPS://other\u3002exam\u2024pl=e/x hTtP://%6fther.example\u003e@ALLOWED.EXAMPLE:/.",
-  "server": [
-   {
-    "host": "other.exam.pl=e",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'`www.xn--caf-dma.example)other.example:65535?u=https://other.example`\"",
-  "server": [
-   {
-    "host": "www.xn--caf-dma.example)other.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b||https:/allowed.example\u0001other%\uff3c2eexample:/https://other.\uff20example||)",
-  "server": [
-   {
-    "host": "example||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](https:///allowed.example.other.example\uff200x7f.1/a(b) \"t\").",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https:/other.example.allowed.exam~ple\uff02`oth\u200ber.example:443?q))",
-  "server": []
- },
- {
-  "msg": "see **http://%6fther.example@oth\u200ber.example:6553\uff025/x.**",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003chttp://caf\u00e9.example@allowed.example.other.example#f\u003e||",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](https://allowed.example) https://%6[fther.example\u034f@other\uff0eexample/x'",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\nHTTPS://other%2eexample\u2060@other.\u003eexample.allowed.example:8o/x.",
-  "server": [
-   {
-    "host": "other",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b`hTtP://other%2eexample@sub.allowed.e\u0001xample:8o\\other.example`!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](\u003chttps://other.example\u0301@o_t\uff0fher\u3002example:65535#f\u003e)'",
-  "server": [
-   {
-    "host": "o_t",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](\u003chTtP://0x\u034f7f.1\\other.exa\u00a0mple\u003e)!",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see \\\u003ch\u2060ttps://other\u3002exampl\u2028e|@0x7f.1:99999#f\u003e\"",
-  "server": [
-   {
-    "host": "other.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"`https:///[::1]@sub.allowed.example:80/` now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(www.allowed.example@other%2eexample:443\\other\uff0e.example\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see **https://caf\u00e9.example:80?u=https://other.example**)",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[allowed.example](https://user@allowed.example:8o?u=https://other.example)\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see \u003chttps://oth\u200ber.exam\uff1cple/x.\u003e\"",
-  "server": [
-   {
-    "host": "other.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n`https://us\ufe65er@0x7f.1:65535/x?y=1`)",
-  "server": [
-   {
-    "host": "us",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](https://allowed.example) hTtP://other.example.allowed.example,caf\u00e9.example:]0#f\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\\\u003cHTT\uff1cPS://[::1] xn--caf-dma.example:80#f\u003e.",
-  "server": []
- },
- {
-  "msg": "\"**http://other.exam\u00a0ple#.allowed.example@%6fther.example/x?y=1**\"",
-  "server": [
-   {
-    "host": "other.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[https://allowed.example](https://127.0.0.1@\u0430llowed.example:443/x?\ufe6by=1).",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xHTTPS://oth\u200ber.example@xn--caf-dma.example:?u=https://other.example ;https:///user@other\u3002example:80/https://!other.example!",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](\u003chttp://other\u3002example xn--ca;f-dma.example:\\other.example\u003e)!",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\\\u003chttps:/other.example.allowed.ex\u003cample\u3000@allowed.example/x.\u003e||",
-  "server": []
- },
- {
-  "msg": "\u200b`https://oth\u200ber.example\u0000o\u0301ther\uff0eexample:65535/x?y=1`'",
-  "server": [
-   {
-    "host": "other.xn--example\u0000ther-7hb.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(||HTTPS://caf\u00e9.example:?u=https://\u3002other.example||",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u003cHTT%PS://oth\u200ber.\u0085example@allowed.example.other.example:99999?q\u003e\"",
-  "server": []
- },
- {
-  "msg": "\u200b[x](hTtP://user@other\u3002|example:443/x.)||",
-  "server": [
-   {
-    "host": "other.|example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](www.ALLOWED.EXAMPLE@other.examp\uff0fle:8o/a(b) \"t\")\n",
-  "server": [
-   {
-    "host": "other.examp",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u003chttps:///oth\u200ber.exampl\u000be\ufe64@other.example\u0301:443/a(b)\u003e now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200bHTTPS\ufe64://user@%6fther.example\ufe65:65535 HTTPS://allowed.example.other.example\tca\u0000f=\u00e9.example:80/x)",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n`www.caf\u00e9.example:99999?q`)",
-  "server": [
-   {
-    "host": "www.xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n\u003ch(ttps://user@allowed\t.example.:0?u=https://other.example\u003e",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](hTtP://caf\u00e9.examp\uff1cle:99'999\\other.example \"t\"))",
-  "server": [
-   {
-    "host": "xn--caf-dma.examp",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u003chttps:///xn--caf-dma.e;xample@\u0430llowed.example:0#f\u003e\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](https\u3000:///]user@0x7f.1:8o \"t\")'",
-  "server": []
- },
- {
-  "msg": "'HTTPS://other%2eexample@other\uff0eexa?mple:99999/a(b) www.other.example\ufe64@other\uff0eexamp\u000ble:99999/https://other.example!",
-  "server": [
-   {
-    "host": "other.exa",
-    "ok": true
-   },
-   {
-    "host": "www.other.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see https://ALLOWED.EXAMPLE@other.example.allowed.example:\u30000/x https\u3002:/other%2eexample\u0301\ufe6b@other.example:?q\"",
-  "server": [
-   {
-    "host": "other.example.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'||https:///[::1\ufe64@othe\uff1er.example:99999/https://other.example||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"**https:/0x7f.1@%6fther.example:65535?u=htt.ps://other.e\u200dxample** now",
-  "server": []
- },
- {
-  "msg": "see https://sub.allowed.example:0 https:///\u0430llowed.ex\u000bample/x||",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(https:/other\uff0eexample@127.0.0.1/||",
-  "server": []
- },
- {
-  "msg": "\"[x](\u003chttps:///other\uff0eexample\uff40@oth\u200ber.example?q\u003e))",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003cHTTPS://other\u3002\te\ufe65xample:/\u003e)",
-  "server": [
-   {
-    "host": "other",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"`HTTPS://sub.allowed.examp\\le\uff0e@[:\uff40:1]#f`||",
-  "server": [
-   {
-    "host": "sub.allowed.examp",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(**https:/allowed.example.other.example\uff1a@127.0.0.1:0#f**\"",
-  "server": []
- },
- {
-  "msg": "x[x](\u003chttps:/allowed.example@xn--caf-dma.example:80?u=https://other.example\u003e) now",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](htt}p://allowed.exa\uff03mple@2130706433:0#f \"t\")\n",
-  "server": []
- },
- {
-  "msg": "\u200bhttps:///ALLOWED.EXAMPLE@other%2eexa\u3002mple:80?u=https://other.example\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b\u003chttps:/#other%2eexample:99999/x?y=1\u003e\"",
-  "server": []
- },
- {
-  "msg": "'`http://sub.allowed.example`",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'**http://other.example/sub.allowed\uff0e.example:65535?u=https://other.example**||",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[x](\u003chttp\ufeffs:///other%2eexample:\u003e80?q\u003e)||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n[x](http://caf\u00e9.example:65535/https://other.example \"t\")!",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "xhttp://2130706433:/x/.||",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n\\\u003chTtP://[::1:80\u003e.",
-  "server": [
-   {
-    "host": "[::1:80",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200bhttp://[::1]\r@sub.allowed.example:\u003c65535?q!",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\nhttp://[::1[other%2eexample:8o\\other.example||",
-  "server": [
-   {
-    "host": "[::1[other%2eexample:8o",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](https://oth\u200ber.example!\u0430llowed.example:65535\\other.example \"t\")",
-  "server": [
-   {
-    "host": "other.xn--example!llowed-2tl.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "||https:///\u0430llowed.example@other\uff0eexa\uff20mple?u=https://other.example||)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\\\u003cwww.[::1]@%6fther.example:4~43\u003e!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xHTTPS://caf\u00e9.example@@other.example\u0301:65535\\other.example www.user@caf\u00e9.example:\\o\u0001ther.example!",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   },
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x||http://xn--caf-dma.example@%6fther.example:99999/x||\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x||www.caf\u00e9.example\u000b:||'",
-  "server": [
-   {
-    "host": "www.xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "xhttp://xn--caf-dma.example:,80/x\uff1e hTtP://user@allowed.example.other.example:65535/https://other.example now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n||HTTPS://user@other.example.allowed.example:/||||",
-  "server": [
-   {
-    "host": "other.example.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](\u003chttp://allowed.example.\u034f@other\u3002example:0/x\u003e)",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\u003chttps:/c\ta\u000bf\u00e9.example:80\u003e",
-  "server": []
- },
- {
-  "msg": "(**https://[::1\u007f[::1/https://other.example**)",
-  "server": [
-   {
-    "host": "[::1\u007f[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n`www.user@allowed.example.other.exampl\uff07e:0?u=https:\ufe65//other.example`!",
-  "server": [
-   {
-    "host": "allowed.example.other.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b**http://other\u3002example'@xn--caf-dma.exampl\ufe6be#f**\"",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003cwww.user@\u0430llowed.example:80#f\u003e||",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"http://\u0430llowed.example\uff1c\u3000@ALLOWED.EXAMPLE/||",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(`https:///user@~allowed.ex\uff3cample.other.example:/https://other.example`'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n\u003chttp://other.ex_ample.allowed.example@127.0.0.1/https://other.example\u003e!",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[allowed.example](hTtP://allowed.example.other.exam\nple\u0026@\u0430llowed.example:99999\\other.example)",
-  "server": [
-   {
-    "host": "allowed.example.other.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](https:/other.example.allowed.example,@other%2eexample:\\other.example \"t\")\n",
-  "server": []
- },
- {
-  "msg": "\"[x](https://allowed.example) \thttps:/other.example:\\other.example\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'||hTtP://caf\u00e9.example:8o/|| now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xwww.other\u3002example:99999#f'",
-  "server": []
- },
- {
-  "msg": "'**hTtP://[::1]\nother\uff0eexample:**'",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b||http://[::]1]:44\r3||!",
-  "server": [
-   {
-    "host": "[::]1]:44",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"h'ttps:///oth\u200b\u0085er.example @allowed.example./\n",
-  "server": []
- },
- {
-  "msg": "\u200bhttps:///%'6fther.example!@[::1]:80#f www.[::1]@other\uff0eexample/a(b).",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://xn--caf-dma.example@caf\u00e9.example#f \"t\")",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "**https\u003c:///oth\u200ber.example:65535?u=https://other.example**)",
-  "server": [
-   {
-    "host": "other.example**",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see **https:///c?af\u00e9.example\u000b@127.0.0.1:65535?q**)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003c\u001fhttp://[:\u3000:1]\uff022130706433:80/x.\u003e now",
-  "server": [
-   {
-    "host": "[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u003cwww.s\u2024ub.al(lowed.example:80/\u003e\"",
-  "server": [
-   {
-    "host": "www.s.ub.al(lowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\\\u003cht\ufefftps\u3002:///user@other.example:65535/x?y=1\u003e!",
-  "server": []
- },
- {
-  "msg": "a\n[x](www.user@\u0430l(lowed.example:_80/ \"t\"))",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see `HTTPS://user@other.example\u0301:/a(b\uff3c)`||",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[x](https:///user@other\uff0eexample:8o/x \"t\")\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https?:/user@%6fther.example:443#f)\"",
-  "server": []
- },
- {
-  "msg": "\u200b\\\u003cHTTPS://ALLOWED.EXAMPLE\"@allowed.example.@other.example:99999/\u003e\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](\u003chTtP://user@\u0430llowed.example:65535/a(b)\u003e) now",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "xhttps:///other\u3002example:80 now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](https://allowed.example) https:///allowed.e;xample:0#f)",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"||HTTPS://other\uff0eexample@allowed.example:0#f||",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](ww\uff20w.allowed.examp\u0000le.other.example:0/a(b) \"t\")\"",
-  "server": []
- },
- {
-  "msg": "see \u003cht\u2028tp://user@other%2eexample:?q\u003e\n",
-  "server": []
- },
- {
-  "msg": "\u200b||hTtP://allowed.example.other.example:99999/x||)",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n||hTtP://127.0.0.1:\uff0780?q||\n",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x\u003chttp\ufe65://[::1/x\u003e.",
-  "server": []
- },
- {
-  "msg": "see hTtP://ot@her.example\u0301@other\uff0eexample:443/ hTtP://sub.allowed.example\uff20caf\u00e9.example:443!",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(||https:/all\u001fowed.example:99999/https://othe'r.example||\"",
-  "server": [
-   {
-    "host": "othe",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](\u003chTtP://allowed.example.\u003exn--caf-dma.example:0\u003e))",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](,hTtP://2130706433@other%2eexample:99999?u=https://other.example \"t\")\"",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bHTTPS://127.0.0.1@other\u3002example:0/ htt(ps:/user@ALLOWED.EXAMPLE:80/x.'",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'**http://allowed.example.other.example/\u0430llowed.example:0?q**!",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "`www.caf\u00e9.example#@%6fth[er.example\ufe64:/a(b)`'",
-  "server": [
-   {
-    "host": "www.xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "xwww/.user@0x7f.1:)99999/x http://[::1@\u0430llowed.example:80/x=",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'www.[::\u200c1@other.ex~ample\u0301:443/x?y=1 hTtP://oth\u200ber%2eexample\u2024other\u3002example:0?u=https\uff0e://other.example)",
-  "server": [
-   {
-    "host": "other.xn--ex~ampl-hya",
-    "ok": false
-   },
-   {
-    "host": "other.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "`https:///oth\u200ber.example\n@other.example\u0301:0/x.`.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(HTTPS:~//allowed.example.other.example(\u0430llowed.example:8o/x\uff40.)",
-  "server": []
- },
- {
-  "msg": "\u200b**hTtP://user@[::1]:65535/a(b)**||",
-  "server": [
-   {
-    "host": "[::1]:65535",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](www.allowed.example.other.example|:443#f \"t\")\n",
-  "server": [
-   {
-    "host": "www.allowed.example.other.example|",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see \u003chttps:/user@ALLOWED.;EXAMPLE:65535/a(b)\u003e now",
-  "server": []
- },
- {
-  "msg": "\u200b\u003chttps://\u0430llowed.example@[::1]\n/https:/:/other.example\u003e)",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x\\\u003chttp\uff20s:///other%2eexamp\u0301le:8o/x.\u003e||",
-  "server": []
- },
- {
-  "msg": "\u200b[x](\u003cHTTPS://user@\u0430llowed.example/https\uff0f://other.example\u003e)\"",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](\u003cHTTPS://other.example\u0301@other.exampl'e\u0301:8o\\other.example\u003e))",
-  "server": [
-   {
-    "host": "other.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003chttps:///\u0430llowed.exampl\u007fe:0?u=https://other.example\u003e now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x`https:////sub.allowed.example\uff1e@[::1?u=https://other.example`\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(**https:/allowed.example.other.example\u034fot\uff40her.example:443/x.**)",
-  "server": []
- },
- {
-  "msg": "(\u003chTtP://other.example.allowed.example@[::1]:8o\u003e||",
-  "server": [
-   {
-    "host": "[::1]:8o",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'`http://user@all\uff1cowed.e\u034fxample.other.example:0/`",
-  "server": [
-   {
-    "host": "all",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'`https:/ALLOWED.EXAMPLE:/a(b)`!",
-  "server": []
- },
- {
-  "msg": "see hTtP://allowed.example\uff40._ot\uff02h\u200ber.example:80/a(b)!",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(||https://127.0.0.1:8o/https://other.example||!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b||https:///user@other\u3002example\\other.e\ufe6bxample||\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n**https:/%6fther.example\tallowed.example.other.example:80[?u=https://other.exampl@e**!",
-  "server": [
-   {
-    "host": "e**",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'**www.other\u3002ex_ample'127.0.0.1:99999?u=https\u001f://other.example**!",
-  "server": [
-   {
-    "host": "www.other.ex_ample",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003cHTTPS://allowed?.example.other.example%@other.example/https://other.example\u003e)\"",
-  "server": [
-   {
-    "host": "allowed",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"`www.caf\u00e9.example@allowed.example.o\u007fther.exam\u2024ple:80?q`)",
-  "server": [
-   {
-    "host": "allowed.example.o\u007fther.exam.ple",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(||https:///ot~her.example.allowed.example:65535||\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(http://[::1\u0085@0x7f.1:99999?u\ufe65=https://other.example http://other.example\u0301)@al\u2028lowed.exam\ufe65ple:443#f||",
-  "server": [
-   {
-    "host": "[::1",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "al",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"\\\u003chttps:/[::1]\uff40caf\u00e9.example:65535/\u003e)",
-  "server": []
- },
- {
-  "msg": "see [x](https://127.0.0.1#[::1:443?q \"t\")'",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(`https://ALLOWED.EXAMPLE@ALLOWED.EXAM?PLE}:80/`.",
-  "server": [
-   {
-    "host": "allowed.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'hTtP\uff07://other.example\u0301}12;7.0.0.1:443 http://[::1]\u0000\ufe64\u0430llowed.example:0#f",
-  "server": [
-   {
-    "host": "[::1]\u0000",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](\u003cwww.[\u0301::1@a@llowed.example:80#f\u003e)'",
-  "server": [
-   {
-    "host": "llowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'**https:/oth\u200ber.example other.example:8o/https://other.example**.",
-  "server": [
-   {
-    "host": "other.example**",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n\\\u003cHTTPS://sub.all)owed.example:65535\\other.examp\u0001le\u003e",
-  "server": [
-   {
-    "host": "sub.all)owed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x`HTTPS://sub.allowed.example\uff40`othe\u200dr.example\u0301:0/x?y=1`||",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\\\u003chttps:///allowed\uff0f.example.\r@0x7f.1/x.\u003e)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\u003chttp://other.example\u0301:99999/\u003e'",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\u003chttps\u001f:/0x7f.1*@allowed.example:0?q\u003e.",
-  "server": []
- },
- {
-  "msg": "a\n[x](HTTPS:///c(af\u00e9.example:99999/a(b) \"t\"))",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n[allowed.example](www.other%2eexample@other.exa%mple\u0301:80\\other.example)||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "https:/use,r@[::1:/a(b) HTTPS://sub\n.allowed.example@sub\u0001.allowed.example:99999/)",
-  "server": [
-   {
-    "host": "sub",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "[x](https://allowed.example) http://[::1]\ufe64other.example.all\u2024owed.example:80/x\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"||ht\ufe64tps:///user@ALLOWED.EXAMPLE:443#f|| now",
-  "server": []
- },
- {
-  "msg": "a\n**http:|//other.example@other\u3002example/a(b)**||",
-  "server": []
- },
- {
-  "msg": "\"**https:/other\u3002example:99999/x.**\"",
-  "server": []
- },
- {
-  "msg": "[x](\u003cHTTPS://other.example.allowed.example@other%2eexample:443?q\u003e)\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'**www.other\uff0eexample.caf\u00e9.example:8o**!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https://allowed.example) HTTPS://2130706433\n@127.0.0.1/x.)",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\\\u003cw*ww.0x7f.1\uff02@\u0430llowed.\u200bexample:443/x\u003e||",
-  "server": []
- },
- {
-  "msg": "\"[https://allowed.example](https://%6fther.example\u001f\u2024caf\u00e9.exampl\u0301e:))",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n||https:///other.example.allowed.example:/x?y=1|| now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](\u003chTtP://allowed.example\u2024other.example\u0301:/https://other.example\u003e)'",
-  "server": [
-   {
-    "host": "allowed.example.other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bhttp://other%2eexample\f:9!9999\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "**h(ttps:///other%2eexample:0/x.**.",
-  "server": []
- },
- {
-  "msg": "\u200b\u003chttp\u0001s://127.0.0.1%allowed.examp\u000ble.other.example\u003e now",
-  "server": []
- },
- {
-  "msg": "www.caf\u00e9.example\u00ad@[2130706433:443\\other.example https:/user@other.exampl/e.allowed.example:8o\\other.example.",
-  "server": [
-   {
-    "host": "[2130706433:443",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n**\u0026hTtP:/:/[::1]}[::1:65535/a(b)**.",
-  "server": []
- },
- {
-  "msg": "`hTtP://user@2;130706433:8o\t?q`||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'[x](\u003cHTTPS:/=/[::1][allowed.examp\uff02le.\u003e) now",
-  "server": []
- },
- {
-  "msg": "**www.other.example\n@allowed.example:443\\other.example**!",
-  "server": [
-   {
-    "host": "www.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"hT.tP://127.0.0.1\u2024@ALLOWED.EXAMPLE:0?q hTtP://\uff02other\uff0eexample\u0085other%2eexample:65535/https://other.example||",
-  "server": [
-   {
-    "host": "other.example||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\\\u003chttps://other\uff0eexa'mple\u003callowed.example:8o\u003e.",
-  "server": [
-   {
-    "host": "other.exa",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[https://allowed.example](http://caf\u00e9.example:/https\u000b://other.example) now",
-  "server": [
-   {
-    "host": "allowed.example](http",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\nwww.0x7f.1:65535/x. www.2130706433\u0001%6fther.exam'ple:#f)",
-  "server": [
-   {
-    "host": "www.0x7f.1",
-    "ok": true
-   },
-   {
-    "host": "www.2130706433\u0001other.exam",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) https:/\u0430llowed.example:8o\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\\\u003cHTTPS://user@xn--caf-dma.example:\uff1c0/https://other.examp\u3000le\u003e",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   },
-   {
-    "host": "other.examp",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](https://allowed.example) http://user@sub.a\u0001llowed.example:99999?q\"",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "sub.a\u0001llowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'`https:/other.(example`@o\u3000ther\uff0eexample:80/https://other.example` now",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n||www.[:\uff02:1:?q)||)",
-  "server": [
-   {
-    "host": "www.[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n[x](ht}tps:/other.example.allowed.example|othe;r%2eexample/x. \"t\") now",
-  "server": []
- },
- {
-  "msg": "[x](HTTPS://0x7f.1\u00a0%6ft_her.example:8o\\other.example \"t\")'",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\\\u003c\uff0ehttps:///[::1]:99999/x\u003e.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x||http://user@sub.allowed.example?q||",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"`ht\ftps://other.example\uff1c@2130706433:0\\other.example` now",
-  "server": []
- },
- {
-  "msg": "([x](www.user@sub.allowed.example:/https://other.example \"t\")\n",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](https://allowed.example) HTTPS://other.example\u0301:\u30008o/https://other.exa\u0085mple",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   },
-   {
-    "host": "other.exa",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(**www.allowed.example.:8o/https://other\u200b.example**\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see \u003chtt\uff0eps:/2130706433@other\uff0eexample\uff40:443/x.\u003e.",
-  "server": []
- },
- {
-  "msg": "x\u003ch\tttp://127.0~.0.1/x\u003e.",
-  "server": []
- },
- {
-  "msg": "\u200bhttps:///allowed=.examp\u000ble.@other\u3002example:80/https://other.example||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example||",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b`ww\u000bw.2130706433[\"@allowed.example.other.example:8o/x.`\"",
-  "server": []
- },
- {
-  "msg": "([https://allowed.example](www.\uff1fxn--caf-dma.example\uff0e@other.example:99999/x)\n",
-  "server": [
-   {
-    "host": "allowed.example](www",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](\u003cHTTPS://sub.allowed.example:80/x?y=1\u003e)||",
-  "server": [
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003chttps://allowed.example.other.example\u0085@0x7f.1:\f8o/https://o`ther.example\u003e now",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   },
-   {
-    "host": "o",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://allowed.example) HTTPS://sub.allowed.example other\uff0eexample:6553 5\\other.example\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "sub.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https]://user@\u0430llowed.exa\tmple:8o/x?y=1).",
-  "server": []
- },
- {
-  "msg": "a\n\u003c(hTtP://0x7f.1@othe\u200cr.example\u0301:443/\u003e",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003chttps://other.example:8o#f\u003e)'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) https:///%6fther.example\u00a0@[::1](:0\uff1f/https://other.example\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[https://allowed.example](https:/[::1]:?u=https://other.example)'",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x**hTtP://oth\u200ber.example\u0026@2130706433:0\\other.example**\n",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x\u003cHTTPS:/\u200d/[::\u20281\noth\u200ber.example:8o/x?y=1\u003e!",
-  "server": [
-   {
-    "host": "[",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b[x](\u003chTtP://\u0430llowed.example\f@[::1:99\u00a0999\\other.e\u3000xample\u003e) now",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b**https:///%6fther.exa}mple@other.example.allowed.example:65535** now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200bhT\u001ftP://allowed.example.other.example@other.example:\\other.exa\u3002mple www.2130706433)[::1:99999?u=https\uff20://other.examp\u200dle\"",
-  "server": [
-   {
-    "host": "www.2130706433)[::1",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https://allowed.example) https://allowed.example.other.example:9999\uff1f9\\other.example now",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[allowed.example](https:///0x7f.1@\u0430llowed.exa\uff3cmple:80/)'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n`www.allowed.example.\uff1fother.example\u0301:8o#f` now",
-  "server": [
-   {
-    "host": "www.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see \\\u003chttps://xn--ca\uff02f-dma.example/https://other.example\u003e",
-  "server": [
-   {
-    "host": "xn--ca",
-    "ok": false
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](www.user@2130706433:0?u=\u3002https://other.exam ple \"t\")||",
-  "server": [
-   {
-    "host": "2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b`https://\u0430llowed.example:@99999\\o\fther.example`\"",
-  "server": [
-   {
-    "host": "99999",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](\u003chttps:/other\uff0eexample\u001f[::1]:65535?u=https://other.example\u003e)\"",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[https://allowed.example](www.allowed.example\ufeffoth\u200ber.example:80\\other.example))",
-  "server": [
-   {
-    "host": "allowed.example](www.allowed.exampleother.example",
+    "host": "2130706433%[0",
     "ok": false
    }
   ]
  },
  {
-  "msg": "\u200bhttp\uff1cs://other.example.allowed.example@other%2eexample:8o/* https:/2130706433@[::1:443?u=https://other.e?xample`\"",
+  "msg": "x[x](\u003chttp://other\uff0ee/xample\nAL\u2024LOWED.EXAMPLE?u=https://other.example\u003e))",
   "server": [
    {
     "host": "other.e",
     "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
    }
   ]
  },
  {
-  "msg": "\"H\u0301TTPS://allowed.example.other.example\uff1c@[::1]:0/x?y=1 https:///other\u3002example\fallowed.e(xample.other.example:65535|/x'",
+  "msg": "a\n~~www.1.2.3.256@allowed.example.other.example**.allowed.example~~||",
   "server": [
+   {
+    "host": "allowed.example.other.example**.allowed.example",
+    "ok": true
+   },
    {
     "host": "allowed.example.other.example",
     "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
    }
   ]
  },
  {
-  "msg": "see [x](https://allowed.example) https:/[::1@\u0430llowed.example:80#f'",
+  "msg": "a\nhTtP://sub.allowed.example*@my_host.allowed.example:443/x http\ns:/oth\u200b\u3002er.example:70000/!",
   "server": [
    {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see **HTTP\u0001S:\f//xn--caf-dma.example\uff1aother\uff0eexample:?q**\n",
-  "server": []
- },
- {
-  "msg": "x[x](https:/oth\u3000\u200ber.example@caf\u00e9.example:443/x.)\n",
-  "server": []
- },
- {
-  "msg": "\"[x](hTtP://xn--caf-dma.example]@caf\u00e9.example:65\uff3c535?q \"t\")||",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](HTTPS://[::1]|other%2eexampl/e:0?u=https://other.example)\n",
-  "server": [
-   {
-    "host": "[::1]|other%2eexampl",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) https:///allowed,.example.\f@other.example:443/\uff02\"",
-  "server": [
-   {
-    "host": "allowed.example",
+    "host": "my_host.allowed.example",
     "ok": true
    },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x||https://sub.allowed.example'@other/%/2eexample:65535/a(b)||\"",
-  "server": [
    {
     "host": "sub.allowed.example",
     "ok": true
@@ -3938,616 +958,46 @@
   ]
  },
  {
-  "msg": "see `https:///allowed.example.]@other%2e%example:8o/`||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[https://allowed.example](https:///ALLOWED.EXAMPLE:99999/a(b))\n",
-  "server": [
-   {
-    "host": "allowed.example](https",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "xhTtP://\u0430llowed.example@other.example:\\other.example https:/2130\u007f706433\t\u0430llowe~d.example:443/https://other.example now",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "ht@tps:/o/ther.example:65535/https://other.example'",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x[x](http://other.example\u0301:/x?y=1)||",
-  "server": [
-   {
-    "host": "other.xn--exampl-gva",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003chttps:///ot\f\u00a0her.example:65535/\u003e\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see \u003cwww.user@allowed.example:80?u=https://other.example\u003e.",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "([x](HTTPS://user@allowed.exam\uff0fple:0/https://other.\ufe6bexample \"t\")||",
-  "server": [
-   {
-    "host": "allowed.exam",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see `https://sub.allowed.example@ot\u200d\uff07her.example\u0301:99999/x`",
-  "server": [
-   {
-    "host": "ot",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b||www.%6fther.example\u3000allowed.example:99\n999/x?y=1||\n",
-  "server": [
-   {
-    "host": "www.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003cHTTPS://127.0.0.1@other.example:80/\\a(b)\u003e||",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(H\u2028TTPS://allo\uff1cwed.example.@xn--caf-dma.example/x.",
+  "msg": "a\n[x](https:/127.0.0.1\n@allowed.|exampl\u8256e.other.example#f).",
   "server": []
  },
  {
-  "msg": "see [x](https:///%6fther.example\uff3c[::1:65535/ \"t\")'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(`HTTPS://other.example\u034fsub.a,llowed.example:99999`'",
-  "server": [
-   {
-    "host": "other.examplesub.a,llowed.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"**HTTPS://allowed.example.other.example\"@ALLOWED.EXAMPLE:99999/x.**||",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003ch\u2024ttps:///user@[::1:80/\u003e.",
-  "server": []
- },
- {
-  "msg": "'`http:/\u001f/other.exampl\u000be\u0301:0/`||",
-  "server": []
- },
- {
-  "msg": "x`HTT\ufeffPS://%=6fther.example:\\other.example`.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see **https:///allowed.example.\ufe65other.example:/x?y=1**'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'https:/%6fther.ex\u00adample\"allowed.\u200dexample:0/ https:/2130706433:65535/x now",
-  "server": []
- },
- {
-  "msg": "\"[x](\u003cwww.other.example\u001fALLO\rWED.EXAMPLE:8o?q\u003e)!",
-  "server": [
-   {
-    "host": "www.other.example\u001fallo",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\\\u003chttps:/allowed.example.other.example\f@\u0430llowed.example:99999/x?y=1\u003e now",
-  "server": []
- },
- {
-  "msg": "'\u003chttps://allow\u003eed.example.@other\uff0eexample:8o/x?y=1\u003e\n",
-  "server": [
-   {
-    "host": "allow",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "(\u003chttp://user@ALLOWED.EXAMPLE:443/x?y=1\u003e)",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see **https:/oth\u200ber.example:80?q**",
-  "server": []
- },
- {
-  "msg": "a\n[x](https:/other\u3002example*[::1]:8o/a(b) \"t\").",
-  "server": []
- },
- {
-  "msg": "x**https:///other.example\u0301@oth\u200ber.example\u000b:80/x**.",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(\\\u003chTtP://other%2eex\u003eample\u0001@[::1:8\\o/x.\u003e\n",
-  "server": [
-   {
-    "host": "other.ex",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see [x](https:/\u0430llowed.example:80#f \"t\") now",
-  "server": []
- },
- {
-  "msg": "(|https://user@127.0.0.1:65535/x?y=1 ,https:/a\u200dllowed.example:99999/x.",
-  "server": [
-   {
-    "host": "127.0.0.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'||www.user@[::1:/https://oth\uff20er.example||",
-  "server": [
-   {
-    "host": "[::1:",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\n\u003chttps:///0x7f.1\uff1callowed.ex\u0000ample/x\u003e",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](\u003chttps:///ALLOWED.EXAMPLE:8o\u003e)'",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x**https:///127.0.0.1:**\n",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](HTTPS\uff1e://user@caf\u00e9.example:#f \"t\"))",
-  "server": []
- },
- {
-  "msg": "\u200b**https:/allowed.example,@[::1:80/x?y=1**\"",
-  "server": []
- },
- {
-  "msg": "see ||https://\u0430llowed.example@0x7f.1:65535?u=https://other.example||||",
-  "server": [
-   {
-    "host": "0x7f.1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'\u003chttps://xn--caf-dma.example\u003c21307064:33:443/\u200dx\u003e\n",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https:///user@[::1]:\\other.example \"t\")!",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b**w\uff0fww.[::1@\ufe65ALLOWED.EXAMPLE:8o?u=https://other.example**\n",
-  "server": [
-   {
-    "host": "other.example**",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see \u003c\thttp://allowed.example.other.example\u00a0@xn--caf-dma.example:?u=https://other.example\u003e)",
-  "server": [
-   {
-    "host": "allowed.example.other.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see http://0x7f.1:8o\\other.example\uff1a www.u*ser@[::1:44\u200d3#f||",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   },
-   {
-    "host": "[::1:443",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "([x](HTTPS://xn--caf-dma.example]%6fther.example/x.)",
-  "server": [
-   {
-    "host": "xn--caf-dma.example]other.example",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "(**hTtP~://user@[::1]:443#f|**\n",
-  "server": []
- },
- {
-  "msg": "xhttp://caf\u00e9.example`other\uff0eexample@:443/x?y=1",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200bHTTPS://oth\u200ber.example\u2028`@other.example\u0301:0\\other.example https:///user@other.exampl(e.allowed.example:8o/x\n",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see ||https://other\u3002;example:99999||\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https://allowed.example) HTTPS://other\uff0eexample:8o/a(b) now",
+  "msg": "a\n[x](https://allowed.example) https://allowed.example:700\u4087|00#f||",
   "server": [
    {
     "host": "allowed.example",
     "ok": true
    },
    {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"https:///other.example\u0301\uff1e@xn\u0085--caf-dm\u2028a.example:80?q http:\t//user@0x7f.1\\\u00adother.example",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x||https%://user@other.example\u0301:/x?y\"=1||'",
-  "server": []
- },
- {
-  "msg": "a\n[x](\u003chttp://[::1\u200c@other%2eexample:80#f\u003e)||",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example) http:/\u2060/ot(her.example\u0301||",
-  "server": [
-   {
-    "host": "allowed.example",
+    "host": "allowed.example)",
     "ok": true
    },
    {
-    "host": "ot(her.xn--exampl||-g1a",
+    "host": "allowed.example",
     "ok": false
    }
   ]
  },
  {
-  "msg": "see [x](http://ot\u200dher.example\u0301:8o/x?y=1 \"t\")",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see HTTPS://allowed.example@caf\u00e9.example:65535/x?y=1 https:///other\u3002example[@allowed.example.other.example:80\\ot=her.ex%ample)",
-  "server": [
-   {
-    "host": "xn--caf-dma.example",
-    "ok": true
-   },
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "see ||hT*tP://0x7f.1\uff1e@allowed.example.other.exam\u0026ple:443/x||!",
-  "server": []
- },
- {
-  "msg": "x[x](https://allowed.example) HTTPS://other.example.allow\red.example\ufeff@allowed.example.:0.",
+  "msg": "see [x](HTTPS://allowed.example.(@allowed.example.:7\u034f0000**.allowed.example)",
   "server": [
    {
     "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "other.example.allow",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "a\n[x](https://allowed.example) www.2130706433/x?y=1||",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   },
-   {
-    "host": "www.2130706433",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https:///user@[:\u00a0:1]:#f \"t\")\"",
-  "server": [
-   {
-    "host": "",
     "ok": false
    }
   ]
  },
  {
-  "msg": "\"[x](\u003cwww.user@other.example.allowed.example:65535\u003e).",
+  "msg": "see hT\uff03tP://\u0430llowed.example\u030a@caf\u00e9.\u53ddexample:99999/x. www.1\f27.0.0(.1.",
   "server": [
    {
-    "host": "other.example.allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"**hTtP://1\r27.0\n.0.1]oth\u200ber.example/**.",
-  "server": [
-   {
-    "host": "1",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[x](https:/u\uff0eser@oth\u200ber.example\\other.example \"t\")!",
-  "server": []
- },
- {
-  "msg": "xHTTPS://allowed.example@caf\u00e9.ex\u0000ample/x.)",
-  "server": [
-   {
-    "host": "xn--caf-dma.ex\u0000ample",
+    "host": "www.1",
     "ok": false
    }
   ]
  },
  {
-  "msg": "\u200b`ww?w.2130706433\n@2130706433/x?y=1`.",
-  "server": []
- },
- {
-  "msg": "'hTtP://allowed.example.:443/ https:/allowed.example.other.example'@allowed.example.:99999\\other.example\n",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"[x](https://allowed.example\u2060@oth\u200ber.example/x. \"t\")||",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "see \u003cwww.other\uff0eexample:/https://other.example\u003e\"",
-  "server": [
-   {
-    "host": "www.other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"\u003cwww.sub.allowed.exampl\u00a0e\u007f@\uff20ALLOWED.EXAMPLE\u003e",
-  "server": [
-   {
-    "host": "www.sub.allowed.exampl",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\u200b\\\u003chttps:///%6fther.example:/x?y~=1\u003e now",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "a\nhttps:///allowed.example.#ALLOWED.EXAMPLE:0/https://other.example\"",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "x[x](HTTPS://ALLOWED.EXAMPLE\r@0x7f.1:80?q \"t\"))",
-  "server": [
-   {
-    "host": "allowed.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "'[allowed.example](www.user@%,6fther.examp\u2060le:?q)",
-  "server": [
-   {
-    "host": "",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\u200b**\ufe6bhttps://use'r@oth\u200ber.example/x**)",
-  "server": [
-   {
-    "host": "use",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "x`hTtP://other\uff0eexampl\uff3ce\u0001[::1:80/x`.",
+  "msg": "(~~HTTPS://user@other\uff0eexampl\ne**.allowed.example~~\n",
   "server": [
    {
     "host": "other.exampl",
@@ -4556,86 +1006,29 @@
   ]
  },
  {
-  "msg": "a\n\\\u003chTtP://sub.allowed.example\u2060@[\u00ad::1]:0?u=https://other.example\u003e now",
-  "server": [
-   {
-    "host": "[::1]:0",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "'\\\u003chttp://user@other.]ex_ample:99999?u=https://other.example\u003e)",
-  "server": [
-   {
-    "host": "other.]ex_ample",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "[x](https:/\ufe64//other%2eexample@2:130706433:443/x \"t\").",
+  "msg": "\u003chtt\u2cc9ps:/user@other\u3002example:443/https\u8774://other.example\u003e\n",
   "server": []
  },
  {
-  "msg": "see [allowed.example](hTtP://other.ex\u2024:ample\u0301:65535\\other.example)\n",
+  "msg": "([x](\u003chttps://[0:0::1]@allowed\u034f.example:65535/\u003e)\n",
   "server": [
    {
-    "host": "other.ex.xn--:ampl-fsa",
-    "ok": false
-   }
-  ]
- },
- {
-  "msg": "\"[x](HTTPS://other.example.allowed.example@\u0430llowed\u200d.exa\uff1emple:/https://other.example \"t\")",
-  "server": [
-   {
-    "host": "xn--llowed-2nf.exa",
-    "ok": true
-   },
-   {
-    "host": "other.example",
+    "host": "allowed.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "'\u003chttp://xn--caf-dma.example:0\u003e now",
+  "msg": "'[x](\u003cwww.%6fther.example`other.example.allowed.example:0/x?y=1\u003e) now",
   "server": [
    {
-    "host": "xn--caf-dma.example",
+    "host": "www.other.example",
     "ok": true
    }
   ]
  },
  {
-  "msg": "[x](www.user@other.example:99999/https://other.example))",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "`HTTPS://%6fther.example\fother%2eexample:80/https://other.example` now",
-  "server": [
-   {
-    "host": "other.example",
-    "ok": true
-   },
-   {
-    "host": "other.example",
-    "ok": true
-   }
-  ]
- },
- {
-  "msg": "\"https:/\u0430llowed.ex\ufe64ample/x",
-  "server": []
- },
- {
-  "msg": "a\n\\\u003cwww.%6fther.example@[::1:8o/https://other.exam?ple\u003e)",
+  "msg": "'.https://[::1:8o\\oth!er.example'",
   "server": [
    {
     "host": "[::1:8o",
@@ -4644,16 +1037,4521 @@
   ]
  },
  {
-  "msg": "a\n[x](https://allowed.example) hTtP://ALLOWED.EXAMPLE/x?y=1\"",
+  "msg": "`\ufe64hTtP://user@allowed.example.other.example\\other.example`\n",
+  "server": [
+   {
+    "host": "allowed.example.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'**https:///[::1:\ucd6b\u2f758o/x**\n",
+  "server": [
+   {
+    "host": "[::1:\ucd6b\u2f758o",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](https://allowed.example) https:///0x7f.1\uff0f213\u27b10\u9959706433:80/x)",
   "server": [
    {
     "host": "allowed.example",
     "ok": true
    },
    {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "0x7f.xn--1/2130706433-yq0i9196k",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\nhTtP://user@[0:0::1]:0/a(b).",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'__www.oth\u200ber.example:\uff2065535?u=https://other.example__",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b||https:///caf\u00e9.example\f127.1:__\t.allowed.example||\n",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b__https://a-.other.example:65535/x?y=1__'",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](\u003chttp|s://user@1.2.3\t.256:443?q\u003e)",
+  "server": []
+ },
+ {
+  "msg": "(**www.other\u3002example@xn--caf-dma.example:0?u=https://other.ex.ample**||",
+  "server": [
+   {
+    "host": "other.ex.ample",
+    "ok": true
+   },
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](\u003chttps://213\ufe640706433|@allowed.example.:65535**.allowed.example\u003e)!",
+  "server": [
+   {
     "host": "allowed.example",
     "ok": true
    }
   ]
+ },
+ {
+  "msg": "x~~hTtP://other.exa\u007fmple\u2060@xn--caf-dma.example:99999~~||",
+  "server": [
+   {
+    "host": "other.exa",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](HTTPS:'//other\uff0eexample\\[::1]:80/x. \"t\").",
+  "server": []
+ },
+ {
+  "msg": "see *ww\uff0ew.user@other\u3002example:99999?q*)",
+  "server": []
+ },
+ {
+  "msg": "\"[x](https://[0:0::1].0x7f.1:65535/a(b) \"t\")",
+  "server": [
+   {
+    "host": "[0:0::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "xHTTPS://\u2e43127.1@[::1:8o/r/https://other.example/x||",
+  "server": [
+   {
+    "host": "[::1:8o",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'`hTtP://user@other\u3002example:8o/r/https://other.example/x`!",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](www.127.0.0.1\u200c@my_host.allowed.example:0/r/https://other.example/x \"t\")!",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n__https://user@@127.0.0.1:8o?q__)",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'\u003cwww.user@sub.allowed.ex@ample:\\other.example\u003e||",
+  "server": [
+   {
+    "host": "ample",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n\u003cHTTPS://user@other.example.allowed.example:99999\u003e\"",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](\u003chttps:/user@other.example:0/h\u003ettps://othe\uff1er.example\u003e))",
+  "server": []
+ },
+ {
+  "msg": "'[x](\u003chttps:///127.?0.0.1@_.other.example:70000__.allow\ufeffed.example\u003e))",
+  "server": [
+   {
+    "host": "0.0.0.127",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\\\u003chttps:/allowed.example\uff0eother\uff0eexample/x?y=1\u003e.",
+  "server": []
+ },
+ {
+  "msg": "'[x](https://allowed.example) http://user@other.example:0\u00ad\\other.exam\ue8bcple",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[allowed.example](https:/allowed.example.@[::1:70000**.allowed.example)\n",
+  "server": []
+ },
+ {
+  "msg": "||http://xn--caf-dma.example:/https://other.example||'",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\nhTtP://user@127.0.0.1?u=ht(tps://other.exampl|e.",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "HTTPS://oth\u200ber.example@allo#wed.example.:/a(b)",
+  "server": [
+   {
+    "host": "allo",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'h\fTtP://[::1)@\u0430llowed.example:80__.allowed.exa\uf992mple\"",
+  "server": []
+ },
+ {
+  "msg": "\"*ht\u461atps://127.0.0.1:99999/x?y=1*",
+  "server": []
+ },
+ {
+  "msg": "'**hTtP://_.other.example@sub.allowed.example:70000/**\n",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"*https://user@oth\u200ber.exa\uff0emple:8o#f*'",
+  "server": [
+   {
+    "host": "other.exa.mple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n__HTTPS://a-.other.example@0x7f\r.1:/r/https://other.exam\ud7d4ple/x__\"",
+  "server": [
+   {
+    "host": "0.0.0.127",
+    "ok": true
+   },
+   {
+    "host": "other.xn--example-5837a",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](\u003ch_TtP://%6fther.example@other.example:70000/https:/[/other.example\u003e)!",
+  "server": []
+ },
+ {
+  "msg": "'~~hTtP://%6fther.example@other\u3002example:80/x.~~",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[allowed.example](HTT\uff07PS://other.example:).",
+  "server": []
+ },
+ {
+  "msg": "\"||HTTPS://allowed.example.\u034f@other\uff0eexample:99999/a(b)||||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "xh\u2ef2t\ufe6btp://user@other\u3002example:'",
+  "server": []
+ },
+ {
+  "msg": "'~~HTTPS://_.other.example@caf\u00e9.example:443#f~~.",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](\u003cwww.allowed.ex\u034fample.\u2024@other.example\u0301:4\ua8ce43\\other.example\u003e)",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n||www.[::1:65535__.allowed.example||!",
+  "server": [
+   {
+    "host": "www.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'https://user@[::1\u2028]:8o/x. https://other\uff0eexample:80\\other.example.",
+  "server": [
+   {
+    "host": "[::1",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n~~HTTPS://21307\u00ad06433@other.example\u0301:0\\\u034fother.example~~)",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200bhttps:/other.example\u0301@[::1:%80/x.\"",
+  "server": []
+ },
+ {
+  "msg": "see HTTPS://us@er@[::1:8o/\"",
+  "server": [
+   {
+    "host": "[::1:8o",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [https://allowed.example](www.a-.other.example\u00ad1=2\uff0e7.0.0.1:80?q)||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b*https:/my_hos)t.allowed.example[0177.0.0.1:65535\\other.example*\n",
+  "server": []
+ },
+ {
+  "msg": "see *https://_ .other.example@my_host.allow\u2028ed.example:0#f* now",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'[x](https://allowed.example) h_ttp://use\u0001r@127.0.0.1:8o?u=https://other.example'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \u003chttp://ALLOWED.EXAM\uff09P\u0026LE\u2060@oth\u200ber.example:65535#f\u003e.",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(||hTtP://user@other%2eexample:0__.allowed.example||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "http://127.1@a-.other.example:0__.allowed.example\"",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](hTtP\u8173://user@%6fther.ex\u030aample:65535?q)",
+  "server": []
+ },
+ {
+  "msg": "\"\\\u003chTtP://xn--caf-dma.example/https://other.example\u003e\n",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\\\u003chttp://127.0\uff1e.0.1@other%2eexam#ple:?q\u003e!",
+  "server": [
+   {
+    "host": "other.exam",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttps:///allowed.example.other.e\u0000xample'my_h(ost.allowed.example:0/r/https://other.example/x\u003e.",
+  "server": [
+   {
+    "host": "allowed.example.other.example'my_h(ost.allowed.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(`http://user@21307064\ud1da33:70000#f`!",
+  "server": [
+   {
+    "host": "xn--2130706433-cj59b",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](https://allowed.example) https://user@[0\n:0::1]\uff40:65535/x?y=1!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "[0",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x`https://user@other.example.allowed.exa\u39d6mple:655\ubf9035/`.",
+  "server": [
+   {
+    "host": "other.example.allowed.xn--example-c49g",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](https:/127.0.0.1\ufe65@other%2eexample:99999/x \"t\")\"",
+  "server": []
+ },
+ {
+  "msg": "\u200bhttps://_.oth\uff0eer.example:__.allowed.example https:///user@oth\u200ber.example:80**.allowed.example'",
+  "server": [
+   {
+    "host": "_.oth.er.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([x](https://allowed.example) https:///my_host.allowed.exa\ubb37mple@allowed.example:70000**.allowed.example\n",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "__https:///[::1\u00admy_host.allowed.example:70000/x.__\"",
+  "server": [
+   {
+    "host": "[::1\u00admy_host.allowed.example:70000",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see www.user@127.0.0.1:80#f",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003cwww.user@_.other.example:80/https://other.exa\uff1fmple\u003e.",
+  "server": [
+   {
+    "host": "other.exa?mple",
+    "ok": false
+   },
+   {
+    "host": "_.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see **https://%6fther.example@other.example\u0301:0,/r/https://other.exam\nple/x**||",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   },
+   {
+    "host": "other.exam",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \\\u003chttps:/other\uff20\uff0eexample\uff02[::1:8o?q\u003e||",
+  "server": []
+ },
+ {
+  "msg": "'*https:///oth\u200ber.example\n127.1:/x.*||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](hTtP://allowed.exampl\ufe64e.#other\u3002example:443/x?y=1) now",
+  "server": [
+   {
+    "host": "allowed.exampl\u003ce",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x`https://user\u030a@allowed.example.other.example:8o/r/https://other.example/x`\"",
+  "server": [
+   {
+    "host": "allowed.example.other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\u003cHTTPS:/\r/127.0.0.1:/x\u003e\"",
+  "server": []
+ },
+ {
+  "msg": "a\n[x](www.0x\u00857f.1.;@2130706433:65535/https://other.example \"t\")||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "**https://[::1]\u200bo\u992dther\u3002exampl\uff3ce:70000/**\"",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([x](https:/user@other\uff0ee\uff02xample**.allowed.example \"t\")||",
+  "server": []
+ },
+ {
+  "msg": "htt)ps:///allowed.example/'",
+  "server": []
+ },
+ {
+  "msg": "(__https://user@127.1:70000?u=https://oth`er.example__)",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   },
+   {
+    "host": "oth",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n__HTTPS://a-.other.example\uff1e@127.1:443/__\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [allowed.example](www.[::1\uff3c@allowed.example:__.allowed.example).",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x**htt\uff3cps:/other.example.allowed.example @127.1:8o**.allowed.exampl\u74b3e**\"",
+  "server": []
+ },
+ {
+  "msg": "www.[::1]\f\r1.2.3.256:99999 HTTPS://other%2eexample\u034f0x7f.1:99999/https:\n//other.example||",
+  "server": [
+   {
+    "host": "other.example0x7f.1",
+    "ok": false
+   },
+   {
+    "host": "www.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(~~http://user@%6fther.example:70000\\ot!her.example~~ now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b**HTTPS://oth\u200ber.example\u030a_.oth\u2028er.example:0/x?y=1**!",
+  "server": [
+   {
+    "host": "other.xn--example_-m1e.oth",
+    "ok": true
+   },
+   {
+    "host": "other.xn--example-1ie",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(www.xn--caf-dma.example@[::1\uff1e:99999?u=htt@ps://other.example\n",
+  "server": [
+   {
+    "host": "[::1\uff1e:99999",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttps:/*//0177.0.0.1:443/x.\u003e.",
+  "server": []
+ },
+ {
+  "msg": "see `HTTPS://sub.allowed.example\ufe64@allowed.example.other.example/`.",
+  "server": [
+   {
+    "host": "allowed.example.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"__www.sub.a[llowed.example:99999/x.__||",
+  "server": []
+ },
+ {
+  "msg": "HTTPS://other\u3002example\uff20127.0.0.1/'",
+  "server": [
+   {
+    "host": "other.example@127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"www.xn--ca\u200cf-dma.example:?q\"",
+  "server": [
+   {
+    "host": "www.xn--caf-xja3701b.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b~~h\ud5edttps:///[::1\uff03other\u3002example:65535*:*.allowed.example~~!",
+  "server": []
+ },
+ {
+  "msg": "'https://[0:0::1]@1.2.3.256:65535__.allowed.example||",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"||https://\u0000/_.other.example\uff0e@sub.allowed.example/:0\\other.example||'",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(__http://\u2028user@sub.allowed.exa\u820ample:0/__)",
+  "server": []
+ },
+ {
+  "msg": "([allowed.example](https://[::1\uff0e@allowed.example.:_\u200d_.allow.ed.example).",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\\\u003chttp://user@other\uff1a\uff0eexamp\uff3cle:443/a(b)\u003e\n",
+  "server": [
+   {
+    "host": "other:.examp\\le",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"https://user@a-.other.example:70000/x||",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n\u003cHTTPS://127.1\u00ad@_.other.example/https://other.example\u003e!",
+  "server": [
+   {
+    "host": "_.other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([allowed.example](ht\u001ftp://[::1\u000bALLOWED.EXAMPL@E:0#f))",
+  "server": []
+ },
+ {
+  "msg": "[x](https://allowed.example) www.0x7f.1\u030a%6fther.example?u=https://other.example\"",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.0x7f.xn--1other-bzd.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "~~http://sub).allowed.example#1.2.3.256:8#o/a(b)~~\n",
+  "server": [
+   {
+    "host": "sub).allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](\u003cHTTPS://user@2130706433:65535/r/https://other.example/x\u003e).",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[allowed.example](https://user@0x7f.1:__.allowed.example)\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](https://allowed.example) https:/user@a-.other.example:65535**.allowed.example'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\u003cHTTPS://caf\u00e9.exa\uff40mple@caf\u200b\u00e9.example:80#f\u003e)",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"HTTPS://us\uff40er@ALLOWED.EXAMPLE:80/https://other.exam\ufe64ple.",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.exam\u003cple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"~~www.[0:0::1]~allowed.example.other.e\uff0example:65535/x~~",
+  "server": [
+   {
+    "host": "www.[0",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"\u6cf5HTTPS://127.0.0.1:80/a(b)||",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(`https:/allowe\u003cd.exampl\u084ee@other\u3002example/x.`)",
+  "server": []
+ },
+ {
+  "msg": "a\n*https:///[0:0::1]:*.",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see h\u0001ttps:/ALLOWED.EXAMPLE%~@[::1/https://other.example\"",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](HTTPS://other\u3002example@[::;1:/x))",
+  "server": [
+   {
+    "host": "[::;1:",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https://allowed.example@oth\u200ber.examp\u52ecle:8o\\ot\u0000her.example)'",
+  "server": [
+   {
+    "host": "other.xn--example-911l",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[x](HTTPS://user\u0085@0x7f.\ufe651:443#f \"t\").",
+  "server": [
+   {
+    "host": "0x7f.\u003e1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see \u003chttps:/other.example\u003e\u0301:8o/\u003e.",
+  "server": []
+ },
+ {
+  "msg": "'[x](hTtP://127.0.0.1@\u0430llowed.example:#f).",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(\u003cwww.1.2.3.256\u0301%6fther.example:8o\\other.example\u003e.",
+  "server": [
+   {
+    "host": "www.1.2.3.xn--256other-6ye.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([x](https://allowed.example) http://other.example@allowed.exampl,e.other.example:443\\other.example\"",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "allowed.exampl,e.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xhTtP://other.example.allowed.example@other.example.allowe\u4e81d.e\uff1cxample:80?q\"",
+  "server": [
+   {
+    "host": "other.example.xn--allowed-so4k.e\u003cxample",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttp://allowed.example@_.other.example:99999/x\u003e\"",
+  "server": [
+   {
+    "host": "_.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n`http://%6fther.example\u00a0@oth\u200ber.example:0/https://other.example`||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xHTTPS://other.exampl\ue081e.allowed.example\ufe6b@other.exam\ufe65ple\u0301:80/x)",
+  "server": [
+   {
+    "host": "other.xn--exam\u003epl-hya",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b~~HTTPS://user@127.%1:70000**.allowed.example~~.",
+  "server": [
+   {
+    "host": "127.%1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(www.[}::1]@\u0430llowed.example:999@99#f now",
+  "server": [
+   {
+    "host": "0.0.0.99",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](\u003chttp://other.\u0cd1example@other\uff0eexample:/a(b)\u003e) now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[allowed.example](https:///other.example.allowed.example`@[::1:/x?y=1)\"",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(**https://user@@_.other.example:443**.allowed.example** now",
+  "server": [
+   {
+    "host": "_.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](https://allowed.example) h%ttps:///user@other\uff0eexample:65535/x'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'~~https:/caf\u00e9.example\uff0f@_.other.example\\other.example~~.",
+  "server": []
+ },
+ {
+  "msg": "a\n`www.@my_ho\"st.allowed.example\uff3c127.1:99999/x`\"",
+  "server": [
+   {
+    "host": "my_ho",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](\u003chttp://other\uff0eexample}@%6fther.example:0\\other.example\u003e)||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "*http://user@other\uff0eexample:0/x?y=1*!",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](\u003chttps://ALLOWED.EXAMPLE@oth\u200ber.e_xample:65535/\u003e)\"",
+  "server": [
+   {
+    "host": "other.e_xample",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(\u003cht'tp://0x7f|.1@[::1:65535/\u003e!",
+  "server": []
+ },
+ {
+  "msg": "[x](https:/[0:0::1]@caf\u00e9.example:/r/https://other.example/x).",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"**hTtP://user@a-.other.exa\"mple:99999__.allowed.example** now",
+  "server": [
+   {
+    "host": "a-.other.exa",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](https://allowed.example) hTtP://user@oth\u200ber.example:0/x. now",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x\u3000h:ttps:/other.example:0/ https://_.other.e\u030axam\uff0fple@[::1]:99999/\"",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n~~https://allowed.exam\u0001ple:65535)/r/https://other.example/x~~\n",
+  "server": [
+   {
+    "host": "allowed.exam",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b~~https:///127.0.0.1:70000/r/https://other.example/x~~.",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](\u003cHTTPS://user@caf\u00e9.ex\uff09ample:70000/r/https://othe\uff1ar.example/x\u003e)",
+  "server": [
+   {
+    "host": "xn--caf-dma.ex)ample",
+    "ok": false
+   },
+   {
+    "host": "othe:r.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\nwww.127.1\u0001@%6fther.exampl\uff07e:0**.al\uff02lowed.example hTtP://allowed.example.other.example*@127.1:0/\"",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "allowed.example.other.example",
+    "ok": true
+   },
+   {
+    "host": "www.127.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see **https://caf\u00e9.example:?u=https://other.example**.",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](https:///user@allowed.example:70000/https://other.example))",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"~~HTTPS://my_host.allowed.example:65535/https://other.example~~\"",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x*https:/\u0430llowed.example:443**.allowed.example*\"",
+  "server": []
+ },
+ {
+  "msg": "x[x](\u003cHTTPS://%6fther.exa\u8f56mple@allowed.example.other.example:99999\\other.example\u003e) now",
+  "server": [
+   {
+    "host": "allowed.example.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"`https:/ALLOWED.EXAMPLE:99999/a(b)`||",
+  "server": []
+ },
+ {
+  "msg": "http://%6fther.exa\nmple\uff0f[0:0::1]/https://other.examp;le",
+  "server": [
+   {
+    "host": "other.exa",
+    "ok": true
+   },
+   {
+    "host": "other.examp;le",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([https://allowed.example](http://user@other%2eexample:0__.allowed.example)\"",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x*htt\uff09p:`//user@127.0.0.1:/x.*\n",
+  "server": []
+ },
+ {
+  "msg": "see ||www.other\uff0eexampl\re:8o#f||!",
+  "server": [
+   {
+    "host": "www.other.exampl",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(\\\u003cHTTPS://o\uff0fther\uff0eexample)@\u0430llowed.example:?q\u003e'",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "www.127.0.0.1~ALLOWED.EXAMPLE:7000@0/r/https://other.example/x",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "0.0.0.0",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](https://allowed.example) https\u5c2d:///127.1\ufeff@allowed.example:0/x..",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "||https:/[0:0::1]@other%2eexample:8\u879b0\uff0e__.allowed.example||)",
+  "server": []
+ },
+ {
+  "msg": "\u200b||https:/other\uff0eexample\ufeff1.2.3.256:0/a(b)\u988a|| now",
+  "server": []
+ },
+ {
+  "msg": "see http://0177\\.0.0.1\u007f2130706433:**.allowed.example https://my_host.allowed.example\u2028@other%2eexample:70000/, now",
+  "server": [
+   {
+    "host": "0.0.0.127",
+    "ok": true
+   },
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](HTTPS://ot\u0026her.e=xample\u0301:443/a(b)).",
+  "server": [
+   {
+    "host": "ot\u0026her.xn--e=xampl-hya",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\u003cwww.a-.other.example\u3002a-.other.example:70000/x?y=1\u003e!",
+  "server": [
+   {
+    "host": "www.a-.other.example.a-.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [x](htt\u664fps:///sub.allowed.example\n@[:\uff1a:1:443/x. \"t\")\"",
+  "server": []
+ },
+ {
+  "msg": "__https://other.example\u0301@%6fther.example:70000\\other.example__.",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x__hTtP://other.example.allowed.example\"@other\uff0eexample:80/x.__ now",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](https:///other%2eexample\u2024my_ho\uc76est.allowed.example:70000/r/https://other.example/x \"t\").",
+  "server": [
+   {
+    "host": "other.xn--examplemy_host-wg3hj247u.allowed.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(~~https:/_.other.example\uff0ecaf\u00e9.example~~'",
+  "server": []
+ },
+ {
+  "msg": "x\u003chttp://127.1\f\uff20caf\u00e9.example:70000#f\u003e)",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](HTTPS://a-.other.example\u003csub.allowed.example?u=https://other.example \"t\")'",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n`https:///[::1]:/`!",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(\\\u003chttps://user@1.2.3.256:8o\\\uff03other.example\uff1a\u003e",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see @www.allowed.example.*127.0.0.1:99999?u=https://other.example\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(~~www.2130706433\uff3c@[:\u956e:1]\u8c84:443?q~~\"",
+  "server": [
+   {
+    "host": "[:\u956e:1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[x](http://oth\u200ber.example\u0001@2130706433:65535`/x?y=1 \"t\") now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](https://%6fther.example:80/r/h\bttps://other.exam,ple/x \"t\")\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[allowed.example](http://allowed.example.@other.example.allowed.example?q)||",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'hTtP://[::1%sub.allowed.example:443/https://other.example||",
+  "server": [
+   {
+    "host": "[::1%sub.allowed.example:443",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](\u003chttps://user@other\uff0eexample:8o?q\u003e)\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b`hTtP://my_host.allowed.example:99999\\other.exa\tmple` now",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b~~https:/user@_.other.example:0#f~~\n",
+  "server": []
+ },
+ {
+  "msg": "a\n\\\u003cwww.1.2.3.256\uff20@other\uff0eexample:\uff1e99999/r/https://other.example/x\u003e||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see \u003chttps:///my_host.allowed.example@ALLOWED.EXAMPLE:443?q\u003e'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200bhTtP://_.other.exa\rmple@o`th\u200ber.example:0/a(b)\n",
+  "server": [
+   {
+    "host": "_.other.exa",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003chTtP://caf\u00e9.example:8\ue1af0/\u003e\"",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "||www.my_host.allowed.example\uff03@other.example.allowed.example:?u=https://other.example||\"",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](\u003chttps:///allowed.example.:8o/x?y=1\u003e).",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see __https:///other.example\u0301:80\\other.example__",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[x](https://allowed.example) https://[::1]@other.example\u0301:99999__.\u3897allowed.example",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'[x](https:/user@othe\u0085r%2eexample:65535/\uff1ax. \"t\")||",
+  "server": []
+ },
+ {
+  "msg": "(http://user\ufe65@[::1]:/ https:///127.0.0.1|@allowed.example.:8o/a(b)'",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   },
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [x](\u003chttps:/\"\uff40//127.0.0.1:65535#f\u003e)\n",
+  "server": []
+ },
+ {
+  "msg": "a\nhttps:///user@my_host.allowed.example:443'\\other.exam=ple HTTPS://user@0\u0026x7f.1:70000/https://other.example!",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": false
+   },
+   {
+    "host": "0\u0026x7f.1",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b**https:///_.other.example:99999#f**.",
+  "server": [
+   {
+    "host": "_.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\u003chttp://'127.1\uff3c@0x7f.1:700\uff2000/a(b)\u003e\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[x](hTtP://_.other.example:0\\other.example \"t\")||",
+  "server": [
+   {
+    "host": "_.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](h\u200cttps:///[::1]@%6fther.example:99999#f)\n",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x__HTTPS://oth\u200ber.example \u003e\u0430llowed.example\u9131:80?q__)",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](\u003chttps:///caf\u00e9.example@2130706433:443/r/https://other.example/x\u003e).",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n`https:///2130706433:6553\u030a5?q\u003e`!",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'http://my_host.allowed.example:**.allowed.exampl\ufe6be'",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](https:///user@[0:0::1]:/x.)!",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[https://allowed.example](www.[0:0::1]/xn--caf-dma.example:44\r3/x\ufda9?y=1) now",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n__www.allowed.example.:0/a(b)__)",
+  "server": []
+ },
+ {
+  "msg": "a\n\u003chttps://user@[::\u069f1:0/r/https://other.exam\u200dple/x\u003e",
+  "server": [
+   {
+    "host": "[::\u069f1:0",
+    "ok": false
+   },
+   {
+    "host": "other.xn--example-k06c",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(HT\nTPS://127.1)@%6fther.example?q!",
+  "server": []
+ },
+ {
+  "msg": "\u200b[x](\u003cwww.[::1]\uff092130706433\u200b:70000?u=https://other.example\u003e)\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'www.user@my_host.all[owed.example:443#f\n",
+  "server": [
+   {
+    "host": "my_host.all[owed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(`https:///oth\u200ber.examp\u2024le\uff200\ufe64x7f.1:80?q`",
+  "server": [
+   {
+    "host": "other.xn--example@0\u003cx7f-fu6g.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'__www.2130706433/127.0.0.1\ufe65?q__.",
+  "server": []
+ },
+ {
+  "msg": "www.user@caf\u00e9.example:8o/\uff03x'",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\\\u003cwww.sub.allowed.e\ufe6bxample\uff20@\u0430llowed.example:8o/x?y=1\u003e!",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see ~~https:///other.example\u0301._.other.example:655\u000135**.allowed.example~~'",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva._.other.example",
+    "ok": false
+   },
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n\\\u003chttps://other.example@ALLOWED.EXAMPLE:/x.\u003e||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u003chttps:/ALLOWED.EXAMPLE:99999__.allowed.example\u003e now",
+  "server": []
+ },
+ {
+  "msg": "'__hTtP://other.exampl\u739fe.allowed.example:443?u=https://other.example__||",
+  "server": [
+   {
+    "host": "other.xn--example-oq6q.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https://allowed.example) https://[::1\u0000@\u0430llowed.example:80!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x\\\u003cHTTPS;://_.other.example:0/https://other.example\u003e",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'`https://0x7f.1\\2130706433:65535\\other.example`)",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b||https:/other\uff0eexample\b@\u200bxn--caf-dma.example:8o/a(b)||!",
+  "server": []
+ },
+ {
+  "msg": "see *https:///ALLOWED.EXAMPLE:80/x.*.",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see ||htt\uff40p://other.example@oth*er\u3002example:8o?q||\n",
+  "server": []
+ },
+ {
+  "msg": "\\\u003cHTT\ufe65PS://other.example.allowed.example*%6fther.exampl\ub2ebe:99999\\other.example\u003e\"",
+  "server": []
+ },
+ {
+  "msg": "x[x](\u003chttps:///sub.allowed.example/ALLOWED.EXAMPLE/\u003e)'",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "__www.caf\u00e9.example\uff03@other..examp\uff07le:8o/__",
+  "server": []
+ },
+ {
+  "msg": "x\u003chttps:/user@%6fther.example\ue956:8o/x\u003e\n",
+  "server": []
+ },
+ {
+  "msg": "([allowed.example](http://user@[0:0::1]:8o/x))",
+  "server": [
+   {
+    "host": "[0:0::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u003chttps:/[0:0::1]\u3002@1.2.3.256:8o__.allowed.example\u003e.",
+  "server": []
+ },
+ {
+  "msg": "\u200b[https://allowed.example](\uff0fhTtP://other.example:443/x.)!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [x](https://allowed.example) hTtP://my_host.allowed.example\u003c[0:0::1]:70000",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](https://allowed.example) ht[tps:/my_host.allowed.example@ALLOWED.EXAMPLE:65535!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](https://allowed.example) \uff40https:///other.example:/a:(b)||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"||hTtP://127.1@0177.0.0.1:99999/x.||!",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[x](https://allowed.example) https:///user@%6f}ther.example:70000__.allowed.example)",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "o}ther.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](HTTPS://127.0.0.1\uff1a@1.2.3.256:70000**.allowed.example)'",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](\u003chttps:///user@other.example\u0301:99999/x?y=1\u003e)!",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x**www.allowed.example.:9999\u569e9**'",
+  "server": [
+   {
+    "host": "www.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see `HTTPS://[0:0::1]:0/x?y=1`||",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](http://[0:0::1\u034f]@0x7f.1:65535**.allowed.exa\u200dmple).",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \u003cHTTPS://1.2\ufe65.3.25\u003e6:/r/https://other.example/x\u003e now",
+  "server": [
+   {
+    "host": "1.2\u003e.3.25",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [https://allowed.example](HTTPS://user@sub.allowed.example:70000?q)'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "||htt\u200bps:/oth\u200ber.example:99999/x?y=1||!",
+  "server": []
+ },
+ {
+  "msg": "a\n__www.user@other.example.allowed.%example:8o/r/https://\ufe65other.example/x__!",
+  "server": [
+   {
+    "host": "\u003eother.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"**https:///ALLOWED.EXAMPLE?*q** now",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\nhttps://[::1]:_99999/a(b) \uff09HTTPS://caf\u00e9.example@[::1]/https://other.exa\u030ample\n",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   },
+   {
+    "host": "[::1]",
+    "ok": true
+   },
+   {
+    "host": "other.xn--exmple-jua",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x||https*:/xn--caf-dma.example~[::1]:99999__.allowed.example|| now",
+  "server": []
+ },
+ {
+  "msg": "see \u003chttps:/caf\u00e9.example*@a\uf8a1llowed.example./x?y=1\u003e!",
+  "server": []
+ },
+ {
+  "msg": "a\n\\\u003chTtP://allowed.example.other.exa.mple/@xn--caf-dma.example:65535/a(b)\u003e!",
+  "server": [
+   {
+    "host": "allowed.example.other.exa.mple",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003chttp://other.example\u0301~@\u0430llowed.exampl'e:80\u003e)",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.exampl'e",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[https://allowed.example](hTtP://other.example\u00ad@my_host.allowed.example:80/)'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "my_host.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[allowed.example](https:///[::1\u003cother.example\u0301:0?u=https:\r//other.example)||",
+  "server": [
+   {
+    "host": "[::1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([allowed.example](https:///other%2eexample\u3000@other.example:99999#f)",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n`https:///my_host.allowed.example\"a-.other.example:99999**.allowed.example` now",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(\u003cwww.allo=wed.example:443/|x?y=1\u003e",
+  "server": [
+   {
+    "host": "www.allo=wed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u003chttps:///othe\ue9e6r.example\u0301;@other%2eexample:80?q\u003e!",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u003cwww.user@127.0.0.1/a(b)\u003e)",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "`ht\u2d2atps:///127.1:70000/x.`)",
+  "server": []
+ },
+ {
+  "msg": "(__hTtP://user@other.example/.allowed.example:99999__.allowed.example__'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b__\u030ahttp://other%2ee\ub7d8xample\uff02other\u3002example:80__.allowed.example__ now",
+  "server": [
+   {
+    "host": "other.xn--example\"other-po05c.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \u003chttps://u\u034fser@allowed.*example.other.example:8o?q\u003e||",
+  "server": [
+   {
+    "host": "allowed",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(http://127.1@a-.other.example:**.allowed.example HTTPS://allow\u007fed.exampl(e.other.example@oth\u200ber.example?q",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   },
+   {
+    "host": "allow",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](http://2130706433@other\uff0eexample:99999\uff02__.allowed.example \"t\")'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttps:///user@allowed.example\\other.example\u003e now",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"__HTTPS://other%2eexample\u000b\u2967@other.example\u0301:443/r/https://\ufe6bother.example/x__.",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "@other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"||https:/1.2.3.2\u0b2e56\r127.0.0.1:99999/x?y\u007f=1|| now",
+  "server": []
+ },
+ {
+  "msg": "\u200b\\\u003chttp://allowed.ex\u200cam\u0152ple:0?q\u003e now",
+  "server": [
+   {
+    "host": "allowed.xn--example-mnb6981e",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'*https://allowed.?example.;@_.other.example\\other.example*||",
+  "server": [
+   {
+    "host": "allowed",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](http://%6fther.example@other.example:99999/a(b))||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](\u003chttp\u8a7d://[::\uff3c1\ufe64[::1]/x?y=1\u003e) now",
+  "server": []
+ },
+ {
+  "msg": "see [x](https://allowed.example) https:///other%2eexample\u003e@213070643\u00a03:80/a(b).",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](\u003chttp://sub.allowed.example\u0001@%6fther.example:/https://other.example\u003e) now",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(`https:///%6fther.example:443#f`||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](https://allowed.example) www.[::1]\t%6fther.example:443\\\ufe6bother.example!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "www.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "`https:/a-.other.examp\uff3cle@allowed.example:80/x?y=1`",
+  "server": []
+ },
+ {
+  "msg": "'http://sub.allowed.example\u0301allowed.example.:8\u2024o/a(b))",
+  "server": [
+   {
+    "host": "sub.allowed.xn--examplallowed-ghb.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"[x](https://a-.other.example@other\uff0eexample:70000\\other.example \"t\")\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "xhttps://other\ua376%2eexample\uff1fALLOWED.EXAMPLE:8\uff40o/x hTtP://127.1:443/r/https://other.ex\u000bample/x now",
+  "server": [
+   {
+    "host": "xn--other-2l8r.example?allowed.example",
+    "ok": false
+   },
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.ex",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'||HTTPS://other.example\u0301\b%6fther.example\u00a0:8o/r/https://other.example/x||\n",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](\u003cwww.0177.0.0.1\u0001@xn--caf-dma.exa:mple:0__.allowed.exa\uff03mple\u003e)||",
+  "server": [
+   {
+    "host": "www.0177.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'\u003chttps:/[::1[other%2eexample:65535\\other*.example\u003e\n",
+  "server": []
+ },
+ {
+  "msg": "\u200b[x](https:///1.2.3.256)other%2eexample:70000#f \"t\") now",
+  "server": [
+   {
+    "host": "1.2.3.256)other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttp://user@allowed.example.other\n.example:443\\other.example=\u003e!",
+  "server": [
+   {
+    "host": "allowed.example.other",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](https\u0026://user@oth\u200ber.example:80**.allo)wed.example \"t\"))",
+  "server": []
+ },
+ {
+  "msg": "\"http:\u001f//[::1]:?u=https://other\u34fa.example hTtP://caf\u00e9.example\uff1e@1.2.3}.256:0/\n",
+  "server": [
+   {
+    "host": "xn--other-e29d.example",
+    "ok": true
+   },
+   {
+    "host": "1.2.3}.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x`HTTPS://1.2.3.25\ufe656*@[::\t1]`||",
+  "server": [
+   {
+    "host": "[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see __HTTPS://_.other.ex\u8d7aample@other.example\u0301\\other.exa/mple__\"",
+  "server": [
+   {
+    "host": "other.xn--exampl-gva",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](HTTPS://user@1.2.3.256\\o\"ther.example \"t\")\"",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x||\u007fhttps:///[0:0::1]@a-.other.example:65535/https://other.example||.",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200bwww.\uff20other.example\u0301\uff0f0x7f\uff40.1:443/x?y=1\"",
+  "server": [
+   {
+    "host": "www.@other.xn--exampl/0x7f`-geb.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "`https://[::1\u030aother\u3002example:8o\\other.example`\n",
+  "server": [
+   {
+    "host": "[::1\u030aother\u3002example:8o",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([x](www.\u0430llowed.example\uff40@[::1:70000/\uff40 \"t\")",
+  "server": [
+   {
+    "host": "[::1:70000",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200bhttps:/oth\u200ber.example:80/x",
+  "server": []
+ },
+ {
+  "msg": "'~~HTTPS:\b//0x7f.1\u034f@other\u3002example:99999\\other.example~~ now",
+  "server": []
+ },
+ {
+  "msg": "\"\u003chTtP://0x7f.\uff401:0\u8dc3?q\u003e now",
+  "server": [
+   {
+    "host": "0x7f.`1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"**hTtP://other.example\u000b@2130706433:65535\\other.example**)",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b`https:///user@my_host.allowed.example:80**.allowe=d.example`\"",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"~~https:///sub.allowed.example\u000bcaf\u00e9.example:8o/r/ht[\uff20tps://other.example/x~~'",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n\\\u003chttps://other%2e\ubc7eexample\b#@my_host.allowed.example:80/r/https://other.example/x\u003e\"",
+  "server": [
+   {
+    "host": "other.xn--example-ik82a",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see https:/\u7d92/other\u3002example\u001fother.example\u0301:\u00ad0/a(b)\"",
+  "server": []
+ },
+ {
+  "msg": "'[x](\u003chttps:///[::1\u2024other%2eexample:8o/\u003e)'",
+  "server": [
+   {
+    "host": "[::1\u2024other%2eexample:8o",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n||http://0x7f.1@[0:0::1]:70000/x?y=1`||",
+  "server": [
+   {
+    "host": "[0:0::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x\\\u003chttps:///%6fther.example\u3000@ALLOWED.EXAMPLE:/https://other.example\u003e)",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'__hTtP://other%2eexample\uff3c@[::1\u0301:65535?u=https://other.examp\u26bcle__'",
+  "server": [
+   {
+    "host": "[::1\u0301:65535",
+    "ok": false
+   },
+   {
+    "host": "other.xn--example-o67d",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see ||https://0x7f.1?%6fther.example:/https://other.example||'",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(~~https://[::1]@127.0.0.(1:\\80/~~.",
+  "server": [
+   {
+    "host": "127.0.0.(1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n*hTtP://01\uff2077.0.0.1:0?q*.",
+  "server": [
+   {
+    "host": "01@77.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'[x](https://allowed.example) hTtP:#//user@sub.allowed.exa.mple:8o\\other.example||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\nhttp://user@1.2.3.256:\\other.example!",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](\thTtP://\u0430llowed.example}sub.allowed.example**.allowed.example \"t\")\"",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example}sub.allowed.example**.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "xn--llowed-2nf.example}sub.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\u003chttps://my_host.allowed.example@my_host.allowed.example:70000/x\u003e)",
+  "server": [
+   {
+    "host": "my_host.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200bwww.\nother%2eexample\uff0e@[::\u034f1]:?q https:/other\u3002example\t@allowed.example:70000\\other.example.",
+  "server": []
+ },
+ {
+  "msg": "a\n**https:/oth\uff1c\u200ber.example\u000b@xn--caf-dma.example:80__.allowed.example**!",
+  "server": []
+ },
+ {
+  "msg": "x*hTtP://a-.other.example'oth\u200ber.example:99999?q* now",
+  "server": [
+   {
+    "host": "a-.other.example'other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see ||HTTPS://user@other.example:443/https://ot@her.example||||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "her.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xhttps://user@1.2.3.256:443__.allowed.example www.us\uff09er@127.1:6553]5\\other.example\n",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   },
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [https://allowed.example](www.user@\uff1callowed.example.other.example:0/x)'",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(http:/|/0x7f.1:0\\other.example https://127.1\u000both\u200ber.example:99999/https://other.example!",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](\u003cHTTPS://sub.allowed.example\uff40@1.2.3.256:70000?u=https://other.example\u003e))",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003chttps://[::1]\r_.other.example:9999\ud3349\\other.example\u003e",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"https://allo\"wed.example.@[\uff20::1:70000/x?y=1||",
+  "server": [
+   {
+    "host": "allo",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n\\\u003cwww.user@a-.other.example\u003e\"",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](hTtP://allowed.example.other.example\uff02@allowed.example:7=0000/ \"t\")\n",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(**www.user@\u1ffdcaf\u00e9.e\uff40xample:8o**'",
+  "server": [
+   {
+    "host": "xn-- caf-epa623a.e`xample",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"~~HTTPS://other.example\u0026@ot\nher\u3002example:443__.allowed.example~~\"",
+  "server": [
+   {
+    "host": "ot",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\u003chttp://127.0.0.1\\@other.examp\ua963le\u0301:0#f\u003e\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n__http%://a-.other.example\\ALLOWED.EXAMPLE:80\\other.example__)",
+  "server": []
+ },
+ {
+  "msg": "see http://\u0a1eallowed.example.other.example:8\u34a1o/a(b) h_ttps://user@other\uff0ee\uff07xample:8o/x\n",
+  "server": [
+   {
+    "host": "xn--allowed-0cq.example.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'http://oth\u200ber.example@[@::1]:80/r/https://other.examp\u00adle/x now",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](www.[::1]@1\uff1e27.0.0.1:**.a]llowed.example \"t\")'",
+  "server": [
+   {
+    "host": "1\u003e27.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"`www.[0:0::1]:443/x.`||",
+  "server": [
+   {
+    "host": "www.[0",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n`http://\u0001my_host.allowed\u3002.example\uff3c@1.2.3.256:99999__.allowed.example`\"",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"||https://0177.0.0.\u88ea1:443\ufe64__.allowed.example||||",
+  "server": [
+   {
+    "host": "0177.0.0.xn--1-t90d",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "http://other.example.allowed.example@%6fther.example:7000\u00a00__.allowed.example now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'__HTTPS://2130706433:99999/https\u2024://other.example__||",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(www.user@allowed.example.\u0609:6\u7a075535!",
+  "server": [
+   {
+    "host": "allowed.example.xn--rfb",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(*http://user@caf\u00e9.exa\uff0fmple:80#f*",
+  "server": [
+   {
+    "host": "xn--caf-dma.exa/mple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see https://[0:0::1]=caf\u00e9.example:\ueb080**.allowed.e\u1edaxample HTTPS://0177.0\b.0.1@\u0430llowed.exam\ufdf6ple:0/x!",
+  "server": [
+   {
+    "host": "[0:0::1]",
+    "ok": false
+   },
+   {
+    "host": "127.0.0.0",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003cHTTPS://user@?ALLOWED.EXAMP;LE:0\\other.example\u003e",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https://other%2eexample\uff0e@2130706433:80/x. \"t\").",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'||https://_.other\u001f.example:80\\other.exa\u2060mple||'",
+  "server": [
+   {
+    "host": "_.other",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](hTtP://user@other%2eexample:70000/https://other.example()||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example()",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(*h`ttp://\u0430llowed.example\"0177.\u034f0.0.1:65535/x.*'",
+  "server": []
+ },
+ {
+  "msg": "\"[x](\u003chttps:///my_host.allo#wed.example@127.0.0.1:/r/https://other.example/x\u003e)'",
+  "server": [
+   {
+    "host": "my_host.allo",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "`http://other.example\uff03@allowed.example./a(b)`!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xhTtP://other\u3002example:80\\other.example now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(**htt\uff0eps:/127.1\uff3c\u200bother.example:80/a(b)**",
+  "server": []
+ },
+ {
+  "msg": "see \u003chttps:///user@xn--caf-dma.example:70000/r/https://oth\u200ber.example/x\u003e now",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n||https:///0177.0.0.1\n[::1]:65535\\other\u0085.example||.",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x*www._.\u030aother.example\u030a1.2.3.256:70000/r/https://other.example/x* now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](\u003cht;tps://other.example\u001f@[0:0.::1]/\u003e) now",
+  "server": []
+ },
+ {
+  "msg": "([allowed.example](https:/127.0.0.1\u0000caf\u00e9.e\u2e31xa\uff02mple:70000/x.)\n",
+  "server": []
+ },
+ {
+  "msg": "a\nhttp://user@0177.0.0.1:99999**.allowed.example\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](\u003chttps:/other\uff0eexample:443/a(b)\u003e)!",
+  "server": []
+ },
+ {
+  "msg": "\"__www.user@[::1]:80/__'",
+  "server": []
+ },
+ {
+  "msg": "x__http://allowed.example:99999/x__",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'~~www.othe[r.example.allowed.e\nxample~other.example:70000/r/https://other.example/x~~\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.othe[r.example.allowed.e",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b__https://caf\u00e9.example\u007f\r@allowed.example:443__.allowed\t.example__'",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \ufe65http://1.2.\uff1f3.256\uff0e@[0:0::1]:443/x||",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xhttps://[::1@ot\uff03her.example:0/r/https://ot#her.example/x",
+  "server": [
+   {
+    "host": "ot#her.example",
+    "ok": false
+   },
+   {
+    "host": "ot",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'`www.other\uff0eexample\u0026@oth\u200ber.example:80\\other.example`\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"__https://user@127.0.0.1:65535?\u0026u=https://other.example__!",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\\\u003chttp://user@%6fthe\ue0e4r.example:80?q\u003e'",
+  "server": [
+   {
+    "host": "xn--other-xm5z.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https://allowed.example) HTTPS://user@xn--caf-dma.example:/r/https://other.example/x.",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x**www.%6fther.\rexample:0**.a}llowed.example**!",
+  "server": [
+   {
+    "host": "www.other",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"\\\u003chttps:///1.2.3.256\\other.exa/mple\u003e\n",
+  "server": [
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n__https:/%6fther.example@\ufe65other%2eex\u000bample:65535**.allowed.example__||",
+  "server": []
+ },
+ {
+  "msg": "[x](https://allowed.example) www.caf\u00e9.example:70000\\other.example!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "www.xn--caf-dma.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "http:/,/%6fther.exa\uff0emple:65535?q\n",
+  "server": []
+ },
+ {
+  "msg": "'[https://allowed.example](https://_.other.example\uff1e@1.2.3.256:70000\b/x)||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "1.2.3.256",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n||https://user@sub.allowed.example:8o/||\n",
+  "server": [
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x*hTtP://user@2130706433:443__.allowed.example\uff0f*",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'~~hTtP://0177.0.0.1 127.1:8o\\other.example~~\"",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see *https:///%6fther|.example\uff1a\u0430llowed.exa\uff40mple:80/x*||",
+  "server": [
+   {
+    "host": "other|.xn--example:llowed-2tl.exa`mple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n\u003cwww.user@caf\u00e9.example:65535\\other.example\u003e\"",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](\u003cwww.0x7f.1:65535\\#othe\ufe6br.example\u003e)\n",
+  "server": [
+   {
+    "host": "www.0x7f.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'__www.sub.allowed.example:65\uc761535/x\\__\n",
+  "server": []
+ },
+ {
+  "msg": "(*www.oth\u200ber.example)other.example.allowed.example:80**.allowed.example*'",
+  "server": [
+   {
+    "host": "www.other.example)other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b__hTtP://allowed.example.@\u200c[::1:80/a(b)__||",
+  "server": [
+   {
+    "host": "xn--[-rgn",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "[https://allowed.example](https:/other\uff0eexample@[0:0::1]:99999__.allowed.example))",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\\\u003chttps:\u1871/user@\u0430llowed.e~xample:443\\other.example\u003e now",
+  "server": []
+ },
+ {
+  "msg": "see \\\u003chttp://0177.0.\u003e0.1}@allowed.example.:443__.allowed.example\u003e.",
+  "server": [
+   {
+    "host": "127.0.0.0",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"||hTtP://ALLOWED.EXAMPLE)@allowed.example.:70000!/a(b)||||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b||https:///_.other.example\u2024@\u0430llowed.example:65535?u=\uff09https://other.example||.",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003chttps:/user@other.example.allowed.example#f\u003e\n",
+  "server": []
+ },
+ {
+  "msg": "\u200bhttps://127.1\uff1f1.2.3.256:0\\ot\ueeaaher.example www.[::1]@@other%2eexample:80/a(b))",
+  "server": [
+   {
+    "host": "127.1?1.2.3.256",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'`HTTPS://\u0430ll\"owed.example@127.1:80/https://\ue342other.example`\"",
+  "server": [
+   {
+    "host": "xn--ll-6kc",
+    "ok": true
+   },
+   {
+    "host": "xn--other-pl8z.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x`https:\u00ad//ALLOWED.EXAMPLE\r[0:0::1]:8o?u=https://other.example`'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[https://allowed.example](http://my_host.allowed.example\uff40@[0:0::1]:7`0000/)\"",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[allowed.example](https://oth\u200ber.example@\u0430llowed.example\\other.example)'",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](\u003chttp://[0:0::1]:#f\u003e)||",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](https://allowed.example) https:///other.ex\u0301ample.al\u66f4lowed.example@sub.allowed.example:70000/x\n",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "sub.allowed.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see ||\u3002https://user@a\u2060-.other.example/a(b)||||",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'*hTtP://other.example.allowed.example @other.example\u0301/r/https://other.example/x*\n",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](\u003cwww.2130706433\uff20[::1]:65535/r/https://other.exa#mple/x\u003e)!",
+  "server": [
+   {
+    "host": "other.exa",
+    "ok": true
+   },
+   {
+    "host": "www.2130706433@[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x*HTTPS://a-.other.example\r_.other.example:700\u003e00/x.*",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see ~~www.0x7f.\u00851~~'",
+  "server": [
+   {
+    "host": "www.0x7f.xn--1-ka",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "__https://user@ALL#OWED.EXAMPLE:99999/x?y=1__||",
+  "server": [
+   {
+    "host": "all",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b`www.ALLOWED.EXAMPLE:\\99999?u=https://other.example`!",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "www.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(`https://other\uff0eexample.@other\uff0eexampl\u074ce:70000?u=https://other.example` now",
+  "server": [
+   {
+    "host": "other.xn--example-5ml",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xhttp://other.example\uff0e@oth\u200ber.example:70000\\other.example http://caf\u00e9.example\ta-.other.example:/https://other.example'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "__https://ALLOWED.EXAMPLE\u007fa-.other.example:80/x?y=1__||",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[allowed.example](https:///m\uff03y_host.allowed.example\u0026@caf\u00e9.example:70000/))",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "**http://user@%6fther.example:99999?u=https://other.example** now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\nh\ub577ttps:/\ufeffcaf\u00e9.example@allowed.example:8o/r/https://other.example/x'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x||hTtP://allowed.example.[@other\u3002exa\uff1cmple/x?y=1||\"",
+  "server": [
+   {
+    "host": "other.exa\u003cmple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"http://\u0430llowed.ex\ub4c6ample\uff1exn--caf-dma.example:80__.allowed.example now",
+  "server": [
+   {
+    "host": "xn--llowed-2nf.xn--example\u003exn--caf-dma-rq76e.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\u003cwww.a-.other.example~@ALLOWED.EXAMPLE:/x?y=1\u003e",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(\u003chttp://user@[::1]:443/x?y=1\u003e)",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see *https:/127.1:80/https://other.example*",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n||https:/my_host.allowed.example|0x7f.1:65535?u=https://other.example||.",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x*https:///[0:0::1]@127.1:443/x\u6bb8?y=1*.",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b**hTtP:\u003e//xn--caf\u5fc4-dma.example\ufe65_.other.example:70000\\other.example**\"",
+  "server": []
+ },
+ {
+  "msg": "'https://allowed.example.@[::1]:80#\uff20f http://user@ot~her\u07b2.example: now",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": true
+   },
+   {
+    "host": "xn--ot~her-usk.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "~~https://127.1\u00ad@%6fther.examp!le:99999/x.~~\"",
+  "server": [
+   {
+    "host": "other.examp!le",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\\\u003chttps:/\uff0e0x7f\u0001.1\u003callowed.example:80/a(b)\u003e now",
+  "server": []
+ },
+ {
+  "msg": "x\u003chttp://user@127.1:0/r/https://other.example/x\u003e\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "(http://[::1\u0001\u200d@127.0.0.1:80#f)",
+  "server": [
+   {
+    "host": "[::1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(__hTtP://\ueed8other%2eexample'@0177.0.0.1:99999/x?y=1__\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(https://ALLOWED.EXAMPLE\u003eother\uff0eexam\uff3cple:/x?y=*1 www.[0:0::1]%other.example.allowed.example:8o**.allowed.example",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "www.[0",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "([x](hTtP://127.1\u0001@my_host.allowed.example:65535/https://oth\u200cer%.example \"t\")\n",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   },
+   {
+    "host": "xn--other%-kf0c.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see htt\u00a0ps:/user@[::1/x!",
+  "server": []
+ },
+ {
+  "msg": "(*https://allowed.exampl\u2028e.ot\u3000her.example:70000__.allowed.example*\"",
+  "server": [
+   {
+    "host": "allowed.exampl",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b||http://oth\u200ber.example:65535/r/https://other.example/x\u034f||\n",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](ht\u6bbftps:///user@127.1:\uff1e8o/ \"t\") now",
+  "server": []
+ },
+ {
+  "msg": "see ||HTTPS://[0:0::1]|xn--caf-dma.example:65535#f||!",
+  "server": [
+   {
+    "host": "[0:0::1]",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "*HTTPS://a-.other.exam}ple:#f* now",
+  "server": [
+   {
+    "host": "a-.other.exam}ple",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003cHTTPS://user@a-.other.example:44\uff073?q\u003e||",
+  "server": [
+   {
+    "host": "a-.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\nhttps:/1.2.3.256 @allowed.example.other.example:65535?q https:/other\uff0eex\u0a6fample@[::1/\\x?y=1.",
+  "server": []
+ },
+ {
+  "msg": "\u200b*HTTPS://other.example!@caf\u00e9.example:443?u=https://other.example*\n",
+  "server": [
+   {
+    "host": "xn--caf-dma.example",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https://127.0.0.1:0x7f.1:70000/a(b))\"",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(`http://ALLOWED.EXAMPLE\u0301other\uff0eexample:9999\u200b9`\n",
+  "server": [
+   {
+    "host": "allowed.xn--examplother-gbb.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b__www.0177.0.0.1:70000#f__ now",
+  "server": []
+ },
+ {
+  "msg": "\"||https:/[::1]:80/https://other.ex\u1541ample\u0c94||'",
+  "server": [
+   {
+    "host": "other.xn--example-7guv32i",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](https://allowed.example) HTTPS://allowed\u0085.example.other.example\u003e\uff0f@[::1]:80/)",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "xn--allowed-mba.example.other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(__hTtP://0177.0.0.1@other.example.allowed.example:443**.allowed.ex_ample]__||",
+  "server": [
+   {
+    "host": "other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[x](https://allowed.example) HTTPS://user@xn--caf-dma.exa\uff1cmple:99999/https://other.example.",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": "xn--caf-dma.exa\u003cmple",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see [allowed.example](www.[0:0::1]@other.example:65535#f))",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x[x](HTTPS\n://other\u3002example\"@0x7f.1:99999/,)!",
+  "server": []
+ },
+ {
+  "msg": "~~hTtP://caf\u00e9.example@other%2eexam\ufe6bple:99999?q~~'",
+  "server": [
+   {
+    "host": "other.exam@ple",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x[x](https://allowed.example) HTTPS\b://user@127.1#f.",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b\\\u003cwww.other.example.allowed.example:65535?q\u003e!",
+  "server": [
+   {
+    "host": "www.other.example.allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "x~~hTtP://user@other\u3002example:443**.allowed.example~~ now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n[x](`https:/user@127.0.0.1#f|)!",
+  "server": []
+ },
+ {
+  "msg": "\u200b~~ww\uff1aw.other\uff0eexample\n@other\u3002example/x?y=1~~.",
+  "server": []
+ },
+ {
+  "msg": "\u200b*hTtP: //allowed.exa\nmple:?u=https://other.example*||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "xwww.\ufeff%6fther.example\u2060@xn--caf-\uff20dma.example:8o/ HTTPS://127.1**.allowed.example'",
+  "server": [
+   {
+    "host": "127.1**.allowed.example",
+    "ok": true
+   },
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "www.ALLOWED.EXAMPLE\uff0e\uff03@%6fther.exa\ubec6mple:65535/x https:/caf\u00e9.example:/ now",
+  "server": [
+   {
+    "host": "other.xn--example-2d23a",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\nHT\u003eTPS://other\uff0eexample\u200c@allowed.example.other.example:0/x ht\u034ftps:///_\uff1a.other.example:8o?q\n",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [x](https:///0x7f.1\u0026@[::1]:70000/r/https://other.exa\ufeffmple/x \"t\")||",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   },
+   {
+    "host": "other.exa",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'[x](\u003cwww.ALLOWE\u425dD.EXAMPLE:70000\u003e)",
+  "server": [
+   {
+    "host": "www.xn--allowed-ee4i.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x`https:/xn--caf-dma.example@%6fthe;r.example:80/x?y=1`\"",
+  "server": []
+ },
+ {
+  "msg": "see **hTtP://\u0301[::1:9|9999/x.**\"",
+  "server": [
+   {
+    "host": "xn--[-wbb",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see hT\btP://1.2.3.256@127.0.0.1:65@535?q.",
+  "server": []
+ },
+ {
+  "msg": "\"[x](\u003chttps:/other%2eexample:0/x.\u003e).",
+  "server": []
+ },
+ {
+  "msg": "\u200b`https://0177.0.0.1/@my_host.all\u69c1owed.example:65535?q` now",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](\u003cwww.oth\u200ber.example\u2024@other\u3002example:99999?u=h\u1bcettps://other.example\u003e)||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [x](\u003chttps:/allowed.example.other.example?q\u003e) now",
+  "server": []
+ },
+ {
+  "msg": "\u200b\u003chttps:/ALLOWED.EXAMPLE\u007fallowed.example.other.example:80\\other.example\u003e.",
+  "server": []
+ },
+ {
+  "msg": "'[x](https:/oth\u200ber.example/https://other.example)\"",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"http s:///other%2eexamp\u618dle.other.example\u0301:70000/x. https://user@2130[706433:8o/https://other.exam\uff09ple",
+  "server": [
+   {
+    "host": "2130[706433",
+    "ok": false
+   },
+   {
+    "host": "other.exam)ple",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003chTtP://my_host.allowed.example\u034f2130706433:65535/https://other.example\u003e",
+  "server": [
+   {
+    "host": "my_host.allowed.example2130706433",
+    "ok": true
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\u200b~~www.1.2.3.256\u00ad@other\uff0eexample:80\n/x~~",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "~~https://allowed.example.other.example!ALLOWED.EXAMPLE:80__.allowed.example~~\n",
+  "server": [
+   {
+    "host": "allowed.example.other.example!allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](\u003chTtP://other\u3002example@0x7f!.1:/x.\u003e).",
+  "server": [
+   {
+    "host": "0x7f!.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x__https:///user@[::1]:80/r/https://other\u970a.example/x__\"",
+  "server": [
+   {
+    "host": "[::1]",
+    "ok": false
+   },
+   {
+    "host": "xn--other-x02q.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see https://user@[::1:6553\u20285/https://other.exampl\u01c2e!",
+  "server": [
+   {
+    "host": "[::1:6553",
+    "ok": false
+   },
+   {
+    "host": "other.xn--example-1dc",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'https:/127.1[@ALLOWED.EXAMPLE:65535?q https:/a-.other.example oth\u200ber.example:0?q!",
+  "server": []
+ },
+ {
+  "msg": "a\n\u003chttps://allowed.example.[::1]:8o?q\u003e now",
+  "server": [
+   {
+    "host": "allowed.example.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "'`https://\u0430)llowed.example\uff1eother.example:0?u=https://other.example`!",
+  "server": [
+   {
+    "host": "xn--)llowed-1fg.example\u003eother.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'~~hTtP://other\u3002example\u2028@other\u3002example:65535**.allowed.example~~||",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "http:\u00ad//%6fther.example@xn--caf-dma.example:0/a(b) http:\u3000//user@allowed.example::",
+  "server": [
+   {
+    "host": "",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\"**hT tP://\u80d2[::1@0177.0.0.1:443#f**!",
+  "server": []
+ },
+ {
+  "msg": "a\n[x](hTtP://%6fther.example:8o/r/https://other.example/x)'",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": false
+   },
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\\\u003chttps:///sub.allowed.example@other.example.allowed.exa\ue8a9mple:99999\\other.example\u003e||",
+  "server": [
+   {
+    "host": "other.example.allowed.xn--example-1e20b",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "(\u003chttp://user@other\uff0eexample:/a(b)\u003e now",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "([x](https://allowed.example) http://\uff09my_host.allowed.example([0:0::1]:99999?u=https://other.exa\u0001mple!",
+  "server": [
+   {
+    "host": "allowed.example",
+    "ok": true
+   },
+   {
+    "host": "allowed.example)",
+    "ok": true
+   },
+   {
+    "host": ")my_host.allowed.example([0",
+    "ok": false
+   },
+   {
+    "host": "other.exa",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n`www.[::1]:/a\uc902\u2028(b)`.",
+  "server": [
+   {
+    "host": "www.[",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see [x](\u003chttp://\u0430llow\ufeffed.example\ufeffother.example.allowed.example**.allowed.example\u003e) now",
+  "server": [
+   {
+    "host": "xn--llow-43d",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "see \u003chttp://127.1:80/htt]ps://other.example\u003e now",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "__h\rTtP://\u0430llowed.example_@ot_her.example:99999/r/https://other.example/x__)",
+  "server": [
+   {
+    "host": "other.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "'\u003ch\uff1cTtP://0x7f.1\uff1f@other.example.allowed.example:443/x?y=1\u003e now",
+  "server": []
+ },
+ {
+  "msg": "\u200b**www.0177.0.0.1`@%6fther.example:80#f**",
+  "server": [
+   {
+    "host": "www.0177.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "see \u003c www.127.0.0.1@1.2.3.2\ufeff56:99999__.allowed.example\u003e now",
+  "server": [
+   {
+    "host": "1.2.3.2",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"__HTTPS://sub.allowed.example\ufe6b@my_host.allowed.exam ple__",
+  "server": [
+   {
+    "host": "my_host.allowed.exam",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "a\n\\\u003chtt\ufe6bps://other%2eexample*@0x7f.1:70000/x?y=1\u003e",
+  "server": []
+ },
+ {
+  "msg": "\"[allowed.example](https://other.example.allowed.example\uff02other\u3002example:8o#f)",
+  "server": [
+   {
+    "host": "other.example.allowed.example\"other.example",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x||https:/127.0.0.1:0/x||",
+  "server": []
+ },
+ {
+  "msg": "a\nhttp:/\ufe64?/other\uff0eexample\uff0e@other\u3002example:?q http://0177.0.0.1\u200c[\uee12::1]:99999/)",
+  "server": [
+   {
+    "host": "0177.0.0.xn--1[-j1t5612i",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "\u200b[x](https:///allowed.example.other.exampl\u21ba(e\uff1e@127.0.0.1:?q \"t\")!",
+  "server": [
+   {
+    "host": "127.0.0.1",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "a\n*;https:/[::1]\uff03[0:0::1]*'",
+  "server": []
  }
 ]

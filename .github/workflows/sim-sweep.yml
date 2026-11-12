@@ -2,7 +2,10 @@ name: Media group sweep
 
 # The simulator of the media group protocol on seeds 1..400, both relays, against
 # the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only
-# shrink). Too slow for the pull request pipeline. A failed run is the alert.
+# shrink), and the link parity sweep: generated messages judged by automod and
+# rendered by the client, where no rule may let a link the client opens through
+# (web/src/shared/lib/markdown/linkParity.sweep.test.ts). Too slow for the pull
+# request pipeline. A failed run is the alert.
 on:
   schedule:
     - cron: "43 2 * * *"
@@ -37,3 +40,41 @@ jobs:
           SIM_SWEEP: "1"
           SIM_SHARD: ${{ matrix.shard }}/8
         run: npx vitest run src/lib/media/groupSim.sweep.test.ts
+
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Link sweep shard ${{ matrix.shard }} of 4, as older desktop bundles render
+        env:
+          LINK_SWEEP: "1"
+          LINK_SWEEP_N: "4000000"
+          LINK_SHARD: ${{ matrix.shard }}/4
+        run: npx vitest run src/shared/lib/markdown/linkParity.sweep.test.ts
+      - name: Link sweep shard ${{ matrix.shard }} of 4, as this bundle renders
+        env:
+          LINK_SWEEP: "1"
+          LINK_SWEEP_N: "1000000"
+          LINK_SHARD: ${{ matrix.shard }}/4
+          LINK_SWEEP_CLIENT: current
+        run: npx vitest run src/shared/lib/markdown/linkParity.sweep.test.ts
