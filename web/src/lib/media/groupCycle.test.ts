@@ -46,9 +46,9 @@ const inside = (epoch: number | null, size: number, alive: [number, number][] = 
   current: epoch === null ? null : { epoch, verification: { members: Array.from({ length: size }, (_, i) => id(i + 1)) } },
   alive: new Map(alive.map(([n, at]) => [id(n), at])), resets: { waitMs: () => wait }, restarting: new Set(), pending: new Map(), heard: new Set(),
 })
-const whole = (members: Inside[], at = 0, flight: { to: string, kind: string, due: number }[] = []) => ({
+const whole = (members: Inside[], at = 0, flight: { to: string, kind: string, due: number }[] = [], timers: { owner: string, due: number }[] = []) => ({
   live: () => members.map((group, index) => ({ id: id(index + 1), label: `m${index + 1}#1`, group })),
-  asleep: () => false, now: Date.UTC(2026, 0, 1) + at, inFlight: () => flight,
+  asleep: () => false, now: Date.UTC(2026, 0, 1) + at, inFlight: () => flight, ownTimers: () => timers,
 }) as unknown as GroupSim
 
 describe('the whole-room state', () => {
@@ -64,6 +64,12 @@ describe('the whole-room state', () => {
     expect(deep(whole([inside(7, 2, [[2, -4000]]), inside(7, 2)], 4000))).not.toBe(base)
     expect(deep(whole([inside(7, 2, [[2, 0]], 30_000), inside(7, 2)], 4000))).not.toBe(base)
     expect(deep(whole([inside(7, 2, [[2, 0]]), inside(7, 2)], 4000, [{ to: id(1), kind: 'commit@7[]', due: 300 }]))).not.toBe(base)
+  })
+
+  it('differs while a tab waits on a timer of its own, even with no group yet (seed 171 of the cycle sweep, hostile)', () => {
+    const waiting = (due: number) => deep(whole([inside(null, 0), inside(null, 0)], 4000, [], [{ owner: 'm1#1', due }]))
+    expect(waiting(2000)).not.toBe(waiting(980))
+    expect(waiting(2000)).toBe(waiting(2020))
   })
 
   it('says when the room is in a state again, and not while it stays in one', () => {

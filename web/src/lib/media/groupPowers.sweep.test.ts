@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
 import { KNOWN_POWERS } from './groupSweep.known.fixture'
-import { occurrences, report, runSeed, type SimPlan, type SimResult } from './groupSimRun.fixture'
+import { LIE_DELIVERED, occurrences, REPLAY_DELIVERED, report, runSeed, type SimPlan, type SimResult } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -38,12 +38,12 @@ describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more tha
     const failing: number[] = []
     const ran: number[] = []
     const failures: string[] = []
-    // What the power claims to do must show in the traces: lies told, handshakes replayed.
-    const claimed = name === 'liar' ? /lie to / : /replay \d+ old handshakes/
+    // What the power claims to do must show its effect in the traces: lies delivered, old handshakes that reached a member.
+    const claimed = name === 'liar' ? LIE_DELIVERED : REPLAY_DELIVERED
     let happened = 0
     let agreed = 0
-    for (const seed of seeds(process.env.SIM_POWERS_SEEDS ?? '1..400')) {
-      if (seed % count !== index) continue
+    // Sharded by position in the list, so a list of named seeds splits evenly too.
+    for (const seed of seeds(process.env.SIM_POWERS_SEEDS ?? '1..400').filter((_, position) => position % count === index)) {
       ran.push(seed)
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
       const result = await runSeed(seed, plan({ relay })).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))

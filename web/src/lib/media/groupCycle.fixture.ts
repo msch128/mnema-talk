@@ -96,8 +96,9 @@ interface Inside {
 /**
  * What the whole room is, as far as it can decide what happens next: for every member the epoch (as a distance to
  * the newest), the size of its group, how long ago it heard of each member of it (in maintenance ticks), how long
- * its next start-over must wait, which members it takes for coming back or having offered; and every handshake on
- * its way with how long it still has. Times are relative to now, so the same state is the same at any hour. What
+ * its next start-over must wait, which members it takes for coming back or having offered; every handshake on
+ * its way with how long it still has; and every timer of a tab with how long it still has (without them a tab that
+ * waits, with no group yet, looks the same at every instant of its wait). Times are relative to now, so the same state is the same at any hour. What
  * it leaves out: the keys, and the random delays of epochs not yet reached (rotation does not happen in a churn).
  */
 export function deep(sim: GroupSim): string {
@@ -113,7 +114,8 @@ export function deep(sim: GroupSim): string {
     return `${member.id.slice(-2)}:${held}:${sim.asleep(member) ? 'z' : 'a'}:${ages.join(',')}:w${Math.ceil(group.resets.waitMs('self') / tick)}:r${[...group.restarting].map(id => id.slice(-2)).join('.')}:p${[...group.pending.keys()].map(id => id.slice(-2)).sort().join('.')}:h${group.heard.size}`
   })
   const flight = sim.inFlight().map(item => `${item.to.slice(-2)}${item.kind.replace(/@\d+/, '')}${Math.round(item.due / 100)}`).sort()
-  return createHash('sha1').update(`${parts.join('|')}#${flight.join(',')}`).digest('hex')
+  const timers = sim.ownTimers().map(item => `${item.owner}@${Math.round(item.due / 100)}`).sort()
+  return createHash('sha1').update(`${parts.join('|')}#${flight.join(',')}#${timers.join(',')}`).digest('hex')
 }
 
 export interface Repeat {

@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
 import { KNOWN_CLOCKS } from './groupSweep.known.fixture'
 import { CLOCK_VARIANTS } from './groupClocks.fixture'
-import { occurrences, report, runSeed, type SimResult } from './groupSimRun.fixture'
+import { occurrences, report, runSeed, STEP_MOVED, type SimResult } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -32,14 +32,14 @@ describe.skipIf(!process.env.SIM_CLOCKS)('seeds with a clock per member', () => 
     let skewed = 0
     let stepped = 0
     let runs = 0
-    for (const seed of seeds(process.env.SIM_CLOCKS_SEEDS ?? '1..400')) {
-      if (seed % count !== index) continue
+    // Sharded by position in the list, so a list of named seeds splits evenly too.
+    for (const seed of seeds(process.env.SIM_CLOCKS_SEEDS ?? '1..400').filter((_, position) => position % count === index)) {
       ran.push(seed)
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
       const result = await runSeed(seed, { relay, clocks }).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
       runs++
       skewed += occurrences(result, /^\s*[\d.]+ clock of m\d+: offset -?[1-9]\d* ms|drift -?[1-9]\d* ppm/) > 0 ? 1 : 0
-      stepped += occurrences(result, / step m\d+#\d+ wall clock by /) > 0 ? 1 : 0
+      stepped += occurrences(result, STEP_MOVED) > 0 ? 1 : 0
       const a = availabilityOf(result)
       const row = { variant: name, relay, seed, failed: result.violations.length > 0, known: listed.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 200), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
       if (process.env.SIM_CLOCKS_OUT) appendFileSync(process.env.SIM_CLOCKS_OUT, `${JSON.stringify(row)}\n`)

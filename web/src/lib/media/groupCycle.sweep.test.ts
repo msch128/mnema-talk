@@ -7,6 +7,10 @@
 //  - the multiset (CycleDetector with `counts`): how many members hold nothing, hold the newest epoch, or are behind.
 //    A room that churns returns to one of these again and again: seeds outside the failure budget stay below
 //    CHURN_LIMIT, and the sweep must see the churn it exists to see (some seed of the budget reaches CHURN_SEEN).
+// NOT EXAMINED by the nightly job: the second detector's "must see churn" check runs only on seeds of the failure
+// budget of groupSim.known.fixture.ts, and that budget is empty since 3.0.9, so the check never runs there. The
+// equal-epoch forks of H-L2-06 (seeds 5 and 120 of the clock sweep) are not runs of this sweep (no clock plan) and
+// were not tried against the detector; a fork that stays put is no return to a state either.
 import { appendFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -38,8 +42,8 @@ describe.skipIf(!process.env.SIM_CYCLE)('recurring states per seed', () => {
     let ran = 0
     let churning = 0
     let inBudget = 0
-    for (const seed of seeds(list)) {
-      if (seed % count !== index) continue
+    // Sharded by position in the list, not by seed value: the default list is all odd.
+    for (const seed of seeds(list).filter((_, position) => position % count === index)) {
       const exact = new Recurrence()
       const coarse = new CycleDetector(counts)
       const result = await runSeed(seed, { relay, agreeWithinMs: Number(process.env.SIM_CYCLE_MS ?? 240_000), watch: (sim) => { exact.observe(sim); coarse.observe(sim) } })
