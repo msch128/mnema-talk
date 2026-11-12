@@ -2,10 +2,12 @@ package sfu
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/pion/ice/v4"
 	"github.com/pion/interceptor"
+	"github.com/pion/logging"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -63,7 +65,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		return nil, err
 	}
 	s := &SFU{load: &peerLoad{}}
-	api, err := buildAPI(portMin, portMax, announceIPs, mux, s.load, s.dropConnection, &s.conns)
+	builder, err := buildAPI(portMin, portMax, announceIPs, mux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -76,7 +78,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		iceServers = []webrtc.ICEServer{{URLs: stunURLs}}
 	}
 
-	s.api = api
+	s.builder, s.api = builder, builder.build(nil)
 	s.announced = append([]string(nil), announceIPs...)
 	s.portMin, s.portMax = portMin, portMax
 	s.udpMux = mux
@@ -107,11 +109,11 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load, s.dropConnection, &s.conns)
+	builder, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		return err
 	}
-	s.api = api
+	s.builder, s.api = builder, builder.build(nil)
 	s.announced = append([]string(nil), ips...)
 	return nil
 }
@@ -130,10 +132,45 @@ func (s *SFU) apiAndAnnounced() (*webrtc.API, []string) {
 	return s.api, append([]string(nil), s.announced...)
 }
 
+// connAPI is apiAndAnnounced for one member's media connection: its API
+// carries that connection's cap on unhandled RTCP streams (rtcpStreamCap).
+func (s *SFU) connAPI(log *slog.Logger) (*webrtc.API, []string, *rtcpStreamCap) {
+	s.apiMu.RLock()
+	defer s.apiMu.RUnlock()
+	limit := newRTCPStreamCap(s.builder.logs, log)
+	return s.builder.build(limit), append([]string(nil), s.announced...), limit
+}
+
+// apiBuilder holds what an API is made of. Each member connection gets an API
+// of its own (NewAPI only copies the settings): its logger and buffer
+// factories are the only per-connection hooks Pion has on the connection's
+// unhandled RTCP streams.
+type apiBuilder struct {
+	settings webrtc.SettingEngine
+	media    *webrtc.MediaEngine
+	registry *interceptor.Registry
+	logs     logging.LoggerFactory
+}
+
+// build makes an API whose connections are counted by limit, or by nothing
+// when limit is nil (the shared API: connection tests carry no media).
+func (b apiBuilder) build(limit *rtcpStreamCap) *webrtc.API {
+	settings := b.settings
+	settings.LoggerFactory = b.logs
+	if limit != nil {
+		settings.LoggerFactory, settings.BufferFactory = limit, limit.buffer
+	}
+	return webrtc.NewAPI(
+		webrtc.WithSettingEngine(settings),
+		webrtc.WithMediaEngine(b.media),
+		webrtc.WithInterceptorRegistry(b.registry),
+	)
+}
+
 // buildSettingEngine configures ICE: loopback handling, the UDP mux or port
 // range, and the announced addresses.
 func buildSettingEngine(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (webrtc.SettingEngine, error) {
-	settingEngine := webrtc.SettingEngine{}
+	settingEngine := webrtc.SettingEngine{BufferFactory: srtpBuffer}
 	if err := configureICEAddresses(&settingEngine, announceIPs); err != nil {
 		return settingEngine, err
 	}
@@ -171,27 +208,25 @@ func configureICEPorts(se *webrtc.SettingEngine, portMin, portMax uint16, mux ic
 	return nil
 }
 
-// buildAPI makes the API new connections come from. dropConn removes the peer
-// of a connection whose outgoing chain panicked (see viewerGuard).
-func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad, dropConn func(connID string), names *connNames) (*webrtc.API, error) {
+// buildAPI makes what the APIs of new connections are built from. dropConn
+// removes the peer of a connection whose outgoing chain panicked (see
+// viewerGuard).
+func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad, dropConn func(connID string), names *connNames) (apiBuilder, error) {
 	settingEngine, err := buildSettingEngine(portMin, portMax, announceIPs, mux)
 	if err != nil {
-		return nil, err
+		return apiBuilder{}, err
 	}
 
 	mediaEngine := &webrtc.MediaEngine{}
 	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
-		return nil, fmt.Errorf("failed to register default WebRTC codecs: %w", err)
+		return apiBuilder{}, fmt.Errorf("failed to register default WebRTC codecs: %w", err)
 	}
 	registry, err := buildInterceptors(mediaEngine, load, dropConn, names)
 	if err != nil {
-		return nil, err
+		return apiBuilder{}, err
 	}
-	return webrtc.NewAPI(
-		webrtc.WithSettingEngine(settingEngine),
-		webrtc.WithMediaEngine(mediaEngine),
-		webrtc.WithInterceptorRegistry(registry),
-	), nil
+	logs := logging.NewDefaultLoggerFactory() // what NewAPI would pick itself
+	return apiBuilder{settings: settingEngine, media: mediaEngine, registry: registry, logs: logs}, nil
 }
 
 // buildInterceptors lists what every connection's packets pass, innermost

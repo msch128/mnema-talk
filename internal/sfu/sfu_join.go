@@ -47,11 +47,14 @@ func (s *SFU) Join(channelID, userID uuid.UUID, connID string, sendOffer func(we
 	// The connection is built before any lock is taken: creating it costs
 	// real time (transports, DTLS and ICE agents), and roomsMu serializes
 	// every join, leave and lookup of every room.
-	api, announced := s.apiAndAnnounced()
-	conn, err := newReceiveConn(api, s.iceServers, joinLogger(userID, connID))
+	log := joinLogger(userID, connID)
+	api, announced, rtcpCap := s.connAPI(log)
+	conn, err := newReceiveConn(api, s.iceServers, log)
 	if err != nil {
 		return nil, nil, err
 	}
+	conn.rtcp = rtcpCap
+	rtcpCap.bind(conn.pc)
 	if s.afterBuild != nil {
 		s.afterBuild() // tests close the SFU exactly here
 	}
@@ -158,6 +161,7 @@ type receiveConn struct {
 	lowerTrs      []*webrtc.RTPTransceiver
 	// cameraLowerTrs are the lines of the camera's lower layers, after those of the screen's.
 	cameraLowerTrs []*webrtc.RTPTransceiver
+	rtcp           *rtcpStreamCap
 }
 
 func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer, log *slog.Logger) (*receiveConn, error) {

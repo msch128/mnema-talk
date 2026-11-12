@@ -1,6 +1,13 @@
 package sfu
 
-import "github.com/pion/sdp/v3"
+import (
+	"errors"
+	"strconv"
+	"strings"
+
+	"github.com/pion/sdp/v3"
+	"github.com/pion/webrtc/v4"
+)
 
 // vetAnswerCandidates removes the ICE candidates an answer SDP carries that the
 // trickle path would have refused (unspecified, multicast, link-local, loopback
@@ -15,11 +22,22 @@ import "github.com/pion/sdp/v3"
 // endings or stray characters the sender chose. An SDP that does not parse is
 // refused. Dropped candidates are logged like trickled ones.
 //
+// The media sections and the SSRC lines are vetted on the same parsed form
+// (vetAnswerSections, vetAnswerSSRCs), before any candidate is counted.
+//
 // It also returns the keys it newly counted, for forgetAnswerCandidates when
 // Pion then refuses the answer.
 func (p *Peer) vetAnswerCandidates(raw string) (string, []string, error) {
 	var desc sdp.SessionDescription
 	if err := desc.Unmarshal([]byte(raw)); err != nil {
+		return "", nil, err
+	}
+	if p.PC != nil {
+		if err := vetAnswerSections(&desc, p.PC.PendingLocalDescription()); err != nil {
+			return "", nil, err
+		}
+	}
+	if err := vetAnswerSSRCs(&desc); err != nil {
 		return "", nil, err
 	}
 	p.candMu.Lock()
@@ -71,4 +89,125 @@ func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute, added *[]string) []sd
 		kept = append(kept, a)
 	}
 	return kept
+}
+
+// errAnswerSections refuses an answer whose media sections are not the ones of
+// the offer it answers.
+var errAnswerSections = errors.New("sfu: the answer's media sections are not the offer's")
+
+// vetAnswerSections checks that an answer has the media sections of the offer
+// the SFU made: as many, in the same order, under the same mids. An answer is
+// a reply to that offer section by section; one with sections of its own would
+// have the connection set up media the SFU never offered, and would let the
+// client choose how many sections the connection counts. Without an offer
+// outstanding there is nothing to compare with, and the connection refuses the
+// answer itself.
+func vetAnswerSections(desc *sdp.SessionDescription, offer *webrtc.SessionDescription) error {
+	if offer == nil {
+		return nil
+	}
+	var offered sdp.SessionDescription
+	if err := offered.Unmarshal([]byte(offer.SDP)); err != nil {
+		return err
+	}
+	if len(desc.MediaDescriptions) != len(offered.MediaDescriptions) {
+		return errAnswerSections
+	}
+	for i, media := range desc.MediaDescriptions {
+		mid, _ := media.Attribute("mid")
+		want, _ := offered.MediaDescriptions[i].Attribute("mid")
+		if mid != want {
+			return errAnswerSections
+		}
+	}
+	return nil
+}
+
+// errAnswerSSRCs refuses an answer whose SSRC lines do not describe one stream
+// per media section.
+var errAnswerSSRCs = errors.New("sfu: the answer's SSRC lines do not describe one stream per media section")
+
+// vetAnswerSSRCs checks the SSRC lines of an answer before Pion reads them.
+// Every media section the SFU offers carries one stream: a microphone, one
+// screen layer, one camera layer (the layers are sections of their own). So a
+// section of the answer may name one SSRC, and next to it only the SSRCs an
+// a=ssrc-group line ties to it as its retransmission (FID) or its error
+// correction (FEC-FR). That is what browsers write: one SSRC, or one pair per
+// group, also on a section they only receive on (Firefox).
+//
+// A section that names two streams, a group that is not one of those pairs,
+// or an SSRC that appears in two sections is refused whole: Pion would start
+// a receiver per stream it reads there, and the SFU has one per section. A
+// refused answer leaves the offer outstanding like any other answer that
+// cannot be applied.
+func vetAnswerSSRCs(desc *sdp.SessionDescription) error {
+	seen := map[uint32]struct{}{}
+	for _, media := range desc.MediaDescriptions {
+		ids, ok := sectionSSRCs(media.Attributes)
+		if !ok {
+			return errAnswerSSRCs
+		}
+		for id := range ids {
+			if _, dup := seen[id]; dup {
+				return errAnswerSSRCs
+			}
+			seen[id] = struct{}{}
+		}
+	}
+	return nil
+}
+
+// sectionSSRCs returns the SSRCs one media section names, and whether they
+// are one stream: at most one of them is not the second member of a group.
+func sectionSSRCs(attrs []sdp.Attribute) (map[uint32]struct{}, bool) {
+	ids := map[uint32]struct{}{}
+	repairs := map[uint32]struct{}{}
+	for _, a := range attrs {
+		switch a.Key {
+		case "ssrc":
+			id, _, _ := strings.Cut(a.Value, " ")
+			ssrc, ok := parseSSRC(id)
+			if !ok {
+				return nil, false
+			}
+			ids[ssrc] = struct{}{}
+		case "ssrc-group":
+			primary, repair, ok := ssrcPair(a.Value)
+			if !ok {
+				return nil, false
+			}
+			ids[primary] = struct{}{}
+			ids[repair] = struct{}{}
+			repairs[repair] = struct{}{}
+		}
+	}
+	primaries := 0
+	for id := range ids {
+		if _, repair := repairs[id]; !repair {
+			primaries++
+		}
+	}
+	// No primary at all means the groups name each other in a circle.
+	return ids, primaries == 1 || len(ids) == 0
+}
+
+// ssrcPair reads "FID a b" or "FEC-FR a b": a stream and the SSRC that
+// repairs it. It reads the line the way the connection does, split at single
+// spaces into exactly three parts: a line the two would read differently
+// (another separator, a second space) is refused, not interpreted.
+func ssrcPair(value string) (primary, repair uint32, ok bool) {
+	f := strings.Split(value, " ")
+	if len(f) != 3 || (f[0] != "FID" && f[0] != "FEC-FR") {
+		return 0, 0, false
+	}
+	primary, okA := parseSSRC(f[1])
+	repair, okB := parseSSRC(f[2])
+	return primary, repair, okA && okB && primary != repair
+}
+
+// parseSSRC reads an SSRC written as a plain decimal number: no sign, no
+// leading zero, no space, so that it is the same number to every reader.
+func parseSSRC(s string) (uint32, bool) {
+	n, err := strconv.ParseUint(s, 10, 32)
+	return uint32(n), err == nil && strconv.FormatUint(n, 10) == s
 }
