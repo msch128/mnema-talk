@@ -38,12 +38,9 @@ func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 	var msg *core.Message
 	var before []uuid.UUID
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1`, messageID)
-		if err != nil {
-			return fmt.Errorf("mentions before the edit: %w", err)
-		}
-		if before, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID]); err != nil {
-			return fmt.Errorf("mentions before the edit: %w", err)
+		var err error
+		if before, err = mentionedBy(ctx, tx, messageID); err != nil {
+			return err
 		}
 		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
 		if err != nil {
@@ -150,6 +147,7 @@ func deleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		if err != nil {
 			return err
 		}
+		newest = m.newest
 		if err := checkDeleteAuthorized(user, m.author, m.ownerContent, canManage); err != nil {
 			return err
 		}
@@ -162,9 +160,6 @@ func deleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 			SELECT s3_key FROM media WHERE message_id IN
 				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
 			return err
-		}
-		if err := tx.QueryRow(ctx, `SELECT max(created_at) FROM messages WHERE id = $1 OR parent_id = $1`, messageID).Scan(&newest); err != nil {
-			return fmt.Errorf("newest removed message: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID); err != nil {
 			return fmt.Errorf("delete message: %w", err)
@@ -182,6 +177,9 @@ type lockedMessage struct {
 	author, channel uuid.UUID
 	parent          *uuid.UUID
 	ownerContent    bool
+	// newest is when the newest of the message and its replies was written,
+	// read once the lock is held (no reply can be added after that).
+	newest time.Time
 }
 
 func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (lockedMessage, error) {
@@ -200,7 +198,8 @@ func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (
 	if err != nil {
 		return m, fmt.Errorf("lock message: %w", err)
 	}
-	return m, nil
+	m.newest, err = newestOfThread(ctx, tx, messageID)
+	return m, err
 }
 
 func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canManage bool) error {
