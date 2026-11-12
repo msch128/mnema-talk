@@ -9,7 +9,9 @@ enforcement points listed below.
 ## The Owner
 
 The Owner is the one account with `users.role = 'admin'`: the account that
-`ADMIN_USERNAME` (default `admin`) seeds on the first start. The database value
+`ADMIN_USERNAME` (default `admin`) seeds on the first start. Servers that
+start together on an empty database seed it once (under a database lock); the
+others find it and start normally, as any later start does. The database value
 and the `role` field of the API stay `admin` for compatibility; the interface
 calls it Owner.
 

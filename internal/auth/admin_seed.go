@@ -27,13 +27,17 @@ func ValidateAdminSeed(username, password string) error {
 	return nil
 }
 
-func hasAdminUser(ctx context.Context, p *db.Pool) (bool, error) {
+// ownerSeedLockKey serialises the Owner seed of servers that start together
+// on one database (pg_advisory_xact_lock).
+const ownerSeedLockKey = "mnema.owner_seed"
+
+func hasAdminUser(ctx context.Context, p db.Querier) (bool, error) {
 	var exists bool
 	err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`).Scan(&exists)
 	return exists, err
 }
 
-func checkAdminUsernameAvailable(ctx context.Context, p *db.Pool, username string) error {
+func checkAdminUsernameAvailable(ctx context.Context, p db.Querier, username string) error {
 	// Usernames are unique case-insensitively: "cool_guy" blocks "cool_guy".
 	var holder string
 	err := p.QueryRow(ctx, `SELECT username FROM users WHERE LOWER(username) = LOWER($1)`, username).Scan(&holder)
@@ -61,7 +65,7 @@ func resolveAdminPassword(password string, requirePassword bool) (string, string
 	return gen, gen, nil
 }
 
-func insertAdminUser(ctx context.Context, p *db.Pool, username, hash string) error {
+func insertAdminUser(ctx context.Context, p db.Querier, username, hash string) error {
 	_, err := p.Exec(ctx, `
 		INSERT INTO users (username, display_name, password_hash, role)
 		VALUES ($1, $2, $3, 'admin')`,
@@ -89,12 +93,35 @@ func checkExistingAdmin(ctx context.Context, p *db.Pool, invalid error) (bool, e
 	return false, nil
 }
 
+// createAdminAccount inserts the Owner unless another server created one
+// first. The check and the insert run in one transaction under a
+// transaction-scoped advisory lock, so of servers that start together on an
+// empty database exactly one seeds the Owner; the others then find it, as a
+// later start does, and start normally. The password is hashed before the
+// lock is taken, so the lock is held for the three short statements only.
 func createAdminAccount(ctx context.Context, p *db.Pool, username, pass, generated string) error {
 	hash, err := HashPassword(pass)
 	if err != nil {
 		return fmt.Errorf("hash admin password: %w", err)
 	}
-	if err := insertAdminUser(ctx, p, username, hash); err != nil {
+	created := false
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, ownerSeedLockKey); err != nil {
+			return fmt.Errorf("lock admin seed: %w", err)
+		}
+		if exists, err := hasAdminUser(ctx, tx); err != nil || exists {
+			return err
+		}
+		if err := checkAdminUsernameAvailable(ctx, tx, username); err != nil {
+			return err
+		}
+		created = true
+		return insertAdminUser(ctx, tx, username, hash)
+	})
+	if err != nil || !created {
+		if err == nil {
+			slog.Info("an administrator was created by another server starting at the same time")
+		}
 		return err
 	}
 	slog.Info("initial administrator created", "username", username)
@@ -124,9 +151,6 @@ func EnsureAdminUser(ctx context.Context, p *db.Pool, username, password string,
 	}
 	pass, generated, err := resolveAdminPassword(password, requirePassword)
 	if err != nil {
-		return err
-	}
-	if err := checkAdminUsernameAvailable(ctx, p, username); err != nil {
 		return err
 	}
 	return createAdminAccount(ctx, p, username, pass, generated)
