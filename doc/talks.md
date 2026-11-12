@@ -66,7 +66,9 @@ admin setup are needed, so it works on a fresh community. The Talk is a temporar
 Talk without a lobby (`is_temp`, `lobby_id` NULL) with `channels.dm_id` pointing
 at the conversation (migration 0079): the permission snapshot lets only the
 conversation's members see and join it, the Owner and Administrators included
-(like the conversation itself), a member added to a group gets it too, it shows
+(like the conversation itself), a member added to a group gets it too, a member
+who leaves a group loses it at once (a seat in it ends as for any lost Talk
+right, and the others see them leave the call), it shows
 in the sidebar of its members only, and it is deleted when it is empty (like any
 temporary Talk) or when the conversation is. Nothing about it reaches the audit log (who joined it, renamed it or when it went), because that would tell the Owner who called whom. It is led by whoever started it and
 counts against the 5 new Talks per 10 minutes. While in a Talk, "Invite to my

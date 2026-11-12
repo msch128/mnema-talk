@@ -30395,7 +30395,7 @@
     },
     "/api/dms/{id}/members/{user}": {
       "delete": {
-        "description": "Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.",
+        "description": "Takes the caller out of a group conversation; they lose its history and their seat in its Talk (voice_kicked reason missing_permission, and a voice_state_update leave to the others in the call). When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.",
         "operationId": "leaveDirectMessage",
         "parameters": [
           {
