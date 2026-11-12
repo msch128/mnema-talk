@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { availabilityOf } from './groupAvailability.fixture'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
 import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
-import { report, runSeed, type SimPlan, type SimResult } from './groupSimRun.fixture'
+import { occurrences, report, runSeed, type SimPlan, type SimResult } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -36,15 +36,23 @@ describe.skipIf(!process.env.SIM_POWERS)('seeds with a server that does more tha
     const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
     const known = relay === 'honest' ? KNOWN_HONEST : KNOWN_HOSTILE
     const failures: string[] = []
+    // What the power claims to do must show in the traces: lies told, handshakes replayed.
+    const claimed = name === 'liar' ? /lie to / : /replay \d+ old handshakes/
+    let happened = 0
+    let agreed = 0
     for (const seed of seeds(process.env.SIM_POWERS_SEEDS ?? '1..400')) {
       if (seed % count !== index) continue
       const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
       const result = await runSeed(seed, plan({ relay })).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
+      happened += occurrences(result, claimed) > 0 ? 1 : 0
+      agreed += result.agreedAfterMs !== null ? 1 : 0
       const a = availabilityOf(result)
       const row = { power: name, relay, seed, failed: result.violations.length > 0, known: known.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 240), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
       if (process.env.SIM_POWERS_OUT) appendFileSync(process.env.SIM_POWERS_OUT, `${JSON.stringify(row)}\n`)
       else if (row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
     }
+    // A sweep in which the power never happened tested nothing (a power needs a room that agreed first, for a replay).
+    expect(happened, `${name}: runs in which the power happened`).toBeGreaterThan(Math.floor(agreed / 4))
     expect(failures, 'seeds outside the failure budget that fail').toEqual([])
   }, 7_200_000)
 })

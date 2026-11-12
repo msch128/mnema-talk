@@ -1,4 +1,4 @@
-// What the server can do beyond delaying, reordering, repeating and dropping (inventory I7, powers P5 and P8/P9):
+// What the server can do beyond delaying, reordering, repeating and dropping (SECURITY.md, "Voice and screenshare": it can replay what it relayed, and the roster is its word):
 // - say again what it relayed, to every member, long after (replay);
 // - tell a member a roster that is not the room (hide a member, list a ghost, list a lower id than all).
 //

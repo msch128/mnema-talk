@@ -97,10 +97,10 @@ function actions(sim: GroupSim, ids: readonly string[], plan: SimPlan): Action[]
   const noticed = 2 * Math.max(10, sim.timing.maintenanceMs) + 60_000
   list.push(['sleep', 1, () => sim.sleep(sim.pick(awake), sim.between(noticed + 6000, noticed + 26_000))])
   list.push(['reconnect', 1, () => sim.reconnect(sim.pick(awake), sim.between(200, 6000))])
-  if (plan.lies) list.push(['lie', 2, () => sim.lie(sim.pick(awake).id, sim.pick(['hide', 'ghost', 'lead'] as const))])
+  if (plan.lies) list.push(['lie', 2, () => sim.lie(sim.pick(awake), sim.pick(['hide', 'ghost', 'lead'] as const))])
   if (clocks?.stepMs) {
     const step = () => Math.round((sim.clockDraw() * 2 - 1) * (clocks as ClockPlan).stepMs)
-    list.push(['step', 1, () => sim.stepWall(sim.pick(awake).id, step())])
+    list.push(['step', 1, () => sim.stepWall(sim.pick(awake), step())])
   }
   return list
 }
@@ -162,6 +162,11 @@ function drawSkew(sim: GroupSim, plan: ClockPlan): ClockSkew {
   return { offset: Math.round(spread(plan.offsetMs)), drift: spread(plan.driftPpm) * 1e-6, wallStep: 0, monoLost: 0, monoStops: sim.clockDraw() < plan.monoStops }
 }
 
+/** How many lines of the trace match `pattern`: what a sweep checks to know that the power or perturbation it claims really happened. */
+export function occurrences(result: SimResult, pattern: RegExp): number {
+  return result.trace.filter(line => pattern.test(line)).length
+}
+
 export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResult> {
   const checks = new GroupChecks()
   const sim = new GroupSim(seed, checks)
@@ -170,7 +175,13 @@ export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResu
     const members = plan.members ?? sim.between(2, 12)
     const chaosMs = plan.chaosMs ?? CHAOS_MS
     const ids = Array.from({ length: members }, (_, index) => fixtureId(index + 1))
-    if (plan.clocks) for (const id of ids) sim.skews.set(id, drawSkew(sim, plan.clocks))
+    if (plan.clocks) {
+      for (const id of ids) {
+        const skew = drawSkew(sim, plan.clocks)
+        sim.skews.set(id, skew)
+        sim.note(`clock of m${Number.parseInt(id.slice(-12), 16)}: offset ${skew.offset} ms, drift ${(skew.drift * 1e6).toFixed(0)} ppm${skew.monoStops ? ', stops in sleep' : ''}`)
+      }
+    }
     sim.record = plan.record ?? false
     sim.ordered = plan.relay === 'honest'
     sim.timing = plan.timing ?? sim.timing

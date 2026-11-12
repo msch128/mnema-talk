@@ -5,8 +5,9 @@
 // The await boundaries are the ones the group's own code waits on: every call into ts-mls (key packages, groups,
 // commits, welcomes) and every call into WebCrypto (heartbeat and capability signatures, key import). A test file
 // wraps both with `wrapModule` and `crashingCrypto`; the hook below counts the boundaries a tab passes and, at the
-// chosen one, has the simulator reload that tab at the next instant. What the tab's last step does after its
-// boundary is lost, as it is when the process dies: nothing it sends reaches the relay (GroupSim.dropWiresOfGone).
+// chosen one, kills that tab on the spot: the awaited call never returns to it, so the rest of its step is lost
+// as it is when the process dies (nothing after the boundary is adopted or sent), and a new tab with the same id
+// takes its place at the next instant (GroupSim.crashNow).
 import type { GroupSim } from './groupSim.fixture'
 
 export interface CrashPoint {
@@ -41,17 +42,22 @@ export function disarm() {
   target = null
 }
 
-/** One await boundary passed by the code of the tab that is running. */
-export function boundary() {
+/** One await boundary passed by the code of the tab that is running. True when the tab dies here. */
+export function boundary(): boolean {
   const member = sim?.running()
-  if (!sim || !member || member.gone) return
+  if (!sim || !member || member.gone) return false
   const ordinal = (boundaries.counts.get(member.id) ?? 0) + 1
   boundaries.counts.set(member.id, ordinal)
   if (!boundaries.crashed && target && target.user === member.id && target.ordinal === ordinal) {
     boundaries.crashed = true
-    sim.crashSoon(member, target.seen)
+    sim.crashNow(member, target.seen)
+    return true
   }
+  return false
 }
+
+/** What a tab that died at a boundary waits for: nothing ever comes. */
+const FOREVER = new Promise<never>(() => undefined)
 
 /** A function whose promise counts a boundary when it settles. Anything else goes through untouched. */
 export function counting<T extends (...args: never[]) => unknown>(fn: T): T {
@@ -59,10 +65,7 @@ export function counting<T extends (...args: never[]) => unknown>(fn: T): T {
     apply(original, self, args) {
       const out = Reflect.apply(original, self, args) as unknown
       if (!(out instanceof Promise)) return out
-      return out.then((value: unknown) => {
-        boundary()
-        return value
-      })
+      return out.then((value: unknown) => (boundary() ? FOREVER : value))
     },
   })
 }

@@ -116,7 +116,7 @@ export interface SimHooks {
 
 /** A handshake on its way, as the control sees it. */
 export interface WireInfo { from: string, to: string, kind: string }
-interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean, info?: WireInfo }
+interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean, info?: WireInfo | undefined }
 
 /**
  * Asked before the simulator delivers a handshake that is on its way: deliver
@@ -190,6 +190,10 @@ export class GroupSim {
   private readonly context = new AsyncLocalStorage<SimMember>()
   private readonly timers = new Map<number, Timer>()
   private readonly touched = new Set<SimMember>()
+  /** Tabs that crashed: their last step never finishes, so nothing waits for it. */
+  private readonly dead = new Set<SimMember>()
+  /** Releases whoever waits for a tab that has just crashed. */
+  private readonly release = new Map<SimMember, () => void>()
   private readonly restore: (() => void)[] = []
   private timerSeq = TIMER_ID_BASE
   private memberSeq = 0
@@ -234,7 +238,7 @@ export class GroupSim {
   }
 
   /** Runs `run` after `delay`. With an owner it waits while that tab sleeps and is dropped once the tab is gone. */
-  after(owner: SimMember | null, delay: number, run: () => void, wire = false, info?: WireInfo): number {
+  after(owner: SimMember | null, delay: number, run: () => void, wire = false, info?: WireInfo | undefined): number {
     const id = ++this.timerSeq
     this.timers.set(id, { id, at: this.now + Math.max(0, delay), owner, run, wire, info })
     return id
@@ -342,13 +346,17 @@ export class GroupSim {
     return this.context.getStore()
   }
 
-  /** The tab is gone at the next instant, wherever its code is: a reload, as at a crash point. */
-  crashSoon(member: SimMember, seen: boolean) {
-    this.after(null, 0, () => {
-      if (member.gone || this.room.get(member.id) !== member) return
-      this.note(`crash ${member.label} (${seen ? 'the roster shows it' : 'unseen'})`)
-      this.reload(member.id, seen)
-    })
+  /**
+   * The tab dies here, in the middle of whatever it is doing: it is gone at once (what it still does is lost, and
+   * nothing waits for it), and a new tab with the same id takes its place at the next instant, as after a reload.
+   */
+  crashNow(member: SimMember, seen: boolean) {
+    if (member.gone || this.room.get(member.id) !== member) return
+    this.note(`crash ${member.label} (${seen ? 'the roster shows it' : 'unseen'})`)
+    this.dead.add(member)
+    this.release.get(member)?.()
+    this.after(null, 0, () => this.reload(member.id, seen))
+    this.drop(member, false)
   }
 
   /** A tab enters the Talk: the server tells it who is here and tells the others. */
@@ -369,8 +377,9 @@ export class GroupSim {
     this.announce(member)
   }
 
-  private drop(member: SimMember) {
+  private drop(member: SimMember, stop = true) {
     member.gone = true
+    if (!stop) return
     this.touched.add(member)
     this.context.run(member, () => member.call.stop())
     if (this.room.get(member.id) === member) this.room.delete(member.id)
@@ -611,7 +620,7 @@ export class GroupSim {
     const choice = this.control(timer.info, others.length + 1)
     if (choice === 'drop') {
       this.note(`drop ${memberNumber(timer.info.from)}->${timer.owner?.label} ${timer.info.kind} (the schedule)`)
-      return { ...timer, run: () => undefined, wire: false, info: undefined }
+      return { id: timer.id, at: timer.at, owner: timer.owner, run: () => undefined, wire: false }
     }
     if (choice === 'swap' && others[0]) {
       this.timers.delete(others[0].id)
@@ -622,11 +631,18 @@ export class GroupSim {
     return timer
   }
 
+  /** `wait`, or until the tab crashes: what a crashed tab was doing never finishes. */
+  private async unlessCrashed(member: SimMember, wait: Promise<unknown>): Promise<void> {
+    if (this.dead.has(member)) return
+    await Promise.race([wait, new Promise<void>((resolve) => { this.release.set(member, resolve) })])
+  }
+
   private async settle() {
     for (const member of this.touched) {
+      if (this.dead.has(member)) continue
       for (let round = 0; round < 3; round++) {
-        await mediaSettled(member.call)
-        if (member.probe && !member.gone) await member.probe()
+        await this.unlessCrashed(member, mediaSettled(member.call))
+        if (member.probe && !member.gone) await this.unlessCrashed(member, member.probe())
       }
     }
     this.touched.clear()

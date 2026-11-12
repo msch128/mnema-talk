@@ -18,6 +18,8 @@ export interface Availability {
   longestLostMs: number
   /** The longest a member went on holding one epoch's keys: what a key's life comes to. */
   longestEpochMs: number
+  /** The longest a tab waited for its first keys (a tab that left or ended the run still waiting counts what it waited). */
+  longestJoinMs: number
 }
 
 interface Tab { since: number, everKeys: boolean, down: number | null, epoch: string | null, epochSince: number }
@@ -32,14 +34,14 @@ export function share(part: number, whole: number): number {
 /** Reads `trace` (see GroupSim.note) for a run of `endMs` virtual milliseconds. */
 export function availability(trace: readonly string[], endMs: number): Availability {
   const tabs = new Map<string, Tab>()
-  const total: Availability = { memberMs: 0, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: 0 }
+  const total: Availability = { memberMs: 0, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: 0, longestJoinMs: 0 }
   const close = (tab: Tab, at: number) => {
     total.memberMs += at - tab.since
     if (tab.epoch !== null) total.longestEpochMs = Math.max(total.longestEpochMs, at - tab.epochSince)
     if (tab.down !== null) {
       const span = at - tab.down
       total.noKeysMs += span
-      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) }
+      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) } else total.longestJoinMs = Math.max(total.longestJoinMs, span)
     }
   }
   for (const line of trace) {
@@ -69,7 +71,7 @@ export function availability(trace: readonly string[], endMs: number): Availabil
     if (tab.down !== null) {
       const span = at - tab.down
       total.noKeysMs += span
-      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) }
+      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) } else total.longestJoinMs = Math.max(total.longestJoinMs, span)
       tab.down = null
     }
     tab.everKeys = true
