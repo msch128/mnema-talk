@@ -265,6 +265,12 @@ func cleanDomain(s string) (string, error) {
 	if !ok || !domainPattern.MatchString(host) {
 		return "", httpx.ErrInvalidInput(fmt.Sprintf("%q is not a domain", s))
 	}
+	// The stored form must be the host a link to it is read as. A name that
+	// ends in a number is an address to a browser ("0.00" is 0.0.0.0), so it
+	// would never match a link: it is no domain.
+	if again, ok := hostOf(host); !ok || again != host {
+		return "", httpx.ErrInvalidInput(fmt.Sprintf("%q is not a domain", s))
+	}
 	return host, nil
 }
 
