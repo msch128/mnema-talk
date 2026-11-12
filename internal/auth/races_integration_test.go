@@ -133,7 +133,9 @@ func TestParallelSignupsNeverPassTheInviteLimit(t *testing.T) {
 				FROM invites i WHERE code = $1`, code).Scan(&uses, &users); err != nil {
 				t.Fatal(err)
 			}
-			if uses > limit || users > limit || uses != users || r.Succeeded() != users {
+			// Exactly the limit: more is the defect, fewer means callers
+			// were refused for another reason and the round raced nothing.
+			if uses != limit || users != limit || r.Succeeded() != users {
 				return fmt.Sprintf("round %d: limit %d, uses_count %d, accounts %d, successes %d", round, limit, uses, users, r.Succeeded())
 			}
 			return ""

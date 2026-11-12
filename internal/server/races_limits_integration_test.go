@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil/racetest"
 )
 
@@ -28,6 +29,21 @@ func statusErr(r response, ok ...int) error {
 		}
 	}
 	return fmt.Errorf("%d %s", r.status, r.body)
+}
+
+// strict makes an answer outside the expected ones (statusErr) a violation,
+// so a sweep whose callers were all refused for another reason (a rate
+// limit, a permission) cannot pass by doing nothing. The checks also require
+// the cap to be reached exactly, which needs at least one caller through.
+func strict(check func(int, racetest.Round) string) func(int, racetest.Round) string {
+	return func(round int, r racetest.Round) string {
+		for _, err := range r.Errs {
+			if err != nil {
+				return fmt.Sprintf("round %d: unexpected answer %v", round, err)
+			}
+		}
+		return check(round, r)
+	}
 }
 
 func (a *app) count(sql string, args ...any) int {
@@ -66,21 +82,24 @@ func TestParallelReactionsStayWithinBothCaps(t *testing.T) {
 	clear := func() { a.runSQL(`DELETE FROM message_reactions WHERE message_id = $1`, msg) }
 
 	t.Run("per member", func(t *testing.T) {
+		// A member of its own per round: the reaction rate is per member.
+		var reactor *client
 		racetest.Sweep(t, racetest.Rounds(10, 200), raceCallers,
-			func(int) {
+			func(round int) {
 				clear()
+				reactor = a.sqlMember(fmt.Sprintf("solo%d", round))
 				a.runSQL(`INSERT INTO message_reactions (message_id, user_id, emoji)
-					SELECT $1, $2, 'f' || g FROM generate_series(1, $3) g`, msg, admin.user.ID, messages.MaxReactionsPerUser-1)
+					SELECT $1, $2, 'f' || g FROM generate_series(1, $3) g`, msg, reactor.user.ID, messages.MaxReactionsPerUser-1)
 			},
 			func(round, i int) error {
-				return statusErr(admin.post(path, map[string]string{"emoji": fmt.Sprintf("r%d", i)}), http.StatusOK, http.StatusConflict)
+				return statusErr(reactor.post(path, map[string]string{"emoji": fmt.Sprintf("r%d", i)}), http.StatusOK, http.StatusConflict)
 			},
-			func(round int, _ racetest.Round) string {
-				if n := a.count(`SELECT COUNT(*) FROM message_reactions WHERE message_id = $1 AND user_id = $2`, msg, admin.user.ID); n > messages.MaxReactionsPerUser {
+			strict(func(round int, _ racetest.Round) string {
+				if n := a.count(`SELECT COUNT(*) FROM message_reactions WHERE message_id = $1 AND user_id = $2`, msg, reactor.user.ID); n != messages.MaxReactionsPerUser {
 					return fmt.Sprintf("round %d: %d reactions of one member", round, n)
 				}
 				return ""
-			}).FailOnViolation(t)
+			})).FailOnViolation(t)
 	})
 	t.Run("distinct per message", func(t *testing.T) {
 		racetest.Sweep(t, racetest.Rounds(10, 200), raceCallers,
@@ -94,65 +113,72 @@ func TestParallelReactionsStayWithinBothCaps(t *testing.T) {
 			func(round, i int) error {
 				return statusErr(members[i].post(path, map[string]string{"emoji": fmt.Sprintf("n%d", i)}), http.StatusOK, http.StatusConflict)
 			},
-			func(round int, _ racetest.Round) string {
-				if n := a.count(`SELECT COUNT(DISTINCT emoji) FROM message_reactions WHERE message_id = $1`, msg); n > messages.MaxEmojiPerMessage {
+			strict(func(round int, _ racetest.Round) string {
+				if n := a.count(`SELECT COUNT(DISTINCT emoji) FROM message_reactions WHERE message_id = $1`, msg); n != messages.MaxEmojiPerMessage {
 					return fmt.Sprintf("round %d: %d distinct emoji", round, n)
 				}
 				return ""
-			}).FailOnViolation(t)
+			})).FailOnViolation(t)
 	})
 }
 
+// The pin and saved rates (per member and minute) would refuse later rounds of
+// one member, so every round has its own; for pins @everyone gets Manage
+// messages.
 func TestParallelPinsStayWithinTheChannelCap(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	ch := a.createChannel(admin, "general", "text")
+	wantStatus(t, "everyone manages messages", admin.patch("/api/admin/roles/"+everyoneID(t, admin).String(),
+		map[string]any{"permissions": perm.DefaultEveryone | perm.ManageMessages}), http.StatusOK)
 	ids := make([]uuid.UUID, raceCallers)
 	for i := range ids {
 		ids[i] = a.send(admin, ch, fmt.Sprintf("pin me %d", i))
 	}
 	a.runSQL(`INSERT INTO messages (channel_id, user_id, content) SELECT $1, $2, 'filler' FROM generate_series(1, $3)`, ch, admin.user.ID, messages.MaxPinsPerChannel-1)
+	var pinner *client
 	racetest.Sweep(t, racetest.Rounds(10, 200), raceCallers,
-		func(int) {
+		func(round int) {
+			pinner = a.sqlMember(fmt.Sprintf("pinner%d", round))
 			a.runSQL(`UPDATE messages SET is_pinned = FALSE, pinned_at = NULL WHERE channel_id = $1`, ch)
 			a.runSQL(`UPDATE messages SET is_pinned = TRUE, pinned_at = NOW() WHERE channel_id = $1 AND content = 'filler'`, ch)
 		},
 		func(_, i int) error {
-			r := admin.do(http.MethodPut, "/api/channels/"+ch.String()+"/messages/"+ids[i].String()+"/pin", nil, nil)
+			r := pinner.do(http.MethodPut, "/api/channels/"+ch.String()+"/messages/"+ids[i].String()+"/pin", nil, nil)
 			return statusErr(r, http.StatusOK, http.StatusConflict)
 		},
-		func(round int, _ racetest.Round) string {
-			if n := a.count(`SELECT COUNT(*) FROM messages WHERE channel_id = $1 AND is_pinned`, ch); n > messages.MaxPinsPerChannel {
+		strict(func(round int, _ racetest.Round) string {
+			if n := a.count(`SELECT COUNT(*) FROM messages WHERE channel_id = $1 AND is_pinned`, ch); n != messages.MaxPinsPerChannel {
 				return fmt.Sprintf("round %d: %d pins", round, n)
 			}
 			return ""
-		}).FailOnViolation(t)
+		})).FailOnViolation(t)
 }
 
 func TestParallelSavesStayWithinTheSavedCap(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	alice := a.register(admin, "alice")
 	ch := a.createChannel(admin, "general", "text")
 	ids := make([]uuid.UUID, raceCallers)
 	for i := range ids {
 		ids[i] = a.send(admin, ch, fmt.Sprintf("save me %d", i))
 	}
 	a.runSQL(`INSERT INTO messages (channel_id, user_id, content) SELECT $1, $2, 'filler' FROM generate_series(1, $3)`, ch, admin.user.ID, saved.MaxSavedPerMember-1)
+	var saver *client
 	racetest.Sweep(t, racetest.Rounds(10, 200), raceCallers,
-		func(int) {
-			a.runSQL(`DELETE FROM saved_messages WHERE user_id = $1`, alice.user.ID)
-			a.runSQL(`INSERT INTO saved_messages (user_id, message_id) SELECT $1, id FROM messages WHERE content = 'filler'`, alice.user.ID)
+		func(round int) {
+			saver = a.sqlMember(fmt.Sprintf("saver%d", round))
+			a.runSQL(`INSERT INTO saved_messages (user_id, message_id) SELECT $1, id FROM messages WHERE content = 'filler'`, saver.user.ID)
 		},
 		func(_, i int) error {
-			return statusErr(alice.put("/api/me/saved/"+ids[i].String(), nil), http.StatusOK, http.StatusConflict)
+			return statusErr(saver.put("/api/me/saved/"+ids[i].String(), nil), http.StatusOK, http.StatusConflict)
 		},
-		func(round int, _ racetest.Round) string {
-			if n := a.count(`SELECT COUNT(*) FROM saved_messages WHERE user_id = $1`, alice.user.ID); n > saved.MaxSavedPerMember {
+		strict(func(round int, _ racetest.Round) string {
+			if n := a.count(`SELECT COUNT(*) FROM saved_messages WHERE user_id = $1`, saver.user.ID); n != saved.MaxSavedPerMember {
 				return fmt.Sprintf("round %d: %d saved", round, n)
 			}
 			return ""
-		}).FailOnViolation(t)
+		})).FailOnViolation(t)
 }
 
 func TestParallelReportsOfOneMessageFileOne(t *testing.T) {
@@ -210,19 +236,23 @@ func TestBothSidesOpeningAConversationAtOnceGetTheSameOne(t *testing.T) {
 // at once.
 func TestParallelFirstMessagesStayWithinTheUnansweredCap(t *testing.T) {
 	f := newDMFixture(t, false)
-	dm := f.alice.mustDM(t, f.bob)
+	// A pair of its own per round: the message rate is per member.
+	var sender *client
+	var dm dmView
 	racetest.Sweep(t, racetest.Rounds(10, 200), raceCallers,
-		func(int) {
-			f.a.runSQL(`DELETE FROM messages WHERE channel_id = $1`, dm.ID)
-			f.a.runSQL(`UPDATE channels SET dm_creator_sent = 0, dm_replied = FALSE WHERE id = $1`, dm.ID)
+		func(round int) {
+			sender = f.a.sqlMember(fmt.Sprintf("sender%d", round))
+			dm = sender.mustDM(t, f.a.sqlMember(fmt.Sprintf("silent%d", round)))
 		},
 		func(_, i int) error {
-			return statusErr(f.alice.dmPost(dm.ID, fmt.Sprintf("hello %d", i)), http.StatusCreated, http.StatusTooManyRequests)
+			// 429 is the answer of the gate; a fresh sender stays far below
+			// the message rate, which answers 429 as well.
+			return statusErr(sender.dmPost(dm.ID, fmt.Sprintf("hello %d", i)), http.StatusCreated, http.StatusTooManyRequests)
 		},
-		func(round int, _ racetest.Round) string {
-			if n := f.a.count(`SELECT COUNT(*) FROM messages WHERE channel_id = $1`, dm.ID); n > 2 {
+		strict(func(round int, _ racetest.Round) string {
+			if n := f.a.count(`SELECT COUNT(*) FROM messages WHERE channel_id = $1`, dm.ID); n != 2 {
 				return fmt.Sprintf("round %d: %d unanswered messages", round, n)
 			}
 			return ""
-		}).FailOnViolation(t)
+		})).FailOnViolation(t)
 }
