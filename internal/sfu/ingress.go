@@ -3,6 +3,8 @@ package sfu
 import (
 	"io"
 	"log/slog"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -105,105 +107,194 @@ func ingressAbuse(info *TrackInfo) {
 	}
 }
 
-// Pion keeps, for the life of a connection, one SRTCP read stream with a
-// buffer for every SSRC an RTCP packet of the member names that nothing on the
-// connection reads: PLI, NACK, FIR and REMB name a media SSRC, a receiver or
-// sender report each of its up to 31 blocks, BYE and SDES each source. Pion
-// drops none and has no cap, so the SFU bounds what one stream may hold
-// (srtpBuffer) and how many there may be (rtcpStreamCap).
-
-// The buffers of a connection's streams. Pion's default for SRTCP is 100 KB:
-// a stream that is read (feedback on a track the SFU sends) holds a few
-// packets at a time, and one that nobody reads keeps all it got.
+// Pion keeps, for the life of a connection, one SRTCP read stream for every
+// SSRC an RTCP packet of the member names that nothing on the connection
+// reads: PLI, NACK, FIR and REMB name a media SSRC, a receiver or sender
+// report each of its up to 31 blocks, BYE and SDES each source. Pion drops
+// none and has no cap. rtcpStreamCap is the logger and buffer factory of one
+// member connection and bounds them: a stream gets a buffer (rtcpBuffer, at
+// most about 20 KB) only for an SSRC the SFU may read; one for an SSRC the
+// client declared or the SFU just stopped sending gets a quietBuffer that
+// keeps nothing; and the connection is closed past any of these caps.
 const (
-	rtcpBufferPackets = 128
-	rtcpBufferBytes   = 16 << 10
-	// rtpBufferBytes is Pion's own limit of an SRTP stream (srtpBufferSize).
-	rtpBufferBytes = 1000 * 1000
-)
-
-// The unread streams a connection may make before it is closed. A browser
-// makes them only for SSRCs that just ended: the reports still on the way
-// when the SFU stopped sending it a track. Those SSRCs count only against
-// maxRTCPStreams; any other counts against maxUnknownRTCPStreams too.
-const (
+	// maxUnknownRTCPStreams: streams for SSRCs the SFU neither sent nor was
+	// told of. An honest client names none (it names its own SSRCs, the
+	// SFU's, the ones it declared in its answer, and ones that just ended).
 	maxUnknownRTCPStreams = 64
-	maxRTCPStreams        = 2048
+	// maxBufferedRTCPStreams: streams with a buffer open at once (counted by
+	// the buffer factory, so it holds even if Pion's log line changes). A
+	// viewer reads one per track it receives, plus one per SSRC the client
+	// sends: a full Talk is a few hundred.
+	maxBufferedRTCPStreams = 1024
+	// maxQuietRTCPStreams: quiet streams (about 0.5 KB each) made in the life
+	// of the connection. A viewer makes up to one or two per track the SFU
+	// stopped sending it: in a Talk of 50 with cameras coming and going for
+	// eight hours, at most about 15 000.
+	maxQuietRTCPStreams = 32768
+	// rtcpRetiredSSRCs is how many of the SSRCs whose stream closed are
+	// remembered: reports for one arrive within seconds of its end.
+	rtcpRetiredSSRCs = 1024
+	// rtcpDeclaredPerLine bounds the SSRCs taken from an answer per m-line
+	// (a line declares its SSRC, an RTX SSRC and maybe simulcast layers).
+	rtcpDeclaredPerLine = 4
 )
-
-// srtpBuffer is the SettingEngine's BufferFactory: Pion's own buffer (srtp's
-// packetBuffer, which keeps each packet's attributes) with the limits above.
-func srtpBuffer(kind packetio.BufferPacketType, _ uint32) io.ReadWriteCloser {
-	b := packetio.NewBuffer()
-	if kind == packetio.RTCPBufferPacket {
-		b.SetLimitCount(rtcpBufferPackets)
-		b.SetLimitSize(rtcpBufferBytes)
-	} else {
-		b.SetLimitSize(rtpBufferBytes)
-	}
-	return attrBuffer{b}
-}
-
-type attrBuffer struct{ *packetio.Buffer }
-
-func (b attrBuffer) Read(p []byte) (int, error) {
-	n, _, err := b.Buffer.Read(p, nil)
-	return n, err
-}
-
-func (b attrBuffer) Write(p []byte) (int, error) { return b.Buffer.Write(p, nil) }
-
-func (b attrBuffer) ReadWithAttributes(p []byte, a packetio.Attributes) (int, packetio.Attributes, error) {
-	return b.Buffer.Read(p, a)
-}
-
-func (b attrBuffer) WriteWithAttributes(p []byte, a packetio.Attributes) (int, error) {
-	return b.Buffer.Write(p, a)
-}
 
 // pionUnhandledRTCP is the line Pion's undeclaredRTCPMediaProcessor logs once
-// for each unread stream it keeps (webrtc v4 peerconnection.go). The logger
-// factory is the only per-connection hook Pion has on them.
+// for each unread stream it keeps (webrtc v4 peerconnection.go).
 const pionUnhandledRTCP = "Incoming unhandled RTCP ssrc(%d), OnTrack will not be fired"
 
-// rtcpStreamCap is the logger factory of one member connection. It counts the
-// unread SRTCP streams Pion keeps on it and closes it past a cap.
+// pionUnhandledRTCPChanged stands, in tests, for a Pion that logs another line.
+var pionUnhandledRTCPChanged atomic.Bool
+
 type rtcpStreamCap struct {
 	logs logging.LoggerFactory
 	log  *slog.Logger
 	pc   atomic.Pointer[webrtc.PeerConnection]
+	// closing is set when the cap closes the connection; from then on Pion's
+	// new streams get a closedBuffer.
+	closing atomic.Bool
 
 	mu sync.Mutex
-	// sentSSRCs are the SSRCs the SFU sent on the connection, RTX included.
-	sentSSRCs      map[uint32]struct{}
-	unknown, total int
-	// closing is set when the cap closes the connection; from then on Pion's
-	// new streams get no buffer (see buffer).
-	closing atomic.Bool
+	// sent are the SSRCs of the tracks the SFU sends now, true for the one it
+	// reads feedback on and false for RTX; declared those of the client's last
+	// answer; retired the last SSRCs the SFU stopped sending or reading,
+	// oldest first in retiredRing; unknown the SSRCs of unread streams that
+	// are none of these.
+	sent                       map[uint32]bool
+	declared, retired, unknown map[uint32]struct{}
+	retiredRing                [rtcpRetiredSSRCs]uint32
+	retiredNext                int
+	buffered, quiet            int
+}
+
+func newRTCPStreamCap(logs logging.LoggerFactory, log *slog.Logger) *rtcpStreamCap {
+	return &rtcpStreamCap{logs: logs, log: log, sent: map[uint32]bool{},
+		declared: map[uint32]struct{}{}, retired: map[uint32]struct{}{}, unknown: map[uint32]struct{}{}}
 }
 
 // bind names the connection to close. Join binds it before the connection can
 // have exchanged any media.
 func (c *rtcpStreamCap) bind(pc *webrtc.PeerConnection) { c.pc.Store(pc) }
 
-// sent records the SSRCs of a track the SFU now sends on the connection.
-func (c *rtcpStreamCap) sent(sender *webrtc.RTPSender) {
+// sentTrack records the SSRCs of a track the SFU now sends on the connection,
+// as long as there are fewer than buffered streams may be open.
+func (c *rtcpStreamCap) sentTrack(sender *webrtc.RTPSender) {
 	if c == nil {
 		return
 	}
 	encodings := sender.GetParameters().Encodings
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.sentSSRCs == nil {
-		c.sentSSRCs = make(map[uint32]struct{})
-	}
 	for _, e := range encodings {
-		for _, ssrc := range []webrtc.SSRC{e.SSRC, e.RTX.SSRC} {
-			if ssrc != 0 {
-				c.sentSSRCs[uint32(ssrc)] = struct{}{}
+		if len(c.sent) < maxBufferedRTCPStreams {
+			c.sent[uint32(e.SSRC)] = true
+		}
+		if e.RTX.SSRC != 0 && len(c.sent) < maxBufferedRTCPStreams {
+			c.sent[uint32(e.RTX.SSRC)] = false
+		}
+	}
+}
+
+// stoppedTrack retires the SSRCs of a track the SFU no longer sends.
+func (c *rtcpStreamCap) stoppedTrack(sender *webrtc.RTPSender) {
+	if c == nil {
+		return
+	}
+	encodings := sender.GetParameters().Encodings
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, e := range encodings {
+		c.retire(uint32(e.SSRC))
+		if e.RTX.SSRC != 0 {
+			c.retire(uint32(e.RTX.SSRC))
+		}
+	}
+}
+
+// retire requires c.mu.
+func (c *rtcpStreamCap) retire(ssrc uint32) {
+	delete(c.sent, ssrc)
+	if _, ok := c.retired[ssrc]; ok {
+		return
+	}
+	delete(c.retired, c.retiredRing[c.retiredNext])
+	c.retiredRing[c.retiredNext] = ssrc
+	c.retired[ssrc] = struct{}{}
+	c.retiredNext = (c.retiredNext + 1) % rtcpRetiredSSRCs
+}
+
+// declare takes the SSRCs of the client's answer, at most
+// rtcpDeclaredPerLine for each of its m-lines (which mirror the SFU's offer).
+// Firefox, for one, sends the receiver reports of each line it only receives
+// on from an SSRC it declares there; nothing on the SFU reads those.
+func (c *rtcpStreamCap) declare(sdp string) {
+	if c == nil {
+		return
+	}
+	declared := map[uint32]struct{}{}
+	lines, budget := 0, 0
+	for line := range strings.Lines(sdp) {
+		switch {
+		case strings.HasPrefix(line, "m="):
+			lines++
+			budget = rtcpDeclaredPerLine
+		case strings.HasPrefix(line, "a=ssrc:") && budget > 0:
+			id, _, _ := strings.Cut(strings.TrimPrefix(line, "a=ssrc:"), " ")
+			if ssrc, err := strconv.ParseUint(strings.TrimSpace(id), 10, 32); err == nil {
+				if _, seen := declared[uint32(ssrc)]; !seen {
+					declared[uint32(ssrc)] = struct{}{}
+					budget--
+				}
 			}
 		}
 	}
+	c.mu.Lock()
+	c.declared = declared
+	// A client may report from a new line before the SFU has its answer.
+	for ssrc := range c.unknown {
+		if _, ok := declared[ssrc]; ok {
+			delete(c.unknown, ssrc)
+		}
+	}
+	c.mu.Unlock()
+}
+
+// buffer is the connection's BufferFactory. Pion calls it, under its stream
+// lock, for every stream it opens or the client's RTCP makes.
+func (c *rtcpStreamCap) buffer(kind packetio.BufferPacketType, ssrc uint32) io.ReadWriteCloser {
+	if kind != packetio.RTCPBufferPacket {
+		return srtpBuffer(kind, ssrc)
+	}
+	if c.closing.Load() {
+		return closedBuffer{}
+	}
+	c.mu.Lock()
+	_, declared := c.declared[ssrc]
+	_, retired := c.retired[ssrc]
+	read, sent := c.sent[ssrc]
+	quiet := (declared || retired || sent) && !read
+	if quiet {
+		c.quiet++
+	} else {
+		c.buffered++
+	}
+	q, b := c.quiet, c.buffered
+	c.mu.Unlock()
+	if q > maxQuietRTCPStreams || b > maxBufferedRTCPStreams {
+		c.trip("streams", q+b)
+	}
+	if quiet {
+		return newQuietBuffer()
+	}
+	return &rtcpBuffer{attrBuffer: srtpBuffer(kind, ssrc).(attrBuffer), limit: c, ssrc: ssrc}
+}
+
+// closed is called once when a buffered stream closes: its SSRC is retired.
+func (c *rtcpStreamCap) closed(ssrc uint32) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.buffered--
+	c.retire(ssrc)
 }
 
 // NewLogger counts on the connection's own logger only.
@@ -221,47 +312,39 @@ type rtcpCountingLogger struct {
 }
 
 func (l rtcpCountingLogger) Warnf(format string, args ...any) {
-	if format == pionUnhandledRTCP && len(args) == 1 {
+	if format == pionUnhandledRTCP && len(args) == 1 && !pionUnhandledRTCPChanged.Load() {
 		ssrc, _ := args[0].(uint32)
 		l.limit.unhandled(ssrc)
 	}
 	l.LeveledLogger.Warnf(format, args...)
 }
 
-// buffer is the connection's BufferFactory: srtpBuffer, and once the cap
-// closes the connection, a closed buffer for every SRTCP stream Pion still
-// makes while the connection closes.
-func (c *rtcpStreamCap) buffer(kind packetio.BufferPacketType, ssrc uint32) io.ReadWriteCloser {
-	if kind == packetio.RTCPBufferPacket && c.closing.Load() {
-		return closedBuffer{}
+// unhandled counts a stream Pion keeps unread, unless its SSRC is one the SFU
+// sends (reports that came before the SFU opened its stream), the client
+// declared, or the SFU just stopped sending.
+func (c *rtcpStreamCap) unhandled(ssrc uint32) {
+	c.mu.Lock()
+	_, declared := c.declared[ssrc]
+	_, retired := c.retired[ssrc]
+	_, sent := c.sent[ssrc]
+	if !declared && !retired && !sent {
+		c.unknown[ssrc] = struct{}{}
 	}
-	return srtpBuffer(kind, ssrc)
+	unknown := len(c.unknown)
+	c.mu.Unlock()
+	if unknown > maxUnknownRTCPStreams {
+		c.trip("unknown", unknown)
+	}
 }
 
-// closedBuffer holds nothing and takes nothing.
-type closedBuffer struct{}
-
-func (closedBuffer) Read([]byte) (int, error)  { return 0, io.EOF }
-func (closedBuffer) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
-func (closedBuffer) Close() error              { return nil }
-
-// unhandled counts one more unread stream. The connection is closed on a
-// goroutine of its own, as Pion logs this from the loop its SRTCP session
-// waits for while closing.
-func (c *rtcpStreamCap) unhandled(ssrc uint32) {
+// trip closes the connection once, on a goroutine of its own: Pion calls the
+// cap from the loops its SRTCP session waits for while closing.
+func (c *rtcpStreamCap) trip(count string, n int) {
 	pc := c.pc.Load()
-	c.mu.Lock()
-	c.total++
-	if _, ok := c.sentSSRCs[ssrc]; !ok {
-		c.unknown++
-	}
-	unknown, total := c.unknown, c.total
-	over := unknown > maxUnknownRTCPStreams || total > maxRTCPStreams
-	c.mu.Unlock()
-	if !over || pc == nil || !c.closing.CompareAndSwap(false, true) {
+	if pc == nil || !c.closing.CompareAndSwap(false, true) {
 		return
 	}
-	c.log.Warn("sfu connection keeps too many unread RTCP streams, closing it", "unknown", unknown, "streams", total)
+	c.log.Warn("sfu connection keeps too many unread RTCP streams, closing it", count, n)
 	metrics.SFUIngressDropped.With("rtcp_ssrcs").Inc()
 	safego.Go("sfu_rtcp_cap", safego.Abandon, func() { _ = pc.Close() })
 }

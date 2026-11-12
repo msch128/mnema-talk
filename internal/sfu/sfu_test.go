@@ -31,7 +31,10 @@ type client struct {
 	// offerTweak changes the SFU's offer before the client applies it, as the
 	// web client does; answerSDP is the last answer the client gave.
 	offerTweak func(string) string
-	answerSDP  atomic.Value
+	// answerTweak changes the client's answer before the SFU gets it (a
+	// browser that signals what Pion does not).
+	answerTweak func(string) string
+	answerSDP   atomic.Value
 	// stops ends the publishing goroutines of this client (cycle tests stop
 	// them per round instead of at the end of the test).
 	stops  []func()
@@ -194,8 +197,12 @@ func (c *client) answer(p *Peer, mu *sync.Mutex) error {
 	case <-time.After(5 * time.Second):
 		return fmt.Errorf("client ICE gathering timed out")
 	}
-	c.answerSDP.Store(c.pc.LocalDescription().SDP)
-	if err := p.SetAnswer(*c.pc.LocalDescription()); err != nil {
+	answer := *c.pc.LocalDescription()
+	if c.answerTweak != nil {
+		answer.SDP = c.answerTweak(answer.SDP)
+	}
+	c.answerSDP.Store(answer.SDP)
+	if err := p.SetAnswer(answer); err != nil {
 		return fmt.Errorf("SFU remote answer: %w", err)
 	}
 	return nil

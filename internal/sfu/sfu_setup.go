@@ -137,7 +137,7 @@ func (s *SFU) apiAndAnnounced() (*webrtc.API, []string) {
 func (s *SFU) connAPI(log *slog.Logger) (*webrtc.API, []string, *rtcpStreamCap) {
 	s.apiMu.RLock()
 	defer s.apiMu.RUnlock()
-	limit := &rtcpStreamCap{logs: s.builder.logs, log: log}
+	limit := newRTCPStreamCap(s.builder.logs, log)
 	return s.builder.build(limit), append([]string(nil), s.announced...), limit
 }
 

@@ -28,6 +28,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		}
 		return err
 	}
+	p.rtcp.declare(answer.SDP)
 	p.applyEarlyCandidates()
 	p.requestPendingSignal()
 	return nil
@@ -181,6 +182,7 @@ func removeStaleSenders(peer *Peer, desired map[string]*TrackInfo) (existing map
 		if err := peer.PC.RemoveTrack(sender); err != nil {
 			continue
 		}
+		peer.rtcp.stoppedTrack(sender)
 		removed = true
 		if vt := peer.takeViewerTrack(trackID); vt != nil {
 			vt.group.removeViewer(vt)
@@ -220,7 +222,7 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 		return false
 	}
 	delete(peer.addTrackFailed, trackID)
-	peer.rtcp.sent(sender)
+	peer.rtcp.sentTrack(sender)
 	if vt != nil {
 		if !r.attachViewer(peer, trackID, info, vt) {
 			_ = peer.PC.RemoveTrack(sender)

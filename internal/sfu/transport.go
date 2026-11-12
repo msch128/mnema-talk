@@ -3,11 +3,15 @@ package sfu
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/netip"
+	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/pion/ice/v4"
+	"github.com/pion/transport/v5/packetio"
 )
 
 var errSFUClosed = errors.New("SFU is closed")
@@ -152,3 +156,90 @@ func announcesLoopback(ips []string) bool {
 	}
 	return false
 }
+
+// The buffers of a connection's SRTP and SRTCP streams (see rtcpStreamCap).
+// Pion's default for SRTCP is 100 KB: a stream that is read (feedback on a
+// track the SFU sends) holds a few packets at a time, and one that nobody
+// reads keeps all it got.
+const (
+	rtcpBufferPackets = 128
+	rtcpBufferBytes   = 16 << 10
+	// rtpBufferBytes is Pion's own limit of an SRTP stream (srtpBufferSize).
+	rtpBufferBytes = 1000 * 1000
+)
+
+// srtpBuffer is the SettingEngine's BufferFactory: Pion's own buffer (srtp's
+// packetBuffer, which keeps each packet's attributes) with the limits above.
+func srtpBuffer(kind packetio.BufferPacketType, _ uint32) io.ReadWriteCloser {
+	b := packetio.NewBuffer()
+	if kind == packetio.RTCPBufferPacket {
+		b.SetLimitCount(rtcpBufferPackets)
+		b.SetLimitSize(rtcpBufferBytes)
+	} else {
+		b.SetLimitSize(rtpBufferBytes)
+	}
+	return attrBuffer{b}
+}
+
+type attrBuffer struct{ *packetio.Buffer }
+
+func (b attrBuffer) Read(p []byte) (int, error) {
+	n, _, err := b.Buffer.Read(p, nil)
+	return n, err
+}
+
+func (b attrBuffer) Write(p []byte) (int, error) { return b.Buffer.Write(p, nil) }
+
+func (b attrBuffer) ReadWithAttributes(p []byte, a packetio.Attributes) (int, packetio.Attributes, error) {
+	return b.Buffer.Read(p, a)
+}
+
+func (b attrBuffer) WriteWithAttributes(p []byte, a packetio.Attributes) (int, error) {
+	return b.Buffer.Write(p, a)
+}
+
+// rtcpBuffer is a member connection's SRTCP buffer: it tells the cap when its
+// stream closes (Pion may close a stream twice).
+type rtcpBuffer struct {
+	attrBuffer
+	limit *rtcpStreamCap
+	ssrc  uint32
+	done  atomic.Bool
+}
+
+func (b *rtcpBuffer) Close() error {
+	if b.done.CompareAndSwap(false, true) {
+		b.limit.closed(b.ssrc)
+	}
+	return b.attrBuffer.Close()
+}
+
+// quietBuffer takes every packet and keeps none; a read waits until it is
+// closed. The stream of an SSRC nothing on the SFU reads costs no buffer, and
+// the rest of its compound packet still reaches the other streams.
+type quietBuffer struct {
+	once sync.Once
+	done chan struct{}
+}
+
+func newQuietBuffer() *quietBuffer { return &quietBuffer{done: make(chan struct{})} }
+
+func (b *quietBuffer) Read([]byte) (int, error) {
+	<-b.done
+	return 0, io.EOF
+}
+
+func (b *quietBuffer) Write(p []byte) (int, error) { return len(p), nil }
+
+func (b *quietBuffer) Close() error {
+	b.once.Do(func() { close(b.done) })
+	return nil
+}
+
+// closedBuffer holds nothing and takes nothing: what Pion makes after the cap
+// closed the connection.
+type closedBuffer struct{}
+
+func (closedBuffer) Read([]byte) (int, error)  { return 0, io.EOF }
+func (closedBuffer) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
+func (closedBuffer) Close() error              { return nil }

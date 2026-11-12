@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/pion/logging"
 	"github.com/pion/rtcp"
+	"github.com/pion/transport/v5/packetio"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -21,9 +22,9 @@ import (
 // report: each of its up to 31 blocks), until the connection closes. Before
 // the fix a member grew the SFU's heap by about 2.7 KB per such SSRC without
 // a cap, and by about 320 KB per SSRC it kept sending to (the 100 KB buffer
-// nobody reads, plus a queue slot per packet). The SFU now caps both: what one
-// stream holds (srtpBuffer) and how many unknown SSRCs a connection may name
-// before it is closed (rtcpStreamCap).
+// nobody reads, plus a queue slot per packet). The SFU now caps what one stream
+// holds, gives the streams of SSRCs it does not read no buffer, and closes a
+// connection that names too many unknown SSRCs (rtcpStreamCap).
 
 // The heap the flood tests allow: what one stream may hold when it is filled
 // (measured about 20 KB), and what a flooded connection may cost (65 streams
@@ -128,11 +129,9 @@ func TestUnhandledSRTCPStreamsAreCapped(t *testing.T) {
 		sent := f.flood(member, 0x40000000, batch)
 		time.Sleep(time.Second)
 		grew := int64(heapAfterGC()) - int64(heapBase)
-		peer.rtcp.mu.Lock()
-		unknown, total := peer.rtcp.unknown, peer.rtcp.total
-		peer.rtcp.mu.Unlock()
-		t.Logf("%s: named %d of %d unknown SSRCs before the connection stopped; Pion kept %d streams "+
-			"(%d unknown), heap +%d bytes", f.name, sent, batch, total, unknown, grew)
+		unknown, buffered, _ := peer.rtcp.counts()
+		t.Logf("%s: named %d of %d unknown SSRCs before the connection stopped; Pion kept %d unknown "+
+			"streams, %d with a buffer, heap +%d bytes", f.name, sent, batch, unknown, buffered, grew)
 		writeFloodProfile()
 		if grew > maxBytesPerFloodedConn {
 			t.Fatalf("%s: one flooding connection grew the heap by %d bytes, over the %d it may cost; "+
@@ -188,31 +187,79 @@ func TestFilledUnhandledSRTCPStreamsStaySmall(t *testing.T) {
 	}
 }
 
-// TestRTCPStreamCapForgivesWhatTheSFUSent: late reports for tracks the SFU
-// stopped sending count only against the large cap; any other SSRC against
-// the small one.
-func TestRTCPStreamCapForgivesWhatTheSFUSent(t *testing.T) {
+// counts reads the cap's counters.
+func (c *rtcpStreamCap) counts() (unknown, buffered, quiet int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.unknown), c.buffered, c.quiet
+}
+
+// TestRTCPStreamCapHoldsWithoutPionsLogLine stands for a Pion whose log line
+// changed: the buffer factory alone still closes a flooding connection.
+func TestRTCPStreamCapHoldsWithoutPionsLogLine(t *testing.T) {
+	pionUnhandledRTCPChanged.Store(true)
+	t.Cleanup(func() { pionUnhandledRTCPChanged.Store(false) })
+	s := newTestSFU(t)
+	room := uuid.New()
+	member := joinLoneMember(t, s, room)
+	peer := member.peer
+	heapBase := heapAfterGC()
+	sent := floodPLIs(member, 0x40000000, 4*maxBufferedRTCPStreams)
+	time.Sleep(time.Second)
+	grew := int64(heapAfterGC()) - int64(heapBase)
+	unknown, buffered, _ := peer.rtcp.counts()
+	t.Logf("named %d unknown SSRCs: %d counted by the log, %d buffered streams, heap +%d bytes", sent, unknown, buffered, grew)
+	if unknown != 0 {
+		t.Fatalf("the log hook counted %d streams; the test must run without it", unknown)
+	}
+	waitSFUCondition(t, "flooding connection closed", func() bool {
+		r := s.Room(room)
+		return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && (r == nil || r.GetPeer(member.id) == nil)
+	})
+	if limit := int64(maxBufferedRTCPStreams) * 4 << 10; grew > limit {
+		t.Fatalf("heap grew by %d bytes, over %d for %d buffered streams", grew, limit, maxBufferedRTCPStreams)
+	}
+}
+
+// TestRTCPStreamCapSortsStreams checks, on a bare connection that sends one
+// track, which streams get a buffer and which count against which cap.
+func TestRTCPStreamCapSortsStreams(t *testing.T) {
 	c, sentSSRC := newTestRTCPCap(t)
-	for range maxRTCPStreams - maxUnknownRTCPStreams {
-		c.unhandled(sentSSRC)
+	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\na=ssrc:7 msid:a b\r\n" +
+		"a=ssrc:8 cname:x\r\na=ssrc:9 cname:x\r\na=ssrc:10 cname:x\r\na=ssrc:11 cname:x\r\n")
+	if _, ok := c.buffer(packetio.RTCPBufferPacket, 7).(*quietBuffer); !ok {
+		t.Error("a declared SSRC got a buffer")
+	}
+	if _, ok := c.buffer(packetio.RTCPBufferPacket, 11).(*rtcpBuffer); !ok {
+		t.Error("the fifth SSRC of one m-line was taken as declared")
+	}
+	sent := c.buffer(packetio.RTCPBufferPacket, sentSSRC)
+	if _, ok := sent.(*rtcpBuffer); !ok {
+		t.Fatal("the SSRC of a track the SFU sends got no buffer")
+	}
+	_ = sent.Close() // the SFU stopped sending it
+	if _, ok := c.buffer(packetio.RTCPBufferPacket, sentSSRC).(*quietBuffer); !ok {
+		t.Error("the late reports of a stopped track got a buffer")
+	}
+	for _, ssrc := range []uint32{7, 8, sentSSRC, 12} {
+		c.unhandled(ssrc)
+	}
+	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\na=ssrc:12 cname:x\r\n")
+	if unknown, buffered, quiet := c.counts(); unknown != 0 || buffered != 1 || quiet != 2 {
+		t.Fatalf("unknown %d, buffered %d, quiet %d; want 0, 1 (SSRC 11), 2", unknown, buffered, quiet)
 	}
 	for i := range maxUnknownRTCPStreams {
-		c.unhandled(uint32(i + 1))
+		c.unhandled(uint32(1000 + i))
 	}
 	if c.closing.Load() {
-		t.Fatalf("closed at %d streams, %d unknown", c.total, c.unknown)
+		t.Fatalf("closed at %d unknown streams", maxUnknownRTCPStreams)
 	}
-	c.unhandled(sentSSRC)
+	c.unhandled(5000)
 	if !c.closing.Load() {
-		t.Fatalf("still open at %d streams, over the cap of %d", c.total, maxRTCPStreams)
+		t.Fatalf("still open past %d unknown streams", maxUnknownRTCPStreams)
 	}
-
-	c, _ = newTestRTCPCap(t)
-	for i := range maxUnknownRTCPStreams + 1 {
-		c.unhandled(uint32(i + 1))
-	}
-	if !c.closing.Load() {
-		t.Fatalf("still open at %d unknown SSRCs, over the cap of %d", c.unknown, maxUnknownRTCPStreams)
+	if _, ok := c.buffer(packetio.RTCPBufferPacket, 6000).(closedBuffer); !ok {
+		t.Error("a stream made while the connection closes got a buffer")
 	}
 	pc := c.pc.Load()
 	waitSFUCondition(t, "connection closed", func() bool {
@@ -237,8 +284,8 @@ func newTestRTCPCap(t *testing.T) (*rtcpStreamCap, uint32) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := &rtcpStreamCap{logs: logging.NewDefaultLoggerFactory(), log: joinLogger(uuid.New(), "")}
+	c := newRTCPStreamCap(logging.NewDefaultLoggerFactory(), joinLogger(uuid.New(), ""))
 	c.bind(pc)
-	c.sent(sender)
+	c.sentTrack(sender)
 	return c, uint32(sender.GetParameters().Encodings[0].SSRC)
 }
