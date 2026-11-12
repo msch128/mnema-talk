@@ -208,6 +208,9 @@ func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID,
 // current one, under the message's row lock, which serializes all changes to
 // one message so concurrent adds cannot overshoot the limits.
 func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]core.ReactionSummary, bool, error) {
+	// One emoji with and without U+FE0F is one reaction: it is stored in one
+	// form, and rows an older server stored in the other match it by key.
+	emoji = core.ReactionForm(emoji)
 	changed := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// The row lock serializes toggles on one message, so concurrent
@@ -242,15 +245,17 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 func reactionPresent(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) (bool, error) {
 	var present bool
 	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
-		messageID, userID, emoji).Scan(&present); err != nil {
+		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND `+reactionKeySQL+` = $3)`,
+		messageID, userID, core.ReactionKey(emoji)).Scan(&present); err != nil {
 		return false, fmt.Errorf("read reaction: %w", err)
 	}
 	return present, nil
 }
 
+// removeReaction takes back userID's reaction in every form it is stored in.
 func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND `+reactionKeySQL+` = $3`,
+		messageID, userID, core.ReactionKey(emoji)); err != nil {
 		return fmt.Errorf("remove reaction: %w", err)
 	}
 	return nil
@@ -292,8 +297,9 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 	var mine, distinct int
 	var emojiPresent bool
 	if err := tx.QueryRow(ctx, `
-		SELECT COUNT(*) FILTER (WHERE user_id = $2), COUNT(DISTINCT emoji), COALESCE(BOOL_OR(emoji = $3), FALSE)
-		FROM message_reactions WHERE message_id = $1`, messageID, userID, emoji).Scan(&mine, &distinct, &emojiPresent); err != nil {
+		SELECT COUNT(DISTINCT `+reactionKeySQL+`) FILTER (WHERE user_id = $2), COUNT(DISTINCT `+reactionKeySQL+`),
+		       COALESCE(BOOL_OR(`+reactionKeySQL+` = $3), FALSE)
+		FROM message_reactions WHERE message_id = $1`, messageID, userID, core.ReactionKey(emoji)).Scan(&mine, &distinct, &emojiPresent); err != nil {
 		return fmt.Errorf("count reactions: %w", err)
 	}
 	if mine >= MaxReactionsPerUser || (!emojiPresent && distinct >= MaxEmojiPerMessage) {

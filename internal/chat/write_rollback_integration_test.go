@@ -257,7 +257,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 		}
 	})
 	t.Run("reaction count", func(t *testing.T) {
-		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "COUNT(*) FILTER (WHERE user_id") }, false)
+		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, ") FILTER (WHERE user_id = $2)") }, false)
 		_, err := messages.ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("reaction count cancellation=%v", err)
