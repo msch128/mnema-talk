@@ -81,12 +81,9 @@ func (s *Service) sendScheduled(ctx context.Context) error {
 // it into a failed draft after maxSendAttempts tries.
 func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 	err := s.post(ctx, d)
-	var stored *messages.StoredError
 	switch {
 	case err == nil:
 		s.notify(d.user, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"})
-	case errors.As(err, &stored): // sent; the channel sees it on its next load
-		slog.Warn("scheduled: load sent message", "err", stored.Err)
 	case errors.Is(err, errSuperseded):
 	default:
 		var apiErr *httpx.APIError

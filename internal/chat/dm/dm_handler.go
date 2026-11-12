@@ -131,6 +131,12 @@ func (a *API) loadDM(r *http.Request, id uuid.UUID) (DirectMessage, error) {
 	if err != nil {
 		return DirectMessage{}, err
 	}
+	return a.firstDM(r, dms)
+}
+
+// firstDM is the one conversation of a ListDMs read for the caller, with
+// what is worked out for them besides.
+func (a *API) firstDM(r *http.Request, dms []DirectMessage) (DirectMessage, error) {
 	if len(dms) == 0 {
 		return DirectMessage{}, errDMNotFound
 	}

@@ -21,16 +21,20 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
-	return editMessage(ctx, p, online, messageID, userID, content, nil)
+	_, err := editMessage(ctx, p, online, messageID, userID, content, nil)
+	return err
 }
 
-// editMessage is EditMessage with audited, if set, run in the edit's
-// transaction after the new text is stored (the audit entry).
-func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string, audited func(pgx.Tx) error) error {
+// editMessage is EditMessage returning the edited message, read in the
+// edit's transaction: an error means that nothing was changed. audited, if
+// set, runs in that transaction after the new text is stored (the audit
+// entry).
+func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string, audited func(pgx.Tx) error) (*core.Message, error) {
 	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var msg *core.Message
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
 		if err != nil {
@@ -41,12 +45,17 @@ func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 				return err
 			}
 		}
-		return RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil)
+		if msg, err = recordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil); err != nil || msg != nil {
+			return err
+		}
+		msg, err = loadStored(ctx, tx, messageID, nil)
+		return err
 	})
-	if err == nil {
-		pending.Commit(ctx, messageID)
+	if err != nil {
+		return nil, err
 	}
-	return err
+	pending.Commit(ctx, messageID)
+	return msg, nil
 }
 
 // EditMessageTx checks that userID may edit the message, keeps the replaced
@@ -232,34 +241,44 @@ func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID,
 // one message so concurrent adds cannot overshoot the limits.
 func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]core.ReactionSummary, bool, error) {
 	changed := false
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// The row lock serializes toggles on one message, so concurrent
-		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
-		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
-		channel, err := lockMessage(ctx, tx, messageID)
-		if err != nil {
+	var reactions []core.ReactionSummary
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) (err error) {
+		if changed, err = applyReaction(ctx, p, tx, messageID, userID, emoji, canAdd, target); err != nil {
 			return err
 		}
-		present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
-		if err != nil || target(present) == present {
-			return err
-		}
-		changed = true
-		if present {
-			err = removeReaction(ctx, tx, messageID, userID, emoji)
-		} else {
-			err = addReactionAs(ctx, tx, messageID, userID, emoji, canAdd)
-		}
-		if err != nil {
-			return err
-		}
-		return recordReactions(ctx, p, tx, channel, messageID)
+		// Read in the transaction: an error means that nothing changed, so
+		// a retry of the toggle does not undo a change that answered 500.
+		reactions, err = ReactionSummary(ctx, tx, messageID)
+		return err
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	reactions, err := ReactionSummary(ctx, p, messageID)
-	return reactions, changed, err
+	return reactions, changed, nil
+}
+
+// applyReaction is changeReaction's change in tx; it says whether there was one.
+func applyReaction(ctx context.Context, p *db.Pool, tx pgx.Tx, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) (bool, error) {
+	// The row lock serializes toggles on one message, so concurrent
+	// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
+	// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
+	channel, err := lockMessage(ctx, tx, messageID)
+	if err != nil {
+		return false, err
+	}
+	present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
+	if err != nil || target(present) == present {
+		return false, err
+	}
+	if present {
+		err = removeReaction(ctx, tx, messageID, userID, emoji)
+	} else {
+		err = addReactionAs(ctx, tx, messageID, userID, emoji, canAdd)
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, recordReactions(ctx, p, tx, channel, messageID)
 }
 
 func reactionPresent(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) (bool, error) {

@@ -199,10 +199,7 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	}
 	userID := auth.UserFrom(r.Context()).ID
 	audited := func(tx pgx.Tx) error { return a.auditEdit(r.Context(), tx, msgID) }
-	if err := editMessage(ctx, a.DB, a.Online, msgID, userID, content, audited); err != nil {
-		return err
-	}
-	msg, err := GetMessage(r.Context(), a.DB, msgID)
+	msg, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content, audited)
 	if err != nil {
 		return err
 	}

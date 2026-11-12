@@ -451,11 +451,12 @@ var crashOps = []crashOp{
 // and class (partialClass). It may only shrink: an entry that no longer
 // reproduces fails the test, as does a partial write that is not listed.
 var knownPartial = map[string]string{
-	// H-L7-04, left open by decision (doc/moderation.md "Audit log"): the
-	// admin middleware records a request below /api/admin after its handler
-	// committed, outside the handler's transaction, so a failed or killed
-	// write leaves a change that answered success with no entry. The other
-	// swept operations write their entry in the change's transaction.
+	// H-L7-04, left open by decision (doc/moderation.md "When an entry can be
+	// missing"): the admin middleware records a request below /api/admin
+	// after its handler committed, outside the handler's transaction, so a
+	// failed or killed write leaves a change that answered success with no
+	// entry. The other swept operations write their entry in the change's
+	// transaction, and none reads its answer back after the commit (H-L7-05).
 	"create a channel | audit":  "H-L7-04",
 	"create a role | audit":     "H-L7-04",
 	"assign a role | audit":     "H-L7-04",
@@ -465,17 +466,6 @@ var knownPartial = map[string]string{
 	"delete a role | audit":     "H-L7-04",
 	"create a webhook | audit":  "H-L7-04",
 	"create a category | audit": "H-L7-04",
-	// H-L7-05: the result is read back after the commit; a failed read
-	// answers 500 for a change that was made.
-	"post a message | error after commit":       "H-L7-05",
-	"start a conversation | error after commit": "H-L7-05",
-	"edit a message | error after commit":       "H-L7-05",
-	"react to a message | error after commit":   "H-L7-05",
-	"comment on an event | error after commit":  "H-L7-05",
-	"open a forum post | error after commit":    "H-L7-05",
-	"answer an event | error after commit":      "H-L7-05",
-	// The webhook's token is only in the answer of its creation.
-	"create a webhook | error after commit": "H-L7-05",
 }
 
 func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {
