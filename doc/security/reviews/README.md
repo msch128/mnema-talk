@@ -31,7 +31,7 @@ audit.
 
 | Report | Change | Subject |
 |---|---|---|
-| [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; its should-fix findings S1 to S4 were fixed in the same pull request |
+| [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; two rounds: the should-fix findings S1 to S4 of the first were fixed in the same pull request and checked in the second |
 
 Not kept from the hardening run (lost with a temporary directory before they were copied): the
 review of #768 (permission checks refuse without a service), the first two
