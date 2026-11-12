@@ -367,6 +367,47 @@ var crashOps = []crashOp{
 			return admin.post("/api/events/"+ev.ID+"/comments", map[string]any{"content": "count me in"})
 		}
 	}},
+	{"ban a member", func(a *app) func() response {
+		admin := a.seedAdmin()
+		alice := a.register(admin, "alice")
+		return func() response {
+			return admin.post("/api/admin/users/"+alice.user.ID.String()+"/ban", map[string]any{"reason": "x"})
+		}
+	}},
+	{"time out a member", func(a *app) func() response {
+		admin := a.seedAdmin()
+		alice := a.register(admin, "alice")
+		return func() response {
+			return admin.post("/api/admin/users/"+alice.user.ID.String()+"/timeout", map[string]any{"duration_seconds": 600, "reason": "x"})
+		}
+	}},
+	{"change the password", func(a *app) func() response {
+		admin := a.seedAdmin()
+		alice := a.register(admin, "alice")
+		return func() response {
+			return alice.put("/api/auth/password", map[string]string{"current_password": memberPassword, "new_password": "another-password-456"})
+		}
+	}},
+	{"open a forum post", func(a *app) func() response {
+		admin := a.seedAdmin()
+		forum := a.createChannel(admin, "board", "forum")
+		return func() response {
+			return admin.post("/api/channels/"+forum.String()+"/posts", map[string]any{"title": "post", "content": "body"})
+		}
+	}},
+	{"answer an event", func(a *app) func() response {
+		admin := a.seedAdmin()
+		res := admin.post("/api/events", map[string]any{"title": "Raid", "description": "", "start_time": time.Now().Add(48 * time.Hour), "location": "Hall"})
+		var ev struct{ ID string }
+		res.decode(a.t, &ev)
+		return func() response {
+			return admin.put("/api/events/"+ev.ID+"/rsvp", map[string]string{"response": "going"})
+		}
+	}},
+	{"create an invite", func(a *app) func() response {
+		admin := a.seedAdmin()
+		return func() response { return admin.post("/api/admin/invites", map[string]any{}) }
+	}},
 	{"create a role", func(a *app) func() response {
 		admin := a.seedAdmin()
 		return func() response {
@@ -398,6 +439,8 @@ var knownPartial = map[string]string{
 	"create an event | audit":         "H-L7-04",
 	"create a role | audit":           "H-L7-04",
 	"assign a role | audit":           "H-L7-04",
+	"ban a member | audit":            "H-L7-04",
+	"create an invite | audit":        "H-L7-04",
 	// H-L7-05: the result is read back after the commit; a failed read
 	// answers 500 for a change that was made (a wiki page also loses its
 	// audit entry).
@@ -407,6 +450,8 @@ var knownPartial = map[string]string{
 	"edit a message | error after commit":       "H-L7-05",
 	"react to a message | error after commit":   "H-L7-05",
 	"comment on an event | error after commit":  "H-L7-05",
+	"open a forum post | error after commit":    "H-L7-05",
+	"answer an event | error after commit":      "H-L7-05",
 }
 
 func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {
@@ -417,8 +462,9 @@ func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {
 	seen := map[string]bool{}
 	ran := map[string]bool{}
 	for _, op := range ops {
-		ran[op.name] = true
 		t.Run(op.name, func(t *testing.T) {
+			// Only operations that ran (not filtered out by -run) count.
+			ran[op.name] = true
 			for _, p := range sweepCrashPoints(t, op) {
 				finding, ok := knownPartial[p.key]
 				if !ok {
