@@ -13,7 +13,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"message.delete": VisChannel, "message.edit": VisChannel, "message.pin": VisChannel, "message.unpin": VisChannel,
 		"message.edit_history_view": VisChannel, "poll.end": VisChannel,
 		"moderation.bulk_delete": VisChannel,
-		"voice.join":             VisChannel, "voice.leave": VisChannel,
+		"voice.join":             VisChannel, "voice.leave": VisChannel, "voice.disconnect": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
 		"auth.register": VisPrivileged, "auth.password_change": VisPrivileged, "auth.logout_all": VisPrivileged, "auth.session_revoke": VisPrivileged, "auth.sessions_revoke_others": VisPrivileged,
 		"auth.two_factor_enabled": VisPrivileged, "auth.two_factor_disabled": VisPrivileged, "auth.two_factor_failed": VisPrivileged, "auth.two_factor_alert": VisPrivileged,

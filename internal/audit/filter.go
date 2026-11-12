@@ -87,6 +87,7 @@ func (f *filter) parseRange(q url.Values) error {
 // VisPrivileged is hidden, VisChannel shown only for channels the reader may
 // view right now (an entry without a channel is hidden), VisAuditors shown.
 // The catch-all row is VisPrivileged, so an action without a row is hidden.
+// One kind of stored row is classed before the table: see legacyTalkRemoval.
 func (f *filter) restrictTo(viewer Viewer) {
 	if viewer.Privileged {
 		return
@@ -94,12 +95,28 @@ func (f *filter) restrictTo(viewer Viewer) {
 	f.args = append(f.args, viewer.Channels)
 	channels := "$" + strconv.Itoa(len(f.args))
 	var b strings.Builder
-	b.WriteString("CASE")
+	b.WriteString("CASE" + legacyTalkRemoval(channels))
 	for _, c := range Classes {
 		b.WriteString(" WHEN " + f.matches(c.Pattern) + " THEN " + shownSQL(c.Vis, channels))
 	}
 	b.WriteString(" ELSE FALSE END")
 	f.where = append(f.where, b.String())
+}
+
+// legacyTalkRemoval classes the rows the per-Talk removal wrote before it
+// became voice.disconnect (H-L6-03): user.talk_kick with the Talk in
+// details.channel_id and no channel_id column. The admin-wide kick, which
+// keeps user.talk_kick, never has that key at the top of its details (they
+// hold path, params, request, before, after and changes), so such a row is a
+// per-Talk removal and is shown like voice.disconnect: only to readers who can
+// view that Talk. audit_log is immutable, so the rows are classed when read.
+// The id is compared as a uuid; one that is not a uuid is never shown, and the
+// inner CASE keeps the cast from failing the whole listing.
+func legacyTalkRemoval(channels string) string {
+	const id = "details->>'channel_id'"
+	return " WHEN action = 'user.talk_kick' AND " + id + " IS NOT NULL THEN COALESCE(CASE WHEN " + id +
+		" ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'" +
+		" THEN CAST(" + id + " AS uuid) = ANY(" + channels + ") END, FALSE)"
 }
 
 // matches is the SQL of matchLike: a literal, or a literal prefix and %.

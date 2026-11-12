@@ -29,7 +29,10 @@ type Class struct {
 // source); the last row, the catch-all, is the narrowest class, so an action
 // that was forgotten here is hidden from everyone but the Owner and
 // Administrators instead of shown to every auditor. Rows of the auditors class
-// name each action on its own: an action is only wide on purpose.
+// name each action on its own: an action is only wide on purpose. One kind of
+// stored row is classed by the listing before this table: user.talk_kick rows
+// written by older versions for a removal from one Talk (filter.go,
+// legacyTalkRemoval), which today is voice.disconnect.
 var Classes = slices.Concat(
 	[]Class{
 		{"webhook.%", VisPrivileged, "webhook addresses and tokens are credentials"},

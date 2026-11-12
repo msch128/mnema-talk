@@ -66,7 +66,7 @@ func (h *API) finishTalkKick(w http.ResponseWriter, err error, kicked bool) erro
 // disconnectFromTalk handles POST /api/channels/{id}/voice/{userID}/disconnect.
 //
 // @Summary Disconnect a member from a Talk
-// @Description Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as user.talk_kick.
+// @Description Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as voice.disconnect, read only by auditors who can view the Talk.
 // @ID disconnectFromTalk
 // @Tags Channels
 // @Produce json
@@ -101,8 +101,11 @@ func (h *API) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
 		return err
 	})
 	if err == nil && kicked {
-		// Outside the admin area, so the audit middleware does not see it.
-		e := audit.Entry{Action: "user.talk_kick", TargetType: "user", TargetID: id.String(), Details: map[string]any{"channel_id": ch.String()}}
+		// Outside the admin area, so the audit middleware does not see it. It
+		// says who was in which Talk, so it is a voice.* entry with its Talk as
+		// the channel: auditors who cannot view the Talk do not read it, like
+		// voice.join (H-L6-03). user.talk_kick is the admin-wide kick's.
+		e := audit.Entry{Action: "voice.disconnect", TargetType: "user", TargetID: id.String(), ChannelID: &ch, Details: map[string]any{"channel_id": ch.String()}}
 		if u, uerr := auth.GetUser(r.Context(), h.Sessions.DB, id); uerr == nil {
 			e.TargetName = u.Username
 		}
