@@ -26,7 +26,10 @@ func Verify(data []byte, keys []ed25519.PublicKey) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Only now is the manifest parsed.
+	// Only now is the manifest parsed, as strictly as the desktop clients do.
+	if err := strictDocument(manifest, strictManifest); err != nil {
+		return nil, fmt.Errorf("manifest: %w", err)
+	}
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(manifest))
 	dec.DisallowUnknownFields()

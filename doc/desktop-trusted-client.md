@@ -94,6 +94,17 @@ The signature covers the manifest bytes as published. The client verifies
 the signature before it parses the manifest, so a hostile manifest never
 reaches the parser unauthenticated.
 
+The manifest and the trust statement (below) are read as `serde_json` reads
+them with unknown fields denied: one JSON object in UTF-8 without a byte order
+mark and with nothing after it, exactly the documented fields, spelled exactly
+and all present (only `max_version` may be missing), each of its type (never
+`null`; integers without sign, fraction or exponent), no key twice, no lone
+surrogate in a string, and times not before 1970. A `max_version` key is read
+like Rust's `u32` parse (`01` and `+1` are API 1). `webbundle verify` and
+`webbundle trust verify` read them the same way; `trust verify` also refuses
+two keys naming the same API (such as `1` and `01`), which the two clients
+would resolve differently. The tool writes only the canonical spelling.
+
 ### Signing
 
 `cmd/webbundle` (package `internal/webbundle`, plain `crypto/ed25519`) has
