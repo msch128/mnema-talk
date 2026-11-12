@@ -102,7 +102,7 @@ func (h *Handler) listComments(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Comment on an event
-// @Description Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500, one member at most 50 of them). Needs Send messages (in the event's Talk when it has one: a timeout, unaccepted rules and a new member's hold refuse it). Comments stay open on a completed event and close on a cancelled one (409). Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.
+// @Description Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500, one member at most 50 of them). Needs Send messages (in the event's Talk when it has one: a timeout, unaccepted rules and a new member's hold refuse it). Comments stay open on a completed event and close on a cancelled one (409). Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Automod screens the text like a message in the event's Talk (a blocking rule answers 400). Rate limited per member.
 // @ID createCommunityEventComment
 // @Tags Events
 // @Accept json
@@ -129,11 +129,16 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	pending, err := h.screenComment(r, ev, uuid.Nil, req.Content)
+	if err != nil {
+		return err
+	}
 	user := auth.UserFrom(r.Context())
 	c, err := h.Store.CreateComment(r.Context(), ev.ID, user.ID, req.Content)
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	h.broadcastComment(ev, CommentPayload{Action: CommentCreated, EventID: ev.ID, CommentID: c.ID, Comment: &c})
 	h.notifyCommentAsync(r.Context(), ev, c)
 	httpx.WriteJSON(w, http.StatusCreated, c)
@@ -141,7 +146,7 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Edit a comment
-// @Description Changes the text of the caller's own comment (shown as edited). Needs Send messages like a new comment. Rate limited per member.
+// @Description Changes the text of the caller's own comment (shown as edited). Needs Send messages like a new comment. Automod screens the new text like an edited message (400). Rate limited per member.
 // @ID updateCommunityEventComment
 // @Tags Events
 // @Accept json
@@ -172,10 +177,15 @@ func (h *Handler) updateComment(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	pending, err := h.screenComment(r, ev, id, req.Content)
+	if err != nil {
+		return err
+	}
 	c, err := h.Store.UpdateComment(r.Context(), ev.ID, id, auth.UserFrom(r.Context()).ID, req.Content)
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	h.broadcastComment(ev, CommentPayload{Action: CommentUpdated, EventID: ev.ID, CommentID: c.ID, Comment: &c})
 	httpx.WriteJSON(w, http.StatusOK, c)
 	return nil

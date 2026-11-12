@@ -134,7 +134,7 @@ func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Create a community event
-// @Description Creates an event. With recurrence the event is the first occurrence of a series that repeats weekly, every two weeks or monthly (at the same wall-clock time in the given time zone; the later occurrences are created up to 60 days ahead and then by the server as time passes, at most 200 and not past until). Requires ManageEvents permission. Location must be either a Talk voice channel or free text.
+// @Description Creates an event. With recurrence the event is the first occurrence of a series that repeats weekly, every two weeks or monthly (at the same wall-clock time in the given time zone; the later occurrences are created up to 60 days ahead and then by the server as time passes, at most 200 and not past until). Requires ManageEvents permission. Location must be either a Talk voice channel or free text. Automod screens the title, description and location like a message in the event's Talk (a blocking rule answers 400).
 // @ID createCommunityEvent
 // @Tags Events
 // @Accept json
@@ -158,8 +158,16 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.validateEventPayload(r, req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location); err != nil {
 		return err
 	}
-	ev, err := h.createOrStartSeries(r, req, user.ID)
+	loc := ""
+	if req.Location != nil {
+		loc = *req.Location
+	}
+	pending, err := h.screen(r, req.ChannelID, req.Title, false, req.Title, req.Description, loc)
 	if err != nil {
+		return err
+	}
+	ev, err := h.createOrStartSeries(r, req, user.ID)
+	if err := commitAfter(r, pending, err); err != nil {
 		return err
 	}
 	h.auditRecord(r, "event.create", ev)
@@ -196,7 +204,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Update a community event
-// @Description Updates an event. Requires ManageEvents permission. "end_time": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status "cancelled" (same as POST cancel) or the current status, and any other change is refused with 409.
+// @Description Updates an event. Requires ManageEvents permission. "end_time": null removes the end time; an event without an end counts as over two hours after it starts. Moving the start or end re-derives the status of an event that is not cancelled. The status follows the event's times: PATCH accepts status "cancelled" (same as POST cancel) or the current status, and any other change is refused with 409. Automod screens the title, description and location the edit sets like a message (a blocking rule answers 400).
 // @ID updateCommunityEvent
 // @Tags Events
 // @Accept json
@@ -243,11 +251,15 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
 	}
+	pending, err := h.screenEdit(r, m, req)
+	if err != nil {
+		return err
+	}
 	if following {
-		return h.updateFollowing(w, r, ev, req, cancelling)
+		return commitAfter(r, pending, h.updateFollowing(w, r, ev, req, cancelling))
 	}
 	updated, err := h.applyUpdate(r, ev, req, cancelling)
-	if err != nil {
+	if err := commitAfter(r, pending, err); err != nil {
 		return err
 	}
 	h.broadcast(updated)

@@ -386,7 +386,16 @@ and that is remembered.
 Automod covers every way a member's message is created: plain messages,
 uploads, thread replies, polls, forwards, slash command replies and
 **edits** (an edit that breaks a blocking rule is refused and the message stays
-as it was).
+as it was). It screens this other text the same way, with the same refusal,
+exemptions and actions: forum post titles and their edits, a forum's tags
+(name and emoji) and guidelines, the new name of a temporary Talk, **comments
+under a community event** and their edits, and an event's **title, description
+and location** when it is created or an edit sets them (*Manage events* does
+not exempt; the event's Talk, if it has one, counts as the channel for exempt
+channels). Tags, guidelines, Talk names and event text are not messages, so
+their queue entries have no message id; an entry about event text names the
+event's title as the place. Other text, such as profiles, wiki pages and the
+names of an event's roles, is not screened.
 
 ### Direct messages
 
