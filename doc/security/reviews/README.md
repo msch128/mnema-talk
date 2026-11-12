@@ -32,6 +32,7 @@ audit.
 | Report | Change | Subject |
 |---|---|---|
 | [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; two rounds: the should-fix findings S1 to S4 of the first were fixed in the same pull request and checked in the second |
+| [790-sweep](2026-11/790-sweep.md) | the nightly simulator sweep | the settle table of the 43 failing seeds, the sweep of seeds 1..400 with a failure budget, a test for the key package renewal rule; its two should-fix findings were fixed in the same pull request |
 
 Not kept from the hardening run (lost with a temporary directory before they were copied): the
 review of #768 (permission checks refuse without a service), the first two
