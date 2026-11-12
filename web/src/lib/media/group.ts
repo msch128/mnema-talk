@@ -317,7 +317,11 @@ export class MediaGroup extends GroupMerge {
       this.previousEpoch = minePrevious
       return this.recoverNow()
     }
-    if (renewal) this.selfUpdate = { ...saved, sender: from, held: [...saved.held, ...processed.consumed] }
+    if (renewal) {
+      this.selfUpdate = { ...saved, sender: from, held: [...saved.held, ...processed.consumed] }
+      // The renewal that won is one taken like any other: its sender may not force another epoch at once.
+      this.updates.set(from, clock.now())
+    }
     this.alive.set(from, clock.now())
     this.wipeRejected(mine)
     return this.step()
