@@ -220,6 +220,7 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 		return false
 	}
 	delete(peer.addTrackFailed, trackID)
+	peer.rtcp.sent(sender)
 	if vt != nil {
 		if !r.attachViewer(peer, trackID, info, vt) {
 			_ = peer.PC.RemoveTrack(sender)

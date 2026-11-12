@@ -43,10 +43,10 @@ jobs:
 
   sfu:
     # Deep SFU growth probes (lane 8, shape 7): env-gated tests that are too
-    # heavy for the pull request pipeline. TestUnhandledSRTCPStreamsGrowWithoutCap
-    # is a known failure (inverse assertion) that stands red the day a cap or a
-    # drain bounds Pion's unhandled SRTCP read streams; see H-L8-07. A failed run
-    # of the whole job is the alert.
+    # heavy for the pull request pipeline. TestUnhandledSRTCPStreamsAreCapped
+    # floods two member connections with 50 000 unknown SSRCs each and holds
+    # each to the cap on unread SRTCP streams (H-L8-07). A failed run of the
+    # whole job is the alert.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -57,10 +57,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - name: Unhandled SRTCP SSRC growth probe
+      - name: Unhandled SRTCP SSRC cap
         env:
           SFU_SSRC_FLOOD_DEEP: "1"
-        run: go test ./internal/sfu/ -run TestUnhandledSRTCPStreamsGrowWithoutCap -count=1 -timeout 15m -v
+        run: go test ./internal/sfu/ -run TestUnhandledSRTCPStreamsAreCapped -count=1 -timeout 15m -v
 
   links:
     runs-on: ubuntu-latest

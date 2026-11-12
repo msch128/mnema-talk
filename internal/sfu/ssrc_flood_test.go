@@ -9,74 +9,34 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/pion/logging"
 	"github.com/pion/rtcp"
+	"github.com/pion/webrtc/v4"
 )
 
-// Lane 8 (shape 7: bounded in the test, unbounded outside): a member's
-// server-side SFU connection keeps one Pion SRTCP read stream for every
-// distinct media SSRC it names in authenticated SRTCP that the SFU never
-// opened, with no cap on the number of streams.
-//
-// When a peer's PeerConnection receives SRTCP whose destination SSRC was not
-// declared in the SDP, Pion's PeerConnection.undeclaredRTCPMediaProcessor
-// (webrtc/v4@v4.2.26 peerconnection.go:2327) accepts the stream, logs
-// "Incoming unhandled RTCP ssrc(...)" and appends it to a slice closed only
-// when the PeerConnection closes; the srtp session also keeps it in its
-// readStreams map (srtp/v3@v3.1.3 session.go:72). Each stream is a
-// *srtp.ReadStreamSRTCP with a packetio.Buffer (capped at 100 KB each,
-// srtcpBufferSize) and a deadline. The per-buffer size is bounded; the number
-// of buffers is not. The SFU builds its API with the default SettingEngine
-// (internal/sfu/sfu_setup.go:buildAPI): no BufferFactory, no per-connection
-// SSRC cap, so nothing on our side bounds the count either.
-//
-// RTCP is authenticated with the member's own negotiated SRTCP keys, so an
-// ordinary member (no special rights) can send a report that names any
-// destination SSRC: Pion's srtp.SessionSRTCP.decrypt demuxes by the
-// destination SSRC of each report (session_srtcp.go:216) and creates a new
-// read stream per unseen one. A member who keeps one voice connection open and
-// streams receiver reports for fresh SSRCs grows the shared SFU process's heap
-// by about 2.5 KB per SSRC without bound, until its own connection ends.
-//
-// This is a known failure written as an inverse assertion: the test asserts
-// that the growth is present and UNCAPPED, so it passes while the defect
-// stands and turns red the day a cap or a drain bounds the streams. When it
-// turns red, drop this test and keep a positive bound instead. See
-// ~/mnema-hunt/findings/H-L8-07.md.
+// Lane 8 (shape 7), H-L8-07: Pion keeps one SRTCP read stream, with a buffer,
+// for every SSRC an authenticated RTCP packet of the member names that nothing
+// on the connection reads (PLI, NACK, FIR, REMB: the media SSRC; a receiver
+// report: each of its up to 31 blocks), until the connection closes. Before
+// the fix a member grew the SFU's heap by about 2.7 KB per such SSRC without
+// a cap, and by about 320 KB per SSRC it kept sending to (the 100 KB buffer
+// nobody reads, plus a queue slot per packet). The SFU now caps both: what one
+// stream holds (srtpBuffer) and how many unknown SSRCs a connection may name
+// before it is closed (rtcpStreamCap).
 
-// floodUnhandledSRTCP makes c send n distinct media SSRCs the SFU never opened,
-// as authenticated SRTCP picture-loss reports, and returns the count sent.
-func floodUnhandledSRTCP(t *testing.T, c *client, firstSSRC uint32, n int) int {
-	t.Helper()
-	const perPacket = 50
-	pkts := make([]rtcp.Packet, 0, perPacket)
-	sent := 0
-	flush := func() {
-		if len(pkts) == 0 {
-			return
-		}
-		if err := c.pc.WriteRTCP(pkts); err != nil {
-			t.Fatalf("WriteRTCP: %v", err)
-		}
-		sent += len(pkts)
-		pkts = pkts[:0]
-		time.Sleep(time.Millisecond)
-	}
-	for i := 0; i < n; i++ {
-		pkts = append(pkts, &rtcp.PictureLossIndication{
-			SenderSSRC: 0x10000000,
-			MediaSSRC:  firstSSRC + uint32(i),
-		})
-		if len(pkts) == perPacket {
-			flush()
-		}
-	}
-	flush()
-	return sent
-}
+// The heap the flood tests allow: what one stream may hold when it is filled
+// (measured about 20 KB), and what a flooded connection may cost (65 streams
+// of one report each, about 2.7 KB apiece, and those Pion makes while the
+// connection closes, which get no buffer). Without the fix the smoke batch
+// alone costs about 4 MB, the deep one about 130 MB per vector.
+const (
+	maxBytesPerFilledStream = 32 << 10
+	maxBytesPerFloodedConn  = 2 << 20
+)
 
-// ssrcFloodRounds is the number of distinct SSRCs each of the two batches
-// sends. SFU_SSRC_FLOOD_N overrides it; the deep gate raises it to 50 000 so
-// the nightly job demonstrates the quarter-gigabyte scale.
+// ssrcFloodBatch is the number of distinct SSRCs each of the two batches
+// sends. SFU_SSRC_FLOOD_N overrides it; the deep gate raises it to 50 000.
 func ssrcFloodBatch(smoke int) int {
 	if v := os.Getenv("SFU_SSRC_FLOOD_N"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
@@ -89,50 +49,109 @@ func ssrcFloodBatch(smoke int) int {
 	return smoke
 }
 
-func TestUnhandledSRTCPStreamsGrowWithoutCap(t *testing.T) {
-	if os.Getenv("SFU_CYCLE_HEAPPROFILE") != "" {
-		runtime.MemProfileRate = 1024
+// floodPLIs makes c name n distinct SSRCs from first on in picture-loss
+// reports, 50 to a packet, and returns how many it sent before its own
+// connection stopped writing.
+func floodPLIs(c *client, first uint32, n int) int {
+	pkts := make([]rtcp.Packet, 0, 50)
+	sent := 0
+	for i := 0; i < n; i += 50 {
+		pkts = pkts[:0]
+		for j := i; j < min(i+50, n); j++ {
+			pkts = append(pkts, &rtcp.PictureLossIndication{SenderSSRC: 0x10000000, MediaSSRC: first + uint32(j)})
+		}
+		if c.pc.WriteRTCP(pkts) != nil {
+			return sent
+		}
+		sent += len(pkts)
 	}
-	batch := ssrcFloodBatch(1500)
-	s := newTestSFU(t)
-	room := uuid.New()
-	// A lone member: no resident, no victim. It floods its own connection, so
-	// the growth is on the member's own server-side peer and the only shared
-	// cost is the SFU process's heap.
+	return sent
+}
+
+// floodReports is floodPLIs with receiver reports of 31 blocks each, the
+// cheapest vector, in a compound packet with a picture-loss report.
+func floodReports(c *client, first uint32, n int) int {
+	sent := 0
+	for i := 0; i < n; i += 32 {
+		rr := &rtcp.ReceiverReport{SSRC: 0x10000000}
+		for j := i; j < min(i+31, n); j++ {
+			rr.Reports = append(rr.Reports, rtcp.ReceptionReport{SSRC: first + uint32(j)})
+		}
+		pkts := []rtcp.Packet{rr}
+		if i+31 < n {
+			pkts = append(pkts, &rtcp.PictureLossIndication{SenderSSRC: 0x10000000, MediaSSRC: first + uint32(i+31)})
+		}
+		if c.pc.WriteRTCP(pkts) != nil {
+			return sent
+		}
+		sent += min(32, n-i)
+	}
+	return sent
+}
+
+// joinLoneMember connects one member who publishes a microphone and nothing
+// else: no resident, no victim.
+func joinLoneMember(t *testing.T, s *SFU, room uuid.UUID) *client {
+	t.Helper()
 	member := newClient(t)
 	member.publishAudio("mic")
 	member.join(s, room)
 	waitSFUCondition(t, "member connected", func() bool {
 		r := s.Room(room)
 		return r != nil && r.GetPeer(member.id) != nil &&
-			member.peer.PC.ConnectionState().String() == "connected"
+			member.peer.PC.ConnectionState() == webrtc.PeerConnectionStateConnected
 	})
 	time.Sleep(300 * time.Millisecond)
+	return member
+}
 
-	heapBase := heapAfterGC()
-	goBase := runtime.NumGoroutine()
+// TestUnhandledSRTCPStreamsAreCapped floods two member connections with
+// batch distinct unknown SSRCs each, one by picture-loss reports and one by
+// 31-block receiver reports in compound packets: each connection is closed
+// past the cap and costs the heap a bounded amount, however long the flood.
+func TestUnhandledSRTCPStreamsAreCapped(t *testing.T) {
+	if os.Getenv("SFU_CYCLE_HEAPPROFILE") != "" {
+		runtime.MemProfileRate = 1024
+	}
+	batch := ssrcFloodBatch(1500)
+	s := newTestSFU(t)
+	closedBefore := metrics.SFUIngressDropped.With("rtcp_ssrcs").Load()
+	floods := []struct {
+		name  string
+		flood func(*client, uint32, int) int
+	}{{"picture-loss reports", floodPLIs}, {"31-block receiver reports", floodReports}}
+	for _, f := range floods {
+		room := uuid.New()
+		member := joinLoneMember(t, s, room)
+		peer := member.peer
+		heapBase := heapAfterGC()
+		sent := f.flood(member, 0x40000000, batch)
+		time.Sleep(time.Second)
+		grew := int64(heapAfterGC()) - int64(heapBase)
+		peer.rtcp.mu.Lock()
+		unknown, total := peer.rtcp.unknown, peer.rtcp.total
+		peer.rtcp.mu.Unlock()
+		t.Logf("%s: named %d of %d unknown SSRCs before the connection stopped; Pion kept %d streams "+
+			"(%d unknown), heap +%d bytes", f.name, sent, batch, total, unknown, grew)
+		writeFloodProfile()
+		if grew > maxBytesPerFloodedConn {
+			t.Fatalf("%s: one flooding connection grew the heap by %d bytes, over the %d it may cost; "+
+				"unhandled SRTCP streams are not capped (H-L8-07)", f.name, grew, maxBytesPerFloodedConn)
+		}
+		if unknown <= maxUnknownRTCPStreams {
+			t.Fatalf("%s: only %d unknown SSRCs reached the SFU; the flood did not get past the cap, the test is void", f.name, unknown)
+		}
+		waitSFUCondition(t, "flooding connection closed", func() bool {
+			r := s.Room(room)
+			return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && (r == nil || r.GetPeer(member.id) == nil)
+		})
+	}
+	if got := metrics.SFUIngressDropped.With("rtcp_ssrcs").Load() - closedBefore; got != 2 {
+		t.Errorf("rtcp_ssrcs closures counted %d times, want once per connection (2)", got)
+	}
+}
 
-	// First batch.
-	n1 := floodUnhandledSRTCP(t, member, 0x40000000, batch)
-	time.Sleep(time.Second)
-	heap1 := heapAfterGC()
-	grow1 := int64(heap1) - int64(heapBase)
-
-	// Second batch of the same size, disjoint SSRCs: if a cap or an eviction
-	// bounded the streams, the Nth stream would be free and this batch would
-	// cost nothing. It does not.
-	n2 := floodUnhandledSRTCP(t, member, 0x80000000, batch)
-	time.Sleep(time.Second)
-	heap2 := heapAfterGC()
-	grow2 := int64(heap2) - int64(heapBase)
-	growSecond := grow2 - grow1
-	goNow := runtime.NumGoroutine()
-
-	perSSRC := grow2 / int64(n1+n2)
-	t.Logf("sent %d + %d unhandled SRTCP SSRCs on one member connection: "+
-		"heap +%d then +%d bytes (second batch +%d), %d B/SSRC, goroutines %d -> %d",
-		n1, n2, grow1, grow2, growSecond, perSSRC, goBase, goNow)
-
+func writeFloodProfile() {
 	if path := os.Getenv("SFU_CYCLE_HEAPPROFILE"); path != "" {
 		if f, err := os.Create(path); err == nil {
 			runtime.GC()
@@ -140,31 +159,86 @@ func TestUnhandledSRTCPStreamsGrowWithoutCap(t *testing.T) {
 			_ = f.Close()
 		}
 	}
+}
 
-	// The perturbation must have happened, or the test could pass by doing
-	// nothing: creating ~1500 SRTCP read streams must cost real heap.
-	const minPerturbation = 512 << 10
-	if grow1 < minPerturbation {
-		t.Fatalf("first batch of %d SSRCs grew the heap by only %d bytes; "+
-			"the flood did not reach the SFU, the measurement is void", n1, grow1)
+// TestFilledUnhandledSRTCPStreamsStaySmall fills as many unread streams as the
+// cap lets one connection keep, each with far more than it may hold.
+func TestFilledUnhandledSRTCPStreamsStaySmall(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+	member := joinLoneMember(t, s, room)
+	heapBase := heapAfterGC()
+
+	const first, streams = 0x40000000, maxUnknownRTCPStreams - 2
+	// 200 packets to each SSRC: more than the 128 a stream may queue, and
+	// the receiver reports (31 blocks, 252 bytes) more than its 16 KB.
+	for range 100 {
+		floodPLIs(member, first, streams)
+		floodReports(member, first, streams)
 	}
-	// It is not a per-connection goroutine leak: Pion runs one
-	// undeclaredRTCPMediaProcessor per connection, not one per stream.
-	if goNow > goBase+8 {
-		t.Errorf("goroutines grew from %d to %d under the SSRC flood; expected a "+
-			"flat count (the growth must be heap, not goroutines)", goBase, goNow)
+	time.Sleep(time.Second)
+	grew := int64(heapAfterGC()) - int64(heapBase)
+	t.Logf("%d unread streams filled: heap +%d bytes, %d per stream", streams, grew, grew/streams)
+	if member.peer.PC.ConnectionState() != webrtc.PeerConnectionStateConnected {
+		t.Fatalf("a connection at %d unknown SSRCs was closed; the cap is %d", streams, maxUnknownRTCPStreams)
+	}
+	if grew > streams*maxBytesPerFilledStream {
+		t.Fatalf("%d filled streams grew the heap by %d bytes (%d per stream), over %d per stream",
+			streams, grew, grew/streams, maxBytesPerFilledStream)
+	}
+}
+
+// TestRTCPStreamCapForgivesWhatTheSFUSent: late reports for tracks the SFU
+// stopped sending count only against the large cap; any other SSRC against
+// the small one.
+func TestRTCPStreamCapForgivesWhatTheSFUSent(t *testing.T) {
+	c, sentSSRC := newTestRTCPCap(t)
+	for range maxRTCPStreams - maxUnknownRTCPStreams {
+		c.unhandled(sentSSRC)
+	}
+	for i := range maxUnknownRTCPStreams {
+		c.unhandled(uint32(i + 1))
+	}
+	if c.closing.Load() {
+		t.Fatalf("closed at %d streams, %d unknown", c.total, c.unknown)
+	}
+	c.unhandled(sentSSRC)
+	if !c.closing.Load() {
+		t.Fatalf("still open at %d streams, over the cap of %d", c.total, maxRTCPStreams)
 	}
 
-	// Inverse assertion (known failure). The second, disjoint batch costs about
-	// as much heap as the first: the streams are uncapped, so every further
-	// SSRC keeps allocating. The day a per-connection cap or a drain of
-	// unhandled streams lands, growSecond collapses and this fails: then delete
-	// this test and assert the cap instead.
-	const perSSRCFloor = 1 << 10 // 1 KB; measured ~2.5 KB
-	if growSecond < int64(n2)*perSSRCFloor {
-		t.Fatalf("the second batch of %d disjoint SSRCs cost only %d bytes "+
-			"(%d B/SSRC); unhandled SRTCP streams now look bounded. The leak "+
-			"appears fixed: drop this inverse assertion and assert the cap "+
-			"(see H-L8-07).", n2, growSecond, growSecond/int64(n2))
+	c, _ = newTestRTCPCap(t)
+	for i := range maxUnknownRTCPStreams + 1 {
+		c.unhandled(uint32(i + 1))
 	}
+	if !c.closing.Load() {
+		t.Fatalf("still open at %d unknown SSRCs, over the cap of %d", c.unknown, maxUnknownRTCPStreams)
+	}
+	pc := c.pc.Load()
+	waitSFUCondition(t, "connection closed", func() bool {
+		return pc.ConnectionState() == webrtc.PeerConnectionStateClosed
+	})
+}
+
+// newTestRTCPCap is the cap of a connection that sends one track, with the
+// SSRC of that track.
+func newTestRTCPCap(t *testing.T) (*rtcpStreamCap, uint32) {
+	t.Helper()
+	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pc.Close() })
+	track, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "a", "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sender, err := pc.AddTrack(track)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &rtcpStreamCap{logs: logging.NewDefaultLoggerFactory(), log: joinLogger(uuid.New(), "")}
+	c.bind(pc)
+	c.sent(sender)
+	return c, uint32(sender.GetParameters().Encodings[0].SSRC)
 }

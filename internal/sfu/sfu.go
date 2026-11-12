@@ -146,6 +146,8 @@ type Peer struct {
 	// connID is the ID Pion gave the connection, which is what the
 	// connection's viewerGuard knows of it.
 	connID string
+	// rtcp caps the unread RTCP streams of the connection (nil in tests).
+	rtcp *rtcpStreamCap
 	// hubConn is the id of the hub connection that made the peer, and log
 	// carries it as conn_id (see nameConn).
 	hubConn    string
@@ -206,6 +208,8 @@ type SFU struct {
 	load       *peerLoad
 	apiMu      sync.RWMutex
 	api        *webrtc.API
+	// builder makes the API of each member connection (see connAPI).
+	builder apiBuilder
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
 	announced []string
 	portMin   uint16

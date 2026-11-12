@@ -449,6 +449,19 @@ details and the limits.
   out to the room. ICE candidates in a client's answer SDP get the same
   vetting and budget as trickled ones (no loopback, link-local, multicast,
   unspecified or name addresses, at most 64 per peer).
+- **Media connection limits.** Each published track has an ingress budget far
+  above what the web client sends; a publisher that stays over it for ten
+  seconds is disconnected. RTCP that names an SSRC nothing on the connection
+  reads (any PLI, NACK, FIR, REMB, report block, BYE or SDES source) makes
+  Pion keep a read stream until the connection closes. The SFU caps what such
+  a stream holds (128 packets, 16 KB; about 20 KB of heap when full) and closes
+  a member's media connection once it named more than 64 SSRCs the SFU never
+  sent on it, or kept 2048 such streams in all (the late reports of tracks the
+  SFU stopped sending count only there), and logs it with the member at warn
+  (`mnema_sfu_ingress_dropped_total{reason="rtcp_ssrcs"}`). A member has one
+  media connection at a time, so it holds at most about 1.3 MB of these
+  streams with arbitrary SSRCs and about 41 MB in the case nobody reaches (2048
+  tracks sent to it and stopped while it stays connected).
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route

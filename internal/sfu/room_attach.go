@@ -35,6 +35,7 @@ func (r *Room) attachPeer(userID uuid.UUID, connID string, conn *receiveConn, se
 		room:      r,
 		gen:       peerGen.Add(1),
 		connID:    pc.ID(),
+		rtcp:      conn.rtcp,
 
 		allowLoopbackCands: r.allowLoopbackCands,
 	}
