@@ -12,12 +12,12 @@
  {
   "a": "Caf\u00e9",
   "b": "Cafe\u0301",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "Caf\u00e9",
   "b": "CAFE\u0301",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "Xa\u00dfo",
@@ -52,12 +52,12 @@
  {
   "a": "\u00c5ngstr\u00f6m",
   "b": "A\u030angstro\u0308m",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "\u00c5ngstr\u00f6m",
   "b": "A\u030aNGSTRO\u0308M",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "\u00c5ngstr\u00f6m",
@@ -77,7 +77,7 @@
  {
   "a": "Istanbul",
   "b": "\u0130stanbul",
-  "conflict": true
+  "conflict": false
  },
  {
   "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
@@ -92,12 +92,12 @@
  {
   "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
   "b": "\u03a3\u03bf\u03c6\u03b9\u0301\u03b1",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "\u03a3\u03bf\u03c6\u03af\u03b1",
   "b": "\u03a3\u039f\u03a6\u0399\u0301\u0391",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "Kelvin",
@@ -137,12 +137,12 @@
  {
   "a": "Ma\u00f1ana",
   "b": "Man\u0303ana",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "Ma\u00f1ana",
   "b": "MAN\u0303ANA",
-  "conflict": false
+  "conflict": true
  },
  {
   "a": "\u1e9ee",

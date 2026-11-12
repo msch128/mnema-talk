@@ -18,8 +18,9 @@ import (
 
 // One rule, two implementations (2026-11 defect hunt, lane 3, pair 5): a wiki
 // title is "unique among the pages, ignoring case, so [[Title]] names one page"
-// (doc/wiki.md). The server decides uniqueness with SQL lower(); the client
-// resolves [[Title]] with JavaScript toLowerCase() (web/src/wiki/lib/wikiTree.ts).
+// (doc/wiki.md). Both sides compare one title key: the server's titleKey
+// (internal/wiki/title_key.go) and the client's wikiTitleKey, which
+// resolveWikiLink uses (web/src/wiki/lib/wikiTree.ts).
 // testdata/wiki_title_pairs.json holds pairs of titles and whether the server
 // refuses the second next to the first; web/src/wiki/lib/wikiTitleFold.test.ts
 // checks that the client resolves the second to the first exactly then.

@@ -20,7 +20,7 @@ func cleanText(title, content *string, summary string) (text, error) {
 	var out text
 	var err error
 	if title != nil {
-		if out.title, err = httpx.CleanName("title", *title, MaxTitleRunes, true); err != nil {
+		if out.title, err = cleanTitle(*title); err != nil {
 			return out, err
 		}
 	}
@@ -37,15 +37,7 @@ func cleanText(title, content *string, summary string) (text, error) {
 	return out, err
 }
 
-// titleTaken reports whether a live page other than except has the title, ignoring case:
-// [[Title]] links name one page.
-func titleTaken(ctx context.Context, q db.Querier, title string, except uuid.UUID) (bool, error) {
-	var taken bool
-	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wiki_pages WHERE lower(title) = lower($1) AND deleted_at IS NULL AND id <> $2)`, title, except).Scan(&taken)
-	return taken, err
-}
-
-// checkTitle refuses a title another live page has.
+// checkTitle refuses a title another live page has (titleTaken).
 func checkTitle(ctx context.Context, q db.Querier, title string, except uuid.UUID) error {
 	taken, err := titleTaken(ctx, q, title, except)
 	if err != nil {

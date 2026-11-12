@@ -2,6 +2,7 @@
 // sends, nested by parent, plus what the screens ask of it.
 import { computed, type Ref } from 'vue'
 import type { WikiPageSummary } from './wikiApi'
+import { wikiTitleKey } from './wikiTitleKey'
 
 export interface WikiNode extends WikiPageSummary {
   children: WikiNode[]
@@ -53,12 +54,18 @@ export function breadcrumbs(pages: readonly WikiPageSummary[], slug: string): Wi
   return trail
 }
 
-/** The slug a `[[Title]]` or `[[slug]]` points to, or null when no page matches. */
+/**
+ * The slug a `[[Title]]` or `[[slug]]` points to, or null when no page matches.
+ * Titles compare by wikiTitleKey, as the server does. Two pages from before
+ * that rule may share a key: the first in the server's tree order wins.
+ */
 export function resolveWikiLink(pages: readonly WikiPageSummary[], target: string): string | null {
-  const wanted = target.trim().toLowerCase()
-  if (!wanted) return null
+  const trimmed = target.trim()
+  if (!trimmed) return null
+  const wanted = wikiTitleKey(trimmed)
+  const slug = trimmed.toLowerCase()
   const live = pages.filter(p => !p.deleted_at)
-  const hit = live.find(p => p.title.toLowerCase() === wanted) ?? live.find(p => p.slug === wanted)
+  const hit = live.find(p => wikiTitleKey(p.title) === wanted) ?? live.find(p => p.slug === slug)
   return hit?.slug ?? null
 }
 

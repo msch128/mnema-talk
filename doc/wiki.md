@@ -42,7 +42,25 @@ This page covers using the wiki and running it. The API is in the
   the wiki*: a caller who may not read gets no page back.
 - A title is one line (no line breaks, no invisible or direction-changing
   characters) and unique among the pages, ignoring case, so `[[Title]]` names
-  one page.
+  one page. Titles are stored in Unicode NFC, so one visible title has one
+  spelling.
+- **Same title** means the same *title key*, on the server (refusing a title
+  another page has) and in the app (finding the page a `[[Title]]` names): the
+  title decomposed (NFD), each character lower-cased on its own with the
+  Unicode simple lowercase mapping, composed again (NFC). So `Café` typed with
+  a precomposed é or with e and a combining accent is one title, as is `RULES`
+  next to `Rules`. Not folded: `ß` and `ss`, `ς` and `σ`, `İ` and `I` (İ is I
+  with a dot above, so `İstanbul` and `Istanbul` are two titles), and
+  compatibility forms such as the `ﬃ` ligature or `x²` (NFC, not NFKC: those
+  look different, and NFKC would store another title than the one typed).
+  Letters of different scripts that look alike (a Cyrillic `е` in `Rulеs`) are
+  different titles; nothing compares by appearance.
+- Two pages written before this rule (3.0.8 and older compared with the
+  database's `lower()`, without NFC) can share a title key. Both stay and both
+  can be edited; no other page can take that title, and a rename or restore
+  onto it is refused. A `[[Title]]` link goes to the first of them in the
+  order the wiki lists its pages (position, then title). To part them, rename
+  one.
 
 ## In the app
 
