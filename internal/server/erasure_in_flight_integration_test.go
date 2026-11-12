@@ -73,15 +73,18 @@ type inFlightWorld struct {
 	canaryWorld
 	event uuid.UUID
 	group uuid.UUID // a group conversation bob started, so the erasure does not lock its row
+	more  inFlightMore
 }
 
 // inFlightSite is one write of the member. With rows set, the leak is the
 // count of that query for the member's id (a write without words); otherwise
-// it is every row that still holds the word.
+// it is every row that still holds the word. Any stored file left behind is a
+// leak too. prep, if set, builds what the write needs before the erasure.
 type inFlightSite struct {
 	name  string
 	write func(f *inFlightWorld, word string) response
 	rows  string
+	prep  func(t *testing.T, f *inFlightWorld)
 }
 
 func (f *inFlightWorld) messages(content string, extra map[string]any) response {
@@ -103,7 +106,7 @@ func inFlightSites() []inFlightSite {
 		write := s.write
 		out = append(out, inFlightSite{name: s.name, write: func(f *inFlightWorld, w string) response { return write(&f.canaryWorld, w) }})
 	}
-	return append(out,
+	return append(append(out,
 		inFlightSite{name: "unsent file", write: func(f *inFlightWorld, w string) response {
 			return f.alice.upload("/api/channels/"+f.ch.String()+"/attachments", "file", w+".png", "image/png", pngBytes, nil)
 		}},
@@ -126,29 +129,18 @@ func inFlightSites() []inFlightSite {
 		inFlightSite{name: "rsvp", rows: `SELECT COUNT(*) FROM event_rsvps WHERE user_id = $1`, write: func(f *inFlightWorld, _ string) response {
 			return f.alice.put("/api/events/"+f.event.String()+"/rsvp", map[string]string{"response": "going"})
 		}},
-	)
+	), moreInFlightSites()...)
 }
 
-// inFlightLeaks are the sites whose write outlives the erasure today: known
-// failures of H-L10-05 (inverse assertion: the site must still leak, and the
-// test turns red the day it does not, so the entry goes with the fix). No
-// statement of these writes reads the account again after its wait: the
-// insert's foreign key check (or the update of the users row) waits for the
-// erasure, then finds the anonymised row and goes through.
-//
-// The one site that holds today is "direct message", for a reason of its
-// own: alice started that conversation, so the erasure's
-// `UPDATE channels SET dm_created_by = NULL` locks its row; the send's
-// `SELECT ... FROM channels WHERE id = $1 FOR UPDATE` (loadDMState) waits for
-// it, and the member list read next, in a new snapshot, no longer holds alice
-// (404). In a conversation someone else started ("group message") nothing
-// locks that row and the message stays.
-var inFlightLeaks = map[string]bool{
-	"message": true, "edited away": true, "bio": true, "status": true, "display name": true,
-	"file name": true, "unsent file": true, "saved note": true, "report note": true, "scheduled": true,
-	"group message": true, "event comment": true, "retry id": true, "upload booking": true,
-	"reaction": true, "rsvp": true,
-}
+// Every site must leave nothing. The guards of migration 0103 make the
+// database refuse, drop or clear a row that names an erased account, and keep
+// the emptied tombstone row and messages empty, so the write that waited for
+// the erasure fails or writes nothing. "direct message" held before them for
+// a reason of its own: alice started that conversation, so the erasure's
+// `UPDATE channels SET dm_created_by = NULL` locks its row, and the send's
+// member check, read after waiting for that lock, no longer finds alice (404).
+// In a conversation someone else started ("group message") nothing locked
+// that row and the message stayed.
 
 // inFlightOutcome is what one held erasure saw.
 type inFlightOutcome struct {
@@ -170,6 +162,9 @@ func runInFlightSite(t *testing.T, s inFlightSite) inFlightOutcome {
 	f.group = f.bob.mustDM(t, f.alice, f.admin).ID
 	f.event = a.coverEventAt(f.admin, time.Now().Add(48*time.Hour), nil).ID
 	word := "inflight" + strings.ReplaceAll(s.name, " ", "") + "x7q"
+	if s.prep != nil {
+		s.prep(t, f)
+	}
 
 	var out inFlightOutcome
 	done := make(chan struct{})
@@ -196,6 +191,9 @@ func runInFlightSite(t *testing.T, s inFlightSite) inFlightOutcome {
 	} else if hits := a.everyRowMentioning(word); len(hits) > 0 {
 		out.left = fmt.Sprint(hits)
 	}
+	if n := a.store.Len(); n > 0 {
+		out.left += fmt.Sprintf(" stored files: %d", n)
+	}
 	return out
 }
 
@@ -204,10 +202,7 @@ func TestAWriteInFlightDuringTheErasureLeavesNothingOfThePerson(t *testing.T) {
 		t.Run(s.name, func(t *testing.T) {
 			out := runInFlightSite(t, s)
 			t.Logf("%s: the write answered %d after %v; left behind: %q", s.name, out.status, out.waited, out.left)
-			switch {
-			case inFlightLeaks[s.name] && out.left == "":
-				t.Errorf("known failure H-L10-05 no longer reproduces for %s (answer %d): drop it from inFlightLeaks", s.name, out.status)
-			case !inFlightLeaks[s.name] && out.left != "":
+			if out.left != "" {
 				t.Errorf("%s: a write that waited for the erasure left the erased person's data behind: %s", s.name, out.left)
 			}
 		})
