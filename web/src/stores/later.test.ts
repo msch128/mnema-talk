@@ -192,6 +192,32 @@ describe('reminders and scheduled messages, against crossing answers and reconne
     expect(toasts.toasts.map(toast => toast.text)).toEqual([named, named])
   })
 
+  it('announces a due reminder from its own answer, though a newer request never answers', async () => {
+    const toasts = useToastStore()
+    apiMock.mockResolvedValueOnce({ items: [] })
+    const later = useLaterStore()
+    await later.load({ reminders: true, scheduled: false })
+    apiMock.mockResolvedValueOnce({ items: [reminder(1, { delivered_at: FIXTURE_TIMESTAMP })] })
+      .mockReturnValueOnce(new Promise(() => undefined))
+    const first = later.onReminderEvent({ id: fixtureId(1), state: 'due' })
+    void later.onReminderEvent({ id: fixtureId(2), state: 'due' })
+    await first
+    expect(toasts.toasts.map(toast => toast.text)).toEqual([t('later.reminderDueChannel', { author: 'Alice', channel: 'general', text: 'call mum' })])
+    expect(later.reminders).toHaveLength(1)
+  })
+
+  it('keeps an older good answer when a newer request fails', async () => {
+    const toasts = useToastStore()
+    apiMock.mockResolvedValueOnce({ items: [] })
+    const later = useLaterStore()
+    await later.load({ reminders: true, scheduled: false })
+    apiMock.mockResolvedValueOnce({ items: [reminder(1, { delivered_at: FIXTURE_TIMESTAMP })] })
+      .mockRejectedValueOnce(new ApiError(502, 'unavailable', 'deploying'))
+    await Promise.all([later.onReminderEvent({ id: fixtureId(1), state: 'due' }), later.onReminderEvent({ id: fixtureId(2), state: 'due' })])
+    expect(later.reminders.map(r => r.id)).toEqual([fixtureId(1)])
+    expect(toasts.toasts[0]?.text).toBe(t('later.reminderDueChannel', { author: 'Alice', channel: 'general', text: 'call mum' }))
+  })
+
   it('keeps the lists it shows when reading them again after a reconnect fails', async () => {
     apiMock.mockResolvedValueOnce({ items: [reminder(1)] })
     const later = useLaterStore()

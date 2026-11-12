@@ -19,6 +19,9 @@ export const useSavedStore = defineStore('saved', () => {
   // removal), numbered: the page was read before those changes, so they are
   // applied to it again. Kept only while a page is on its way.
   const pending = new Map<string, { at: number; entry: ChatSavedMessage | null }>()
+  // Thread roots deleted while a page was on its way: the page may hold saved
+  // replies of theirs (saved elsewhere, not shown here yet), which went with them.
+  const deletedRoots = new Map<string, number>()
   let changes = 0
   let loads = 0
 
@@ -37,6 +40,11 @@ export const useSavedStore = defineStore('saved', () => {
         items.value = [change.entry, ...items.value.filter(e => e.message_id !== id)]
       }
     }
+    for (const [root, at] of deletedRoots) {
+      if (at <= from) continue
+      for (const e of items.value) if (e.message?.parent_id === root) known.value.delete(e.message_id)
+      items.value = items.value.filter(e => e.message?.parent_id !== root)
+    }
   }
 
   async function tracked(read: () => Promise<boolean>, saves: boolean) {
@@ -47,7 +55,10 @@ export const useSavedStore = defineStore('saved', () => {
       if (applied) reapply(from, saves)
       return applied
     } finally {
-      if (--loads === 0) pending.clear()
+      if (--loads === 0) {
+        pending.clear()
+        deletedRoots.clear()
+      }
     }
   }
 
@@ -118,6 +129,7 @@ export const useSavedStore = defineStore('saved', () => {
     }
     // Only a message saved, or one a page on its way may still bring back, is dropped.
     if (known.value.has(messageId) || loads > 0 || items.value.some(e => e.message_id === messageId)) drop(messageId)
+    if (loads > 0) deletedRoots.set(messageId, ++changes)
   }
 
   /** Another session of mine saved or removed a message. */
@@ -131,6 +143,7 @@ export const useSavedStore = defineStore('saved', () => {
   function reset() {
     list.reset()
     pending.clear()
+    deletedRoots.clear()
     requested = false
     hintPending.value = false
     known.value = new Set()

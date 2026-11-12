@@ -56,27 +56,22 @@ async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId:
 let generation = 0
 
 /**
- * A loader whose answer is kept only if no newer request of the same list was
- * made meanwhile: an older answer that lands last would bring back what a
- * newer one (asked after an event or a reconnect) already left out.
+ * A loader that applies an answer only when its request was made after the
+ * one whose answer is shown: an older answer that lands last would bring back
+ * what a newer one (asked after an event or a reconnect) already left out. No
+ * caller waits for anyone else's request, so a newer request that fails or
+ * never answers neither holds up nor throws away an older good answer.
  */
 function newestOf<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
   let seq = 0
-  let newest: Promise<void> | null = null
-  async function one(request: number) {
-    const mine = generation
-    const list = await fetch()
-    if (mine === generation && request === seq) apply(list)
-  }
-  /** Loads the list; resolves once the newest request made meanwhile has landed too, so the caller sees its answer. */
+  let applied = 0
   return async () => {
-    const request = one(++seq)
-    newest = request
-    await request
-    for (let seen: Promise<void> | null = request; seen !== newest;) {
-      seen = newest
-      await seen?.catch(() => undefined)
-    }
+    const mine = generation
+    const request = ++seq
+    const list = await fetch()
+    if (mine !== generation || request < applied) return
+    applied = request
+    apply(list)
   }
 }
 

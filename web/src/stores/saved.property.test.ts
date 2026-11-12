@@ -132,9 +132,11 @@ async function run(seed: number, steps: number, WITH_REPLIES: boolean) {
 
 const SEEDS = Number(process.env['SAVED_PROPERTY_SEEDS'] ?? 1000)
 
-async function sweep(withReplies: boolean) {
+const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1)
+
+async function sweep(withReplies: boolean, seeds: number[]) {
   const bad: string[] = []
-  for (let seed = 1; seed <= SEEDS; seed++) {
+  for (const seed of seeds) {
     setActivePinia(createPinia())
     const res = await run(seed, 60, withReplies)
     if (JSON.stringify(res.want) !== JSON.stringify(res.got) || JSON.stringify(res.want) !== JSON.stringify(res.marks)) {
@@ -146,10 +148,16 @@ async function sweep(withReplies: boolean) {
 
 describe('the saved store against the server', () => {
   it('ends with the server\'s list and marks after random changes, lost events and late answers', async () => {
-    expect((await sweep(false)).slice(0, 3)).toEqual([])
+    expect((await sweep(false, range(SEEDS))).slice(0, 3)).toEqual([])
   }, 120_000)
 
   it('the same with thread replies whose root is deleted', async () => {
-    expect((await sweep(true)).slice(0, 3)).toEqual([])
+    expect((await sweep(true, range(SEEDS))).slice(0, 3)).toEqual([])
   }, 120_000)
+
+  // Found at 5,000 seeds: a reply saved elsewhere while the socket was down
+  // came back with a page that was on its way when its root was deleted.
+  it('keeps a deleted root\'s saved replies out of a page that was on its way (seeds 2790 and 4690)', async () => {
+    expect(await sweep(true, [2790, 4690])).toEqual([])
+  })
 })
