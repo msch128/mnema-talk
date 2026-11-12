@@ -18,8 +18,9 @@ import (
 // estimator turns the send and arrival times into a bitrate. The estimate is
 // only read (by the layer adapter, adapt.go): nothing is paced, delayed or
 // dropped, so audio, cameras and layers that are not adapted are untouched.
-// The cost per connection is the estimator's history of the last 250 packets
-// and two small goroutines.
+// The cost per connection is the estimator's history of the last 250 packets,
+// two small goroutines and one writer per stream it sends, which is forgotten
+// when the stream's sender stops.
 const (
 	// bweInitialBitrate starts high so a fresh connection does not look
 	// slow while the estimate ramps up; the estimate falls on its own the
@@ -94,6 +95,13 @@ func (b *bweInterceptor) BindLocalStream(info *interceptor.StreamInfo, w interce
 	return out
 }
 
+// UnbindLocalStream forgets the stream's writer and its RTX alias when Pion
+// stops the sender. Otherwise every stopped sender of a connection would stay
+// in the pacer, with the writer chain it pins, until the connection closes.
+func (b *bweInterceptor) UnbindLocalStream(info *interceptor.StreamInfo) {
+	b.pacer.remove(info.SSRC, info.SSRCRetransmission)
+}
+
 func (b *bweInterceptor) BindRTCPReader(r interceptor.RTCPReader) interceptor.RTCPReader {
 	return interceptor.RTCPReaderFunc(func(buf []byte, a interceptor.Attributes) (int, interceptor.Attributes, error) {
 		n, attr, err := r.Read(buf, a)
@@ -146,6 +154,19 @@ func (p *passPacer) AddStream(ssrc uint32, w interceptor.RTPWriter) {
 func (p *passPacer) alias(ssrc, target uint32) {
 	p.mu.Lock()
 	p.writers[ssrc] = p.writers[target]
+	p.mu.Unlock()
+}
+
+// remove forgets the writer of ssrc and of its RTX alias rtx (zero: none, as
+// in BindLocalStream) at once. A Write that looked its writer up before remove
+// took the lock still sends; one that looks it up after gets the unknown
+// stream error, as a packet of a stream that was never bound does.
+func (p *passPacer) remove(ssrc, rtx uint32) {
+	p.mu.Lock()
+	delete(p.writers, ssrc)
+	if rtx != 0 {
+		delete(p.writers, rtx)
+	}
 	p.mu.Unlock()
 }
 
