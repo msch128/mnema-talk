@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
@@ -50,7 +52,7 @@ func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*co
 	}
 	var ch core.Channel
 	err := p.QueryRow(ctx, `
-		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND type <> 'dm'
+		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND NOT `+core.PrivateChannelSQL("channels")+`
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, days).
 		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -76,6 +78,9 @@ type AutoDeleter struct {
 	Objects core.ObjectDeleter
 	// Audit records one entry per channel and run; nil records nothing.
 	Audit *audit.Log
+	// Recount tells the members who had not read the removed messages their
+	// counts again, once per channel and run; nil tells nobody.
+	Recount *readstate.Recounter
 }
 
 type autoDeleteChannel struct {
@@ -108,7 +113,7 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 // Sweep runs one pass over all channels that have auto-delete on.
 func (a *AutoDeleter) Sweep(ctx context.Context) error {
 	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
-	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND type <> 'dm'`)
+	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND NOT `+core.PrivateChannelSQL("channels"))
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)
 	}
@@ -150,6 +155,8 @@ func (a *AutoDeleter) sweepChannel(ctx context.Context, c autoDeleteChannel) err
 		}
 	}
 	if messages > 0 {
+		// Every removed message and every reply that went with it is older than the cutoff.
+		a.Recount.Tell(c.id, &cutoff, nil)
 		a.Audit.RecordOrLog(ctx, audit.Entry{
 			Action: "channel.auto_delete_run", TargetType: "channel", TargetID: c.id.String(), TargetName: c.name, ChannelID: &c.id,
 			Details: map[string]any{"days": c.days, "messages": messages, "attachments": attachments, "complete": failure == nil},
@@ -209,13 +216,14 @@ type expiredMessage struct {
 
 // selectExpired locks the next batch of expired messages. Locking them blocks
 // a concurrent reply or upload (their foreign keys need a share lock), so
-// every attachment the delete removes is in the key list.
+// every attachment the delete removes is in the key list. The thread roots
+// that must stay are then left out by dropKeptThreads.
 func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff time.Time) ([]expiredMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT m.id, m.parent_id FROM messages m
 		WHERE m.channel_id = $1 AND m.created_at < $2 AND NOT m.is_pinned
 		  AND NOT EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND (r.created_at >= $2 OR r.is_pinned))
-		  AND EXISTS (SELECT 1 FROM channels c WHERE c.id = m.channel_id AND c.auto_delete_days = $3 AND c.type <> 'dm')
+		  AND EXISTS (SELECT 1 FROM channels c WHERE c.id = m.channel_id AND c.auto_delete_days = $3 AND NOT `+core.PrivateChannelSQL("c")+`)
 		ORDER BY m.created_at
 		LIMIT $4
 		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, c.days, autoDeleteBatch)
@@ -229,7 +237,35 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 	if err != nil {
 		return nil, fmt.Errorf("select expired messages: %w", err)
 	}
-	return out, nil
+	if len(out) == 0 {
+		return out, nil
+	}
+	return dropKeptThreads(ctx, tx, out, cutoff)
+}
+
+// dropKeptThreads leaves out the locked roots that now have a reply younger
+// than the cutoff or a pinned one. The NOT EXISTS of selectExpired reads the
+// statement's snapshot, so it misses a reply or pin that committed after the
+// snapshot and before the root's lock was taken; this statement starts after
+// the locks are held. Once a root is locked, neither can be added: a reply's
+// insert and a pin of a reply take a key-share lock on the root first and wait
+// for the sweep.
+func dropKeptThreads(ctx context.Context, tx pgx.Tx, removed []expiredMessage, cutoff time.Time) ([]expiredMessage, error) {
+	ids := make([]uuid.UUID, len(removed))
+	for i, g := range removed {
+		ids[i] = g.id
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT parent_id FROM messages
+		WHERE parent_id = ANY($1) AND (created_at >= $2 OR is_pinned)`, ids, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("check kept threads: %w", err)
+	}
+	kept, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("check kept threads: %w", err)
+	}
+	return slices.DeleteFunc(removed, func(g expiredMessage) bool { return slices.Contains(kept, g.id) }), nil
 }
 
 func deleteExpired(ctx context.Context, tx pgx.Tx, removed []expiredMessage, keys *[]string) error {

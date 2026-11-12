@@ -2006,6 +2006,7 @@ export type ChatMessage = {
   channel_id: string
   content: string
   created_at: string
+  direct_mentions?: Array<string>
   display_name: string
   embeds?: Array<ChatEmbed>
   forward?: ChatForwardRef
@@ -2043,6 +2044,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "direct_mentions") || isArrayOf(value["direct_mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
     && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatEmbed(item)))
     && (!hasOwn(value, "forward") || isChatForwardRef(value["forward"]))
@@ -2242,6 +2244,7 @@ export const decodeChatReactionSummary = decoder("chat.ReactionSummary", isChatR
 
 export type ChatReadState = {
   channel_id: string
+  last_message_number?: number
   last_read_at: string | null
   mention_count: number
   notify_level: ChatNotifyLevel
@@ -2251,6 +2254,7 @@ export type ChatReadState = {
 export function isChatReadState(value: unknown): value is ChatReadState {
   return isRecord(value)
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "last_message_number") || isInteger(value["last_message_number"]))
     && (hasOwn(value, "last_read_at") && (isTimestamp(value["last_read_at"]) || value["last_read_at"] === null))
     && (hasOwn(value, "mention_count") && isInteger(value["mention_count"]))
     && (hasOwn(value, "notify_level") && isChatNotifyLevel(value["notify_level"]))

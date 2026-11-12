@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { MediaGroup } from './group'
 import { GroupChecks } from './groupSimChecks.fixture'
-import { SIM_TIMING, type GroupSim, type SimMember } from './groupSim.fixture'
+import { NO_SKEW, SIM_TIMING, type GroupSim, type SimMember } from './groupSim.fixture'
 import type { MediaVerification } from './verify'
 
 const previous = globalThis.crypto
@@ -26,7 +26,7 @@ function watcher(id: string, roster: string[], group: MediaGroup | null = null) 
   const violations: string[] = []
   const checks = new GroupChecks()
   checks.bind({ now: 1000, timing: SIM_TIMING, violation: (text: string) => violations.push(text) } as unknown as GroupSim)
-  const member = { id, label: 'watcher', roster, previousRoster: roster, wokeAt: -Infinity, keys: [], group } as unknown as SimMember
+  const member = { id, label: 'watcher', roster, previousRoster: roster, wokeAt: -Infinity, keys: [], group, skew: NO_SKEW } as unknown as SimMember
   return { checks, member, violations }
 }
 

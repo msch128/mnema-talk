@@ -20,7 +20,7 @@ func TestSourceReplacementCannotResumeOldCapture(t *testing.T) {
 	// An announced stop removes subscriptions while keeping the RTP reader alive.
 	r.mu.Lock()
 	delete(r.trackLocals, "old-screen-audio")
-	old.stoppedAt.Store(time.Now().Add(-time.Second).UnixNano())
+	old.resumeAt.Store(steadyNanos(time.Now().Add(-time.Second)))
 	r.mu.Unlock()
 	r.addTrack("current-screen-audio", current)
 	r.addTrack("old-screen-audio", old)

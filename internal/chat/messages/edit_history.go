@@ -172,8 +172,8 @@ func (a *API) auditHistoryView(ctx context.Context, actor *auth.User, msgID uuid
 	if a.Audit == nil || !a.Views.First(actor.ID, msgID, time.Now()) {
 		return
 	}
-	s := a.snapshotMessage(ctx, msgID, false)
-	if s == nil || s.msg.UserID == actor.ID {
+	s, err := a.snapshotMessage(ctx, a.DB, msgID, false)
+	if err != nil || s == nil || s.msg.UserID == actor.ID {
 		return
 	}
 	a.Audit.RecordOrLog(ctx, audit.Entry{

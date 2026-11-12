@@ -66,13 +66,19 @@ admin setup are needed, so it works on a fresh community. The Talk is a temporar
 Talk without a lobby (`is_temp`, `lobby_id` NULL) with `channels.dm_id` pointing
 at the conversation (migration 0079): the permission snapshot lets only the
 conversation's members see and join it, the Owner and Administrators included
-(like the conversation itself), a member added to a group gets it too, a member
+(like the conversation itself). Membership is what lets a member see it, not
+*View channels*: no role and no category or channel overwrite of the community
+grants or takes anything there, so a community that hides its channels from
+@everyone does not lock its members out of their calls; what they may do there
+(*Connect*, *Speak*, *Video*, *Send messages*, *Attach files*, *Add
+reactions*, *Disconnect members*) is what they hold server-wide, a timeout and
+the new-member speak wait included. A member added to a group gets it too, a member
 who leaves a group loses it at once (a seat in it ends as for any lost Talk
 right, and the others see them leave the call), it shows
 in the sidebar of its members only, and it is deleted when it is empty (like any
 temporary Talk) or when the conversation is. Its chat follows the conversation's
 writing rule: after a block in a conversation of two nobody writes there any
-more, while the Talk and its seats stay as they are ([blocking](moderation.md#blocking-a-member)). Nothing about it reaches the audit log (who joined it, renamed it or when it went), because that would tell the Owner who called whom. It is led by whoever started it and
+more, while the Talk and its seats stay as they are ([blocking](moderation.md#blocking-a-member)). Nothing about it reaches the audit log (who joined it, renamed it, was removed from it or when it went), because that would tell the Owner who called whom; for the same reason it is no community channel that an event's location or an automod rule's exemption can name, and the administrative channel routes (rename, delete, duplicate, auto-delete, overwrites, layout) answer for it exactly what they answer for a channel that does not exist; its leader renames it with `PATCH /api/talks/{id}`. The admin-wide kick (`POST /api/admin/users/{id}/kick`) is still recorded as `user.talk_kick`, which names the member but no Talk, also when it ends a call; removals written by older versions as `user.talk_kick` stay in the log, readable by the Owner and Administrators. It is led by whoever started it and
 counts against the 5 new Talks per 10 minutes. While in a Talk, "Invite to my
 Talk" (`POST /api/talks/{id}/invites` with the conversation) posts the same card.
 

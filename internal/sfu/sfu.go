@@ -44,7 +44,16 @@ const (
 )
 
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
-const resumeHoldoff = 500 * time.Millisecond
+// Every resume makes a new sender on each viewer's connection, so a source
+// resumes at once only resumeBurst times, then once per resumeRefill (see
+// resumeBudget): a publisher that keeps stopping and sending cannot push its
+// viewers' connections to their sender cap (maxSentTracks). By hand, a camera
+// is switched off and on a few times a minute at most.
+const (
+	resumeHoldoff = 500 * time.Millisecond
+	resumeBurst   = 10
+	resumeRefill  = 10 * time.Second
+)
 
 // TrackInfo is one forwarded track: the publisher's remote track and the
 // local track every other peer subscribes to.
@@ -57,10 +66,10 @@ type TrackInfo struct {
 	Source    Source
 	publisher *Peer
 	ssrc      uint32
-	lastPLI   atomic.Int64 // unix nanos of the last keyframe request
-	// stoppedAt (unix nanos, 0 = live) is set when the publisher announced the
-	// stop; packets arriving later publish the track again.
-	stoppedAt atomic.Int64
+	lastPLI   atomic.Int64 // steadyNanos of the last keyframe request
+	// resumeAt (steadyNanos, 0 = live) is set when the publisher announced the
+	// stop; packets arriving after it publish the track again.
+	resumeAt atomic.Int64
 	// A replaced capture must never resume or forward alongside its successor.
 	superseded atomic.Bool
 	// writeErrLogged keeps a failing forward from logging every packet.
@@ -146,6 +155,8 @@ type Peer struct {
 	// connID is the ID Pion gave the connection, which is what the
 	// connection's viewerGuard knows of it.
 	connID string
+	// rtcp caps the unread RTCP streams of the connection (nil in tests).
+	rtcp *rtcpStreamCap
 	// hubConn is the id of the hub connection that made the peer, and log
 	// carries it as conn_id (see nameConn).
 	hubConn    string
@@ -194,8 +205,11 @@ type Room struct {
 	// layers; lastLayers what was announced. Both guarded by mu.
 	layerMeta  map[uuid.UUID][]Layer
 	lastLayers map[uuid.UUID][]Layer
-	notifyMu   sync.Mutex
-	notifier   *mediaNotifier
+	// resumeBudgets is each publisher's stop/resume budget per source;
+	// guarded by mu (see stopUntilLocked).
+	resumeBudgets map[sourceKey]*resumeBudget
+	notifyMu      sync.Mutex
+	notifier      *mediaNotifier
 	// iceSeen hears of every connection that completed ICE; nil in tests.
 	iceSeen *iceObserver
 }
@@ -206,6 +220,8 @@ type SFU struct {
 	load       *peerLoad
 	apiMu      sync.RWMutex
 	api        *webrtc.API
+	// builder makes the API of each member connection (see connAPI).
+	builder apiBuilder
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
 	announced []string
 	portMin   uint16

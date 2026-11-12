@@ -3,19 +3,26 @@
 // word (internal/ws/budget.go). A dropped commit leaves every other member a
 // step behind, so they start over. Sending below that limit costs a moment;
 // a drop costs everyone a restart.
+import { clock } from './clock'
+
 export const HANDSHAKES_PER_SEC = 8
 export const HANDSHAKE_BYTES_PER_SEC = 192 << 10
 // What the server counts besides the wire: the event envelope and channel id.
 const ENVELOPE_BYTES = 128
 const WINDOW_MS = 1000
 
-/** Sends in order, holding back what would exceed the budget within any second. */
+/**
+ * Sends in order, holding back what would exceed the budget within any second.
+ * The second is measured on the monotonic clock of the key lifecycle (clock.ts):
+ * on the wall clock a step back would make every counted send look recent until
+ * the clock caught up, and hold back every handshake for the size of the step.
+ */
 export class WirePacer {
   private readonly queue: { text: string, send: () => void }[] = []
   private readonly sent: { at: number, bytes: number }[] = []
   private timer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(private readonly now: () => number = () => clock.now()) {}
 
   push(text: string, send: () => void) {
     this.queue.push({ text, send })

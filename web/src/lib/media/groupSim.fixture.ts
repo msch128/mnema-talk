@@ -24,6 +24,7 @@ import { browserMediaCall, mediaSettled } from './browserCall'
 import { decodeWire } from './callEngine'
 import { isCapability } from './capability'
 import type { EpochKeys } from './frame'
+import { clock } from './clock'
 import { MediaGroup } from './group'
 import type { FrameStats, MediaGuard } from './guard'
 import { isHeartbeat } from './heartbeat'
@@ -37,6 +38,9 @@ const EMPTY = new Uint8Array(0)
 const STATS_MS = 1000
 const QUIET_DELAY_MS = 20
 const TIMER_ID_BASE = 2 ** 40
+/** Ids nobody is behind: one that sorts above every member and one below. */
+export const GHOST_HIGH = fixtureId(0xfffff)
+export const GHOST_LOW = '00000000-0000-4000-8000-000000000000'
 
 /** mulberry32: small, seedable, and good enough to pick delays and actions. */
 export function seededRandom(seed: number): () => number {
@@ -50,10 +54,34 @@ export function seededRandom(seed: number): () => number {
   }
 }
 
+/**
+ * How one machine keeps time. Every member runs on the simulator's virtual
+ * clock plus this: its own offset, a rate error, a step of the wall clock
+ * (the monotonic clock that clock.now reads does not follow it), and the
+ * time the monotonic clock stood still while the machine slept. All zero is
+ * the simulator's single clock.
+ */
+export interface ClockSkew {
+  /** Both clocks run this far ahead of virtual time, in ms. */
+  offset: number
+  /** The monotonic clock gains this many ms per ms of virtual time since SIM_START (0.001 is 1000 ppm). */
+  drift: number
+  /** The wall clock was stepped by this much in total (NTP, a manual change). */
+  wallStep: number
+  /** Time spent asleep that the monotonic clock did not count. */
+  monoLost: number
+  /** Whether the monotonic clock stands still while the machine sleeps. */
+  monoStops: boolean
+}
+
+export const NO_SKEW: Readonly<ClockSkew> = { offset: 0, drift: 0, wallStep: 0, monoLost: 0, monoStops: false }
+
 /** One browser tab in the call: a reload is a new one with the same user id. */
 export interface SimMember {
   readonly id: string
   readonly label: string
+  /** The machine's clocks: shared by every tab of this user. */
+  readonly skew: ClockSkew
   readonly call: MediaCall
   group: MediaGroup | null
   /** The barrier on the group's queue, set once the group is open. */
@@ -86,7 +114,16 @@ export interface SimHooks {
   epoch(member: SimMember, verification: MediaVerification | null): void
 }
 
-interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean }
+/** A handshake on its way, as the control sees it. */
+export interface WireInfo { from: string, to: string, kind: string }
+interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean, info?: WireInfo | undefined }
+
+/**
+ * Asked before the simulator delivers a handshake that is on its way: deliver
+ * it ('run'), lose it ('drop'), or deliver the next one on its way to the same
+ * member first ('swap'). A schedule explorer plays the relay with this.
+ */
+export type WireControl = (wire: WireInfo, pending: number) => 'run' | 'drop' | 'swap'
 
 export interface Fault { drop: number, duplicate: number, slow: number, stall: number }
 
@@ -139,18 +176,34 @@ export class GroupSim {
   /** Each member's link latency in ms, for a scripted run: a wire takes the sender's plus the recipient's. */
   latency: Map<string, number> | null = null
   events = 0
+  /** When set, decides the fate of every handshake before it is delivered. */
+  control: WireControl | null = null
+  /** Whether what a tab sends after it was closed is lost, as it is when the process is gone (a crash point leaves the tab's last step running). */
+  dropWiresOfGone = false
+  /** While set, every handshake a member sends is kept in `log`, for replayAll. */
+  record = false
+  readonly log: { from: string, text: string }[] = []
   private readonly random: () => number
   private readonly jitter: () => number
+  /** Draws for the machines' clocks only, so that giving them clocks leaves the rest of a seed's run alone. */
+  readonly clockDraw: () => number
   private readonly context = new AsyncLocalStorage<SimMember>()
   private readonly timers = new Map<number, Timer>()
   private readonly touched = new Set<SimMember>()
+  /** Tabs that crashed: their last step never finishes, so nothing waits for it. */
+  private readonly dead = new Set<SimMember>()
+  /** Releases whoever waits for a tab that has just crashed. */
+  private readonly release = new Map<SimMember, () => void>()
   private readonly restore: (() => void)[] = []
   private timerSeq = TIMER_ID_BASE
   private memberSeq = 0
+  /** The clocks of each user's machine, by user id; zero until set. */
+  readonly skews = new Map<string, ClockSkew>()
 
   constructor(readonly seed: number, private readonly hooks: SimHooks) {
     this.random = seededRandom(seed)
     this.jitter = seededRandom(seed ^ 0x5bd1e995)
+    this.clockDraw = seededRandom(seed ^ 0x2545f491)
     this.install()
   }
 
@@ -185,9 +238,9 @@ export class GroupSim {
   }
 
   /** Runs `run` after `delay`. With an owner it waits while that tab sleeps and is dropped once the tab is gone. */
-  after(owner: SimMember | null, delay: number, run: () => void, wire = false): number {
+  after(owner: SimMember | null, delay: number, run: () => void, wire = false, info?: WireInfo | undefined): number {
     const id = ++this.timerSeq
-    this.timers.set(id, { id, at: this.now + Math.max(0, delay), owner, run, wire })
+    this.timers.set(id, { id, at: this.now + Math.max(0, delay), owner, run, wire, info })
     return id
   }
 
@@ -197,6 +250,12 @@ export class GroupSim {
     const realClear = globalThis.clearTimeout
     const realRandom = Math.random
     vi.useFakeTimers({ toFake: ['Date'], now: SIM_START })
+    // What the code of a member reads as the time: the virtual one through that member's clocks.
+    const virtual = Date.now.bind(Date)
+    const realMono = clock.now
+    const mine = () => this.context.getStore()?.skew ?? NO_SKEW
+    Date.now = () => virtual() + mine().offset + mine().wallStep
+    clock.now = () => virtual() + mine().offset + mine().drift * (virtual() - SIM_START) - mine().monoLost
     const setTimer = (run: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
       const owner = this.context.getStore()
       if (!owner) return realSet(run, delay, ...args)
@@ -216,6 +275,7 @@ export class GroupSim {
       return group
     })
     this.restore.push(() => {
+      clock.now = realMono
       spy.mockRestore()
       Math.random = realRandom
       Object.assign(globalThis, { setTimeout: realSet, clearTimeout: realClear })
@@ -252,8 +312,10 @@ export class GroupSim {
       onStats: (listener) => { member.stats = listener },
       reset: () => undefined,
     }
+    const skew = this.skews.get(id) ?? { ...NO_SKEW }
+    this.skews.set(id, skew)
     const member: SimMember = {
-      id, label: `m${memberNumber(id)}#${++this.memberSeq}`, call: null as unknown as MediaCall, group: null, probe: null,
+      id, skew, label: `m${memberNumber(id)}#${++this.memberSeq}`, call: null as unknown as MediaCall, group: null, probe: null,
       gone: false, wakeAt: 0, wokeAt: -Infinity, roster: [], previousRoster: [], linkDueAt: 0, rosterDueAt: 0, offlineUntil: 0,
       current: null, staleAt: null, opens: new Map(), keys: [], stats: () => undefined,
     }
@@ -274,6 +336,34 @@ export class GroupSim {
     this.hooks.epoch(member, verification)
   }
 
+  /** The handshakes on their way: to whom, what, and how long until they arrive. */
+  inFlight(): { to: string, kind: string, due: number }[] {
+    return [...this.timers.values()].filter(timer => timer.wire && timer.info).map(timer => ({ to: timer.info?.to ?? '', kind: timer.info?.kind ?? '', due: Math.max(0, timer.at - this.now) }))
+  }
+
+  /** The tabs' own timers (not handshakes on their way): whose, and how long until each runs. */
+  ownTimers(): { owner: string, due: number }[] {
+    return [...this.timers.values()].filter(timer => !timer.wire && timer.owner).map(timer => ({ owner: timer.owner?.label ?? '', due: Math.max(0, timer.at - this.now) }))
+  }
+
+  /** The tab whose code is running now, if any: the one a timer or a wire was handed to. */
+  running(): SimMember | undefined {
+    return this.context.getStore()
+  }
+
+  /**
+   * The tab dies here, in the middle of whatever it is doing: it is gone at once (what it still does is lost, and
+   * nothing waits for it), and a new tab with the same id takes its place at the next instant, as after a reload.
+   */
+  crashNow(member: SimMember, seen: boolean) {
+    if (member.gone || this.room.get(member.id) !== member) return
+    this.note(`crash ${member.label} (${seen ? 'the roster shows it' : 'unseen'})`)
+    this.dead.add(member)
+    this.release.get(member)?.()
+    this.after(null, 0, () => this.reload(member.id, seen))
+    this.drop(member, false)
+  }
+
   /** A tab enters the Talk: the server tells it who is here and tells the others. */
   join(id: string) {
     const member = this.newMember(id)
@@ -292,8 +382,9 @@ export class GroupSim {
     this.announce(member)
   }
 
-  private drop(member: SimMember) {
+  private drop(member: SimMember, stop = true) {
     member.gone = true
+    if (!stop) return
     this.touched.add(member)
     this.context.run(member, () => member.call.stop())
     if (this.room.get(member.id) === member) this.room.delete(member.id)
@@ -323,12 +414,28 @@ export class GroupSim {
     this.note(`sleep ${member.label} for ${ms} ms`)
     member.wakeAt = this.now + ms
     if (ms > 60_000) member.wokeAt = member.wakeAt
+    // A monotonic clock that stands still in sleep never saw this time: only the wall clock did.
+    if (member.skew.monoStops) member.skew.monoLost += ms
+  }
+
+  /** The wall clock of the member's machine is set by `ms` (negative: back). The monotonic clock does not follow. */
+  stepWall(id: string, ms: number) {
+    const member = this.room.get(id)
+    if (!member) return
+    // The effect, read back: the member's own wall clock before and after (the self-checks count a step that moved it).
+    const wall = () => this.context.run(member, () => Date.now())
+    const before = wall()
+    member.skew.wallStep += ms
+    this.note(`step ${member.label} wall clock by ${ms} ms: it moved ${wall() - before} ms`)
+    // Forward by more than a sleep is long, the call takes it for one: a removal then is taken on trust.
+    if (ms > 60_000) member.wokeAt = this.now
   }
 
   /** Every sleeper wakes now. */
   wakeAll() {
     for (const member of this.live()) {
       if (!this.asleep(member)) continue
+      if (member.skew.monoStops) member.skew.monoLost -= member.wakeAt - this.now
       member.wakeAt = this.now
       if (member.wokeAt > this.now) member.wokeAt = this.now
     }
@@ -373,7 +480,9 @@ export class GroupSim {
   private relay(from: SimMember, text: string) {
     const wire = decodeWire(text)
     const kind = wire ? describeWire(wire) : 'garbage'
+    if (from.gone && this.dropWiresOfGone) return
     if (from.offlineUntil > this.now) return this.note(`lost ${from.label} ${kind} (socket down)`)
+    if (this.record) this.log.push({ from: from.id, text })
     for (const to of this.live()) {
       if (to === from) continue
       if (to.offlineUntil > this.now) {
@@ -390,7 +499,7 @@ export class GroupSim {
         this.after(to, this.due(to, this.delay(from, to)), () => {
           this.note(`deliver ${from.label}->${to.label} ${kind}${copy ? ' (copy)' : ''}`)
           this.enter(to, () => to.call.receive(from.id, text))
-        }, true)
+        }, true, { from: from.id, to: to.id, kind })
       }
     }
   }
@@ -399,6 +508,56 @@ export class GroupSim {
     member.previousRoster = member.roster
     member.roster = roster
     this.enter(member, () => member.call.roster(roster))
+  }
+
+  /** The server's next roster reaches everyone, and it is true. */
+  correctRosters() {
+    this.announce()
+  }
+
+  /**
+   * The server tells `id`, and nobody else, a roster that is not the room:
+   * 'hide' leaves out another member that is here, 'ghost' lists an id nobody
+   * is behind, 'lead' lists one that sorts below every member.
+   */
+  lie(id: string, kind: 'hide' | 'ghost' | 'lead') {
+    const member = this.room.get(id)
+    if (!member || member.offlineUntil > this.now) return
+    const truth = [...this.room.keys()].sort()
+    const others = truth.filter(other => other !== id)
+    const hidden = kind === 'hide' && others.length ? this.pick(others) : null
+    const roster = (hidden ? truth.filter(other => other !== hidden) : [...truth, ...(kind === 'hide' ? [] : [kind === 'ghost' ? GHOST_HIGH : GHOST_LOW])]).sort()
+    this.note(`lie to ${member.label}: room {${roster.map(memberNumber).join(',')}}`)
+    // Like every roster, it never overtakes an older one.
+    const at = Math.max(this.now + this.due(member, this.between(0, 800)), member.rosterDueAt + 1)
+    member.rosterDueAt = at
+    this.after(member, at - this.now, () => {
+      this.deliverRoster(member, roster)
+      // The effect, read back: the member now holds this very roster, and it is not the room (the self-checks count this line).
+      const truth = [...this.room.keys()].sort().join(',')
+      if (!member.gone && member.roster === roster && roster.join(',') !== truth) this.note(`lie delivered to ${member.label}: room {${member.roster.map(memberNumber).join(',')}}`)
+    })
+  }
+
+  /**
+   * The server says again what it relayed (see `record`): up to `most` of the
+   * handshakes, each to every member but its sender, in no order and spread
+   * over `spreadMs`; only of the given `kinds` (commit, welcome, key-package,
+   * heartbeat, capability) when named. Whoever sent one may be long gone.
+   */
+  replayAll(most: number, spreadMs: number, kinds?: readonly string[]) {
+    const kindOf = (item: { text: string }) => describeWire(decodeWire(item.text) ?? EMPTY).replace(/@.*$/, '')
+    const picked = this.log.filter(item => !kinds || kinds.includes(kindOf(item))).sort(() => this.random() - 0.5).slice(0, most)
+    this.note(`replay ${picked.length} old handshakes to ${this.room.size} members`)
+    for (const item of picked) {
+      for (const to of this.live()) {
+        if (to.id === item.from) continue
+        this.after(to, this.between(0, spreadMs), () => {
+          this.note(`replay ${memberNumber(item.from)}->${to.label} ${describeWire(decodeWire(item.text) ?? EMPTY)}`)
+          this.enter(to, () => to.call.receive(item.from, item.text))
+        }, true)
+      }
+    }
   }
 
   /** The room changed. Each member hears it after a moment, and in the order it happened. */
@@ -467,11 +626,36 @@ export class GroupSim {
     return best
   }
 
+  /** What `control` makes of the next timer, when it is a handshake: it may be lost, or another one to the same member goes first. */
+  private controlled(timer: Timer | null): Timer | null {
+    if (!timer?.wire || !timer.info || !this.control) return timer
+    const others = [...this.timers.values()].filter(other => other.wire && other.owner === timer.owner && other.info).sort((a, b) => a.at - b.at || a.id - b.id)
+    const choice = this.control(timer.info, others.length + 1)
+    if (choice === 'drop') {
+      this.note(`drop ${memberNumber(timer.info.from)}->${timer.owner?.label} ${timer.info.kind} (the schedule)`)
+      return { id: timer.id, at: timer.at, owner: timer.owner, run: () => undefined, wire: false }
+    }
+    if (choice === 'swap' && others[0]) {
+      this.timers.delete(others[0].id)
+      this.timers.set(timer.id, timer)
+      this.note(`overtake ${memberNumber(others[0].info?.from ?? '')}->${timer.owner?.label} ${others[0].info?.kind} before ${timer.info.kind}`)
+      return others[0]
+    }
+    return timer
+  }
+
+  /** `wait`, or until the tab crashes: what a crashed tab was doing never finishes. */
+  private async unlessCrashed(member: SimMember, wait: Promise<unknown>): Promise<void> {
+    if (this.dead.has(member)) return
+    await Promise.race([wait, new Promise<void>((resolve) => { this.release.set(member, resolve) })])
+  }
+
   private async settle() {
     for (const member of this.touched) {
+      if (this.dead.has(member)) continue
       for (let round = 0; round < 3; round++) {
-        await mediaSettled(member.call)
-        if (member.probe && !member.gone) await member.probe()
+        await this.unlessCrashed(member, mediaSettled(member.call))
+        if (member.probe && !member.gone) await this.unlessCrashed(member, member.probe())
       }
     }
     this.touched.clear()
@@ -481,7 +665,7 @@ export class GroupSim {
   async runUntil(limit: number, done: () => boolean = () => false): Promise<void> {
     await this.settle()
     while (!done()) {
-      const timer = this.next(limit)
+      const timer = this.controlled(this.next(limit))
       if (!timer) break
       vi.setSystemTime(this.now)
       this.events++

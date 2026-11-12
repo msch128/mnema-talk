@@ -77,11 +77,19 @@ func (e *Engine) record(ctx context.Context, p Post, dm bool, r *compiled, outco
 
 func (e *Engine) insertHit(ctx context.Context, p Post, dm bool, r *compiled, outcome string, message uuid.UUID) (opened bool, err error) {
 	var username, display, channelName string
+	var channel *uuid.UUID // text outside a channel (an event without a Talk) has none
+	if p.ChannelID != uuid.Nil {
+		channel = &p.ChannelID
+	}
 	err = e.DB.QueryRow(ctx, `
-		SELECT u.username, u.display_name, c.name FROM users u, channels c WHERE u.id = $1 AND c.id = $2`,
-		p.UserID, p.ChannelID).Scan(&username, &display, &channelName)
+		SELECT u.username, u.display_name, COALESCE((SELECT c.name FROM channels c WHERE c.id = $2), '')
+		FROM users u WHERE u.id = $1`,
+		p.UserID, channel).Scan(&username, &display, &channelName)
 	if err != nil {
 		return false, err
+	}
+	if p.Place != "" {
+		channelName = p.Place
 	}
 	kind, content := "channel", p.Content
 	if dm {
@@ -110,7 +118,7 @@ func (e *Engine) insertHit(ctx context.Context, p Post, dm bool, r *compiled, ou
 		ON CONFLICT (reported_user_id, automod_rule) WHERE source = 'automod' AND status = 'open' AND reported_user_id IS NOT NULL
 		DO UPDATE SET hit_count = message_reports.hit_count + 1
 		RETURNING (xmax = 0)`,
-		p.UserID, msgID, p.ChannelID, kind, channelName, raw, r.Name, outcome).Scan(&opened)
+		p.UserID, msgID, channel, kind, channelName, raw, r.Name, outcome).Scan(&opened)
 	return opened, err
 }
 

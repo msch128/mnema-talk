@@ -59,3 +59,15 @@ func (r *Room) CameraFit(viewer, publisher uuid.UUID) int {
 	defer r.mu.RUnlock()
 	return r.cameraFitLocked(viewer, publisher)
 }
+
+// TripCap closes the peer's connection as one of its caps does: the sender
+// cap (a renewal) when senders is set, else the cap on unread RTCP streams.
+// It lets packages built on the SFU test what follows; the server never
+// calls it.
+func (p *Peer) TripCap(senders bool) {
+	if senders {
+		p.rtcp.trip("senders", maxSentTracks+1)
+		return
+	}
+	p.rtcp.trip("unknown", maxUnknownRTCPStreams+1)
+}

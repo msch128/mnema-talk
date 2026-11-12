@@ -149,7 +149,7 @@ type PruneResult struct {
 // orphans handles GET /api/admin/media/orphans.
 //
 // @Summary Count orphaned media objects
-// @Description Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).
+// @Description Objects in storage (uploads/, avatars/, banners/, covers/, exports/) that no row refers to (a media row, or for exports/ the row of a data export), older than 24 hours: left behind by a failed delete or a crash during an upload or an export. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).
 // @ID getMediaOrphans
 // @Tags Admin
 // @Produce json
@@ -174,7 +174,7 @@ func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
 // cleanupOrphans handles POST /api/admin/media/orphans/cleanup.
 //
 // @Summary Delete orphaned media objects
-// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Owner only (403 otherwise).
+// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row or the row of a data export refers to, nor one younger than 24 hours. Owner only (403 otherwise).
 // @ID cleanupMediaOrphans
 // @Tags Admin
 // @Produce json

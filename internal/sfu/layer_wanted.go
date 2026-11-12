@@ -79,7 +79,7 @@ func (g *layerGroup) resolveFlowing(want int, now time.Time) int {
 
 // recent reports whether layer i delivered a packet within the last second.
 func (g *layerGroup) recent(i int, now time.Time) bool {
-	return g.live.Load()&(1<<i) != 0 && now.UnixNano()-g.lastPkt[i].Load() < int64(time.Second)
+	return g.live.Load()&(1<<i) != 0 && steadyNanos(now)-g.lastPkt[i].Load() < int64(time.Second)
 }
 
 // floor is the worst layer a viewer may be given: the last declared one, else

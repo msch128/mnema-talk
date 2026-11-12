@@ -330,7 +330,7 @@ details and the limits.
   request line, access log or Referer); only its SHA-256 is stored; a token is
   single use (one atomic UPDATE), expires (24 hours for confirmation, 30
   minutes for reset), is bound to its purpose and, for confirmation, to the
-  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one. Reset: the
+  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one (the hourly count, the retire and the insert run under one lock per account and purpose, so requests that arrive together still leave one live link and stay within the hourly budget). Reset: the
   request answers `202` with an empty body for every well-formed address, known
   or not, confirmed or not, disabled account or not, and does its work after
   responding, so neither content nor timing tells accounts apart; it is limited
@@ -420,9 +420,27 @@ details and the limits.
   forgotten. The name `deleted-…` is reserved. A deleted account is final:
   every administrative action treats it as missing (404), the account queries
   count it as inactive, and a database trigger refuses any update that would
-  re-enable it or give it a password, name, address, avatar, role or ban. *Export* is built in the
-  background into the object store under `exports/` (not touched by the orphan
-  cleanup), limited to one per account per 24 hours by a database lock, is
+  re-enable it or give it a password, name, display name, bio, status, address,
+  avatar, role or ban. A write of the member's that is still under way while
+  the account is erased (a second tab or device, a retry) leaves nothing
+  behind either: a trigger on every table with a foreign key to `users` (a
+  test fails for a new one without it) waits for the erasure's lock on the
+  account and then refuses a row of the member's own, and writes other
+  members' rows without the member: a reply no longer makes them follow the
+  thread, and a report no longer names them as the reported account. A role,
+  channel overwrite, block or conversation membership another member sets for
+  them in that moment is dropped (the request still answers success, as if it
+  had come a moment later, when the account no longer exists). A report's copy
+  of the conversation written after the erasure holds none of their text or
+  files, only the tombstone name and "Deleted member", like the copies the
+  erasure scrubs. Their emptied messages
+  cannot get text, link cards or a title again, and an audit entry by or about
+  the erased account is written without names and details. A file such a
+  write had already stored is deleted when its row is refused; if that delete
+  fails, the orphan cleanup finds it. *Export* is built in the
+  background into the object store under `exports/` (the orphan cleanup
+  removes only an archive no export row names), limited to one per account
+  per 24 hours by a database lock, is
   streamed into storage while it is made (memory stays at one page of rows; the
   bounds are enforced while writing), can be downloaded once within 24 hours
   (the file is spent and deleted only after it was sent completely; an
@@ -449,6 +467,54 @@ details and the limits.
   out to the room. ICE candidates in a client's answer SDP get the same
   vetting and budget as trickled ones (no loopback, link-local, multicast,
   unspecified or name addresses, at most 64 per peer).
+- **Media connection limits.** Each published track has an ingress budget far
+  above what the web client sends; a publisher that stays over it for ten
+  seconds is disconnected. RTCP that names an SSRC nothing on the connection
+  reads (any PLI, NACK, FIR, REMB, report block, BYE or SDES source) makes
+  Pion keep a read stream until the connection closes. The SFU gives such a
+  stream a buffer only for an SSRC it might read, and caps that buffer (128
+  packets, 16 KB; about 20 KB of heap when full). A stream for an SSRC the
+  client declared in its answer, or that the SFU sent and stopped (the late
+  reports of an ended track, RTX included), keeps nothing (about 0.5 KB); a report that arrives in the moment a sender is made or stopped can
+  leave that one stream with its capped buffer, which the buffered limit counts. A
+  member's media connection is closed, logged with the member at warn and
+  counted (`mnema_sfu_ingress_dropped_total{reason="rtcp_ssrcs"}`) once it
+  named more than 64 SSRCs that are neither, made more than 32 768 of the
+  empty streams, or had more than 1024 buffered streams open (a cap counted
+  apart from Pion's log line). An SSRC reported from before the answer that
+  declares it is forgiven at most once per m-line the connection gains, as
+  its stream keeps the buffer; the lines are counted in the SFU's own offer,
+  never in the client's answer. A member has one media connection at a time,
+  so it holds at most (65 + the offer's m-lines) buffered streams for arbitrary SSRCs
+  (about 1.3 MB plus 20 KB per line, under 3 MB for 70 lines) and about 16 MB
+  of empty ones before the connection is closed; a client can make the empty
+  ones in about two minutes. Every sender the SFU makes on a
+  connection (one per subscription switched on, and per track that starts
+  or resumes for the viewer) leaves Pion's SRTP state for its SSRCs, about
+  160 bytes (about 240 with retransmissions), until the connection closes;
+  nothing else of a stopped sender stays. After 32 768 senders the
+  connection is renewed: the SFU closes it (counted as
+  `mnema_sfu_ingress_dropped_total{reason="senders"}`), the member's
+  WebSocket is closed with code 4002, and the client reconnects and resumes
+  the call within the grace period, so this is at most about 8 MB per
+  connection, and a member switching camera batches of 16 at the event
+  budget adds at most about 80 KB a second until then. A camera or screen
+  share that its publisher stops and sends again resumes for its viewers (a
+  new sender on each) at once ten times, then once every ten seconds; the
+  budget belongs to the publisher and source, so a new capture or a rejoin
+  does not refill it, and another member cannot drive a viewer's connection
+  to that cap. The caps above
+  that only abuse reaches end the member's voice with `connection_lost`
+  instead, so no seat is left without media.
+- **Answers are checked against what the SFU offers.** An answer must have the
+  media sections of the offer it answers: as many, in the same order, under
+  the same mids. Every section the SFU offers carries one stream, so a section
+  of the answer may name one SSRC and, tied to it by an `a=ssrc-group` line,
+  its retransmission (`FID`) and error correction (`FEC-FR`) SSRCs; no SSRC
+  may appear in two sections. An answer that does not fit is refused before
+  the connection reads it, logged with the member at warn, and the offer is
+  sent again. The candidates inside an answer get the same vetting and budget
+  as trickled ones.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
@@ -808,7 +874,14 @@ details and the limits.
   longer lists, one silent for about the absence limit by the receiver's own
   clock, or one the commit replaces. A browser that slept, and the member being
   removed itself, take a removal on the committer's word, since neither can
-  judge silence. So another member cannot remove a present member or give
+  judge silence. A commit from the committer whose first violation is an add of a
+  key package the relay never delivered to this receiver is held for one offer wait (4 seconds), since
+  the package may be on its way, and taken then if it has come (it is never taken if it breaks another rule); if not, the
+  receiver starts over like for a commit ahead (not more often than the reset
+  limit allows), because the members that were given the package may be in the
+  next epoch. A relay that gives a reloaded member's package to the committer
+  only therefore costs the others a start-over, not a split until the next
+  commit (design: `doc/security/h-l2-04-unseen-add.md`). So another member cannot remove a present member or give
   someone a second leaf (an epoch where an identity holds two leaves is
   refused and the member starts over). A malicious committer (the lowest id)
   keeps the powers the rules give the role: it can remove a member that looks
@@ -981,8 +1054,9 @@ details and the limits.
   connected, for up to twice the limit (40 minutes in production, where it
   was 20), and only while newcomers keep coming in within every 20 minutes;
   otherwise for about the limit. A member that left the Talk is removed at
-  once, as before. A receiver never accepted a removal earlier than the
-  limit. A 3.0.7 committer still removes at the limit and a new receiver
+  once, as before. A receiver accepts a removal for silence from the limit
+  minus one maintenance interval (19.5 minutes in production), measured by
+  its own clock, and never earlier. A 3.0.7 committer still removes at the limit and a new receiver
   treats that as before; a new committer among 3.0.7 receivers waits where
   they would have refused, which is strictly better for them. A receiver
   that slept counts everyone alive from its wake and may still refuse one
@@ -1075,9 +1149,11 @@ details and the limits.
   Ed25519 signature over group, id and bits, with the member's leaf key) when they
   join or meet a member they have not told, and with each heartbeat; older clients
   decide their format by it, and a 1.2 member answers it like any other. The security floor of the signed web
-  bundle is raised to 1.2.0 with this change (`Security-Floor: raise`), so a
-  desktop client that has run a 1.2 bundle never falls back to an older bundle
-  that still sealed version 2. The server cannot enforce this: it relays media it
+  bundle was not raised by this change (its `Security-Floor: raise` line was not
+  a git trailer, so the signed 1.2.0 manifest declares `security_floor` 0.7.23);
+  a desktop client that has run a 1.2 bundle still never falls back to an older
+  bundle that sealed version 2, because the high-water mark of its
+  `web_client_api` keeps it at 1.2 or newer. The server cannot enforce this: it relays media it
   cannot read, and the format is checked by the receiving clients.
   Also known and accepted: two colluding members, or the server, can make a
   listener who hears nobody else regroup by naming a newer epoch in unopened

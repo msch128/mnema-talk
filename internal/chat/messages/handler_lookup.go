@@ -16,7 +16,7 @@ import (
 // ToggleReaction handles POST /api/messages/{messageID}/reactions.
 //
 // @Summary Toggle a reaction
-// @Description Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.
+// @Description Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). One emoji with and without U+FE0F (a red heart, a thumbs up) is one reaction, stored and returned in its fully-qualified Unicode form; skin tones and joined sequences stay separate emoji. Broadcasts message_reaction.
 // @ID toggleReaction
 // @Tags Messages
 // @Accept json

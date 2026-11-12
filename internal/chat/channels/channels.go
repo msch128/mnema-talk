@@ -72,16 +72,24 @@ func cleanChannelInputs(name, topic string, chType core.ChannelType) (string, st
 	return cleanName, cleanTopic, nil
 }
 
-// lockCategory requires the category to exist and holds it until the end of
-// the transaction, so it cannot be deleted before the channel is in it.
-func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
+// errNoCategory is what creating a channel in a category answers when the
+// category does not exist and when the caller cannot see it: one answer, so a
+// hidden category cannot be told from a missing one.
+var errNoCategory = httpx.ErrInvalidInput("category not found")
+
+// lockCategory requires the category to exist and to be one the caller sees
+// (canSee; nil sees all), and holds it until the end of the transaction, so it
+// cannot be deleted before the channel is in it. Existence and sight are
+// decided at this one place, after the same work, so a hidden category cannot
+// be told from a missing one by the answer or by how long it takes.
+func lockCategory(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, categoryID *uuid.UUID) error {
 	if categoryID == nil {
 		return nil
 	}
 	var one int
 	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR SHARE`, *categoryID).Scan(&one)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrInvalidInput("category not found")
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && canSee != nil && !canSee(*categoryID)) {
+		return errNoCategory
 	}
 	return err
 }
@@ -90,6 +98,12 @@ func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 // with asStage, makes it a Stage in the same transaction, so a request that
 // cannot be a Stage (a text channel) creates nothing.
 func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
+	return CreateChannelSeenBy(ctx, p, nil, categoryID, name, chType, topic, sortOrder, asStage)
+}
+
+// CreateChannelSeenBy is CreateChannelWithStage for a caller who sees the
+// categories canSee names (nil: all): any other category answers as a missing one.
+func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -99,7 +113,7 @@ func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UU
 	}
 	var ch core.Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockCategory(ctx, tx, categoryID); err != nil {
+		if err := lockCategory(ctx, tx, canSee, categoryID); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `

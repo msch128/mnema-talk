@@ -63,9 +63,13 @@ type Server struct {
 	// Background runs the swap after the 202; tests replace it to wait.
 	Background func(func())
 
-	mu    sync.Mutex
-	busy  bool
-	swaps sync.WaitGroup
+	// mu guards busy, draining and every swaps.Add: once WaitIdle began
+	// (shutdown) no swap is admitted, and nothing is added to swaps while it
+	// is waited on.
+	mu       sync.Mutex
+	busy     bool
+	draining bool
+	swaps    sync.WaitGroup
 }
 
 // ServeHTTP serves POST /v1/update (Bearer token) and GET /healthz.
@@ -137,6 +141,11 @@ func (s *Server) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	plan, status, reason := s.verifyAll(ctx, targets, want)
 	if reason != "" {
 		reply(w, status, reason)
+		return
+	}
+	if !s.admit() {
+		s.Log.Warn("update refused: the updater is shutting down; nothing was pulled or restarted")
+		reply(w, http.StatusServiceUnavailable, "")
 		return
 	}
 	handedOver = true
@@ -249,8 +258,20 @@ func checkVersion(signed, running string, want update.Semver) error {
 	return nil
 }
 
-func (s *Server) background(f func()) {
+// admit counts one swap, unless WaitIdle began (shutdown): then it refuses.
+// Every admitted swap must be started with background.
+func (s *Server) admit() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.draining {
+		return false
+	}
 	s.swaps.Add(1)
+	return true
+}
+
+// background runs f, a swap admit counted, and marks it done.
+func (s *Server) background(f func()) {
 	run := func() {
 		defer s.swaps.Done()
 		f()
@@ -263,8 +284,13 @@ func (s *Server) background(f func()) {
 }
 
 // WaitIdle blocks until no swap is running, or until timeout; it reports
-// whether the updater is idle.
+// whether the updater is idle. It is the shutdown step: from its start on no
+// new swap is admitted (the request is answered 503), also after a WaitIdle
+// that timed out.
 func (s *Server) WaitIdle(timeout time.Duration) bool {
+	s.mu.Lock()
+	s.draining = true
+	s.mu.Unlock()
 	idle := make(chan struct{})
 	safego.Go("updater_wait", safego.Crash, func() {
 		s.swaps.Wait()

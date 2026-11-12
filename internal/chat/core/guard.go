@@ -78,6 +78,18 @@ func (g Guard) ViewableCategories(r *http.Request) ([]uuid.UUID, error) {
 	return snap.VisibleCategories(auth.UserFrom(r.Context()).Subject()), nil
 }
 
+// CategoryViewer says which categories the caller sees now, for an operation
+// that decides it where it also checks the category exists (a category the
+// permission state does not know is left to that check).
+func (g Guard) CategoryViewer(r *http.Request) (func(uuid.UUID) bool, error) {
+	snap, err := g.Perms.Snapshot(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	sub := auth.UserFrom(r.Context()).Subject()
+	return func(id uuid.UUID) bool { return !snap.KnowsCategory(id) || snap.CategoryVisible(sub, id) }, nil
+}
+
 // RequireCategory checks that the caller may see a category (a category that
 // does not exist is left to the operation itself to report).
 func (g Guard) RequireCategory(r *http.Request, id uuid.UUID) error {

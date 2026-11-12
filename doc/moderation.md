@@ -179,8 +179,9 @@ A sweeper runs every ten minutes, removes the messages older than the period
 in batches of 200 (at most 25 batches per channel and run, the rest on the next
 run) and deletes their attachments through the same path as a deleted message.
 Clients get `message_delete` for each. **Pinned messages stay**, and so does a
-thread root while it has a reply that is newer than the period or pinned; the
-old replies of such a thread go. Turning auto-delete off stops a run at once.
+thread root while it has a reply that is newer than the period or pinned (also
+one that is written or pinned while a run is underway); the old replies of such
+a thread go. Turning auto-delete off stops a run at once.
 Every run that removed something is one `channel.auto_delete_run` audit entry
 with the counts; changing the setting is `channel.auto_delete_set`. The
 audit entries of `message.delete` are *not* written for these deletions (they
@@ -214,7 +215,9 @@ Holders of *Manage messages* in a channel can:
   /api/channels/{channelID}/messages/bulk-delete` with `user_id`, `count` 1 to
   100 and a reason): replies and attachments go with them. It needs a higher
   role than the member (checked in the same transaction as the delete) and
-  leaves threads that hold a reply of the Owner alone. Every message gets its own
+  leaves threads that hold a reply of the Owner alone (also one whose reply is
+  committed while the delete runs; the delete then takes fewer messages than
+  asked, the summary has both numbers). Every message gets its own
   audit entry with its text, plus one `moderation.bulk_delete` summary.
 - **Read the edit history** of an edited message (`GET
   /api/channels/{channelID}/messages/{messageID}/edits`, "Edit history" in the
@@ -386,7 +389,16 @@ and that is remembered.
 Automod covers every way a member's message is created: plain messages,
 uploads, thread replies, polls, forwards, slash command replies and
 **edits** (an edit that breaks a blocking rule is refused and the message stays
-as it was).
+as it was). It screens this other text the same way, with the same refusal,
+exemptions and actions: forum post titles and their edits, a forum's tags
+(name and emoji) and guidelines, the new name of a temporary Talk, **comments
+under a community event** and their edits, and an event's **title, description
+and location** when it is created or an edit sets them (*Manage events* does
+not exempt; the event's Talk, if it has one, counts as the channel for exempt
+channels). Tags, guidelines, Talk names and event text are not messages, so
+their queue entries have no message id; an entry about event text names the
+event's title as the place. Other text, such as profiles, wiki pages and the
+names of an event's roles, is not screened.
 
 ### Direct messages
 
@@ -496,12 +508,39 @@ middleware that works from a route table (`internal/audit/routes.go`), so a
 handler cannot forget it: roles (create, edit, delete, reorder, assignment),
 channel and category overwrites, channels and categories (create, edit,
 delete, duplicate, layout), invites (created, changed, revoked), members (disable,
-enable, end sessions, status line, password set or reset, login unlock, Talk
-kick), incoming and outgoing webhooks (create, edit, regenerate or rotate,
+enable, end sessions, status line, password set or reset, login unlock, the
+admin-wide Talk kick `user.talk_kick`, which names no Talk), incoming and outgoing webhooks (create, edit, regenerate or rotate,
 delete), media pruning and deletion, and self-update. The wiki is edited by members, not through `/api/admin`, so it records its own actions: `wiki.create`, `wiki.edit`, `wiki.move`, `wiki.delete`, `wiki.restore`, `wiki.lock` and `wiki.image` (a picture uploaded) ([wiki](wiki.md#history-and-undoing-vandalism)). A test walks the router
 and fails when an admin route is missing from the table; an unlisted route is
 still recorded under a generic `admin.<method>` action. Refused or failed
 requests leave no entry. Reading the log is not recorded.
+
+### When an entry can be missing
+
+The entries of a message deletion or edit, a report, a registration, an
+account deletion, a new wiki page and a new event (not a series) are written
+in the same database transaction as the change: the change and its entry
+exist together or not at all, and a failed entry fails the change. Every other
+entry is written right after the change committed, in a statement of its own:
+all of the `/api/admin` middleware's, and the entries of a bulk delete
+(`message.delete` per message and `moderation.bulk_delete`), pins, ending a
+poll, the forum (post updates, settings, tags), Talks (`voice.join` and
+`voice.leave`, removing a member from one Talk, Talk settings, the removal
+of a temporary Talk), event edits,
+cancellations, series, covers, roles, role templates and comment removals,
+wiki edits, moves, deletions, restores, locks and images, role
+self-assignment, auto-delete settings and runs, automod timeouts and raid
+mode, expired bans, removed avatars, the moderation slash commands, the
+edit-history view, and the auth events (sign-in and failed sign-in, password
+change and reset mail, e-mail, second factor, sessions, data export). That
+write does not end with the request: a client that disconnects in that moment
+still leaves its entry (the write has five seconds of its own). What is left
+is a crash of the server or a database failure (an error, a restart) in that
+moment: the change stays, its request answered success, the entry is
+missing, and the server logs `audit log write failed` with the action. A
+deploy shuts the server down gracefully and does not cut that moment. The admin middleware
+works outside the handlers' transactions by design (it snapshots before and
+after any handler), so it cannot join them.
 
 ### Events besides admin actions
 
@@ -514,7 +553,8 @@ requests leave no entry. Reading the log is not recorded.
 | `role.self_assign`, `role.self_remove` | A member takes or drops a role an admin opened to everyone (see [Roles members choose themselves](roles-and-permissions.md#roles-members-choose-themselves)) | The role. The member is the actor; the same request again, which changes nothing, is not recorded |
 | `channel.auto_delete_set` | Someone with *Manage channels* turns a channel's auto-delete on, off or to another period | The channel with its settings before and after (`auto_delete_days`) |
 | `channel.auto_delete_run` | The sweeper removed messages of a channel | The channel, the period (`days`), how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
-| `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
+| `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group. Under a burst of more than about a thousand joins and leaves in a moment, the audit log may not record every one (the hub's `voice join` and `voice leave` log lines name the member and the Talk of each one at the default log level, and `mnema_ws_dropped_total{reason="audit_presence"}` counts the misses) |
+| `voice.disconnect` | A moderator removes a member from one Talk (*Disconnect members* there) | The moderator, the member and the Talk. It says who was in which Talk, so it is read like `voice.join`; the moderation history lists it as a Talk removal without the Talk. A removal from a conversation's call Talk is not recorded, like `voice.join` there |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |
 | `auth.login` | Successful sign-in | The member |
 | `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
@@ -571,13 +611,20 @@ Only the Owner and holders of the **View audit log** permission may read it
 (`GET /api/admin/audit-log`; the permission also opens the admin console on the
 *Audit log* tab). *Administrator* includes it. What a reader sees depends on the class of the entry. The table lives in code
 (`audit.Classes`, pinned action by action in a test), so a new action cannot
-quietly default to something wider than intended; this is the same table.
+quietly default to something wider than intended; this is the same table. An
+action gets the class of the first row it matches. A test reads the server's
+source for every action an entry can be written with and fails for one without
+a row of its own, and the last row, which catches everything else, is the
+narrowest class (Owner and Administrators only): a forgotten action is hidden,
+not shown to every auditor. The Auditors class names each of its actions one by
+one. The class is applied when the log is read, so older entries follow the
+current table.
 
 | Class | Who reads it | Actions |
 |---|---|---|
-| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `wiki.*` (the wiki is open to every member who may view it), and the moderation actions not listed elsewhere |
-| Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `poll.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too), `event.talk_*`, `moderation.bulk_delete` |
-| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `import.*`, `moderation.note_*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
+| Auditors | Every holder of *View audit log* | The actions of roles (`role.create`, `role.update`, `role.delete`, `role.reorder`, `role.self_assign`, `role.self_remove`), members (`user.disable`, `user.enable`, `user.sessions_revoke`, `user.status`, `user.roles_set`, `user.talk_kick`: the admin-wide kick, which names no Talk), invites (`invite.create`, `invite.vanity_link`, `invite.update`, `invite.revoke`), moderation (`moderation.timeout`, `moderation.timeout_remove`, `moderation.ban`, `moderation.unban`, `moderation.ban_expired`, `moderation.kick`), automod (`automod.rule_create`, `automod.rule_update`, `automod.rule_delete`, `automod.timeout`, `automod.raid`), custom emoji (`emoji.create`, `emoji.rename`, `emoji.delete`), events without a Talk (`event.create`, `event.edit`, `event.cancel`, `event.comment_delete`, `event.role_template_create`, `event.role_template_update`, `event.role_template_delete`) and the wiki (`wiki.create`, `wiki.edit`, `wiki.move`, `wiki.delete`, `wiki.restore`, `wiki.lock`, `wiki.image`; the wiki is open to every member who may view it) |
+| Channel | Holders of *View audit log* **who can view the entry's channel when they read**; an entry that names no channel is hidden from them | `message.*`, `poll.*`, `voice.*` (with `voice.disconnect`, a removal from one Talk; older versions wrote that removal as `user.talk_kick` with the Talk in its details, and such entries are read the same way), `forum.*` (post titles, their authors and tag names of a possibly private forum), `channel.*` (a private channel's name, topic and overwrites are private too), `event.talk_*`, `moderation.bulk_delete` |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `import.*`, `moderation.note_*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table), and every action without a row of its own |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

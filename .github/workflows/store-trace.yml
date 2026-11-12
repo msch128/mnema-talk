@@ -1,0 +1,70 @@
+name: Store trace sweep
+
+# Do the web client's stores end where a freshly loaded client starts? The Go
+# integration test runs random operations by several members against a real
+# server and records what one member's socket received and what the REST
+# routes answered after every operation (internal/server/store_trace_integration_test.go).
+# The web test replays every trace into the real stores, drops the connection
+# at every position, lets answers and events cross, and compares the stores
+# with fresh clients (web/src/stores/storeTrace.test.ts). What breaks today is
+# on the known list (web/src/stores/storeTrace.known.ts): a new break, or a
+# known one that no longer happens, fails the run. New seeds every night. Too
+# slow for the pull request pipeline; a failed run is the alert.
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+      STORE_TRACE_SEEDS: "30"
+    steps:
+      # Seeds the checked-in traces were not taken from: a new block per run.
+      - run: echo "STORE_TRACE_FIRST=$((100 + 30 * GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Record the traces
+        env:
+          STORE_TRACE_OUT: ${{ runner.temp }}/traces
+        run: |
+          mkdir -p "$STORE_TRACE_OUT"
+          go test -tags=integration -count=1 -timeout=1800s -run 'TestStoreTrace$' ./internal/server
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - name: Replay them into the stores
+        working-directory: web
+        env:
+          STORE_TRACE_DIR: ${{ runner.temp }}/traces
+        run: npx vitest run src/stores/storeTrace.test.ts -t deep

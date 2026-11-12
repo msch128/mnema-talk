@@ -143,6 +143,9 @@ type NewReport struct {
 	MessageID uuid.UUID
 	Category  string
 	Note      string
+	// Audited, if set, runs in the report's transaction once its id is
+	// known (the audit entry, so a report is never stored without it).
+	Audited func(tx pgx.Tx, id uuid.UUID) error
 }
 
 // FileReport stores a report of a message the reporter can see (the caller
@@ -161,7 +164,7 @@ func FileReport(ctx context.Context, p *db.Pool, nr NewReport) (uuid.UUID, error
 		return uuid.Nil, errReportOwn
 	}
 	var kind, name string
-	if err := p.QueryRow(ctx, `SELECT CASE WHEN type = 'dm' THEN 'dm' ELSE 'channel' END, CASE WHEN type = 'dm' THEN '' ELSE name END FROM channels WHERE id = $1`, ref.ChannelID).Scan(&kind, &name); err != nil {
+	if err := p.QueryRow(ctx, `SELECT CASE WHEN `+core.PrivateChannelSQL("c")+` THEN 'dm' ELSE 'channel' END, CASE WHEN `+core.PrivateChannelSQL("c")+` THEN '' ELSE c.name END FROM channels c WHERE c.id = $1`, ref.ChannelID).Scan(&kind, &name); err != nil {
 		return uuid.Nil, fmt.Errorf("load report channel: %w", err)
 	}
 	snap, err := reportContext(ctx, p, ref.ChannelID, nr.MessageID)
@@ -178,32 +181,41 @@ func FileReport(ctx context.Context, p *db.Pool, nr NewReport) (uuid.UUID, error
 func insertReport(ctx context.Context, p *db.Pool, nr NewReport, ref *core.MessageRef, kind, name string, snapshot []byte) (uuid.UUID, error) {
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, nr.Reporter); err != nil {
+		if err := storeReport(ctx, tx, nr, ref, kind, name, snapshot, &id); err != nil || nr.Audited == nil {
 			return err
 		}
-		err := tx.QueryRow(ctx, `SELECT id FROM message_reports WHERE reporter_id = $1 AND message_id = $2 AND status = 'open'`, nr.Reporter, nr.MessageID).Scan(&id)
-		if err == nil {
-			return nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-		var open int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM message_reports WHERE reporter_id = $1 AND status = 'open'`, nr.Reporter).Scan(&open); err != nil {
-			return err
-		}
-		if open >= MaxOpenReportsPerMember {
-			return errTooManyReports
-		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO message_reports (reporter_id, reported_user_id, message_id, channel_id, kind, channel_name, category, note, snapshot)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-			nr.Reporter, ref.AuthorID, nr.MessageID, ref.ChannelID, kind, name, nr.Category, nr.Note, snapshot).Scan(&id)
+		return nr.Audited(tx, id)
 	})
 	if db.IsUniqueViolation(err) {
 		return uuid.Nil, httpx.ErrConflict("this message is already reported")
 	}
 	return id, err
+}
+
+// storeReport inserts the report, or finds the reporter's open report of the
+// same message, and sets id.
+func storeReport(ctx context.Context, tx pgx.Tx, nr NewReport, ref *core.MessageRef, kind, name string, snapshot []byte, id *uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, nr.Reporter); err != nil {
+		return err
+	}
+	err := tx.QueryRow(ctx, `SELECT id FROM message_reports WHERE reporter_id = $1 AND message_id = $2 AND status = 'open'`, nr.Reporter, nr.MessageID).Scan(id)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	var open int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM message_reports WHERE reporter_id = $1 AND status = 'open'`, nr.Reporter).Scan(&open); err != nil {
+		return err
+	}
+	if open >= MaxOpenReportsPerMember {
+		return errTooManyReports
+	}
+	return tx.QueryRow(ctx, `
+		INSERT INTO message_reports (reporter_id, reported_user_id, message_id, channel_id, kind, channel_name, category, note, snapshot)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+		nr.Reporter, ref.AuthorID, nr.MessageID, ref.ChannelID, kind, name, nr.Category, nr.Note, snapshot).Scan(id)
 }
 
 // listReportRows reads one page of reports, newest first, from the row after

@@ -114,11 +114,28 @@ func (s *Server) revalidate(user uuid.UUID) {
 	})
 }
 
-// allowAllocation rate-limits allocation attempts per source address.
-func (s *Server) allowAllocation(_, _ string, src net.Addr) bool {
-	if !s.allocLimit.allow(hostOf(src), s.now()) {
+// allowAllocation is the quota handler. Pion calls it only for a request that
+// passed the integrity check, with the username of the credential that signed
+// it, so the member is known and nobody else could have sent it; the source
+// address is not, a UDP sender can name any. So the attempts are rate-limited
+// per member (one budget however many addresses a member sends from, and one
+// member cannot use up another's), and only after the member's account state
+// is checked: a banned or removed member's still-valid credential is refused
+// here, before it can draw on the limiter. The check is the cached, shared
+// lookup the generator asks again.
+func (s *Server) allowAllocation(username, _ string, src net.Addr) bool {
+	user, _, err := parseUsername(username)
+	if err != nil {
+		return false
+	}
+	if ok, err := s.mayJoin(user); err != nil || !ok {
+		metrics.TURNEvents.With("forbidden").Inc()
+		s.debug("turn: member may not join voice", "user", user, "from", hostOf(src), "err", err)
+		return false
+	}
+	if !s.allocLimit.allow(user.String(), s.now()) {
 		metrics.TURNEvents.With("rate_limited").Inc()
-		s.debug("turn: allocation rate limit", "from", hostOf(src))
+		s.debug("turn: allocation rate limit", "user", user, "from", hostOf(src))
 		return false
 	}
 	return true

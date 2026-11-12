@@ -101,7 +101,7 @@ func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 
 // write hands one packet of layer idx to every viewer.
 func (g *layerGroup) write(idx int, p *rtp.Packet) {
-	now := layerNow().UnixNano()
+	now := steadyNanos(layerNow())
 	if was := g.lastPkt[idx].Swap(now); now-was >= int64(time.Second) && g.source == SourceCamera {
 		// The layer was silent (its sender switched it off, or it just began: its
 		// first packet comes after the layer was attached) and delivers now:
@@ -158,7 +158,7 @@ func (g *layerGroup) sampleRates(now time.Time) {
 		return
 	}
 	defer g.rateMu.Unlock()
-	at, t := g.rateAt, now.UnixNano()
+	at, t := g.rateAt, steadyNanos(now)
 	if at != 0 && t-at < int64(rateEvery) {
 		return
 	}

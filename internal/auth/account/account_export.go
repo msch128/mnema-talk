@@ -48,8 +48,8 @@ const (
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: an export was already requested in the last 24 hours, or too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Header 503 {integer} Retry-After "Seconds until the client may retry (when every export slot is busy)."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
+// @Header 503 {integer} Retry-After "Seconds until the client may retry (when every export slot is busy or the server is shutting down)."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: object storage is not available, every export slot is busy, or the server is shutting down; no export was started and none counts toward the daily limit."
 // @Router /api/users/me/export [post]
 func (h *API) requestExport(w http.ResponseWriter, r *http.Request) error {
 	u := auth.UserFrom(r.Context())
@@ -71,10 +71,8 @@ func (h *API) requestExport(w http.ResponseWriter, r *http.Request) error {
 		httpx.WriteRateLimited(w, retry)
 		return nil
 	}
-	if !h.buildExportInBackground(id, u.ID) {
-		busy := httpx.ErrUnavailable("exports are being built for other members right now; try again in a few minutes")
-		busy.RetryAfter = exportBusyRetry
-		return busy
+	if err := h.buildExportInBackground(id, u.ID); err != nil {
+		return err
 	}
 	h.AuditUser(r.Context(), u, "auth.export_request")
 	st, err := h.exportState(r.Context(), u.ID)
@@ -108,17 +106,29 @@ func (h *API) claimExport(ctx context.Context, user uuid.UUID) (id uuid.UUID, wa
 	return id, wait, err
 }
 
-// buildExportInBackground starts building the export. It reports false, after
-// marking the export failed (which does not count toward the daily limit),
-// when every build slot is taken.
-func (h *API) buildExportInBackground(id, user uuid.UUID) bool {
+// buildExportInBackground starts building the export. When every build slot
+// is taken, or the server is shutting down, it marks the export failed (which
+// does not count toward the daily limit, so the member can ask again) and
+// returns the 503 to answer. Should that update fail too (the pool is
+// closing), the sweep marks the export failed after 30 minutes.
+func (h *API) buildExportInBackground(id, user uuid.UUID) *httpx.APIError {
 	select {
 	case h.exportSlots <- struct{}{}:
 	default:
 		h.failExport(context.Background(), id)
-		return false
+		busy := httpx.ErrUnavailable("exports are being built for other members right now; try again in a few minutes")
+		busy.RetryAfter = exportBusyRetry
+		return busy
 	}
-	done := h.TrackJob()
+	done, ok := h.TrackJob()
+	if !ok {
+		<-h.exportSlots
+		h.failExport(context.Background(), id)
+		slog.Warn("server shutting down, data export refused")
+		down := httpx.ErrUnavailable("server shutting down")
+		down.RetryAfter = exportBusyRetry
+		return down
+	}
 	// A panic fails this export; its slot is released like after any build.
 	safego.Go("export_build", func() { h.failExport(context.Background(), id) }, func() {
 		defer func() {
@@ -132,7 +142,7 @@ func (h *API) buildExportInBackground(id, user uuid.UUID) bool {
 			h.failExport(context.Background(), id)
 		}
 	})
-	return true
+	return nil
 }
 
 func (h *API) failExport(ctx context.Context, id uuid.UUID) {

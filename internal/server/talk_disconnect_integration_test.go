@@ -102,8 +102,8 @@ func TestDisconnectMembersFollowsTalkOverwrites(t *testing.T) {
 	// Not in that Talk: 400, like the admin route.
 	wantStatus(t, "not in the Talk", global.post(disconnectURL(lobby, max), nil), http.StatusBadRequest)
 
-	// Each disconnect is audited.
-	if n := a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'user.talk_kick' AND actor_id = ANY($1)`, []uuid.UUID{global.user.ID, scoped.user.ID, denied.user.ID}); n != 4 {
+	// Each disconnect is audited, as an entry about its Talk.
+	if n := a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'voice.disconnect' AND channel_id IS NOT NULL AND actor_id = ANY($1)`, []uuid.UUID{global.user.ID, scoped.user.ID, denied.user.ID}); n != 4 {
 		t.Fatalf("audit entries: %d, want 4", n)
 	}
 }

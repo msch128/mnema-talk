@@ -92,31 +92,54 @@ func CheckWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) err
 	return nil
 }
 
-// CheckLayout checks, on a state read under the permission lock, that the
-// caller sees everything a layout change names and may make its moves.
-func CheckLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error {
-	for _, c := range req.Categories {
-		if snap.KnowsCategory(c.ID) && !snap.CategoryVisible(sub, c.ID) {
-			return core.ErrCategoryNotFound
+// SeenLayout prepares a layout change on a state read under the permission
+// lock: every category and channel it names that the caller cannot see is
+// replaced by a fresh random id, and the moves are checked for the caller.
+//
+// A hidden object thus takes exactly the path of one that does not exist: the
+// same checks, in the same order, with the same database work, and the answer
+// (the request's ids are never echoed) cannot tell the two apart, whatever
+// else is wrong with the request. Apply the returned request, not the given one.
+func SeenLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) (LayoutRequest, error) {
+	standIns := map[uuid.UUID]uuid.UUID{} // one per hidden id, so a repeated id stays repeated
+	standIn := func(id uuid.UUID) uuid.UUID {
+		if f, ok := standIns[id]; ok {
+			return f
 		}
+		f := uuid.New()
+		standIns[id] = f
+		return f
 	}
-	for _, c := range req.Channels {
+	seenCategory := func(id uuid.UUID) uuid.UUID {
+		if snap.KnowsCategory(id) && !snap.CategoryVisible(sub, id) {
+			return standIn(id)
+		}
+		return id
+	}
+	out := LayoutRequest{
+		Categories: make([]CategoryOrder, len(req.Categories)),
+		Channels:   make([]ChannelPlacement, len(req.Channels)),
+	}
+	for i, c := range req.Categories {
+		c.ID = seenCategory(c.ID)
+		out.Categories[i] = c
+	}
+	for i, c := range req.Channels {
+		if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+			c.ID = standIn(c.ID)
+		}
+		if c.CategoryID != nil {
+			to := seenCategory(*c.CategoryID)
+			c.CategoryID = &to
+		}
+		out.Channels[i] = c
+	}
+	for _, c := range out.Channels {
 		if err := checkChannelMove(snap, sub, c); err != nil {
-			return err
+			return LayoutRequest{}, err
 		}
 	}
-	return nil
-}
-
-func targetCategoryVisible(snap *perm.Snapshot, sub perm.Subject, target *uuid.UUID) (uuid.UUID, error) {
-	if target == nil {
-		return uuid.Nil, nil
-	}
-	to := *target
-	if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
-		return uuid.Nil, core.ErrCategoryNotFound
-	}
-	return to, nil
+	return out, nil
 }
 
 func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
@@ -127,14 +150,17 @@ func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
 }
 
 // checkChannelMove checks one placement of a layout change: the caller sees
-// the channel and its target category, and may move it between categories.
+// the channel (one they cannot see was replaced by an unknown id, which they do
+// not see either) and may move it between categories.
 func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
-	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+	// A conversation's call Talk is no part of the community's layout: it is as
+	// hidden as a channel that does not exist, even from its own members.
+	if snap.IsDMTalk(c.ID) || !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
-	to, err := targetCategoryVisible(snap, sub, c.CategoryID)
-	if err != nil {
-		return err
+	to := uuid.Nil
+	if c.CategoryID != nil {
+		to = *c.CategoryID
 	}
 	// Moving a channel takes on the permissions of its new category and
 	// drops those of the old one, which could undo a restriction the

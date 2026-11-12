@@ -31,7 +31,7 @@ creating the webhook or later (`PATCH /api/admin/webhooks/{id}`):
 | Setting | Default | Meaning |
 |---|---|---|
 | `allow_everyone` | off | `@all` and `@here` may notify (the sender must also ask for it with `allowed_mentions.parse: ["everyone"]`) |
-| `allow_user_mentions` | on | `@username` notifies members, as Discord's `parse: ["users"]`; off turns every member mention into plain text |
+| `allow_user_mentions` | on | `@username` notifies members, as Discord's `parse: ["users"]`; off turns every member mention into plain text (next to `@all` or `@here` a named member is reached by that group only, which a mute silences, and a named bot is not mentioned; a web app that does not know `direct_mentions` yet still counts such a name live in a muted channel until it reloads) |
 | `allow_attachments` | on | a post may carry files; otherwise it is refused with `400` |
 | `allow_embeds` | on | a post may carry embeds; otherwise it is refused with `400` |
 | `allow_identity_override` | on | a post may set its own `username`; otherwise the webhook's name is used |

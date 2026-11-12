@@ -41,14 +41,31 @@ type recovery struct {
 	// resetFlood is a coarse flood guard on the anonymous reset form, keyed
 	// the same way whether or not an account has the address.
 	resetFlood *httpx.RateLimiter
-	// resetPerAccount is the exact, race-free cap on reset mails per account:
-	// the database count alone lets concurrent requests slip past together. It
-	// is a budget of its own, so reset requests of strangers never spend the
-	// confirmation mails' perAddress budget.
+	// resetPerAccount caps reset mails per account in memory, in front of the
+	// database budget (auth.TokensPerHour, counted under a lock in
+	// auth.IssueAccountToken, so it holds across restarts and parallel
+	// requests). It is a budget of its own, so reset requests of strangers
+	// never spend the confirmation mails' perAddress budget.
 	resetPerAccount *httpx.RateLimiter
 	resendPerUser   *httpx.RateLimiter
 	slots           chan struct{}
-	wg              sync.WaitGroup
+	// mu guards draining and every wg.Add, so no job is counted once Drain
+	// began: a WaitGroup must not be added to while it is waited on.
+	mu       sync.Mutex
+	draining bool
+	wg       sync.WaitGroup
+}
+
+// enter counts one background job, unless shutdown (Drain) began; then it
+// refuses, and the job must not run, since the database is about to close.
+func (r *recovery) enter() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.draining {
+		return false
+	}
+	r.wg.Add(1)
+	return true
 }
 
 func newRecovery() *recovery {
@@ -88,8 +105,10 @@ func (h *Handler) mountAccount(r chi.Router) {
 func (h *Handler) mailEnabled() bool { return h.Mail != nil }
 
 // background runs fn off the request, so the time a request takes does not
-// depend on whether mail is sent. When the queue is full the job is dropped;
-// that happens for any request alike and says nothing about accounts.
+// depend on whether mail is sent. When the queue is full, or the server is
+// shutting down, the job is dropped and logged: that happens for any request
+// alike and says nothing about accounts. The mail queue lives in memory only,
+// so a dropped mail is not sent later; the member asks again.
 func (h *Handler) background(fn func(ctx context.Context)) {
 	select {
 	case h.rec.slots <- struct{}{}:
@@ -97,7 +116,11 @@ func (h *Handler) background(fn func(ctx context.Context)) {
 		slog.Warn("mail queue full, dropping account mail")
 		return
 	}
-	h.rec.wg.Add(1)
+	if !h.rec.enter() {
+		<-h.rec.slots
+		slog.Warn("server shutting down, dropping account mail")
+		return
+	}
 	safego.Go("account_mail", safego.Abandon, func() {
 		defer func() {
 			<-h.rec.slots
@@ -109,13 +132,19 @@ func (h *Handler) background(fn func(ctx context.Context)) {
 	})
 }
 
-// DrainMail waits for the mail jobs in flight (shutdown and tests).
+// DrainMail waits for the mail jobs in flight (tests). Unlike Drain it
+// refuses no later job, so it must not run concurrently with new requests.
 func (h *Handler) DrainMail() { h.rec.wg.Wait() }
 
 // Drain waits up to max for the background jobs (mail, exports) in flight, so
 // shutdown does not close the database under them. It reports whether they
-// all finished.
+// all finished. From its start on, every new job is refused, also after a
+// Drain that timed out: a late request must not start work against a closing
+// pool, and nothing is added to the WaitGroup while it is waited on.
 func (h *Handler) Drain(max time.Duration) bool {
+	h.rec.mu.Lock()
+	h.rec.draining = true
+	h.rec.mu.Unlock()
 	done := make(chan struct{})
 	safego.Go("account_drain", safego.Crash, func() {
 		h.rec.wg.Wait()
@@ -148,10 +177,13 @@ func (h *Handler) sendMail(ctx context.Context, msg mailer.Message) error {
 }
 
 // TrackJob registers a background job (an export build, say) that Drain waits
-// for, and returns the function that reports it finished.
-func (h *Handler) TrackJob() (done func()) {
-	h.rec.wg.Add(1)
-	return h.rec.wg.Done
+// for, and returns the function that reports it finished. ok is false once
+// Drain began (shutdown): the job is not registered and must not start.
+func (h *Handler) TrackJob() (done func(), ok bool) {
+	if !h.rec.enter() {
+		return nil, false
+	}
+	return h.rec.wg.Done, true
 }
 
 // JobContext is the parent of a background job: the server's lifetime when it

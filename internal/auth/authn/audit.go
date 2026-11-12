@@ -19,11 +19,16 @@ func (h *Handler) AuditUser(ctx context.Context, u *auth.User, action string) {
 	if h.Audit == nil {
 		return
 	}
+	h.Audit.RecordOrLog(ctx, userEntry(u, action))
+}
+
+// userEntry is the audit entry of action by and about u.
+func userEntry(u *auth.User, action string) audit.Entry {
 	id := u.ID
-	h.Audit.RecordOrLog(ctx, audit.Entry{
+	return audit.Entry{
 		ActorID: &id, ActorName: u.Username, Action: action,
 		TargetType: "user", TargetID: id.String(), TargetName: u.Username,
-	})
+	}
 }
 
 // auditTwoFactorFailure records a wrong second-step code, at most once per

@@ -100,6 +100,17 @@ func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 	if base.Has(Administrator) {
 		return base
 	}
+	if _, ok := s.dmTalks[ch]; ok {
+		// A call of a conversation is resolved like the conversation (Channel let only its
+		// members this far): membership lets them see it, no View channels and no overwrite
+		// of the community grants or takes anything there; the rest is the server-wide set,
+		// timeouts included, and the speak wait holds the call as a whole.
+		p := base | ViewChannel
+		if s.NewMemberWaits(sub.ID).Speak > 0 {
+			p &^= dmCallMask
+		}
+		return p
+	}
 	p := base
 	if cat != uuid.Nil {
 		p = s.categoryOv[cat].apply(p, s, sub.ID)
@@ -109,15 +120,7 @@ func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 		p &^= ChannelScoped
 	}
 	// Overwrites must not hand back what the timeout took.
-	p = s.silence(sub.ID, p)
-	if _, ok := s.dmTalks[ch]; ok {
-		// A call of a conversation follows the speak wait as a whole: joining it waits too.
-		if s.NewMemberWaits(sub.ID).Speak > 0 {
-			p &^= dmCallMask
-		}
-		return p
-	}
-	return s.hold(sub.ID, p)
+	return s.hold(sub.ID, s.silence(sub.ID, p))
 }
 
 // EveryoneCanView reports whether every member sees ch through @everyone

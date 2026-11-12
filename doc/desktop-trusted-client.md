@@ -84,7 +84,8 @@ Dotfiles, and files below a dotted directory such as `.well-known/`, are rejecte
 * `security_floor` is the oldest bundle version that is still acceptable.
   It lives in `web/desktop-compat.json` and only ever rises. The release
   workflow raises it to the release's own version when the release contains a
-  security fix (see "Security floor" below); it can also be raised by hand in
+  security fix, and every later release repeats that raise (see "Security
+  floor" below); the baseline can also be raised by hand in
   that file. A bundle's floor never exceeds its own version.
 * `key_id` is the first 8 bytes of SHA-256 over the raw public key. It only
   selects a pinned key; the signature check decides.
@@ -93,6 +94,17 @@ Dotfiles, and files below a dotted directory such as `.well-known/`, are rejecte
 The signature covers the manifest bytes as published. The client verifies
 the signature before it parses the manifest, so a hostile manifest never
 reaches the parser unauthenticated.
+
+The manifest and the trust statement (below) are read as `serde_json` reads
+them with unknown fields denied: one JSON object in UTF-8 without a byte order
+mark and with nothing after it, exactly the documented fields, spelled exactly
+and all present (only `max_version` may be missing), each of its type (never
+`null`; integers without sign, fraction or exponent), no key twice, no lone
+surrogate in a string, and times not before 1970. A `max_version` key is read
+like Rust's `u32` parse (`01` and `+1` are API 1). `webbundle verify` and
+`webbundle trust verify` read them the same way; `trust verify` also refuses
+two keys naming the same API (such as `1` and `01`), which the two clients
+would resolve differently. The tool writes only the canonical spelling.
 
 ### Signing
 
@@ -131,20 +143,38 @@ steps were run locally against the same Dockerfile image.
 
 `web/desktop-compat.json` carries the baseline floor. Because only the three
 release-please files may change in a release PR, the floor is raised **at
-signing time**: the `web-bundle` job runs `scripts/security-floor.sh` over the
-commits since the previous tag and, if any of them carries a
-`Security-Floor: raise` trailer (the last paragraph of the commit message, so
-for a squash merge the end of the pull request description), passes
-`-security-floor <release version>` to `webbundle build`. The flag only
+signing time**: the `web-bundle` job runs `scripts/security-floor.sh` on the
+release tag. A release raises the floor to its own version when one of its
+commits carries a `Security-Floor: raise` trailer (the last paragraph of the
+commit message, so for a squash merge the end of the pull request
+description), and every later release repeats the highest floor raised so far,
+so a client that missed the raising release still learns the floor from the
+next one. The script computes this from the git history and the release tags
+alone (a raising commit belongs to the first release tag that contains it), so
+a rebuild from the tag declares the same floor; it refuses a shallow clone,
+and the pipeline has no way to lower the floor. The job passes
+`-security-floor <that version>` to `webbundle build`. The flag only
 raises, never lowers, the value from the compat file. The commit subject plays
 no part: a `fix(security)` title alone neither raises the floor nor can a
 lookalike scope such as `docs(security-notes)` raise it by accident. A subject
 with the `security` scope but no trailer only prints a warning in the job log.
+A line that starts with `Security-Floor` but is not exactly the trailer
+`Security-Floor: raise` in the last paragraph (another paragraph such as
+`BREAKING CHANGE:` follows it, or a near miss such as `Security-Floor: raise.`)
+is refused instead of being dropped: the `backend` check of a pull request
+fails when its title, its description (read as the squash commit: title, blank
+line, description) or one of its commits has such a line, and the release job
+fails when a commit of
+the release has one (only the release's own commits, since the previous tag),
+so that release gets no signed bundle until the next one carries the trailer
+as the last paragraph. That includes a prose line wrapped so that it starts
+with the key, and the marker quoted on its own line in a code block: mention
+the marker inside a sentence, never at the start of a line.
 So a vulnerability fix in anything the bundle ships (the web app: markdown,
 media, auth, message rendering, crypto) must carry the trailer; the maintainer
 checklist in `AGENTS.md` repeats this. A fix without the trailer leaves the
-floor where it was, and old clients keep accepting older bundles until the next
-release that raises it.
+floor where the last raise put it, and old clients keep accepting older bundles
+down to that floor until the next release that raises it.
 
 The job builds the bundle tool in its own step without the key and passes
 the key only to the single `webbundle build` step.

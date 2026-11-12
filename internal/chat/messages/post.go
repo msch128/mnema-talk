@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -32,11 +33,24 @@ func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*core.
 }
 
 // ValidateTarget checks a new message's thread parent and quoted reply target.
-func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
-	if err := core.ValidateParent(ctx, p, chID, parentID); err != nil {
+// A target in a channel sub cannot see answers like one that does not exist.
+func ValidateTarget(ctx context.Context, p *db.Pool, perms *perm.Service, sub perm.Subject, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
+	return validateTarget(ctx, p, viewerOf(perms, sub), chID, parentID, replyToID)
+}
+
+// viewerOf is what sub may see now, by the permission state.
+func viewerOf(perms *perm.Service, sub perm.Subject) core.Viewer {
+	return func(ctx context.Context, ch uuid.UUID) (bool, error) {
+		set, err := perms.Channel(ctx, sub, ch)
+		return set.Has(perm.ViewChannel), err
+	}
+}
+
+func validateTarget(ctx context.Context, p *db.Pool, view core.Viewer, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
+	if err := core.ValidateParentFor(ctx, p, view, chID, parentID); err != nil {
 		return err
 	}
-	return ValidateReplyTarget(ctx, p, chID, parentID, replyToID)
+	return ValidateReplyTargetFor(ctx, p, view, chID, parentID, replyToID)
 }
 
 // InsertMessage stores a validated message and its mentions in one
@@ -48,17 +62,28 @@ func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource
 	return id, err
 }
 
+// InsertStoredMessage is InsertMessage for a caller that answers with the
+// message: it is read in the same transaction, so an error means that
+// nothing was stored (PublishStored sends it).
+func InsertStoredMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (*core.Message, error) {
+	_, msg, err := insertMessage(ctx, inserter{db: p, online: online, automod: automod.Of(p), load: true}, nm, rulesFrom(ctx), also)
+	return msg, err
+}
+
 // inserter is what storing a message works with.
 type inserter struct {
 	db     *db.Pool
 	online mentions.OnlineSource
 	// automod screens the message first; nil screens nothing.
 	automod *automod.Engine
+	// load reads the stored message in the transaction, for the answer.
+	load bool
 }
 
 // insertMessage is InsertMessage. It also returns the stored message when the
-// transaction had to load it for a webhook (nil otherwise), so the caller
-// that publishes it next need not load it a second time.
+// transaction loaded it, for a webhook or because in.load asks for it (nil
+// otherwise), so the caller that publishes it need not load it after the
+// commit, where a failed read would answer an error for a stored message.
 func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRules, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, *core.Message, error) {
 	p := in.db
 	pending, err := checkAutomod(ctx, in.automod, nm)
@@ -77,10 +102,7 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 				return err
 			}
 		}
-		if nm.WebhookID != nil { // a webhook's message never leaves through a webhook
-			return nil
-		}
-		stored, err = recordMessageEvent(ctx, p, tx, events.MessageCreate, nm.ChannelID, id, nm.Nonce)
+		stored, err = finishInsert(ctx, in, tx, nm, id)
 		return err
 	})
 	if err != nil {
@@ -88,6 +110,22 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 	}
 	pending.Commit(ctx, id)
 	return id, stored, nil
+}
+
+// finishInsert records message_create for the channel's outgoing webhooks
+// and returns the message when that or in.load read it (nil otherwise).
+func finishInsert(ctx context.Context, in inserter, tx pgx.Tx, nm NewMessage, id uuid.UUID) (*core.Message, error) {
+	var stored *core.Message
+	if nm.WebhookID == nil { // a webhook's message never leaves through a webhook
+		var err error
+		if stored, err = recordMessageEvent(ctx, in.db, tx, events.MessageCreate, nm.ChannelID, id, nm.Nonce); err != nil {
+			return nil, err
+		}
+	}
+	if stored != nil || !in.load {
+		return stored, nil
+	}
+	return loadStored(ctx, tx, id, nm.Nonce)
 }
 
 // checkAutomod applies the automod rules to a member's new message before it
@@ -114,13 +152,34 @@ func ScreenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uu
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,
 // the follows it implies.
+//
+// The channel row stays locked from before the message draws its number until
+// the commit, and the number is written to channels.last_message_number: the
+// messages of one channel commit in the order of their numbers, so a read of
+// that column sees every message up to it and none above it. That is what
+// lets GET /api/read-state say which messages its counts include.
+//
+// One lock cycle is known and left to PostgreSQL's deadlock detection: an
+// account erasure locks the user and later updates the channels that user
+// leads (a temporary Talk), while a post in such a Talk that mentions them
+// holds the channel row and waits for the user's row (the mention's foreign
+// key). One of the two is aborted and fails once; it needs the Talk's leader
+// to erase their account while being mentioned in it.
 func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage, rules sendRules) (uuid.UUID, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, nm.ChannelID); err != nil {
+		return uuid.Nil, fmt.Errorf("lock channel: %w", err)
+	}
 	if err := gatePost(ctx, tx, nm, rules); err != nil {
 		return uuid.Nil, err
 	}
 	id, err := CreateMessage(ctx, tx, nm)
 	if err != nil {
 		return uuid.Nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE channels SET last_message_number = m.number FROM messages m
+		WHERE channels.id = $1 AND m.id = $2`, nm.ChannelID, id); err != nil {
+		return uuid.Nil, fmt.Errorf("note newest message: %w", err)
 	}
 	if err := recordNonce(ctx, tx, nm, id); err != nil {
 		return uuid.Nil, err
@@ -210,10 +269,26 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 	if err != nil {
 		return err
 	}
+	PublishStored(w, r, p, pub, msg)
+	return nil
+}
+
+// PublishStored is PublishMessage for a message already loaded (by
+// InsertStoredMessage).
+func PublishStored(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	publishCreated(pub, msg)
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
-	return nil
+}
+
+// loadStored reads the message just stored, in its transaction.
+func loadStored(ctx context.Context, tx pgx.Tx, id uuid.UUID, nonce *uuid.UUID) (*core.Message, error) {
+	msg, err := GetMessage(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	msg.Nonce = nonce
+	return msg, nil
 }
 
 // publishCreated broadcasts message_create for a stored message. Service.Post

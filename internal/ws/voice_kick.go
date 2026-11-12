@@ -1,7 +1,10 @@
 package ws
 
 import (
+	"time"
+
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -22,9 +25,39 @@ func (h *Hub) kickClientReason(c *Client, onlyCh *uuid.UUID, reason string) bool
 // kickLostPeer takes c out of its voice room because the SFU gave up on its
 // media connection peer, and tells it (voice_kicked, reason
 // "connection_lost"). A client that has meanwhile rejoined over another
-// peer is left alone.
+// peer is left alone. A peer the SFU closed only to renew it (sfu.Peer.Renew)
+// is renewed instead.
 func (h *Hub) kickLostPeer(c *Client, peer *sfu.Peer) bool {
+	if peer.Renew() {
+		return h.renewLostPeer(c, peer)
+	}
 	return h.kickClientPeer(c, nil, "connection_lost", peer)
+}
+
+// closeRenewMedia is the close code of a socket closed so that its client
+// renews its media connection. The web client reconnects as after any
+// dropped socket and then resumes its call (rejoinAfterReconnect): within the
+// grace period nobody else sees it leave.
+const closeRenewMedia = 4002
+
+// renewLostPeer closes c's socket when peer is still its media connection:
+// the member keeps its seat for the grace period and comes back with a fresh
+// connection, which is what an honest member who hit the SFU's sender cap
+// needs. It reports whether it closed the socket.
+func (h *Hub) renewLostPeer(c *Client, peer *sfu.Peer) bool {
+	current := false
+	safego.Locked(&c.voiceMu, func() { current = c.currentVoice() != nil && c.peer() == peer })
+	if !current {
+		return false
+	}
+	c.logger().Info("voice media connection renewed", "user", c.User.ID)
+	if c.conn != nil {
+		_ = c.conn.WriteControl(websocket.CloseMessage,
+			websocket.FormatCloseMessage(closeRenewMedia, "media connection renewed"), time.Now().Add(writeWait))
+	}
+	c.shutdown()
+	c.close()
+	return true
 }
 
 // kickClientPeer is kickClientReason limited, when peer is set, to a client

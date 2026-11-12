@@ -5,6 +5,7 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"mime/multipart"
 	"net/http/httptest"
 	"net/textproto"
@@ -138,7 +139,15 @@ func TestExecuteAppliesTheWebhooksSettings(t *testing.T) {
 		t.Helper()
 		w := post(body)
 		wantStatus(t, w, 200, body)
-		return strings.Count(w.Body.String(), other.String())
+		// The list of the mentioned, not the whole answer: the same member is
+		// named again under direct_mentions when addressed by name.
+		var msg struct {
+			Mentions json.RawMessage `json:"mentions"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &msg); err != nil {
+			t.Fatalf("%s: %v", body, err)
+		}
+		return strings.Count(string(msg.Mentions), other.String())
 	}
 
 	// Defaults: members can be mentioned, @all not, even when asked for.

@@ -257,7 +257,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 		}
 	})
 	t.Run("reaction count", func(t *testing.T) {
-		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "COUNT(*) FILTER (WHERE user_id") }, false)
+		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, ") FILTER (WHERE user_id = $2)") }, false)
 		_, err := messages.ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("reaction count cancellation=%v", err)
@@ -272,21 +272,24 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 			t.Fatalf("thread page cancellation=%v", err)
 		}
 	})
-	t.Run("load after committed edit", func(t *testing.T) {
+	// The edited message is read in the edit's transaction (H-L7-05), so a
+	// client that leaves right after the commit cannot turn a made change
+	// into an error answer: the edit answers and is published.
+	t.Run("cancellation after committed edit", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return sql == "commit" }, true)
 		recorder := &events.Recorder{}
 		h := &Handler{DB: p, Perms: perm.NewService(f.p), Events: recorder}
 		r := chattest.Request(f.u, `{"content":"edited before disconnect"}`, map[string]string{"channelID": f.c.ID.String(), "messageID": f.m.String()}, "")
 		r = r.WithContext(auth.WithUser(copyChatRouteContext(ctx, r), f.u))
-		if err := h.messages().ServeEditMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
-			t.Fatalf("post-edit cancellation=%v", err)
+		if err := h.messages().ServeEditMessage(httptest.NewRecorder(), r); err != nil {
+			t.Fatalf("committed edit answered %v", err)
 		}
 		msg, err := messages.GetMessage(context.Background(), f.p, f.m)
 		if err != nil || msg.Content != "edited before disconnect" {
 			t.Fatalf("committed edit lost: %v,%v", msg, err)
 		}
-		if len(recorder.Snapshot()) != 0 {
-			t.Fatal("unsuccessful response published update")
+		if len(recorder.Snapshot()) != 1 {
+			t.Fatalf("published %d events for the committed edit, want its update", len(recorder.Snapshot()))
 		}
 	})
 }

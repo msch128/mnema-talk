@@ -9,7 +9,9 @@ enforcement points listed below.
 ## The Owner
 
 The Owner is the one account with `users.role = 'admin'`: the account that
-`ADMIN_USERNAME` (default `admin`) seeds on the first start. The database value
+`ADMIN_USERNAME` (default `admin`) seeds on the first start. Servers that
+start together on an empty database seed it once (under a database lock); the
+others find it and start normally, as any later start does. The database value
 and the `role` field of the API stay `admin` for compatibility; the interface
 calls it Owner.
 
@@ -287,7 +289,7 @@ it is probed with a private channel or exempted with a reason.
 | Mentions | `@all`/`@here` need *Mention @all and @here*; nobody who cannot view the channel is notified |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
-| Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
+| Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running. The Talk of a conversation is for the conversation's members only (not the Owner, not Administrators) and needs no *View channels*: overwrites do not apply there, the server-wide permissions do ([talks](talks.md#start-a-talk-from-a-direct-message)) |
 | `GET /api/admin/roles/{id}/view-as` | *Manage roles*. A preview for a made-up member holding only @everyone and that role, computed by the same resolver (overwrites included) and intersected with what the caller can view: a channel or category the caller cannot see is never in it |
 | Wiki (`/api/wiki`, [wiki](wiki.md)) | Reading, history and search: *View the wiki*. Creating, editing and restoring a revision: *Edit the wiki* (a timeout, pending rules and the new-member wait refuse it). Locking, moving, renaming, deleting and restoring a page: *Manage the wiki* together with *Edit the wiki*; reading deleted pages: *Manage the wiki*. A locked page: *Manage the wiki* for any change |
 | Community events (`/api/events`) | Listing, viewing, RSVPing: public if free-text location; if located in a Talk channel, requires *View channels* on that Talk. Creating, editing, cancelling, uploading cover: *Manage events* |

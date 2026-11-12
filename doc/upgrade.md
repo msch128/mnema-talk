@@ -9,6 +9,77 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Nothing new may name an erased account (migration 0103)
+
+Migration 0103 adds triggers: one on every table with a foreign key to
+`users`, one on `messages`, one on `message_reports` (a report's copy of the
+conversation) and one on `audit_log`, and tightens the trigger
+on `users` that keeps a deleted account final. A row that names an erased
+account (a message, reaction or upload that was still under way while the
+member deleted their account) is refused, or, for another member's row about
+them (a thread follow, a mention, a report), written without them. The
+migration adds no column and rewrites no row. Each insert into those tables
+does one more primary key lookup on `users`, measured at about 9 µs per row
+on a bulk insert; a single request does not notice it. Restoring a backup
+is unaffected: `pg_dump` writes triggers after the data.
+
+## Removals from a Talk in the audit log
+
+A moderator's removal of a member from one Talk is now recorded as
+`voice.disconnect`, so in the console it moves from the *Members* ("user")
+filter group to *Talk presence* ("voice"); the admin-wide kick keeps
+`user.talk_kick`. Like `voice.join`, it is read only by auditors who can view
+the Talk, and older `user.talk_kick` entries of such a removal (they carry the
+Talk in their details) are now read the same way. A removal from a
+conversation's call Talk is no longer recorded; older entries of that kind
+stay in the log, readable by the Owner and Administrators (the log is
+immutable, and a call Talk is usually gone, so they cannot be told apart).
+
+## Calls in conversations no longer need View channels
+
+The Talk started from a conversation was resolved like a community channel, so
+in a community that hides its channels from @everyone a member without a role
+granting *View channels* could start a call but neither open its chat nor join
+it. Membership of the conversation now decides: no *View channels* is needed,
+and channel or category overwrites, if any were set on such a Talk, no longer
+apply there. The server-wide permissions (*Connect*, *Speak*, *Video*, *Send
+messages*, a timeout, the new-member speak wait) still do. Nobody outside the
+conversation gets anything, as before.
+
+## Conversations' calls leave the community's objects
+
+A Talk started from a conversation is no community channel. It can no longer be
+the location of an event or an exemption of an automod rule, and the
+administrative channel routes (rename, delete, duplicate, auto-delete,
+overwrites, layout) answer for it what they answer for a channel that does not
+exist; its leader renames it with `PATCH /api/talks/{id}`. Nothing about such
+an event (cancelling it, its roster, deleting a comment) is audited any more.
+Audit entries written earlier (`event.talk_*`, `channel.update`,
+`channel.duplicate`, `channel.delete`, `automod.rule_*` naming a call) stay
+readable by the Owner and the Administrators: the log is immutable.
+
+## A role mention next to @all breaks a mute
+
+A message such as `@all @Dev` stored the members of the role as reached by
+`@all` only, so a member who muted the channel got no mention badge and no
+push, although `@Dev` alone breaks the mute. A member reached several ways is
+now stored by the strongest reason: a name, then a role, then `@all` or
+`@here`. The other way round, a name the sender may not use no longer counts:
+a webhook with `allow_user_mentions` off, or a bot whose `allowed_mentions`
+leaves `users` out and does not list the member, posting `@all @name` reaches
+that member through `@all` only, which a mute silences, and does not mention
+a bot it names at all (`@all` never reaches bots). Messages sent before the
+update keep the kinds they were stored with.
+
+Messages gain `direct_mentions` (REST and the `message_create` and
+`message_update` events): the members of `mentions` addressed by name or
+role, not by `@all` or `@here` alone. The web app reads it in a muted channel
+for the live badge, the desktop notification and the sound, so they match the
+badge after a reload. `mentions` is unchanged. A web app from before this
+release ignores the new field and still counts a plain-text name next to
+`@all` live in a muted channel until it reloads; against an older server the
+web app reads the text as before.
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters
@@ -483,7 +554,7 @@ working and turns the built-in relay off automatically.**
 
 ### 1.1.x → 1.2.0
 
-Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the
+Update with the procedure above and take the backup first. 1.2.0 only adds, apart from removing media frame format 2 (see "Calls and the
 security floor" below). A 1.1.x web app keeps working against a 1.2 server, and a 1.2 web app hides what
 a 1.1.x server lacks (it reads the `features` list of `GET /api/health`).
 Nothing in `.env` has to change. A rollback to a 1.1.x image needs the restore
@@ -536,6 +607,8 @@ of the pre-update backup (see "Rollback" above).
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
 | 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
+| 0103 | Triggers that refuse a row naming an erased account (or write another member's row without it), keep a deleted member's messages and profile empty, write report copies without an erased account's text, and write audit entries about an erased account without names and details. Adds functions and triggers only. |
+| 0104 | `channels.last_message_number`: the number of each channel's newest message, written while a new message holds the channel's lock, so `GET /api/read-state` can say exactly which messages its counts include. Adds a column and fills it once from the stored messages (one pass over `messages`); an older release ignores it. |
 
 | 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
 
@@ -850,19 +923,20 @@ members always carry them.
   an outdated Mnema client ...") when a unit in the old format arrives. Fix: reload the
   app, or update the desktop client; there is nothing to configure on the server,
   which only relays media it cannot read.
-- **Security floor raised to 1.2.0.** The release is committed with a
-  `Security-Floor: raise` trailer, so the signed web bundle of 1.2.0 carries
-  `security_floor` 1.2.0. A desktop client that has run it refuses every older
-  bundle: it will not connect to a server that still serves a 1.1.x bundle until
+- **Security floor not changed by 1.2.0.** The release commit meant to raise
+  it, but its `Security-Floor: raise` line was not a git trailer, so the signed
+  web bundle of 1.2.0 carries `security_floor` 0.7.23. The high-water mark has
+  the same effect: a desktop client that has run the 1.2 bundle refuses every
+  older bundle of `web_client_api` 1: it will not connect to a server that still serves a 1.1.x bundle until
   that server is updated, and it never runs a bundle that seals the old format.
   Update the server before (or together with) the clients. `web_client_api` is
   unchanged (still 1), so older desktop clients keep loading the 1.2 bundle.
   Why this is allowed under [API stability](api-stability.md): it is a security
-  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the floor is the documented tool
-  for it, and no public API, event or bridge contract changes.
+  fix (RT-4 in [SECURITY.md](../SECURITY.md)), the high-water mark is the
+  documented rollback protection, and no public API, event or bridge contract changes.
 - **Rollback.** Going back to 1.1.x is possible for the server, but desktop
   clients that already saw the 1.2.0 bundle will refuse the older one (the
-  floor is a high-water mark); web tabs reload into the older bundle.
+  high-water mark); web tabs reload into the older bundle.
 
 ### 1.0.x → 1.1.0
 

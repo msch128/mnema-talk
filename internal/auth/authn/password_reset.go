@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -88,7 +89,12 @@ func (h *Handler) sendReset(ctx context.Context, email, lang string) {
 	if err != nil || tooOften {
 		return
 	}
+	// The count above is a cheap early exit; IssueAccountToken counts again
+	// under its lock, and that count is the one that holds for parallel requests.
 	token, err := auth.IssueAccountToken(ctx, h.Sessions.DB, id, auth.PurposePasswordReset, "", auth.PasswordResetTTL)
+	if errors.Is(err, auth.ErrTooManyLinks) {
+		return
+	}
 	if err != nil {
 		slog.Warn("password reset token not stored", "err", err)
 		return

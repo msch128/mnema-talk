@@ -209,7 +209,7 @@ security scheme `botAuth`).
 | `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `allowed_mentions`, `message_reference`, `parent_id` |
 | `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
-| `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works) |
+| `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`, `allowed_mentions`, `parent_id`, `reply_to_id`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
 | `GET /members`, `GET /members/{id}` | the `GUILD_MEMBERS` intent allowed; only members who can view a channel the bot can view; id, name, avatar |
 
@@ -314,6 +314,10 @@ when they happened.
 | `4009` | session timed out (missed heartbeats) |
 | `4013`, `4014` | invalid intents; intents the admin has not allowed for this bot |
 | `1009`, `1013` | frame too large; the bot reads too slowly (resume) |
+
+These are the bot gateway's codes. The member WebSocket (`/api/ws`) has codes of
+its own: there `4002` means "renew the media connection: reconnect and resume
+the call", not an undecodable frame.
 
 ### Intents and events
 

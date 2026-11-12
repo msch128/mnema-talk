@@ -2,11 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref, type Ref } from 'vue'
 import type { LaterReminder, LaterScheduled } from '../types/rest'
 import {
-  deleteReminder, deleteScheduled, fetchReminders, fetchScheduled, patchScheduled, postReminder, postScheduled,
+  deleteReminder, deleteScheduled, patchScheduled, postReminder, postScheduled,
   type ScheduleOptions
 } from '../chat/lib/laterApi'
 import { isApiError } from '../shared/lib/api'
 import { noticeReminderDue, noticeScheduledFailed } from '../chat/lib/laterNotices'
+import { createLaterLoading } from './laterLoading'
 
 export type { ScheduleOptions }
 
@@ -27,6 +28,15 @@ function attentionCounts(reminders: Ref<LaterReminder[]>, scheduled: Ref<LaterSc
   const dueCount = computed(() => reminders.value.filter(r => r.delivered_at !== null).length)
   const failedCount = computed(() => scheduled.value.filter(s => s.state === 'failed').length)
   return { dueCount, failedCount, attention: computed(() => dueCount.value + failedCount.value) }
+}
+
+/** Whether a reminder points at the message, or at a reply in its thread. */
+const remindsOf = (r: LaterReminder, messageId: string) => r.message !== undefined && (r.message.id === messageId || r.message.parent_id === messageId)
+
+/** The reminder after its message was deleted: kept, without the message, as unavailable. */
+function withoutMessage(r: LaterReminder, messageId: string): LaterReminder {
+  if (!remindsOf(r, messageId)) return r
+  return { id: r.id, remind_at: r.remind_at, created_at: r.created_at, delivered_at: r.delivered_at, available: false }
 }
 
 /** Puts an entry the server returned into a list, replacing an older copy of it. */
@@ -52,47 +62,14 @@ async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId:
   return { next, cleanupFailed }
 }
 
-// Bumped by reset(): a list asked for before must not fill the next account's store.
-let generation = 0
-
-async function latest<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
-  const mine = generation
-  const list = await fetch()
-  if (mine === generation) apply(list)
-}
-
 // The member's reminders and scheduled messages (both private, both kept by
 // the server). The server tells the member's sessions about every change, so
 // the lists reload on those events instead of being patched by hand.
 export const useLaterStore = defineStore('later', () => {
   const reminders = ref<LaterReminder[]>([])
   const scheduled = ref<LaterScheduled[]>([])
-  const loading = ref(false)
-  const failed = ref(false)
-  const loaded = ref(false)
-
+  const { loading, failed, loaded, load, refresh, loadReminders, loadScheduled, reset: resetLoading } = createLaterLoading(reminders, scheduled)
   const { dueCount, failedCount, attention } = attentionCounts(reminders, scheduled)
-
-  const loadReminders = () => latest(fetchReminders, list => { reminders.value = list })
-  const loadScheduled = () => latest(fetchScheduled, list => { scheduled.value = list })
-
-  /** Loads the lists of the features the server has. */
-  async function load(want: { reminders: boolean; scheduled: boolean }) {
-    const mine = generation
-    loading.value = true
-    try {
-      await Promise.all([want.reminders ? loadReminders() : null, want.scheduled ? loadScheduled() : null])
-      if (mine !== generation) return
-      loaded.value = true
-      failed.value = false
-    } catch (error) {
-      if (mine !== generation) return
-      console.warn('Failed to load reminders and scheduled messages:', error)
-      failed.value = true
-    } finally {
-      if (mine === generation) loading.value = false
-    }
-  }
 
   async function remind(messageId: string, at: Date) {
     return keep(reminders, await postReminder(messageId, at))
@@ -133,13 +110,17 @@ export const useLaterStore = defineStore('later', () => {
     if (loaded.value) await loadScheduled().catch(() => undefined)
   }
 
+  /** A message was deleted: a reminder on it stays, as one for a message the member can no longer see (as the server lists it). */
+  function onMessageDeleted(messageId: string) {
+    if (reminders.value.some(r => remindsOf(r, messageId))) reminders.value = reminders.value.map(r => withoutMessage(r, messageId))
+  }
+
   const reset = () => {
-    ++generation; reminders.value = []; scheduled.value = []
-    loading.value = false; loaded.value = false; failed.value = false
+    resetLoading(); reminders.value = []; scheduled.value = []
   }
 
   return {
     reminders, scheduled, loading, failed, loaded, dueCount, failedCount, attention,
-    load, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
+    load, refresh, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, onMessageDeleted, reset
   }
 })

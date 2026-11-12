@@ -1,15 +1,17 @@
 // WebSocket is not represented in OpenAPI. These payloads follow
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../shared/lib/moderation'
-import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
+import type { Message, Poll, ReactionSummary, User, UserUpdate, VoiceUser, Presence } from './domain'
 import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
 import { withMessageDefaults } from '../shared/lib/compat/olderServers'
-import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
+import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { NOTICE_EVENT_CHECKS } from './noticeEvents'
 import type { DirectMessageMember, DirectMessageRef, DmCallEnd, DmCallRing } from './dmEvents'
 import { DM_EVENT_CHECKS } from './dmEvents'
+import type { ReadStateUpdate } from './readStateEvents'
+import { isReadStateUpdate } from './readStateEvents'
 import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
@@ -28,14 +30,10 @@ export interface SpeakingState { channel_id: string; user_id: string; active: bo
 export interface MuteState { channel_id: string; user_id: string; muted: boolean; deafened: boolean }
 export interface VoiceRooms { started: Record<string, string>; now: string }
 export type VoiceSnapshot = Record<string, Record<string, VoiceUser>>
+export type { ReadStateUpdate }
 export type VoiceStateUpdate =
   | { action: 'join'; channel_id: string; user: VoiceUser; started_at: string }
   | { action: 'leave'; channel_id: string; user_id: string }
-export type ReadStateUpdate =
-  | Pick<ReadState, 'channel_id' | 'last_read_at' | 'unread_count' | 'mention_count'>
-  | { channel_id: string; last_read_at: string; refresh: true }
-  | { channel_id: string; refresh: true } | { refresh: true }
-  | Pick<ReadState, 'channel_id' | 'notify_level'>
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
 /** What a bot says it is doing: Discord's activity type (0 playing, 2 listening, 3 watching, 4 custom, 5 competing) and a short text. */
@@ -255,32 +253,6 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['presence_snapshot', payload => isArrayOf(payload, isIdentifier) || isDictionaryOf(payload, isPresence)],
   ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
 ])
-
-function isRefreshReadState(payload: Record<string, unknown>): boolean {
-  if (payload['refresh'] !== true || (hasOwn(payload, 'last_read_at') && !isTimestamp(payload['last_read_at']))) return false
-  return onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
-}
-
-function isNotifyLevelReadState(payload: Record<string, unknown>): boolean {
-  if (!isChatNotifyLevel(payload['notify_level'])) return false
-  return onlyFields(payload, ['channel_id', 'notify_level'])
-}
-
-function isStandardReadState(payload: Record<string, unknown>): boolean {
-  const lastReadAt = payload['last_read_at']
-  const validLastRead = lastReadAt === null || isTimestamp(lastReadAt)
-  if (!validLastRead) return false
-  if (!isInteger(payload['unread_count']) || !isInteger(payload['mention_count'])) return false
-  return onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
-}
-
-function isReadStateUpdate(payload: Record<string, unknown>): boolean {
-  if (!hasOwn(payload, 'channel_id')) return payload['refresh'] === true && onlyFields(payload, ['refresh'])
-  if (!isIdentifier(payload['channel_id'])) return false
-  if (hasOwn(payload, 'refresh')) return isRefreshReadState(payload)
-  if (hasOwn(payload, 'notify_level')) return isNotifyLevelReadState(payload)
-  return isStandardReadState(payload)
-}
 
 function isOptionalAvatarUrl(payload: Record<string, unknown>): boolean {
   return !hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)

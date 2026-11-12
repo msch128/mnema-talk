@@ -30,7 +30,8 @@ const (
 
 func parseUTC(s string) (time.Time, error) {
 	t, err := time.Parse(time.RFC3339, s)
-	if err != nil || t.UTC().Format(time.RFC3339) != s {
+	// The clients count unsigned seconds since 1970: an earlier time is none.
+	if err != nil || t.UTC().Format(time.RFC3339) != s || t.Unix() < 0 {
 		return time.Time{}, errors.New("not a UTC time like 2026-10-17T10:00:00Z")
 	}
 	return t, nil
@@ -159,8 +160,13 @@ func (t *Trust) validateHeader() error {
 	return t.validateValidity()
 }
 
-// Validate checks that a statement is well formed and consistent.
-func (t *Trust) Validate() error {
+// Validate checks that a statement is well formed and consistent, with the
+// max_version keys spelled canonically, as the signing tool writes them.
+func (t *Trust) Validate() error { return t.validate(false) }
+
+// validate is Validate; reading accepts every max_version key spelling the
+// clients read (see validateMaxVersions), as VerifyTrust does.
+func (t *Trust) validate(reading bool) error {
 	if err := t.validateHeader(); err != nil {
 		return err
 	}
@@ -170,7 +176,7 @@ func (t *Trust) Validate() error {
 	if err := t.validateUpdaterKeys(); err != nil {
 		return err
 	}
-	if err := t.validateMaxVersions(); err != nil {
+	if err := t.validateMaxVersions(reading); err != nil {
 		return err
 	}
 	if len(t.BundleKeys) == 0 {
@@ -226,11 +232,21 @@ func (t *Trust) validateUpdaterKeys() error {
 	return nil
 }
 
-func (t *Trust) validateMaxVersions() error {
+// validateMaxVersions checks the caps. A reader takes the keys as the clients
+// do (Rust's u32 parse: decimal digits after an optional plus, so "01" and
+// "+1" are API 1) and refuses two keys naming the same API, since each client
+// would keep a different one of them; a writer accepts only "1", "2", ...
+func (t *Trust) validateMaxVersions(reading bool) error {
+	seen := map[uint64]bool{}
 	for api, v := range t.MaxVersion {
-		if n, err := strconv.ParseUint(api, 10, 32); err != nil || n < 1 || api != strconv.FormatUint(n, 10) {
+		n, err := strconv.ParseUint(strings.TrimPrefix(api, "+"), 10, 32)
+		if err != nil || n < 1 || (!reading && api != strconv.FormatUint(n, 10)) {
 			return fmt.Errorf("max_version key %q is not a web client API number", api)
 		}
+		if seen[n] {
+			return fmt.Errorf("max_version names web client API %d twice", n)
+		}
+		seen[n] = true
 		if _, err := ParseVersion(v); err != nil {
 			return fmt.Errorf("max_version %s: %w", api, err)
 		}
@@ -243,6 +259,15 @@ func (t *Trust) validateMaxVersions() error {
 func SignTrust(t Trust, root ed25519.PrivateKey) (doc, sig []byte, err error) {
 	if err := t.Validate(); err != nil {
 		return nil, nil, err
+	}
+	// A nil list or map would be written as null, which the clients refuse.
+	for _, l := range []*[]string{&t.BundleKeys, &t.RevokedBundleKeys, &t.UpdaterKeys, &t.RevokedUpdaterKeys} {
+		if *l == nil {
+			*l = []string{}
+		}
+	}
+	if t.MaxVersion == nil {
+		t.MaxVersion = map[string]string{}
 	}
 	doc, err = json.MarshalIndent(t, "", "  ") // plain strings and numbers
 	if err != nil {
@@ -267,13 +292,16 @@ func VerifyTrust(doc, sig []byte, root ed25519.PublicKey) (*Trust, error) {
 	if !ed25519.Verify(root, doc, raw) {
 		return nil, errors.New("trust signature does not match the root key")
 	}
+	if err := strictDocument(doc, strictTrust); err != nil {
+		return nil, fmt.Errorf("trust statement: %w", err)
+	}
 	var t Trust
 	dec := json.NewDecoder(bytes.NewReader(doc))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&t); err != nil {
 		return nil, fmt.Errorf("trust statement: %w", err)
 	}
-	if err := t.Validate(); err != nil {
+	if err := t.validate(true); err != nil {
 		return nil, err
 	}
 	return &t, nil

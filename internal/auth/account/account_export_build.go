@@ -59,6 +59,7 @@ func (b *budgetWriter) Write(p []byte) (int, error) {
 const exportReadme = `Your data from Mnema Talk (GDPR Art. 20).
 
 profile.json    your account: names, bio, status, language, role, e-mail address, settings
+                (dm_policy: who may start a direct message with you; dm_mute_all: all direct messages muted)
 avatar.*        your profile picture, if you set one (as stored; the file name is in profile.json)
 banner.*        your profile banner, if you set one (as stored; the file name is in profile.json)
 settings.json   notification levels per channel and category
@@ -84,6 +85,7 @@ scheduled_messages.json  your scheduled messages that were not sent yet (your te
 rsvps.json      your RSVPs to community events
 event_signups.json your sign-ups for event roles (the event, the role, confirmed or waitlist)
 event_comments.json  your comments on community events (the event, your text and when)
+event_comment_mutes.json  the events whose comment notices you switched off
 wiki_revisions.json  the wiki pages you saved (address, title and text you wrote); the pages stay in the wiki
 truncated.json  only present when a list was cut: the files that hold more rows than the archive keeps
 
@@ -91,7 +93,8 @@ The files are meant for machines: file names and keys are in English whatever
 language your account uses, and messages.json keeps your messages as typed,
 with Markdown and tokens such as custom emoji (<:name:id>) unchanged.
 
-Other members' personal data is not part of this archive.
+Other members' personal data is not part of this archive, nor are the events
+and series you created: they stay in the community.
 This file was available for download once, for 24 hours.
 `
 
@@ -173,14 +176,17 @@ func (h *API) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Ch
 }
 
 func exportProfile(ctx context.Context, q db.Querier, user uuid.UUID) (map[string]any, error) {
-	var username, display, bio, role, status, locale, presence string
+	var username, display, bio, role, status, locale, presence, dmPolicy string
 	var email *string
 	var verified, lastSeen, created *time.Time
 	var rules, voice, publicVoice, count int64
+	var dmMuteAll bool
 	var onboarding json.RawMessage
 	err := q.QueryRow(ctx, `SELECT username, display_name, bio, role, status_text, locale, presence, email, email_verified_at,
-		last_seen_at, created_at, rules_accepted_version, voice_seconds, public_voice_seconds, message_count, onboarding FROM users WHERE id = $1`, user).
-		Scan(&username, &display, &bio, &role, &status, &locale, &presence, &email, &verified, &lastSeen, &created, &rules, &voice, &publicVoice, &count, &onboarding)
+		last_seen_at, created_at, rules_accepted_version, voice_seconds, public_voice_seconds, message_count, onboarding,
+		dm_policy, dm_mute_all FROM users WHERE id = $1`, user).
+		Scan(&username, &display, &bio, &role, &status, &locale, &presence, &email, &verified, &lastSeen, &created, &rules, &voice, &publicVoice, &count, &onboarding,
+			&dmPolicy, &dmMuteAll)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +199,7 @@ func exportProfile(ctx context.Context, q db.Querier, user uuid.UUID) (map[strin
 		"status_text": status, "language": locale, "chosen_presence": presence,
 		"email": email, "email_confirmed_at": verified, "created_at": created, "last_seen_at": lastSeen,
 		"rules_accepted_version": rules, "voice_seconds": voice, "public_voice_seconds": publicVoice, "message_count": count,
-		"onboarding": onboarding, "roles": roles,
+		"onboarding": onboarding, "roles": roles, "dm_policy": dmPolicy, "dm_mute_all": dmMuteAll,
 	}, nil
 }
 

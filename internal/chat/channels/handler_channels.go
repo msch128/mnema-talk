@@ -106,12 +106,11 @@ func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 	if req.Type == "" {
 		req.Type = core.ChannelTypeText
 	}
-	if req.CategoryID != nil {
-		if err := a.Guard.RequireCategory(r, *req.CategoryID); err != nil {
-			return err
-		}
+	canSee, err := a.Guard.CategoryViewer(r)
+	if err != nil {
+		return err
 	}
-	ch, err := CreateChannelWithStage(r.Context(), a.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
+	ch, err := CreateChannelSeenBy(r.Context(), a.DB, canSee, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
 	if err != nil {
 		return err
 	}
@@ -313,10 +312,11 @@ func (a *API) ServeApplyLayout(w http.ResponseWriter, r *http.Request) error {
 	}
 	sub := auth.UserFrom(r.Context()).Subject()
 	err := a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
-		if err := CheckLayout(snap, sub, req); err != nil {
+		seen, err := SeenLayout(snap, sub, req)
+		if err != nil {
 			return err
 		}
-		return ApplyLayoutTx(r.Context(), tx, req.Categories, req.Channels)
+		return ApplyLayoutTx(r.Context(), tx, seen.Categories, seen.Channels)
 	})
 	if err != nil {
 		return err

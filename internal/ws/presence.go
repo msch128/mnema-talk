@@ -64,7 +64,11 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 		if c.idle != idle {
 			c.idle = idle
 			if idle {
-				h.active[c.User.ID]--
+				// The entry goes at zero, as in forget: an account that closes
+				// while idle must not leave a counter behind.
+				if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {
+					delete(h.active, c.User.ID)
+				}
 			} else {
 				h.active[c.User.ID]++
 			}

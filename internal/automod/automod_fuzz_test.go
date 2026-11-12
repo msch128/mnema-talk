@@ -33,7 +33,7 @@ func FuzzHostOf(f *testing.F) {
 // FuzzCleanDomain checks that a domain accepted for a rule list is already in
 // the form hostOf reads, so a listed domain and a link to it always compare equal.
 func FuzzCleanDomain(f *testing.F) {
-	for _, s := range []string{"example.com", "*.example.com", "https://Example.COM/x", "b\u00fccher.example", "xn--bcher-kva.example", "a", "", "-a.com", "a.b"} {
+	for _, s := range []string{"example.com", "*.example.com", "https://Example.COM/x", "b\u00fccher.example", "xn--bcher-kva.example", "a", "", "-a.com", "a.b", "0.00..", "1.2.3"} {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {

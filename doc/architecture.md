@@ -80,6 +80,11 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
    staged files, joins the same transaction).
 3. [`messages.PublishMessage`](../internal/chat/messages/post.go) loads the stored message,
    broadcasts `message_create` through the `events.Publisher` and answers 201.
+   A typed message and a new forum post are read inside the transaction of
+   step 2 instead (`InsertStoredMessage`, `PublishStored`), so an error answer
+   means nothing was stored; an edit, a reaction, a new conversation, an event
+   comment or answer and a new webhook answer from inside their transaction
+   the same way.
 4. The hub writes the event to every open WebSocket; the
    [chat store](../web/src/stores/chat.ts) inserts it, updates unread and
    mention counters and plays the notification according to the channel's
@@ -295,7 +300,21 @@ asked for.
 **Saved messages** (`saved_messages`, migration 0051) are the same idea: a row
 holds a reference and the member's note. `GET /api/me/saved` joins the messages
 the member may see now; a conversation's messages need membership, tested in
-SQL like search does.
+SQL like search does. A deleted message takes its saves with it (`ON DELETE
+CASCADE`).
+
+The web client keeps the saved list and the reminders and scheduled messages
+current from the events to the member's own sessions (`saved_updated`,
+`reminder_update`, `scheduled_message_update`). Those of a time the socket was
+down are lost, so every socket open reads again the lists that were already
+asked for (one never opened stays unread), and an answer older than a newer
+request of the same list, or than a change made meanwhile, does not overwrite it.
+The saved list is read again as far as it was shown (up to 100 entries; older
+entries shown behind them stay until a page replaces them), and the saved marks
+follow the list that lands last. A failed read after a reconnect keeps the
+lists shown.
+On `message_delete` the client drops the saved entry (and those of the thread's
+replies) and shows a reminder on the message as unavailable, as a reload would.
 
 ## Reminders and scheduled messages
 
@@ -384,7 +403,11 @@ back), so it needs no public relay ports and cannot reach anything else.
    write error for one subscriber never ends the track for the others. No
    decoding, no transcoding, no recording. Viewers' keyframe requests (PLI/FIR)
    go to the publisher, rate-limited per track (300 ms), so a burst of
-   viewers costs the publisher one keyframe.
+   viewers costs the publisher one keyframe. This rate limit and the SFU's
+   other stored times (the 500 ms in which late packets of a stopped track do
+   not publish it again, a layer's last packet, resends, bitrate measurements)
+   follow the monotonic clock, so a step of the host's wall clock moves none
+   of them.
 4. **Subscriptions (opt-in).** What each viewer receives is decided per
    viewer ([`subscriptions.go`](../internal/sfu/subscriptions.go)): voice
    audio is always forwarded; cameras are on by default and can be turned off
@@ -433,8 +456,14 @@ new layer starts (a VP8 keyframe tag or an H.264 parameter set, both of which
 the browser's media transform leaves readable), asking the publisher for one
 when it switches. Sequence numbers, timestamps and VP8 picture IDs and
 `TL0PICIDX` are rewritten so the viewer sees one continuous stream; the sealed
-payload is never touched. The sender declares the layers (`webrtc_layers`,
-announced as `screen_layers`), a viewer picks one with `quality` on
+payload is never touched. A switch continues after the highest sequence
+number, the newest timestamp and the newest VP8 picture ID and `TL0PICIDX`
+sent, not after the last packet: a packet that arrived late (overtaken on the
+way, or repaired by a retransmission) would otherwise give the new layer's
+keyframe numbers the viewer already holds, and its browser would drop them as
+duplicates. A late packet the new layer's sender sent before the keyframe of
+the switch is dropped for the same reason. The sender declares the layers
+(`webrtc_layers`, announced as `screen_layers`), a viewer picks one with `quality` on
 `webrtc_subscribe` and is told what it receives (`screen_quality`), and the
 sender is told which layers anyone needs (`screen_layers_wanted`) so it can
 stop encoding the others. A layer nobody needs any more stays wanted for eight
@@ -476,7 +505,9 @@ report as lost), the browser answers with transport-wide feedback (arrival
 time of each packet) and the estimator turns both into a bitrate. It is only
 read: the pacer is a pass-through, so nothing is delayed or dropped, and
 audio, cameras and viewers who chose a layer are unaffected. The cost is the
-estimator's history of 250 packets and two small goroutines per connection.
+estimator's history of 250 packets and two small goroutines per connection,
+plus one writer per stream it sends, which is forgotten when the stream's
+sender stops.
 The estimate is compared with the bitrate each layer has at the SFU (bytes
 arriving per layer, measured once a second per share, smoothed; a layer the
 sender switched off keeps its last size). Delivery that keeps up makes the
@@ -603,7 +634,47 @@ mention policy: a name a webhook or bot left as plain text (user mentions off,
 `allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
 web client decides from the message's `mentions` list, not from the text, so
 the live badge, the page's notification and the sound match the badge after a
-reload.
+reload. The answer of `GET /api/read-state` and the live `message_create`
+events travel separately and can cross. Each answer therefore says per channel
+`last_message_number`, the number of the newest message its counts include:
+a message draws its number and commits while its transaction holds the
+channel row's lock (`messages.insertMessageTx`, `channels.last_message_number`,
+migration 0104), so a channel's messages commit in the order of their numbers
+and the counts hold exactly the messages up to that number. The client counts
+a `message_create` on top of the answer only when its number is above the
+mark, and re-adds the ones it counted while the request was on its way the
+same way; a read in another session (`read_state` with counts) after the
+request began keeps the client's state, like a read in this one. Only the
+answer of the newest request is kept. This exactness has a price, accepted
+for exact counters: the posts of one channel now wait for each other from the
+lock to the commit. Measured on the insert alone (`messages.InsertMessage`, no
+HTTP, no rate limit): in one busy channel with 8 concurrent writers about 230
+to 480 posts a second instead of about 630 to 660, and a median insert of 15 to
+27 ms instead of about 8.5 ms (independent review, loaded machine); a second
+run with the erased-person guard of migration 0103 in place, on a quieter
+machine, gave about 740 to 760 posts a second instead of about 870 and a
+median of about 10.5 ms instead of 6.5 ms. Writers spread over channels show
+no difference. A channel still takes several hundred posts a second, far more
+than the per-member send limit lets members produce. `GET /api/threads/following` is ordered
+the same way without a mark: `thread_follow_updated` carries the whole state
+of a thread, so the changes that arrived while the list was on its way are
+applied to it again.
+A client counts a new message itself; a delete (also a bulk delete or
+the auto-delete sweep, once per channel and run) or an edit that changes the
+mentions brings nothing it could count, so the server sends the members whose
+count it may have moved (online, allowed to view the channel, not read up to
+the changed messages; for an edit, those it mentioned before or after) a
+`read_state` with their `unread_count`, `mention_count` and the channel's
+`last_message_number`, which the client applies like an answer of
+`GET /api/read-state` for that channel ([`recount.go`](../internal/chat/readstate/recount.go)).
+The request only queues the recount: one worker counts after the broadcast,
+with the server's context, 500 members a statement, and merges the requests
+of a channel that is already waiting (at most 256 channels wait; beyond that
+a channel is skipped and logged, and its badges heal at the next read,
+reconnect or reload). Nothing new starts once the server shuts down. The
+worker's time grows with the members told and the channel's unread backlog:
+measured, 1,000 members take 0.04 s (50 unread), 0.2 s (500) and 2 s (5,000),
+10,000 members 0.3 s, 1.8 s and 21 s; the deleting request waits for none of it.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is
@@ -622,7 +693,12 @@ threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
 unfollow is kept and a later reply does not undo it, but a reply that mentions
 the member by name or quotes their message still reaches them. A change, and
 a reply that makes someone follow, is sent to that member's own sessions as
-`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/messages/thread_follow_sync.go)), and
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/messages/thread_follow_sync.go));
+the tap runs before the hub hands the reply to any connection (taps never
+run under the hub's lock, and this one is the first tap, ahead of outgoing
+webhooks and the bot gateway), so a new follower's sessions have the update
+before the reply they decide it by; the lookup is bounded to a second, after
+which the reply goes out without the update, and
 `GET /api/threads/following` lists the followed threads for clients. The
 in-page OS notification shows the message text only when the member's
 "show message text" setting is on and the operator has not set
@@ -631,6 +707,14 @@ in-page OS notification shows the message text only when the member's
 **Mentions.** A message stores one `message_mentions` row per notified member,
 with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
 in `message_role_mentions` (migration 0036), so a pill survives a role rename.
+A member reached several ways gets the strongest kind: a name, then a role,
+then `@all`/`@here`. A name only counts when the sender may name members (not
+a webhook with `allow_user_mentions` off, nor a bot whose `allowed_mentions`
+leaves `users` out and does not list the member; a bot, which `@all` never
+reaches, is then not mentioned at all). A message carries every notified
+member in `mentions` and those of a kind other than `@all`/`@here` in
+`direct_mentions`: a muted channel's live badge, desktop notification and
+sound read that list, as the badge after a reload and push read the kinds.
 Webhooks and bots mention roles too, subject to `allowed_mentions`. An author
 without the right to mention everyone notifies at most 50 members per message
 ([`mentions_cap.go`](../internal/chat/mentions/mentions_cap.go)).

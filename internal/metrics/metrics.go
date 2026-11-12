@@ -181,7 +181,7 @@ var (
 	// WSEventsReceived counts events accepted from clients.
 	WSEventsReceived Counter
 	// WSDropped counts events dropped or connections cut, by reason:
-	// slow_client, flood_frame, flood_event.
+	// slow_client, flood_frame, flood_event, voice_churn, audit_presence.
 	WSDropped = newVec("mnema_ws_dropped_total", "Realtime events dropped or connections cut, by reason", "reason")
 
 	// MLSHandshakes counts relayed or refused media_handshake messages, by
@@ -195,7 +195,10 @@ var (
 	SFUIngressBytes, SFUIngressPackets Counter
 	// SFUIngressDropped counts publisher packets dropped over the per-track
 	// rate limit (reason "rate") and publishers closed for sustained
-	// abuse (reason "closed").
+	// abuse (reason "closed"); "rtcp_ssrcs" counts media connections closed
+	// for naming too many SSRCs in RTCP that nothing reads, "senders" media
+	// connections renewed after the SFU made too many senders on them
+	// (internal/sfu).
 	SFUIngressDropped                = newVec("mnema_sfu_ingress_dropped_total", "Publisher packets dropped over the ingress limit, by reason", "reason")
 	SFUEgressBytes, SFUEgressPackets Counter
 	// SFUNackRequests counts NACK feedback messages received from

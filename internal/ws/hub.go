@@ -31,14 +31,18 @@ type Hub struct {
 	// permRetry re-enforces permission changes whose state failed to load.
 	permRetry permRetry
 	// Tap, when set, sees every event the hub publishes (channel is uuid.Nil
-	// for events to everybody), before delivery. Outgoing webhooks listen
-	// here. It must not block and must not call back into the hub: it runs
-	// next to the hub's lock, and a call that takes that lock again can
-	// wait forever behind a writer.
+	// for events to everybody), in the publisher's goroutine, before any
+	// connection is handed the event, and never while h.mu is held (every
+	// caller of tapped and dmTapped calls them before taking it;
+	// TestTapsRunOutsideTheHubLock guards that). So a tap may block for a
+	// bounded time (it holds up that one publication, nothing else) and may
+	// publish itself: what it publishes reaches each connection before the
+	// event it was shown (the thread follow sync relies on that). The bot
+	// gateway, Web Push and the thread follow sync listen here.
 	Tap func(channel uuid.UUID, ev events.Event)
-	// DMTap is Tap for the events of direct message conversations. Those
-	// never reach Tap (outgoing webhooks, the bot gateway): only Web Push
-	// listens here, which delivers to members alone. It must not block.
+	// DMTap is Tap for the events of direct message conversations, under the
+	// same rules. Those never reach Tap (outgoing webhooks, the bot gateway):
+	// only Web Push and the thread follow sync listen here.
 	DMTap func(channel uuid.UUID, ev events.Event)
 	// Presence, when set, hears every join and leave of a Talk (a quick
 	// rejoin is neither). The audit log listens here. It must not block.

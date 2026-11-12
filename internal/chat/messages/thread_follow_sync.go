@@ -11,55 +11,40 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/safego"
 )
 
-// followSyncTimeout bounds the lookup behind one thread reply.
-const followSyncTimeout = 5 * time.Second
-
-const (
-	// followSyncWorkers run the lookups side by side, so a burst of replies
-	// cannot take the pool's connections from the request handlers.
-	followSyncWorkers = 4
-	// followSyncQueue is how many replies wait for a worker. A reply beyond
-	// it is skipped: the follow itself is stored, only the live update to
-	// open clients is lost and the next list load shows it.
-	followSyncQueue = 256
-)
+// followSyncTimeout bounds the lookup behind one thread reply. The lookup
+// runs on the reply's publishing path: until it ends, the reply's sender waits
+// for the answer to the send and nobody sees the reply. A healthy lookup is one
+// indexed query (milliseconds), so a second only passes with a stalled
+// database; then the reply goes out without the follow update (logged; the
+// next list load shows the follow, and the first reply under one's message may
+// pass without an in-page notification), rather than every viewer waiting
+// longer for it.
+const followSyncTimeout = time.Second
 
 // NewFollowSync returns a hub tap that keeps the followed-thread lists of open
 // clients current. A reply makes the root's author, the replier and the members
 // it mentions follow the thread (see followOnReply), so their sessions are told
 // with thread_follow_updated; the clients decide from that list which thread
 // replies notify them. Only members who really follow and can still view the
-// channel are told. The lookup runs off the publishing path, so a failed one
-// is logged and that reply's update is lost; the next list load shows the follow.
+// channel are told.
+//
+// The lookup runs in the tap, that is before the hub hands the reply to any
+// connection, and its updates go out from the same goroutine: a connection
+// receives frames in the order they were handed to it, so every session of a
+// new follower has thread_follow_updated before the reply it decides on (the
+// first reply under one's own message notifies in the page like the push,
+// which reads the followers after the commit too). A failed lookup is logged
+// and only that reply's update is lost; the next list load shows the follow.
 func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, ev events.Event) {
 	perm.Must(perms, "thread follow sync")
-	queue := make(chan core.Message, followSyncQueue)
-	for range followSyncWorkers {
-		safego.Go("thread_follow_sync", safego.Crash, func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case msg := <-queue:
-					syncFollowers(ctx, p, perms, pub, msg)
-				}
-			}
-		})
-	}
 	return func(_ uuid.UUID, ev events.Event) {
 		created, ok := ev.(*core.MessageCreate)
 		if !ok || created == nil || created.ParentID == nil {
 			return
 		}
-		msg := core.Message(*created)
-		select {
-		case queue <- msg:
-		default:
-			slog.Warn("thread follow sync: queue full, reply skipped", "thread", *msg.ParentID)
-		}
+		syncFollowers(ctx, p, perms, pub, core.Message(*created))
 	}
 }
 

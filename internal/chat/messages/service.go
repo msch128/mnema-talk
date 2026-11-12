@@ -110,16 +110,6 @@ type Posted struct {
 	Replayed bool
 }
 
-// StoredError says that the message exists but could not be loaded to be
-// published. The caller must not post it again.
-type StoredError struct {
-	ID  uuid.UUID
-	Err error
-}
-
-func (e *StoredError) Error() string { return "load stored message: " + e.Err.Error() }
-func (e *StoredError) Unwrap() error { return e.Err }
-
 // Post checks that actor may post cmd, stores the message, records it for the
 // channel's outgoing webhooks in the same transaction, publishes
 // message_create and moves the author's read marker.
@@ -146,7 +136,9 @@ func (s *Service) Post(ctx context.Context, actor Actor, cmd PostCommand) (*Post
 	if err != nil {
 		return nil, err
 	}
-	id, msg, err := insertMessage(ctx, s.inserter(), nm, rules, s.inTx(ctx, actor, cmd))
+	// The message is read in the insert's transaction: an error means that
+	// nothing was stored, never a stored message behind a failure.
+	_, msg, err := insertMessage(ctx, s.inserter(), nm, rules, s.inTx(ctx, actor, cmd))
 	if IsNonceConflict(err) {
 		// A concurrent send of the same nonce won the race.
 		posted, err := s.replay(ctx, actor.ID, cmd)
@@ -158,18 +150,12 @@ func (s *Service) Post(ctx context.Context, actor Actor, cmd PostCommand) (*Post
 	if err != nil {
 		return nil, err
 	}
-	if msg == nil { // not loaded for a webhook inside the transaction
-		if msg, err = GetMessage(ctx, s.DB, id); err != nil {
-			return nil, &StoredError{ID: id, Err: err}
-		}
-		msg.Nonce = cmd.Nonce
-	}
 	s.announce(ctx, msg, cmd)
 	return &Posted{Message: msg}, nil
 }
 
 func (s *Service) inserter() inserter {
-	return inserter{db: s.DB, online: s.Online, automod: s.Automod}
+	return inserter{db: s.DB, online: s.Online, automod: s.Automod, load: true}
 }
 
 // inTx is what runs next to the insert: the staged files become the

@@ -1,0 +1,78 @@
+name: Visibility sweep
+
+# Who may see what, measured two ways. The permission snapshot against a
+# second, plain implementation of the rules (internal/perm
+# reference_model_test.go) on 200,000 generated communities, and the canary
+# world (internal/server visibility_canary_*): every GET route as every
+# observer with every combination of the world's ids, every word as a search
+# term, the socket and gateway frames, and each hidden id against a missing
+# one. Known leaks live in canaryKnownLeaks and may only shrink. A failed run
+# is the alert; the seeds are in the log. Too slow for the pull request
+# pipeline, which runs the smoke size of both.
+on:
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  perm-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PERM_SWEEP: "1"
+    steps:
+      # Seeds the generator was not tuned on: a new range of 200,000 per run.
+      - run: echo "PERM_SEED=$((1000000 + GITHUB_RUN_NUMBER * 200000))" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go test -count=1 -run TestSnapshotAgreesWithTheReferenceModel -v ./internal/perm
+
+  canaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Odd seeds: no conversation call, so an Administrator's channel list
+        # is "all"; even seeds: a call exists.
+        parity: [1, 2]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+      VIS_SWEEP: "1"
+    steps:
+      - run: echo "VIS_SEED=$((GITHUB_RUN_NUMBER * 2 + PARITY))" >> "$GITHUB_ENV"
+        env:
+          PARITY: ${{ matrix.parity }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      # The canary world, and 400 random communities whose every member must
+      # see exactly what the snapshot of the test's own mirror grants.
+      - run: go test -tags=integration -count=1 -timeout=40m -run 'TestNoCanaryReachesAnObserverOutsideItsClass|TestRandomCommunitiesShowEachMemberWhatTheSnapshotAllows' -v ./internal/server

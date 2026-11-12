@@ -53,7 +53,7 @@ func (a *API) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) 
 // botAddReaction handles PUT /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me.
 //
 // @Summary Add the bot's reaction
-// @Description Idempotent. The emoji is URL-encoded. Needs Add reactions in the channel. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409).
+// @Description Idempotent. The emoji is URL-encoded. Needs Add reactions in the channel. One emoji with and without U+FE0F is one reaction, stored in its fully-qualified Unicode form. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409).
 // @ID botAddReaction
 // @Tags Bot API
 // @Security botAuth
@@ -76,7 +76,7 @@ func (a *API) botAddReaction(w http.ResponseWriter, r *http.Request) error {
 // botRemoveReaction handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me.
 //
 // @Summary Remove the bot's reaction
-// @Description Idempotent. Taking a reaction back always works.
+// @Description Idempotent. Taking a reaction back always works. It removes the emoji in every form it is stored in (with and without U+FE0F).
 // @ID botRemoveReaction
 // @Tags Bot API
 // @Security botAuth

@@ -3,6 +3,7 @@ import { messageText } from '../../shared/lib/textLength'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api } from '../../shared/lib/api'
 import { resolveReaction } from '../../shared/lib/reactionEmoji'
+import { reactionForm } from '../../shared/lib/reactionForm'
 import { useEmojiStore } from '../emoji'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { assertCommunity, type Cx } from './state'
@@ -106,7 +107,8 @@ export async function toggleReaction(cx: Cx, messageId: string, emoji: string) {
   const { cs } = cx
   const community = cs.communityGeneration
   const pending = resolveReaction(emoji, useEmojiStore().byName)
-  const resolved = typeof pending === 'string' ? pending : await pending
+  // One form per emoji (the server applies the same rule): the quick thumbs up and the picker's are one reaction.
+  const resolved = reactionForm(typeof pending === 'string' ? pending : await pending)
   const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji: resolved }, decode: decodeReactionResult })
   assertCommunity(cx, community)
   applyToMessage(cx, messageId, m => { m.reactions = data.reactions || [] })

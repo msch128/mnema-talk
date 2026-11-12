@@ -59,6 +59,33 @@ One change in this set was made by the coordinator and reviewed by nobody
 else: after "Show", focus goes to the message's row in the place where it was
 pressed (`web/src/shared/lib/revealFocus.ts`).
 
+## 2026-11: defect hunt, second part (lanes 5 to 11, on 3.0.9)
+
+The same procedure. Several findings of this part came from the fix reviews
+themselves, and a review that ended in "merge after fixes" stays in the report
+with its later rounds appended.
+
+| Report | Fix for |
+|---|---|
+| [h-l8-07](2026-11-hunt/h-l8-07.md) | caps on RTCP streams nothing reads on a media connection; four rounds |
+| [h-l8-09](2026-11-hunt/h-l8-09.md) | memory kept per subscription switch: the connection is renewed at a sender cap, a resume budget per publisher and source; three rounds |
+| [h-l8-03](2026-11-hunt/h-l8-03.md), [h-l8-04-06](2026-11-hunt/h-l8-04-06.md) | the bandwidth estimator forgets a stopped sender; a hub map entry left at zero; a counter for dropped presence audit entries |
+| [h-l8-02-h-c-01-03](2026-11-hunt/h-l8-02-h-c-01-03.md) | the TURN relay's allocation budget per member; mention kinds next to `@all` (the field `direct_mentions`); an event comment's delete dialog; two rounds |
+| [h-l9-01-03](2026-11-hunt/h-l9-01-03.md) | the SFU's stored times on a steady clock; sequence numbers and picture ids across a layer switch; two rounds |
+| [h-l2-04](2026-11-hunt/h-l2-04.md) | the media group protocol: an add the member never saw relayed; two rounds |
+| [h-l2-05-h-l9-02](2026-11-hunt/h-l2-05-h-l9-02.md) | the handshake pacer and the back-offs on the monotonic clock; with a measured judgement of the availability under a hostile relay and the trace of five simulator seeds (one new finding, not fixed: an equal-epoch fork) |
+| [lane2-harness](2026-11-hunt/lane2-harness.md) | the protocol sweeps themselves (replays, roster lies, clocks, crash points): three rounds; the first found that two perturbations never ran |
+| [h-l5-02-03-05](2026-11-hunt/h-l5-02-03-05.md), [h-l5-01-04](2026-11-hunt/h-l5-01-04.md) | the web client's lists after a reconnect and a delete; the follow before the first reply; unread counts corrected after a delete or edit; read-state answers ordered against live events (migration 0104) |
+| [h-l6-01](2026-11-hunt/h-l6-01.md), [h-l6-01-round2-h-l6-03](2026-11-hunt/h-l6-01-round2-h-l6-03.md) | audit entries of a private forum and of a removal from a private Talk reach only auditors who can see them |
+| [h-l6-02](2026-11-hunt/h-l6-02.md) | a hidden message, category or channel answers like a missing one; three rounds |
+| [h-l6-04](2026-11-hunt/h-l6-04.md), [h-l6-05-06-07](2026-11-hunt/h-l6-05-06-07.md) | a conversation's call Talk: membership decides, and it is no community channel anywhere (events, the admin channel routes, the media list, reports, auto-delete) |
+| [h-l7-01-03](2026-11-hunt/h-l7-01-03.md), [h-l7-06-07](2026-11-hunt/h-l7-06-07.md), [h-l7-09](2026-11-hunt/h-l7-09.md) | limits and rules under concurrent requests: reset links, the first Owner, role templates, the group conversation cap, the Owner's reply and a pinned reply against deletes and the auto-delete sweep |
+| [h-l7-04-05](2026-11-hunt/h-l7-04-05.md), [h-l7-08](2026-11-hunt/h-l7-08.md) | audit entries inside the change's transaction; answers read inside it; no background job after the shutdown drain began |
+| [h-l10-01-04](2026-11-hunt/h-l10-01-04.md), [h-l10-05](2026-11-hunt/h-l10-05.md) | account erasure and export: what was left out; nothing new may name an erased account (migration 0103), with a dump and restore comparison |
+| [h-l11-01-03](2026-11-hunt/h-l11-01-03.md) | the security floor of the desktop bundle: the trailer is read the same way by the pull request check and the release; Go reads signed documents as the desktop clients do; three rounds |
+| [follow-ups](2026-11-hunt/follow-ups.md) | event comments and event texts go through automod; reactions compared in one emoji form |
+| [bundle-integration](2026-11-hunt/bundle-integration.md) | the collection branch as a whole: every merge with a hand resolution, the coordinator's own commits, interactions between fixes |
+
 Not kept from the hardening run (lost with a temporary directory before they were copied): the
 review of #768 (permission checks refuse without a service), the first two
 rounds for #771 and the second round for #779.

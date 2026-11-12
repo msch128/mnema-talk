@@ -696,12 +696,31 @@ nothing else:
   that check cannot be made (database down), new sessions are refused but
   running ones are kept.
 - Limits: 4 sessions per member and 256 in total, 120 allocation attempts a
-  minute per address (burst 60), a username that keeps failing is refused
+  minute per member (burst 60), a username that keeps failing is refused
   from that address for a while (counted per address and username, so forged
   requests cannot lock out the members behind one address), 4 MiB/s per
   session towards the voice server, sessions that carry nothing for 2 minutes
   or outlive their credential are closed, and TCP connections are capped per
   address, must authenticate within 15 seconds and are idle-timed.
+- The allocation budget belongs to the member whose credential signed the
+  request, not to the address it came from: a UDP source address can be
+  forged, a credential cannot, so one member sending from any number of
+  addresses still has one budget and cannot use up anyone else's. The account
+  is checked before the budget is charged, so a banned or removed member's
+  still-valid credential is refused (`forbidden`) without touching it.
+  Requests without a valid credential never reach the budget: pion answers
+  them with a challenge, and the only failures it counts are malformed or
+  expired usernames, per address and username. Both tables are bounded (4096
+  entries each). When 4096 members draw on the allocation budget at once, the
+  fullest one is forgotten rather than a new member refused; a full failure
+  table stops counting new addresses but refuses nobody.
+- A member who exceeds their allocation budget (more than 60 relay sessions
+  started in a burst, or more than 2 a second after that) gets "486
+  Allocation Quota Reached" for the next attempt, counted as `rate_limited`.
+  Their browser then has no relay candidate for that connection: on a network
+  that blocks UDP the join does not connect, and a new join a few seconds
+  later works again. Running calls are not affected. A fifth session at once
+  is refused as well (`quota_user`).
 - Refused attempts are counted in `mnema_turn_events_total{event}`
   (`auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`,
   `peer_denied`, `packet_blocked`, `throttled`) and logged at debug level
@@ -1515,7 +1534,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
-| `mnema_ws_dropped_total{reason}` | counter | `slow_client` (connection cut because its buffer was full), `flood_frame`, `flood_event` (per-connection budget exceeded). |
+| `mnema_ws_dropped_total{reason}` | counter | `slow_client` (connection cut because its buffer was full), `flood_frame`, `flood_event` (per-connection budget exceeded), `voice_churn` (voice join or leave refused by the rate limit), `audit_presence` (a Talk join or leave that the audit log did not record because its queue was full). |
 | `mnema_mls_handshakes_total{result}` | counter | Voice-room encryption handshakes: `relayed`, `rejected` (malformed or wrong room), `rate_limited`. `mnema_mls_handshake_bytes_total` is the relayed size. |
 | `mnema_voice_rooms`, `mnema_voice_participants` | gauge | Calls as members see them (including the reconnect grace period). |
 | `mnema_sfu_rooms`, `mnema_sfu_peers` | gauge | Rooms with media and media connections. |
@@ -1534,7 +1553,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose layer of a screen share or camera the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |
 | `mnema_sfu_bandwidth_layer_moves_total` | counter | Moves to a lower layer caused by the bandwidth estimate (those caused by loss, round trip time or keyframe requests are only in the layer switch counters). |
 | `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
-| `mnema_sfu_ingress_dropped_total{reason}` | counter | Publisher packets dropped over the ingress limit: `rate` (a sender above its budget) or `closed` (the peer was already closing). |
+| `mnema_sfu_ingress_dropped_total{reason}` | counter | Publisher packets dropped over the ingress limit: `rate` (a sender above its budget) or `closed` (the peer was already closing); `rtcp_ssrcs` counts media connections closed because their RTCP named too many SSRCs nothing reads, and `senders` media connections renewed because the SFU made more than 32 768 senders on them (the member reconnects and resumes the call by itself; see SECURITY.md, media connection limits). |
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
 | `mnema_turn_events_total{event}` | counter | The built-in TURN relay: `allocation`, `relay_opened` and the refused attempts `auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`, `peer_denied`, `packet_blocked`, `throttled`. A steady climb of `peer_denied` or `packet_blocked` means someone is probing the relay; it cannot get anywhere. |
 | `mnema_turn_allocations` | gauge | Sessions relayed by the built-in TURN relay right now. |
@@ -1551,10 +1570,12 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 
 ## Orphaned media
 
-Objects in storage that no media row refers to (a failed delete, a crash
-during an upload) are invisible to members and only take space. Once a day
-the app counts those older than 24 hours under `uploads/`, `avatars/` and `banners/` and
-logs a warning when it finds any; it never deletes them on its own.
+Objects in storage that no row refers to (a failed delete, a crash during an
+upload) are invisible to members and only take space. Once a day the app
+counts those older than 24 hours under `uploads/`, `avatars/`, `banners/` and
+`covers/` (no media row) and under `exports/` (no data export row, such as
+the archive of an erased account whose file delete failed) and logs a warning
+when it finds any; it never deletes them on its own.
 
 ```sh
 # as admin (session cookie): count, then remove
@@ -1562,8 +1583,8 @@ GET  /api/admin/media/orphans           -> {"count": 2, "bytes": 150, "deleted":
 POST /api/admin/media/orphans/cleanup   -> {"count": 2, "bytes": 150, "deleted": 2}
 ```
 
-Objects with a media row, objects younger than 24 hours and anything outside
-those two prefixes are never touched.
+Objects with such a row, objects younger than 24 hours and anything outside
+those five prefixes are never touched.
 
 ## Logs
 
@@ -1645,7 +1666,7 @@ their saved messages (ids, notes and times, not the saved text), the threads
 they follow, their reminders and unsent scheduled messages, the devices
 signed in, the direct message conversations they are in (their own messages
 are in the message file), their RSVPs and event sign-ups, their event
-comments, the wiki pages they saved (their text; the pages stay in the wiki),
+comments and comment mutes, the wiki pages they saved (their text; the pages stay in the wiki),
 audit entries about their account and their sign-in setup; nothing of other
 members. The archive's own `README.txt` lists every file. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see
@@ -1655,7 +1676,9 @@ nobody else is in is deleted with its messages and files, and in the others
 their messages stay without text; reports keep their copies for the
 moderators with the member's text blanked; files are removed from
 object storage in the same request, and anything that could not be removed is
-found by Admin > Media > orphan cleanup. The one exception is a picture a
+found by Admin > Media > orphan cleanup. A request of the member's that was
+still running while the account was erased fails (500) and stores nothing:
+the database refuses rows that name an erased account. The one exception is a picture a
 wiki page still shows: it survives the erasure, unlinked from the person
 (see [the wiki](wiki.md#privacy)). Exports are stored for at most 24 hours
 under `exports/` in the bucket and need object storage; back-ups taken in that

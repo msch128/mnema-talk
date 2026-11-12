@@ -82,11 +82,11 @@ func (a *API) ReportMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	id, err := FileReport(r.Context(), a.DB, NewReport{Reporter: user.ID, MessageID: msgID, Category: req.Category, Note: note})
+	id, err := FileReport(r.Context(), a.DB, NewReport{Reporter: user.ID, MessageID: msgID, Category: req.Category, Note: note,
+		Audited: func(tx pgx.Tx, id uuid.UUID) error { return a.auditReport(r.Context(), tx, id, req.Category) }})
 	if err != nil {
 		return err
 	}
-	a.auditReport(r.Context(), id, req.Category)
 	reportcount.Announce(r.Context(), a.DB, a.Events)
 	httpx.WriteJSON(w, http.StatusCreated, ReportFiled{ID: id})
 	return nil
@@ -94,11 +94,9 @@ func (a *API) ReportMessage(w http.ResponseWriter, r *http.Request) error {
 
 // auditReport records that a report was filed, never what it contains: the
 // entry would otherwise carry direct message text to every reader of the log.
-func (a *API) auditReport(ctx context.Context, id uuid.UUID, category string) {
-	if a.Audit == nil {
-		return
-	}
-	a.Audit.RecordOrLog(ctx, audit.Entry{
+// It is written through tx, the report's transaction.
+func (a *API) auditReport(ctx context.Context, tx pgx.Tx, id uuid.UUID, category string) error {
+	return a.Audit.RecordTx(ctx, tx, audit.Entry{
 		Action: "report.create", TargetType: "report", TargetID: id.String(),
 		Details: map[string]any{"category": category},
 	})

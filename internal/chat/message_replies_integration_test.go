@@ -92,12 +92,12 @@ func TestReplyValidationDoesNotHideDatabaseErrors(t *testing.T) {
 	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); !errors.Is(err, context.Canceled) {
 		t.Errorf("ValidateParent: %v, want the context error", err)
 	}
-	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); !errors.Is(err, context.Canceled) {
+	if err := messages.ValidateReplyTargetFor(ctx, f.p, nil, f.c.ID, nil, &f.m); !errors.Is(err, context.Canceled) {
 		t.Errorf("ValidateReplyTarget: %v, want the context error", err)
 	}
 	missing := uuid.New()
 	chattest.RequireError(t, core.ValidateParent(context.Background(), f.p, f.c.ID, &missing), "parent message not found")
-	chattest.RequireError(t, messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
+	chattest.RequireError(t, messages.ValidateReplyTargetFor(context.Background(), f.p, nil, f.c.ID, nil, &missing), "message to reply to not found")
 }
 
 func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
@@ -106,7 +106,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing parent: %v", err)
 	}
-	if err := messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
+	if err := messages.ValidateReplyTargetFor(context.Background(), f.p, nil, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing reply target: %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -114,7 +114,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("parent lookup failure: %v", err)
 	}
-	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+	if err := messages.ValidateReplyTargetFor(ctx, f.p, nil, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("reply target lookup failure: %v", err)
 	}
 }

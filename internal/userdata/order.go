@@ -72,6 +72,8 @@ const (
 	OrderDiscordImportCreatedBy
 	OrderDiscordImportUndoneBy
 	OrderLoginUnlock
+	OrderMessageNonces
+	OrderUploadUsage
 	OrderAuditFlag
 	OrderScrubAudit
 )
@@ -101,6 +103,7 @@ const (
 	FileRSVPs          = 210
 	FileEventSignups   = 220
 	FileEventComments  = 230
+	FileCommentMutes   = 232
 	FileWikiRevisions  = 235
 	FileMessages       = 240
 )

@@ -104,7 +104,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if info.Type == core.ChannelTypeForum && req.ParentID == nil {
 		return httpx.ErrInvalidInput("a forum post needs a title; schedule a reply in a post instead")
 	}
-	if err := messages.ValidateTarget(ctx, s.DB, ch, req.ParentID, req.ReplyToID); err != nil {
+	if err := messages.ValidateTarget(ctx, s.DB, s.Perms, auth.UserFrom(ctx).Subject(), ch, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
 	out, err := s.AddScheduled(ctx, NewScheduled{

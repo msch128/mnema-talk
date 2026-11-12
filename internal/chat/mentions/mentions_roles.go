@@ -48,7 +48,7 @@ func resolveMentionSet(ctx context.Context, q db.Querier, policy MentionPolicy, 
 		return MentionSet{}, err
 	}
 	delete(ids, authorID)
-	set := MentionSet{Users: allowedMentions(ids, policy, targets, online)}
+	set := MentionSet{Users: allowedMentions(ids, policy)}
 	if len(roles) > 0 {
 		if set, err = addRoleMentions(ctx, q, set, roles, authorID, policy); err != nil {
 			return set, err
@@ -58,16 +58,18 @@ func resolveMentionSet(ctx context.Context, q db.Querier, policy MentionPolicy, 
 }
 
 // addRoleMentions adds the members of the mentioned roles. A user whose name
-// equals the role's name wins: that @name stays a mention of the user.
+// equals the role's name wins: that @name stays a mention of the user. A
+// member already reached by @all or @here is raised to a role mention, which
+// addresses them (a mute lets it through); a name mention stays.
 func addRoleMentions(ctx context.Context, q db.Querier, set MentionSet, roles []MentionRole, authorID uuid.UUID, policy MentionPolicy) (MentionSet, error) {
 	taken, err := takenByUsers(ctx, q, roles)
 	if err != nil {
 		return set, err
 	}
 	var candidates []uuid.UUID
-	have := map[uuid.UUID]bool{}
-	for _, u := range set.Users {
-		have[u.ID] = true
+	at := make(map[uuid.UUID]int, len(set.Users))
+	for i, u := range set.Users {
+		at[u.ID] = i
 	}
 	for _, r := range roles {
 		if taken[strings.ToLower(r.Name)] {
@@ -81,10 +83,16 @@ func addRoleMentions(ctx context.Context, q db.Querier, set MentionSet, roles []
 		return set, err
 	}
 	for _, id := range members {
-		if id == authorID || have[id] || !mentionVisible(policy, id) {
+		if i, ok := at[id]; ok {
+			if set.Users[i].Kind == core.MentionKindGroup {
+				set.Users[i].Kind = core.MentionKindRole
+			}
 			continue
 		}
-		have[id] = true
+		if id == authorID || !mentionVisible(policy, id) {
+			continue
+		}
+		at[id] = len(set.Users)
 		set.Users = append(set.Users, MentionedUser{ID: id, Kind: core.MentionKindRole})
 	}
 	return set, nil

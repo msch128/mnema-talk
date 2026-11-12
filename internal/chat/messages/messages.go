@@ -42,7 +42,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 	defer rows.Close()
 	msgs := make([]core.Message, 0)
 	for rows.Next() {
-		m := core.Message{Attachments: make([]core.MediaAttachment, 0), Reactions: make([]core.ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
+		m := core.Message{Attachments: make([]core.MediaAttachment, 0), Reactions: make([]core.ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), DirectMentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
 		var avatar *string
 		var r rawReplyFields
 		var embeds []byte
@@ -115,9 +115,9 @@ func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx
 
 func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
-		SELECT message_id, emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
+		SELECT message_id, MIN(emoji), array_agg(user_id ORDER BY created_at)
 		FROM message_reactions WHERE message_id = ANY($1)
-		GROUP BY message_id, emoji ORDER BY MIN(created_at)`, ids)
+		GROUP BY message_id, `+reactionKeySQL+` ORDER BY MIN(created_at)`, ids)
 	if err != nil {
 		return fmt.Errorf("load reactions: %w", err)
 	}
@@ -125,26 +125,31 @@ func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx m
 	for rows.Next() {
 		var r core.ReactionSummary
 		var msgID uuid.UUID
-		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Users); err != nil {
+		if err := rows.Scan(&msgID, &r.Emoji, &r.Users); err != nil {
 			return err
 		}
-		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, r)
+		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, oneReaction(r))
 	}
 	return rows.Err()
 }
 
 func loadMentions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
+	rows, err := p.Query(ctx, `SELECT message_id, user_id, kind <> $2 FROM message_mentions WHERE message_id = ANY($1)`, ids, core.MentionKindGroup)
 	if err != nil {
 		return fmt.Errorf("load mentions: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var msgID, userID uuid.UUID
-		if err := rows.Scan(&msgID, &userID); err != nil {
+		var direct bool
+		if err := rows.Scan(&msgID, &userID, &direct); err != nil {
 			return err
 		}
-		msgs[idx[msgID]].Mentions = append(msgs[idx[msgID]].Mentions, userID)
+		m := &msgs[idx[msgID]]
+		m.Mentions = append(m.Mentions, userID)
+		if direct {
+			m.DirectMentions = append(m.DirectMentions, userID)
+		}
 	}
 	return rows.Err()
 }
@@ -240,13 +245,15 @@ func IsSameThreadContext(refParentID, parentID, replyTo *uuid.UUID) bool {
 	return false
 }
 
-// ValidateReplyTarget checks that replyTo exists in the same channel and the
-// same thread context (both root messages, or both replies of one thread).
-func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, parentID, replyTo *uuid.UUID) error {
+// ValidateReplyTargetFor checks that replyTo exists in the same channel and the
+// same thread context (both root messages, or both replies of one thread). A
+// caller who sees what view lets them see gets a message in a channel they
+// cannot see answered as a missing message; a nil view asks nobody.
+func ValidateReplyTargetFor(ctx context.Context, p *db.Pool, view core.Viewer, channelID uuid.UUID, parentID, replyTo *uuid.UUID) error {
 	if replyTo == nil {
 		return nil
 	}
-	ref, err := core.LoadReferencedMessage(ctx, p, *replyTo, "message to reply to not found")
+	ref, err := core.LoadReferencedMessage(ctx, p, view, channelID, *replyTo, "message to reply to not found")
 	if err != nil {
 		return err
 	}

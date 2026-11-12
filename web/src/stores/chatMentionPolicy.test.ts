@@ -92,6 +92,22 @@ describe('a muted channel follows the mentions the server resolved', () => {
     expect(made).toHaveLength(0)
   })
 
+  // A webhook with user mentions off, or a bot without "users", posting
+  // "@all @max": @all puts me on `mentions` and the text names me, but the
+  // server stored me as reached by @all only (finding H-C-02), so after a
+  // reload the badge is 0. direct_mentions is how the frame says so.
+  it('a name next to @all from a sender that may not name members does not break the mute', () => {
+    const chat = setup()
+    chat.handleWSEvent({ type: 'message_create', payload: { ...unresolved('@all @max deploy'), mentions: ['me'], direct_mentions: [] } })
+    expect({ count: required(chat.readStates[BUILDS]).mention_count, notes: made.length }).toEqual({ count: 0, notes: 0 })
+  })
+
+  it('a name next to @all that the server counts does break the mute (control)', () => {
+    const chat = setup()
+    chat.handleWSEvent({ type: 'message_create', payload: { ...unresolved('@all @max deploy'), mentions: ['me'], direct_mentions: ['me'] } })
+    expect({ count: required(chat.readStates[BUILDS]).mention_count, notes: made.length }).toEqual({ count: 1, notes: 1 })
+  })
+
   it('a reply to me breaks the mute whatever the list says', () => {
     const chat = setup()
     chat.handleWSEvent({ type: 'message_create', payload: { ...unresolved('agreed'), reply_to: { id: 'r', deleted: false, user_id: 'me', username: 'max', display_name: 'Max', content: 'x' } } })

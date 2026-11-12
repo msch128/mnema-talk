@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -36,11 +37,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireWrite(r, 0); err != nil {
 		return err
 	}
-	p, err := h.Store.Create(r.Context(), h.userID(r), in)
+	p, err := h.Store.create(r.Context(), h.userID(r), in, func(tx pgx.Tx, p *Page) error {
+		return h.Audit.RecordTx(r.Context(), tx, pageEntry("wiki.create", p, map[string]any{"slug": p.Slug}))
+	})
 	if err != nil {
 		return err
 	}
-	h.record(r, "wiki.create", p, map[string]any{"slug": p.Slug})
 	httpx.WriteJSON(w, http.StatusCreated, p)
 	return nil
 }

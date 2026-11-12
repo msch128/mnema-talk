@@ -66,6 +66,7 @@ var auditKinds = map[string]string{
 	"moderation.ban_expired":    "ban_expired",
 	"moderation.kick":           "kick",
 	"user.talk_kick":            "talk_removal",
+	"voice.disconnect":          "talk_removal",
 	"user.roles_set":            "roles",
 }
 

@@ -235,7 +235,8 @@ func TestAnAnswerRefusedAfterItWasAppliedKeepsItsCandidatesCounted(t *testing.T)
 	if err := p.PC.SetLocalDescription(offer); err != nil {
 		t.Fatal(err)
 	}
-	sdp := sdpHead + candidateLine("192.0.2.7") + "\r\n"
+	// The offer's one section under its mid, so the answer passes the vetting.
+	sdp := sdpHead + "a=mid:0\r\n" + candidateLine("192.0.2.7") + "\r\n"
 	if err := p.SetAnswer(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp}); err == nil {
 		t.Fatal("an answer that does not match the offer was accepted")
 	}

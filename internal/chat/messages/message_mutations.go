@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,21 +22,46 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
+	_, _, err := editMessage(ctx, p, online, messageID, userID, content, nil)
+	return err
+}
+
+// editMessage is EditMessage returning the edited message, read in the
+// edit's transaction: an error means that nothing was changed. audited, if
+// set, runs in that transaction after the new text is stored (the audit
+// entry). It also returns the members the message mentioned before the edit.
+func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string, audited func(pgx.Tx) error) (*core.Message, []uuid.UUID, error) {
 	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	var msg *core.Message
+	var before []uuid.UUID
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		var err error
+		if before, err = mentionedBy(ctx, tx, messageID); err != nil {
+			return err
+		}
 		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
 		if err != nil {
 			return err
 		}
-		return RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil)
+		if audited != nil {
+			if err := audited(tx); err != nil {
+				return err
+			}
+		}
+		if msg, err = recordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil); err != nil || msg != nil {
+			return err
+		}
+		msg, err = loadStored(ctx, tx, messageID, nil)
+		return err
 	})
-	if err == nil {
-		pending.Commit(ctx, messageID)
+	if err != nil {
+		return nil, nil, err
 	}
-	return err
+	pending.Commit(ctx, messageID)
+	return msg, before, nil
 }
 
 // EditMessageTx checks that userID may edit the message, keeps the replaced
@@ -101,7 +127,18 @@ func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 // the storage keys of the media that went with it; their rows are removed by
 // cascade, the caller deletes the objects.
 func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
+	keys, _, err := deleteMessageAs(ctx, p, messageID, user, canManage, nil)
+	return keys, err
+}
+
+// deleteMessageAs is DeleteMessageAs with audited, if set, run in the
+// deletion's transaction once the message is locked and the deletion allowed,
+// while the message can still be read (the audit entry). It also returns when
+// the newest of the removed messages (the message or one of its replies) was
+// written: members who had read the channel up to then were not counting any.
+func deleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool, audited func(pgx.Tx) error) ([]string, time.Time, error) {
 	var keys []string
+	var newest time.Time
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Locking the message first blocks a concurrent thread reply or
 		// upload (their foreign keys need a share lock on it) until we are
@@ -110,8 +147,14 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		if err != nil {
 			return err
 		}
+		newest = m.newest
 		if err := checkDeleteAuthorized(user, m.author, m.ownerContent, canManage); err != nil {
 			return err
+		}
+		if audited != nil {
+			if err := audited(tx); err != nil {
+				return err
+			}
 		}
 		if err := CollectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
@@ -124,9 +167,9 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		return RecordMessageDelete(ctx, p, tx, m.channel, messageID, m.parent)
 	})
 	if err != nil {
-		return nil, err
+		return nil, newest, err
 	}
-	return keys, nil
+	return keys, newest, nil
 }
 
 // lockedMessage is what deleting a message needs to know about it.
@@ -134,25 +177,28 @@ type lockedMessage struct {
 	author, channel uuid.UUID
 	parent          *uuid.UUID
 	ownerContent    bool
+	// newest is when the newest of the message and its replies was written,
+	// read once the lock is held (no reply can be added after that).
+	newest time.Time
 }
 
 func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (lockedMessage, error) {
 	var m lockedMessage
-	// The Owner's words (the message or a reply of theirs in its thread)
-	// are only the Owner's to remove.
-	err := tx.QueryRow(ctx, `
-		SELECT m.user_id, m.channel_id, m.parent_id,
-		       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
-		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
-		               WHERE r.parent_id = m.id AND ru.role = 'admin')
-		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&m.author, &m.channel, &m.parent, &m.ownerContent)
+	err := tx.QueryRow(ctx, `SELECT user_id, channel_id, parent_id FROM messages WHERE id = $1 FOR UPDATE`, messageID).
+		Scan(&m.author, &m.channel, &m.parent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return m, fmt.Errorf("lock message: %w", err)
 	}
-	return m, nil
+	// The Owner's words, read after the lock in a statement of its own
+	// (ownerWords), then the newest message the delete removes.
+	if m.ownerContent, err = ownerWords(ctx, tx, messageID, m.author); err != nil {
+		return m, err
+	}
+	m.newest, err = newestOfThread(ctx, tx, messageID)
+	return m, err
 }
 
 func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canManage bool) error {
@@ -208,49 +254,64 @@ func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID,
 // current one, under the message's row lock, which serializes all changes to
 // one message so concurrent adds cannot overshoot the limits.
 func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]core.ReactionSummary, bool, error) {
+	// One emoji with and without U+FE0F is one reaction: it is stored in one
+	// form, and rows an older server stored in the other match it by key.
+	emoji = core.ReactionForm(emoji)
 	changed := false
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// The row lock serializes toggles on one message, so concurrent
-		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
-		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
-		channel, err := lockMessage(ctx, tx, messageID)
-		if err != nil {
+	var reactions []core.ReactionSummary
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) (err error) {
+		if changed, err = applyReaction(ctx, p, tx, messageID, userID, emoji, canAdd, target); err != nil {
 			return err
 		}
-		present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
-		if err != nil || target(present) == present {
-			return err
-		}
-		changed = true
-		if present {
-			err = removeReaction(ctx, tx, messageID, userID, emoji)
-		} else {
-			err = addReactionAs(ctx, tx, messageID, userID, emoji, canAdd)
-		}
-		if err != nil {
-			return err
-		}
-		return recordReactions(ctx, p, tx, channel, messageID)
+		// Read in the transaction: an error means that nothing changed, so
+		// a retry of the toggle does not undo a change that answered 500.
+		reactions, err = ReactionSummary(ctx, tx, messageID)
+		return err
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	reactions, err := ReactionSummary(ctx, p, messageID)
-	return reactions, changed, err
+	return reactions, changed, nil
+}
+
+// applyReaction is changeReaction's change in tx; it says whether there was one.
+func applyReaction(ctx context.Context, p *db.Pool, tx pgx.Tx, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) (bool, error) {
+	// The row lock serializes toggles on one message, so concurrent
+	// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
+	// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
+	channel, err := lockMessage(ctx, tx, messageID)
+	if err != nil {
+		return false, err
+	}
+	present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
+	if err != nil || target(present) == present {
+		return false, err
+	}
+	if present {
+		err = removeReaction(ctx, tx, messageID, userID, emoji)
+	} else {
+		err = addReactionAs(ctx, tx, messageID, userID, emoji, canAdd)
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, recordReactions(ctx, p, tx, channel, messageID)
 }
 
 func reactionPresent(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) (bool, error) {
 	var present bool
 	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
-		messageID, userID, emoji).Scan(&present); err != nil {
+		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND `+reactionKeySQL+` = $3)`,
+		messageID, userID, core.ReactionKey(emoji)).Scan(&present); err != nil {
 		return false, fmt.Errorf("read reaction: %w", err)
 	}
 	return present, nil
 }
 
+// removeReaction takes back userID's reaction in every form it is stored in.
 func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
-	if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND `+reactionKeySQL+` = $3`,
+		messageID, userID, core.ReactionKey(emoji)); err != nil {
 		return fmt.Errorf("remove reaction: %w", err)
 	}
 	return nil
@@ -292,8 +353,9 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 	var mine, distinct int
 	var emojiPresent bool
 	if err := tx.QueryRow(ctx, `
-		SELECT COUNT(*) FILTER (WHERE user_id = $2), COUNT(DISTINCT emoji), COALESCE(BOOL_OR(emoji = $3), FALSE)
-		FROM message_reactions WHERE message_id = $1`, messageID, userID, emoji).Scan(&mine, &distinct, &emojiPresent); err != nil {
+		SELECT COUNT(DISTINCT `+reactionKeySQL+`) FILTER (WHERE user_id = $2), COUNT(DISTINCT `+reactionKeySQL+`),
+		       COALESCE(BOOL_OR(`+reactionKeySQL+` = $3), FALSE)
+		FROM message_reactions WHERE message_id = $1`, messageID, userID, core.ReactionKey(emoji)).Scan(&mine, &distinct, &emojiPresent); err != nil {
 		return fmt.Errorf("count reactions: %w", err)
 	}
 	if mine >= MaxReactionsPerUser || (!emojiPresent && distinct >= MaxEmojiPerMessage) {
