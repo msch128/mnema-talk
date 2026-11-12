@@ -1,0 +1,83 @@
+name: Published release check
+
+# CI tests the image verification of the updater (internal/imageverify) and the
+# desktop layout rules for web bundles (internal/webbundle) against fixtures and
+# a locally built bundle. Two tests read what a release really published, and
+# this workflow is where they run, against the latest release (or a tag given
+# by hand):
+# - TestLiveReleaseImage verifies the GHCR image with the public Sigstore
+#   instance, the same Verify path the updater runs.
+# - TestPublishedBundlesSatisfyDesktopLayout checks the release's
+#   mnema-web-*.zip against the archive and manifest rules of the desktop
+#   clients.
+# A drift between release.yml and these checks shows here within a day. A
+# failed run is the alert. Only public artifacts are read: no secrets, and the
+# token only lists and downloads release assets.
+on:
+  schedule:
+    - cron: "23 7 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to check (vX.Y.Z); empty for the latest release"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  published:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Release to check
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-}"
+          if [ -z "$tag" ]; then
+            tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "not a release tag: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "Checking release $tag" >> "$GITHUB_STEP_SUMMARY"
+
+      # A -run pattern that matches nothing passes as "no tests to run", so the
+      # log must show the test itself passing.
+      - name: The published image verifies as the updater verifies it
+        env:
+          MNEMA_VERIFY_LIVE_IMAGE: ${{ steps.release.outputs.image }}
+        run: |
+          set -euo pipefail
+          go test -count=1 -v -run '^TestLiveReleaseImage$' ./internal/imageverify/ | tee "$RUNNER_TEMP/image.log"
+          grep -q -- '--- PASS: TestLiveReleaseImage' "$RUNNER_TEMP/image.log"
+
+      - name: The published web bundle satisfies the desktop layout
+        if: ${{ !cancelled() && steps.release.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/bundles"
+          mkdir -p "$dir/$TAG"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'mnema-web-*.zip' --dir "$dir/$TAG"
+          MNEMA_BUNDLE_DIR="$dir" go test -count=1 -v -run '^TestPublishedBundlesSatisfyDesktopLayout$' ./internal/webbundle/ | tee "$RUNNER_TEMP/bundle.log"
+          grep -q -- '--- PASS: TestPublishedBundlesSatisfyDesktopLayout' "$RUNNER_TEMP/bundle.log"
