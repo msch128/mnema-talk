@@ -419,6 +419,11 @@ var canaryKnownLeaks = map[string]string{
 	// The same entries found by target_id: a forum id lists them, a missing id
 	// lists nothing. Smoke samples the target ids, so only the deep run must hit it.
 	"mod /api/admin/audit-log existence": "H-L6-01",
+	// A file in a conversation's call chat is listed for the Owner (only with a call: even seeds).
+	"owner /api/admin/media dm talk file":      "H-L6-07",
+	"owner /api/admin/media dm talk":           "H-L6-07",
+	"owner /api/admin/media dm talk name":      "H-L6-07",
+	"owner /api/admin/media dm talk file name": "H-L6-07",
 }
 
 // canaryKnownDeepOnly are rows of canaryKnownLeaks that only the deep run is
@@ -515,7 +520,7 @@ func (s *canarySweep) report(t *testing.T) {
 		t.Errorf("the control reached too few Staff words")
 	}
 	for key, id := range canaryKnownLeaks {
-		if !s.known[key] && (s.deep || !canaryKnownDeepOnly[key]) {
+		if !s.known[key] && (s.deep || !canaryKnownDeepOnly[key]) && (id != "H-L6-07" || s.w.calls) {
 			t.Errorf("known leak %s (%s) did not happen: drop it from canaryKnownLeaks", key, id)
 		}
 	}

@@ -286,6 +286,12 @@ func (w *canaryWorld) conversation(t *testing.T) {
 	w.hide(clsDM, "channel", "dm talk", talk.ID)
 	wantStatus(t, "name the call", w.insider.patch("/api/talks/"+talk.ID.String(), map[string]any{"name": "call-" + w.word(clsDM, "dm talk name")}), http.StatusOK)
 	w.say(t, w.carol, clsDM, talk.ID, "dm talk chat", map[string]any{})
+	// What members put into the call's chat: a mention of every observer and a file.
+	w.say(t, w.insider, clsDM, talk.ID, "dm talk mentions", map[string]any{
+		"content": "@outsider @moderator @everyone " + w.word(clsDM, "dm talk mentions")})
+	callFile := w.a.stage(w.carol, talk.ID, "call-"+w.word(clsDM, "dm talk file name")+".png")
+	w.hide(clsDM, "media", "dm talk file", callFile.ID)
+	wantStatus(t, "dm talk file", sendWith(w.carol, talk.ID, "callfile "+w.word(clsDM, "dm talk file message"), callFile.ID), http.StatusCreated)
 }
 
 // pending is what insider keeps for later and the event of the Staff Talk.
