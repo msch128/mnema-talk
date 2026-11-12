@@ -1,5 +1,34 @@
 # Changelog
 
+## [3.0.9](https://github.com/msch128/mnema-talk/compare/v3.0.8...v3.0.9) (2026-11-12)
+
+
+### Bug Fixes
+
+* a block also closes the chat of the conversation's Talk ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* a block also stops edits and poll votes in a conversation of two ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* a link target longer than the client's cap, or a message past its scan budget, passes no link rule ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* a muted channel follows the mentions the server resolved, not the text ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* a renewal that won against a rival one counts toward the limit like any other ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* an erased partner closes the conversation of two and its Talk's chat to writes ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* automod judges every host the client links, read the way a browser reads it ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* fold a blocked member's words on every surface, not only in the message list ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* leaving a group conversation ends the leaver's seat in its Talk ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* snippets of long messages are cut after stripping, so spoilers stay hidden ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the committer waits for newcomers before it removes a silent member ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the committer's wait covers the patience of a hung lowest id, and a swapped leaf re-arms it ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the composer trims and counts message text the way the server does ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the server reads Markdown like the web renderer, so pushes and snippets hide the same spoilers ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* wiki search matches the query composed and decomposed ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* wiki titles compare by one Unicode-aware key on the server and in the app ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+
+
+### Documentation
+
+* state what the code does for key retention, key lifetime, poll export, DTX frame size and memory alert ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the architecture page says the relay checks framing and room membership, members check commits ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+* the fix reviews of the defect hunt ([93502a1](https://github.com/msch128/mnema-talk/commit/93502a10ec0a7168d5c3befe58654a0520b9783f))
+
 ## [3.0.8](https://github.com/msch128/mnema-talk/compare/v3.0.7...v3.0.8) (2026-11-12)
 
 
