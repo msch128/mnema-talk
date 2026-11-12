@@ -19,16 +19,19 @@ import (
 	"github.com/msch128/mnema-talk/internal/testutil/racetest"
 )
 
-// recordingMail keeps every message it is asked to send.
+// recordingMail keeps every message it is asked to send and announces each on
+// delivered.
 type recordingMail struct {
-	mu   sync.Mutex
-	sent []mailer.Message
+	mu        sync.Mutex
+	sent      []mailer.Message
+	delivered chan struct{}
 }
 
 func (m *recordingMail) Send(_ context.Context, msg mailer.Message) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sent = append(m.sent, msg)
+	m.delivered <- struct{}{}
 	return nil
 }
 
@@ -57,7 +60,7 @@ func TestParallelResetRequestsLeaveOnlyTheNewestLinkWorking(t *testing.T) {
 			}
 			// A fresh handler per round: its in-memory budgets are those of a
 			// process that has just started.
-			mail = &recordingMail{}
+			mail = &recordingMail{delivered: make(chan struct{}, callers)}
 			h = NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 			h.Mail = mail
 		},
@@ -69,10 +72,22 @@ func TestParallelResetRequestsLeaveOnlyTheNewestLinkWorking(t *testing.T) {
 			if err == nil && w.Code != http.StatusAccepted {
 				err = fmt.Errorf("status %d", w.Code)
 			}
-			h.DrainMail()
-			return err
+			if err != nil {
+				return err
+			}
+			// Each caller stays until one mail went out, so the callers'
+			// spans cover the background jobs they started. Not DrainMail:
+			// a WaitGroup.Wait while other callers still start jobs
+			// (WaitGroup.Add) is a misuse of the WaitGroup.
+			select {
+			case <-mail.delivered:
+				return nil
+			case <-time.After(30 * time.Second):
+				return fmt.Errorf("no reset mail within 30 s")
+			}
 		},
 		func(round int, _ racetest.Round) string {
+			// Every caller has returned, so no job is started any more.
 			h.DrainMail()
 			working := 0
 			for _, msg := range mail.sent {
