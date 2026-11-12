@@ -333,7 +333,9 @@ func buildZip(t *testing.T, fill func(*zip.Writer)) []byte {
 }
 
 // TestPublishedBundlesSatisfyDesktopLayout checks real release assets when
-// MNEMA_BUNDLE_DIR points at a directory of mnema-web-*.zip files.
+// MNEMA_BUNDLE_DIR points at a directory of mnema-web-*.zip files (one
+// sub-directory per release). .github/workflows/release-check.yml runs it
+// daily against the latest release's bundle.
 func TestPublishedBundlesSatisfyDesktopLayout(t *testing.T) {
 	dir := os.Getenv("MNEMA_BUNDLE_DIR")
 	if dir == "" {

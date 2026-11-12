@@ -129,6 +129,7 @@ mnema-talk/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e (Chromium, WebKit, Firefox, macOS WebKit calls),
 │   │                        # docker build + smoke test, upgrade/restore drills, English-only check, trivy scan
 │   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
+│   ├── release-check.yml    # Daily: the latest release's GHCR image and web bundle pass TestLiveReleaseImage and TestPublishedBundlesSatisfyDesktopLayout
 │   ├── sim-sweep.yml        # Nightly: the media group simulator on seeds 1..400, both relays, against the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only shrink)
 │   ├── trust-expiry.yml     # Weekly: fails when the desktop trust statement has under 60 days left
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
