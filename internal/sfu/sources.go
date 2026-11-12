@@ -1,5 +1,11 @@
 package sfu
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 // Source tells what a forwarded track carries. Audio and screen tracks are
 // published under the user's ID as stream ID; a camera under CameraStreamPrefix
 // and a screen share's sound under ScreenAudioStreamPrefix plus the user's ID,
@@ -84,4 +90,78 @@ func (p *Peer) releaseViewerTracks() {
 	for _, vt := range tracks {
 		vt.group.removeViewer(vt)
 	}
+}
+
+func matchesSource(tInfoSource Source, source Source) bool {
+	if tInfoSource == source {
+		return true
+	}
+	return source == SourceScreen && tInfoSource == SourceScreenAudio
+}
+
+// stopSourceTracksLocked stops the publisher's tracks of source; one stop
+// spends one resume of the source's budget, however many tracks (layers, the
+// share's sound) it stops. r.mu is held.
+func (r *Room) stopSourceTracksLocked(userID uuid.UUID, source Source) bool {
+	var resumeAt int64
+	for id, tInfo := range r.trackLocals {
+		if tInfo.SenderID == userID && matchesSource(tInfo.Source, source) {
+			if resumeAt == 0 {
+				resumeAt = r.stopUntilLocked(userID, source, layerNow())
+			}
+			tInfo.resumeAt.Store(resumeAt)
+			delete(r.trackLocals, id)
+		}
+	}
+	return resumeAt != 0
+}
+
+// sourceKey names one source of one publisher.
+type sourceKey struct {
+	user   uuid.UUID
+	source Source
+}
+
+// resumeBudget is how many resumes a publisher's source has left (resumeBurst
+// at most, refilled one per resumeRefill) as of at. It belongs to the
+// publisher and source, not to a track, so a replaced capture or a rejoin does
+// not start a fresh burst.
+type resumeBudget struct {
+	left float64
+	at   time.Time
+}
+
+// leftAt is what the budget has left at now.
+func (b *resumeBudget) leftAt(now time.Time) float64 {
+	return min(resumeBurst, b.left+float64(now.Sub(b.at))/float64(resumeRefill))
+}
+
+// stopUntilLocked spends one resume of the source's budget for a stop at now
+// and returns when its tracks may resume (steadyNanos): after resumeHoldoff
+// while the budget lasts, else once it has refilled by one. The budgets of
+// publishers no longer in the room are forgotten once full again, so the map
+// holds at most one entry per source of each member seated now or within the
+// last (resumeBurst+1)*resumeRefill (110 s). r.mu is held.
+func (r *Room) stopUntilLocked(user uuid.UUID, source Source, now time.Time) int64 {
+	for k, b := range r.resumeBudgets {
+		if r.peers[k.user] == nil && b.leftAt(now) >= resumeBurst {
+			delete(r.resumeBudgets, k)
+		}
+	}
+	if r.resumeBudgets == nil {
+		r.resumeBudgets = map[sourceKey]*resumeBudget{}
+	}
+	key := sourceKey{user, source}
+	b := r.resumeBudgets[key]
+	if b == nil {
+		b = &resumeBudget{left: resumeBurst, at: now}
+		r.resumeBudgets[key] = b
+	}
+	// Clamped at -1: a stop never waits longer than resumeRefill.
+	b.left, b.at = max(b.leftAt(now)-1, -1), now
+	wait := resumeHoldoff
+	if b.left < 0 {
+		wait = max(wait, time.Duration(-b.left*float64(resumeRefill)))
+	}
+	return steadyNanos(now.Add(wait))
 }

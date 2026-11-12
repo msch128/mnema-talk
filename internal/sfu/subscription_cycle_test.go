@@ -288,33 +288,84 @@ func TestSenderCapRenewsTheConnection(t *testing.T) {
 	}
 }
 
-// TestStopResumeBudget: a track resumes after resumeHoldoff resumeBurst
+// budgetRoom is a bare room with publisher seated, for the resume budget.
+func budgetRoom(publisher uuid.UUID) *Room {
+	return &Room{peers: map[uuid.UUID]*Peer{publisher: {ID: publisher}}}
+}
+
+// stopWait is how long a stop of publisher's source at now holds its tracks.
+func stopWait(r *Room, publisher uuid.UUID, source Source, now time.Time) time.Duration {
+	return time.Duration(r.stopUntilLocked(publisher, source, now) - steadyNanos(now))
+}
+
+// TestStopResumeBudget: a source resumes after resumeHoldoff resumeBurst
 // times in a row, then once per resumeRefill, and the budget refills.
 func TestStopResumeBudget(t *testing.T) {
-	info := &TrackInfo{}
+	user := uuid.New()
+	r := budgetRoom(user)
 	now := time.Unix(1_000_000, 0)
 	for i := range resumeBurst {
-		if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeHoldoff {
+		if wait := stopWait(r, user, SourceCamera, now); wait != resumeHoldoff {
 			t.Fatalf("stop %d waits %v, want %v", i+1, wait, resumeHoldoff)
 		}
 	}
-	if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeRefill {
+	if wait := stopWait(r, user, SourceCamera, now); wait != resumeRefill {
 		t.Fatalf("a stop past the budget waits %v, want %v", wait, resumeRefill)
+	}
+	if wait := stopWait(r, user, SourceScreen, now); wait != resumeHoldoff {
+		t.Fatalf("another source's stop waits %v, want %v: budgets are per source", wait, resumeHoldoff)
 	}
 	// A publisher that keeps cycling as fast as it may resumes once per refill.
 	for range 20 {
-		now = now.Add(time.Duration(info.stopUntil(now) - steadyNanos(now))).Add(time.Millisecond)
+		now = now.Add(stopWait(r, user, SourceCamera, now)).Add(time.Millisecond)
 	}
 	start := now
 	for range 30 {
-		now = now.Add(time.Duration(info.stopUntil(now) - steadyNanos(now))).Add(time.Millisecond)
+		now = now.Add(stopWait(r, user, SourceCamera, now)).Add(time.Millisecond)
 	}
 	if per := now.Sub(start) / 30; per < resumeRefill-time.Second {
 		t.Fatalf("a cycling publisher resumes every %v, want about %v", per, resumeRefill)
 	}
 	now = now.Add(time.Duration(resumeBurst) * resumeRefill)
-	if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeHoldoff {
+	if wait := stopWait(r, user, SourceCamera, now); wait != resumeHoldoff {
 		t.Fatalf("after a long pause a stop waits %v, want %v", wait, resumeHoldoff)
+	}
+}
+
+// TestResumeBudgetOutlivesCapturesAndRejoins: the budget belongs to the
+// publisher's source, so a publisher that replaces its capture or rejoins 20
+// times in a minute, cycling its camera each time, does not get 20 fresh
+// bursts; and the budget of a publisher who left is forgotten once full.
+func TestResumeBudgetOutlivesCapturesAndRejoins(t *testing.T) {
+	user := uuid.New()
+	r := budgetRoom(user)
+	start := time.Unix(1_000_000, 0)
+	now, quick := start, 0
+	for round := range 20 {
+		// A rejoin: a new connection of the same user (a replaced capture
+		// keeps the peer and only makes a new track, which owns no budget).
+		r.peers[user] = &Peer{ID: user, gen: uint64(round + 1)}
+		for range resumeBurst {
+			if stopWait(r, user, SourceCamera, now) == resumeHoldoff {
+				quick++
+			}
+		}
+		now = now.Add(3 * time.Second)
+	}
+	// One burst plus one resume per refill over the minute.
+	if most := resumeBurst + int(now.Sub(start)/resumeRefill) + 1; quick > most {
+		t.Fatalf("%d quick resumes in %v over 20 rejoins, want at most %d", quick, now.Sub(start), most)
+	}
+	other := uuid.New()
+	r.peers[other] = &Peer{ID: other}
+	delete(r.peers, user)
+	_ = stopWait(r, other, SourceCamera, now.Add(time.Second))
+	if _, kept := r.resumeBudgets[sourceKey{user, SourceCamera}]; !kept {
+		t.Fatal("the budget of a publisher who just left was forgotten before it refilled")
+	}
+	_ = stopWait(r, other, SourceCamera, now.Add(time.Duration(resumeBurst+60)*resumeRefill))
+	if _, kept := r.resumeBudgets[sourceKey{user, SourceCamera}]; kept || len(r.resumeBudgets) != 1 {
+		t.Fatalf("budgets %v after the publisher left and the budget refilled; want only the other's", r.resumeBudgets)
 	}
 }
 
@@ -346,11 +397,7 @@ func TestTrackPastItsResumeBudgetStaysStopped(t *testing.T) {
 		t.Fatal("a share that keeps sending after its stop was not published again")
 	}
 	r.mu.Lock()
-	for _, info := range r.trackLocals {
-		if info.SenderID == publisher.id {
-			info.resumes, info.resumesAt = 0, time.Now()
-		}
-	}
+	r.resumeBudgets[sourceKey{publisher.id, SourceScreen}] = &resumeBudget{at: layerNow()}
 	r.mu.Unlock()
 	if cycle() {
 		t.Fatal("a share past its resume budget was published again within 3 s")

@@ -55,6 +55,7 @@ func sfuSizes(s *SFU) map[string]int {
 		out["lastMedia"] += len(r.lastMedia)
 		out["lastViewers"] += len(r.lastViewers)
 		out["layerMeta"] += len(r.layerMeta) + len(r.lastLayers)
+		out["resumeBudgets"] += len(r.resumeBudgets)
 		r.mu.RUnlock()
 	}
 	conns := 0

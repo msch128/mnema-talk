@@ -479,10 +479,12 @@ details and the limits.
   WebSocket is closed with code 4002, and the client reconnects and resumes
   the call within the grace period, so this is at most about 8 MB per
   connection, and a member switching camera batches of 16 at the event
-  budget adds at most about 80 KB a second until then. A track whose
-  publisher stops it and sends again resumes for its viewers (a new sender
-  on each) at once ten times, then once every ten seconds, so another
-  member cannot drive a viewer's connection to that cap. The caps above
+  budget adds at most about 80 KB a second until then. A camera or screen
+  share that its publisher stops and sends again resumes for its viewers (a
+  new sender on each) at once ten times, then once every ten seconds; the
+  budget belongs to the publisher and source, so a new capture or a rejoin
+  does not refill it, and another member cannot drive a viewer's connection
+  to that cap. The caps above
   that only abuse reaches end the member's voice with `connection_lost`
   instead, so no seat is left without media.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
