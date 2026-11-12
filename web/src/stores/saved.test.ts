@@ -124,4 +124,96 @@ describe('saved store', () => {
     expect(saved.items).toHaveLength(0)
     expect(saved.isSaved(fixtureId(1))).toBe(false)
   })
+
+  it('keeps what changed while a page was on its way: the page was read before', async () => {
+    const saved = useSavedStore()
+    let resolve: (value: unknown) => void = () => undefined
+    apiMock.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    const late = saved.load()
+    // A removal in another session and a save here, both after the page was read.
+    saved.onUpdated({ message_id: fixtureId(1), saved: false })
+    apiMock.mockResolvedValueOnce(entry(2))
+    await saved.save(fixtureId(2))
+    resolve(page([entry(1)]))
+    await late
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(2)])
+    expect(saved.isSaved(fixtureId(1))).toBe(false)
+    expect(saved.isSaved(fixtureId(2))).toBe(true)
+  })
+
+  it('drops a deleted message and the saved replies of a deleted thread root', async () => {
+    const saved = useSavedStore()
+    const reply = { ...entry(2), message: { parent_id: fixtureId(1) } }
+    apiMock.mockResolvedValueOnce(page([entry(1), reply, entry(3)]))
+    await saved.load()
+    saved.onMessageDeleted(fixtureId(1))
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(3)])
+    expect(saved.isSaved(fixtureId(2))).toBe(false)
+  })
+})
+
+describe('saved store after a reconnect', () => {
+  const deferred = () => {
+    let resolve: (v: unknown) => void = () => undefined
+    const promise = new Promise(r => { resolve = r })
+    return { promise, resolve }
+  }
+
+  it('drops the mark of a message removed elsewhere, also when a newer load overtakes the reconnect read', async () => {
+    const saved = useSavedStore()
+    apiMock.mockResolvedValueOnce(page([entry(1)]))
+    await saved.ensureLoaded()
+    // The socket was down while another session removed 1; it opens again.
+    const slow = deferred()
+    apiMock.mockReturnValueOnce(slow.promise)
+    const reconnect = saved.refresh()
+    // Another session saves 2 right after the open: saved_updated reads the list again.
+    apiMock.mockResolvedValueOnce(page([entry(2)]))
+    saved.onUpdated({ message_id: fixtureId(2), saved: true })
+    await flushPromises()
+    slow.resolve(page([]))
+    await reconnect
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(2)])
+    expect(saved.isSaved(fixtureId(1))).toBe(false)
+  })
+
+  it('keeps the pages the member scrolled to, and their marks, reading as many entries as were shown', async () => {
+    const saved = useSavedStore()
+    const ids = (from: number, n: number) => Array.from({ length: n }, (_, i) => entry(from + i))
+    apiMock.mockResolvedValueOnce(page(ids(1, 50), true))
+    await saved.ensureLoaded()
+    apiMock.mockResolvedValueOnce(page(ids(51, 50), true))
+    await saved.loadMore()
+    apiMock.mockResolvedValueOnce(page(ids(101, 20), false))
+    await saved.loadMore()
+    expect(saved.items).toHaveLength(120)
+    // The server answers at most 100: the third page stays behind the hundredth entry until a page replaces it.
+    apiMock.mockResolvedValueOnce(page(ids(1, 100), true))
+    await saved.refresh()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/me/saved?limit=100', expect.anything())
+    expect(saved.items).toHaveLength(120)
+    expect(saved.isSaved(fixtureId(110))).toBe(true)
+    expect(saved.hasMore).toBe(false)
+  })
+
+  it('keeps a removal made while an older page was on its way', async () => {
+    const saved = useSavedStore()
+    apiMock.mockResolvedValueOnce(page([entry(1)], true))
+    await saved.load()
+    const older = deferred()
+    apiMock.mockReturnValueOnce(older.promise)
+    const more = saved.loadMore()
+    saved.onUpdated({ message_id: fixtureId(2), saved: false })
+    older.resolve(page([entry(2), entry(3)]))
+    await more
+    expect(saved.items.map(e => e.message_id)).toEqual([fixtureId(1), fixtureId(3)])
+    expect(saved.isSaved(fixtureId(2))).toBe(false)
+  })
+
+  it('leaves the list alone when a message that was not saved is deleted', () => {
+    const saved = useSavedStore()
+    const before = saved.items
+    saved.onMessageDeleted(fixtureId(9))
+    expect(saved.items).toBe(before)
+  })
 })
