@@ -145,6 +145,12 @@ type Post struct {
 	HasAttachment bool
 	// MessageID is the message being edited; uuid.Nil for a new one.
 	MessageID uuid.UUID
+	// Edit marks a changed text that is not a message (an event comment), so
+	// the refusal speaks of an edit while MessageID stays uuid.Nil.
+	Edit bool
+	// Place names where the text stands, for the queue, instead of the
+	// channel's name (an event's title); ChannelID may then be uuid.Nil.
+	Place string
 }
 
 // Pending holds the hits of a message that is let through (rules that only
@@ -272,7 +278,7 @@ func (e *Engine) newAccountHit(ctx context.Context, r *compiled, pend *Pending) 
 func (e *Engine) block(ctx context.Context, pend *Pending, r *compiled) error {
 	e.record(ctx, pend.post, pend.dm, r, "blocked", pend.post.MessageID)
 	what := "Your message was not sent"
-	if pend.post.MessageID != uuid.Nil {
+	if pend.post.MessageID != uuid.Nil || pend.post.Edit {
 		what = "Your edit was not saved"
 	}
 	return httpx.ErrInvalidInput(fmt.Sprintf("%s: it breaks the community rule %q (automod). The moderators can see this.", what, r.Name))
