@@ -2,104 +2,149 @@ package turnrelay
 
 import (
 	"fmt"
+	"net"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-// Oracle for inventory I6 row 51: the TURN relay's allocLimit and failLimit
-// each hold at most maxKeys (4096) source-address buckets. At the cap, prune()
-// only reclaims buckets that have refilled to full burst; if none have, a new
-// source is refused rather than admitted ("saturated by distinct sources:
-// refuse rather than grow", limit.go). The existing TestRateLimiter asserts the
-// refusal with maxKeys=2; this measures the production consequence: one party
-// that presents maxKeys distinct (spoofable UDP) source addresses and keeps
-// their buckets drawn down can hold the table full and deny the relay to every
-// new source, while paying a low, steady packet rate.
-//
-// The perturbation is counted (distinct sources admitted, top-up packets sent)
-// so the sweep cannot pass by doing nothing.
+// H-L8-02: the allocation limiter used to keep one bucket per source address,
+// in a table of at most 4096. A member with one valid credential could sign
+// Allocate requests from thousands of forged UDP sources (the nonce is not
+// bound to the source), keep the table full and so refuse every new source,
+// other members' first allocation included. The budget is now the member's.
 
-// TestAllocLimiterSaturationDeniesNewSource fills the allocation limiter with
-// maxKeys distinct sources and asserts that a fresh, otherwise-legitimate
-// source is then refused.
-func TestAllocLimiterSaturationDeniesNewSource(t *testing.T) {
-	const maxKeys = 4096
-	now := time.Unix(0, 0)
-	// Production defaults: 120/min, burst 60 (options.go withDefaults).
-	l := newRateLimiter(120, 60, maxKeys)
-
-	// Fill every slot with a distinct source and immediately draw each bucket
-	// below full burst, so prune() cannot reclaim it.
-	admitted := 0
-	for i := 0; i < maxKeys; i++ {
-		src := fmt.Sprintf("198.51.%d.%d", i/256, i%256)
-		if !l.allow(src, now) { // first touch: bucket starts at burst, token taken
-			t.Fatalf("legit-looking source %d refused before the cap", i)
-		}
-		admitted++
-	}
-	if got := len(l.m); got != maxKeys {
-		t.Fatalf("table holds %d keys, want the cap %d", got, maxKeys)
-	}
-	// A fresh source now: the table is full and nothing has refilled to burst
-	// (each was just drawn down by one token within the same instant).
-	if l.allow("203.0.113.9", now) {
-		t.Fatal("a new source was admitted while the table was saturated")
-	}
-	t.Logf("admitted=%d then new source refused at cap=%d", admitted, maxKeys)
+// spoofedSource is the i-th of the addresses one member forges.
+func spoofedSource(i int) net.Addr {
+	return &net.UDPAddr{IP: net.IPv4(198, 51, byte(i/256), byte(i%256)), Port: 40000}
 }
 
-// TestAllocLimiterSaturationSustainedCheaply shows the denial holds over time
-// at a low packet rate: the attacker re-touches each held source before its
-// bucket refills to full burst (the only condition under which prune reclaims
-// it), so the table never drains. It measures the packet rate required.
-func TestAllocLimiterSaturationSustainedCheaply(t *testing.T) {
-	const maxKeys = 4096
-	now := time.Unix(0, 0)
-	l := newRateLimiter(120, 60, maxKeys) // rate 2 tok/s, burst 60
+// keys is the number of buckets held.
+func (l *rateLimiter) keys() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.m)
+}
 
-	srcs := make([]string, maxKeys)
-	for i := range srcs {
-		srcs[i] = fmt.Sprintf("198.51.%d.%d", i/256, i%256)
-		l.allow(srcs[i], now)
-	}
-
-	// A bucket refills from drawn-down to full burst in burst/rate = 60/2 = 30s.
-	// Touch every held source once per refill window to keep it un-prunable, and
-	// confirm a new source stays refused throughout several windows.
-	refill := time.Duration(float64(l.burst)/l.rate) * time.Second // 30s
-	touchPackets := 0
-	windows := 6
-	for w := 0; w < windows; w++ {
-		now = now.Add(refill - time.Second) // just before any bucket tops up
-		for _, s := range srcs {
-			l.allow(s, now) // take a token to keep it below burst
-			touchPackets++
+// The quota handler is what pion calls for a request that passed the message
+// integrity check; calling it directly stands for one signed Allocate from
+// each forged source, which a test cannot send from addresses it does not own.
+func TestOneMemberFromThousandsOfSourcesCannotKeepAnotherOut(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	attacker, _, _ := h.srv.Credentials(uuid.New())
+	const sources = 5000 // more than the table's 4096 slots
+	granted := 0
+	// The refuter's sustained case: two tokens per source per second keeps a
+	// per-source table from ever refilling. Each round sends one signed
+	// request per source, half a second apart.
+	for round := range 6 {
+		for i := range sources {
+			if h.srv.allowAllocation(attacker, Realm, spoofedSource(i)) {
+				granted++
+			}
 		}
-		if l.allow(fmt.Sprintf("203.0.113.%d", w), now) {
-			t.Fatalf("window %d: a new source was admitted; the denial did not hold", w)
+		victim, _ := h.member()
+		if _, err := victim.Allocate(); err != nil {
+			t.Fatalf("round %d: another member's first allocation failed: %v", round, err)
 		}
+		h.advance(500 * time.Millisecond)
 	}
-	span := refill * time.Duration(windows)
-	pps := float64(touchPackets) / span.Seconds()
-	t.Logf("sustained denial over %s with %d top-up packets = %.1f packets/s to hold %d spoofable sources",
-		span, touchPackets, pps, maxKeys)
-	// The whole point: the sustaining cost is tiny relative to the denial.
-	if pps > float64(maxKeys) {
-		t.Fatalf("sustaining rate %.1f pps unexpectedly high", pps)
+	// One member, one budget: the burst plus what refilled, not one per source.
+	if limit := h.srv.limits.AllocationBurst + 6; granted > limit {
+		t.Fatalf("one member was granted %d attempts from %d sources, budget %d", granted, sources, limit)
+	}
+	if n := h.srv.allocLimit.keys(); n > 7 {
+		t.Fatalf("the limiter holds %d keys for 7 members", n)
 	}
 }
 
-// TestFailLimiterSaturationBlocksLegitCredentialCheck shows the same for the
-// failure limiter: authenticate() calls failLimit.available(ip|username) and
-// refuses when the source has no budget. Saturating failLimit with distinct
-// spoofed source addresses makes available() refuse a legitimate source's
-// credential check (its key is absent, so a saturated table has no room to
-// even open a bucket on allow()). available() returns true for an absent key,
-// so the denial here is via allow() at the fill path: once full, a genuine
-// failed-but-present source cannot be recorded, and more importantly the
-// allocation limiter (above) already gates the same clients. This test pins the
-// cap and the refuse-rather-than-grow contract for failLimit.
+// The relay does not look the member up at authentication: pion runs that
+// before the integrity check, so a forger could spend the lookups (see
+// authenticate). The first point that knows the request is genuine is the
+// quota handler, and there the account state is checked before the limiter.
+func TestABannedMembersCredentialIsRefusedBeforeTheLimiter(t *testing.T) {
+	var banned atomic.Bool
+	h := newHarness(t, harnessOpts{mayRelay: func(uuid.UUID) bool { return !banned.Load() }})
+	id := uuid.New()
+	u, p, _ := h.srv.Credentials(id)
+	if _, err := h.dial(u, p).Allocate(); err != nil {
+		t.Fatal(err)
+	}
+	banned.Store(true)
+	h.advance(2 * verdictTTL)
+	if _, err := h.dial(u, p).Allocate(); err == nil {
+		t.Fatal("a banned member's still-valid credential allocated")
+	}
+	for i := range 5000 {
+		if h.srv.allowAllocation(u, Realm, spoofedSource(i)) {
+			t.Fatal("a banned member's signed request passed the quota handler")
+		}
+	}
+	h.srv.allocLimit.mu.Lock()
+	b, charged := h.srv.allocLimit.m[id.String()]
+	keys := len(h.srv.allocLimit.m)
+	h.srv.allocLimit.mu.Unlock()
+	if keys != 1 || !charged || b.tokens != float64(h.srv.limits.AllocationBurst-1) {
+		t.Fatalf("after the ban the limiter holds %d keys (member's bucket %v): the refusals were charged", keys, b)
+	}
+	if n := h.srv.Status().Allocations; n != 0 {
+		t.Fatalf("the banned member keeps %d allocations", n)
+	}
+}
+
+// A full member table forgets the fullest bucket rather than refuse a member:
+// nobody can mint member keys, so the table is full only when that many
+// members draw on it at once.
+func TestAFullMemberTableAdmitsANewMemberAndStaysBounded(t *testing.T) {
+	const maxKeys = 4096
+	now := time.Unix(0, 0)
+	l := newMemberLimiter(120, 60, maxKeys)
+	for i := range maxKeys * 3 {
+		if !l.allow(fmt.Sprintf("member-%d", i), now) {
+			t.Fatalf("member %d refused its first attempt with %d keys held", i, len(l.m))
+		}
+		if len(l.m) > maxKeys {
+			t.Fatalf("the table grew to %d keys", len(l.m))
+		}
+	}
+	// A member with a drawn-down bucket keeps it while fuller ones go first.
+	drawn := "member-drawn"
+	for range 60 {
+		l.allow(drawn, now)
+	}
+	if !l.allow("member-new", now) {
+		t.Fatal("a new member was refused at the cap")
+	}
+	if l.allow(drawn, now) {
+		t.Fatal("eviction forgot the most drawn-down bucket and handed it a fresh budget")
+	}
+	if len(l.m) > maxKeys {
+		t.Fatalf("the table grew to %d keys", len(l.m))
+	}
+}
+
+// failLimit stays keyed by source and username: a failure has no credential
+// to attribute it to. Filled with forged sources it stops recording new keys,
+// and refuses nobody, since a key it does not hold has budget.
+func TestAFullFailureTableRefusesNobody(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	now := h.srv.now()
+	for i := range 5000 {
+		h.srv.failLimit.allow(hostOf(spoofedSource(i))+"|nonsense", now)
+	}
+	if n := h.srv.failLimit.keys(); n > 4096 {
+		t.Fatalf("failLimit grew to %d keys", n)
+	}
+	c, _ := h.member()
+	if _, err := c.Allocate(); err != nil {
+		t.Fatalf("a member was refused while the failure table was full: %v", err)
+	}
+}
+
+// TestFailLimiterRefusesToGrowPastCap pins the refuse-rather-than-grow
+// contract of failLimit at the production cap.
 func TestFailLimiterRefusesToGrowPastCap(t *testing.T) {
 	const maxKeys = 4096
 	now := time.Unix(0, 0)

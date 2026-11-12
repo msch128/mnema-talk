@@ -17,9 +17,9 @@ type Limits struct {
 	// tabs or devices); Total is the most the relay holds.
 	PerMember, Total int
 	// AllocationsPerMinute and AllocationBurst rate-limit allocation attempts
-	// per source address; FailuresPerMinute and FailureBurst the failed
-	// authentications per source address, after which that address is
-	// refused until its budget refills.
+	// per member; FailuresPerMinute and FailureBurst the failed
+	// authentications per source address and username, after which that
+	// pair is refused until its budget refills.
 	AllocationsPerMinute, AllocationBurst int
 	FailuresPerMinute, FailureBurst       int
 	// BytesPerSecond and BurstBytes bound what a client may send through its
@@ -44,7 +44,8 @@ func (l Limits) withDefaults() Limits {
 	}
 	def(&l.PerMember, 4)
 	def(&l.Total, 256)
-	// Sized for a whole office behind one address joining a Talk at once.
+	// Far above what one member's tabs and devices need to join, even while
+	// a flaky network makes them retry.
 	def(&l.AllocationsPerMinute, 120)
 	def(&l.AllocationBurst, 60)
 	def(&l.FailuresPerMinute, 60)

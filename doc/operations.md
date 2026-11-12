@@ -696,12 +696,31 @@ nothing else:
   that check cannot be made (database down), new sessions are refused but
   running ones are kept.
 - Limits: 4 sessions per member and 256 in total, 120 allocation attempts a
-  minute per address (burst 60), a username that keeps failing is refused
+  minute per member (burst 60), a username that keeps failing is refused
   from that address for a while (counted per address and username, so forged
   requests cannot lock out the members behind one address), 4 MiB/s per
   session towards the voice server, sessions that carry nothing for 2 minutes
   or outlive their credential are closed, and TCP connections are capped per
   address, must authenticate within 15 seconds and are idle-timed.
+- The allocation budget belongs to the member whose credential signed the
+  request, not to the address it came from: a UDP source address can be
+  forged, a credential cannot, so one member sending from any number of
+  addresses still has one budget and cannot use up anyone else's. The account
+  is checked before the budget is charged, so a banned or removed member's
+  still-valid credential is refused (`forbidden`) without touching it.
+  Requests without a valid credential never reach the budget: pion answers
+  them with a challenge, and the only failures it counts are malformed or
+  expired usernames, per address and username. Both tables are bounded (4096
+  entries each). When 4096 members draw on the allocation budget at once, the
+  fullest one is forgotten rather than a new member refused; a full failure
+  table stops counting new addresses but refuses nobody.
+- A member who exceeds their allocation budget (more than 60 relay sessions
+  started in a burst, or more than 2 a second after that) gets "486
+  Allocation Quota Reached" for the next attempt, counted as `rate_limited`.
+  Their browser then has no relay candidate for that connection: on a network
+  that blocks UDP the join does not connect, and a new join a few seconds
+  later works again. Running calls are not affected. A fifth session at once
+  is refused as well (`quota_user`).
 - Refused attempts are counted in `mnema_turn_events_total{event}`
   (`auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`,
   `peer_denied`, `packet_blocked`, `throttled`) and logged at debug level

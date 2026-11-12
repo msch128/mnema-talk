@@ -53,7 +53,9 @@ func Start(opts Options) (*Server, error) {
 		opts: opts, limits: opts.Limits.withDefaults(), auth: auth,
 		guards: map[*guard]struct{}{}, byPort: map[int]*guard{}, byClient: map[string]*guard{}, perUser: map[uuid.UUID]int{}, verdicts: map[uuid.UUID]verdict{}, flights: map[uuid.UUID]*flight{},
 	}
-	s.allocLimit = newRateLimiter(s.limits.AllocationsPerMinute, s.limits.AllocationBurst, 4096)
+	// Allocation attempts are counted per member, failures per source address
+	// and username (see allowAllocation and authenticate).
+	s.allocLimit = newMemberLimiter(s.limits.AllocationsPerMinute, s.limits.AllocationBurst, 4096)
 	s.failLimit = newRateLimiter(s.limits.FailuresPerMinute, s.limits.FailureBurst, 4096)
 	s.tgt.Store(&t)
 	s.SetMayRelay(opts.MayRelay)
