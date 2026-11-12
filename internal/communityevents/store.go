@@ -96,22 +96,38 @@ func newUserRef(id uuid.UUID, username, displayName string, avatarKey *string) U
 // start is not in the future) is created active, so it never waits for the
 // scheduler to show up as running.
 func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID) (*CommunityEvent, error) {
+	return s.create(ctx, req, creatorID, nil)
+}
+
+// create is Create with audited, if set, run in the same transaction with
+// the new event (the audit entry).
+func (s *Store) create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID, audited func(pgx.Tx, *CommunityEvent) error) (*CommunityEvent, error) {
 	status := StatusScheduled
 	now := time.Now()
 	if !req.StartTime.After(now) {
 		status = StatusActive
 	}
 
-	row, err := scanEvent(s.DB.QueryRow(ctx, `
-		INSERT INTO events (title, description, start_time, end_time, channel_id, location, status, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-		RETURNING `+eventColumns,
-		req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location, status, creatorID,
-	))
+	var ev *CommunityEvent
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		row, err := scanEvent(tx.QueryRow(ctx, `
+			INSERT INTO events (title, description, start_time, end_time, channel_id, location, status, created_by, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+			RETURNING `+eventColumns,
+			req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location, status, creatorID,
+		))
+		if err != nil {
+			return fmt.Errorf("create event: %w", err)
+		}
+		if ev = row.toEvent(); audited == nil {
+			return nil
+		}
+		return audited(tx, ev)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("create event: %w", err)
+		return nil, err
 	}
-	return row.toEvent(), nil
+	return ev, nil
 }
 
 // Get loads one event with its RSVP counts, the caller's own answer (when
@@ -248,22 +264,44 @@ func (s *Store) swapCover(ctx context.Context, id uuid.UUID, mediaID *uuid.UUID)
 // two wait for each other.
 func (s *Store) SetRSVP(ctx context.Context, eventID, userID uuid.UUID, response string) ([]Promotion, error) {
 	var promoted []Promotion
-	err := s.inTx(ctx, func(tx pgx.Tx) error {
-		if response != RSVPGoing {
-			var err error
-			if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
-				return err
-			}
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO event_rsvps (event_id, user_id, response, created_at, updated_at)
-			VALUES ($1, $2, $3, NOW(), NOW())
-			ON CONFLICT (event_id, user_id)
-			DO UPDATE SET response = EXCLUDED.response, updated_at = NOW()`,
-			eventID, userID, response,
-		)
+	err := s.inTx(ctx, func(tx pgx.Tx) (err error) {
+		promoted, err = setRSVP(ctx, tx, eventID, userID, response)
 		return err
 	})
+	return promoted, err
+}
+
+// AnswerRSVP is SetRSVP that also returns the event as the member sees it
+// afterwards, read in the same transaction: an error means that the answer
+// was not stored (and nobody moved up unannounced).
+func (s *Store) AnswerRSVP(ctx context.Context, eventID, userID uuid.UUID, response string) (*CommunityEvent, []Promotion, error) {
+	var promoted []Promotion
+	var ev *CommunityEvent
+	err := s.inTx(ctx, func(tx pgx.Tx) (err error) {
+		if promoted, err = setRSVP(ctx, tx, eventID, userID, response); err != nil {
+			return err
+		}
+		ev, err = (&Store{DB: tx}).Get(ctx, eventID, &userID)
+		return err
+	})
+	return ev, promoted, err
+}
+
+func setRSVP(ctx context.Context, tx pgx.Tx, eventID, userID uuid.UUID, response string) ([]Promotion, error) {
+	var promoted []Promotion
+	if response != RSVPGoing {
+		var err error
+		if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
+			return nil, err
+		}
+	}
+	_, err := tx.Exec(ctx, `
+		INSERT INTO event_rsvps (event_id, user_id, response, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW(), NOW())
+		ON CONFLICT (event_id, user_id)
+		DO UPDATE SET response = EXCLUDED.response, updated_at = NOW()`,
+		eventID, userID, response,
+	)
 	return promoted, err
 }
 

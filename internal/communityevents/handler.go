@@ -162,7 +162,6 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.auditRecord(r, "event.create", ev)
 	h.broadcast(ev)
 	httpx.WriteJSON(w, http.StatusCreated, ev)
 	return nil

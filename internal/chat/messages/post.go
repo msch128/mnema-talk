@@ -48,17 +48,28 @@ func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource
 	return id, err
 }
 
+// InsertStoredMessage is InsertMessage for a caller that answers with the
+// message: it is read in the same transaction, so an error means that
+// nothing was stored (PublishStored sends it).
+func InsertStoredMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (*core.Message, error) {
+	_, msg, err := insertMessage(ctx, inserter{db: p, online: online, automod: automod.Of(p), load: true}, nm, rulesFrom(ctx), also)
+	return msg, err
+}
+
 // inserter is what storing a message works with.
 type inserter struct {
 	db     *db.Pool
 	online mentions.OnlineSource
 	// automod screens the message first; nil screens nothing.
 	automod *automod.Engine
+	// load reads the stored message in the transaction, for the answer.
+	load bool
 }
 
 // insertMessage is InsertMessage. It also returns the stored message when the
-// transaction had to load it for a webhook (nil otherwise), so the caller
-// that publishes it next need not load it a second time.
+// transaction loaded it, for a webhook or because in.load asks for it (nil
+// otherwise), so the caller that publishes it need not load it after the
+// commit, where a failed read would answer an error for a stored message.
 func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRules, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, *core.Message, error) {
 	p := in.db
 	pending, err := checkAutomod(ctx, in.automod, nm)
@@ -77,10 +88,7 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 				return err
 			}
 		}
-		if nm.WebhookID != nil { // a webhook's message never leaves through a webhook
-			return nil
-		}
-		stored, err = recordMessageEvent(ctx, p, tx, events.MessageCreate, nm.ChannelID, id, nm.Nonce)
+		stored, err = finishInsert(ctx, in, tx, nm, id)
 		return err
 	})
 	if err != nil {
@@ -88,6 +96,22 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 	}
 	pending.Commit(ctx, id)
 	return id, stored, nil
+}
+
+// finishInsert records message_create for the channel's outgoing webhooks
+// and returns the message when that or in.load read it (nil otherwise).
+func finishInsert(ctx context.Context, in inserter, tx pgx.Tx, nm NewMessage, id uuid.UUID) (*core.Message, error) {
+	var stored *core.Message
+	if nm.WebhookID == nil { // a webhook's message never leaves through a webhook
+		var err error
+		if stored, err = recordMessageEvent(ctx, in.db, tx, events.MessageCreate, nm.ChannelID, id, nm.Nonce); err != nil {
+			return nil, err
+		}
+	}
+	if stored != nil || !in.load {
+		return stored, nil
+	}
+	return loadStored(ctx, tx, id, nm.Nonce)
 }
 
 // checkAutomod applies the automod rules to a member's new message before it
@@ -224,10 +248,26 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 	if err != nil {
 		return err
 	}
+	PublishStored(w, r, p, pub, msg)
+	return nil
+}
+
+// PublishStored is PublishMessage for a message already loaded (by
+// InsertStoredMessage).
+func PublishStored(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	publishCreated(pub, msg)
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
-	return nil
+}
+
+// loadStored reads the message just stored, in its transaction.
+func loadStored(ctx context.Context, tx pgx.Tx, id uuid.UUID, nonce *uuid.UUID) (*core.Message, error) {
+	msg, err := GetMessage(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	msg.Nonce = nonce
+	return msg, nil
 }
 
 // publishCreated broadcasts message_create for a stored message. Service.Post

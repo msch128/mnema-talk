@@ -205,35 +205,16 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 	if _, err := rand.Read(suffix); err != nil {
 		panic(err)
 	}
-	var id uuid.UUID
+	var rec *record
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// Serialise creations per channel so the cap cannot be overrun; NO KEY
-		// does not block message inserts that only reference the channel.
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, channel); err != nil {
+		id, err := insertWebhook(ctx, tx, channel, creator, name, hash, suffix, st)
+		if err != nil {
 			return err
 		}
-		var n int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks WHERE channel_id = $1`, channel).Scan(&n); err != nil {
-			return err
-		}
-		if n >= maxPerChannel {
-			return httpx.ErrConflict(fmt.Sprintf("a channel can have at most %d webhooks", maxPerChannel))
-		}
-		var bot uuid.UUID
-		// "!" is no password hash: the account can never sign in (Login, sessions and
-		// re-authentication skip bots).
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO users (username, display_name, password_hash, role, is_bot)
-			VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
-			"wh-"+hex.EncodeToString(suffix), botDisplayName(name)).Scan(&bot); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by,
-			    allow_everyone, allow_attachments, allow_embeds, allow_user_mentions, allow_identity_override)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-			channel, bot, name, hash, creator,
-			st.AllowEveryone, st.AllowAttachments, st.AllowEmbeds, st.AllowUserMentions, st.AllowIdentityOverride).Scan(&id)
+		// Read in the transaction: the token is only in this answer, so a
+		// failure must not leave a webhook nobody can use.
+		rec, err = get(ctx, tx, id)
+		return err
 	})
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); ok {
@@ -241,8 +222,41 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 		}
 		return nil, "", fmt.Errorf("create webhook: %w", err)
 	}
-	rec, err := get(ctx, p, id)
-	return rec, token, err
+	return rec, token, nil
+}
+
+// insertWebhook stores a webhook and its bot account in tx, within the
+// channel's cap.
+func insertWebhook(ctx context.Context, tx pgx.Tx, channel, creator uuid.UUID, name string, hash, suffix []byte, st Settings) (uuid.UUID, error) {
+	// Serialise creations per channel so the cap cannot be overrun; NO KEY
+	// does not block message inserts that only reference the channel.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, channel); err != nil {
+		return uuid.Nil, err
+	}
+	var n int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks WHERE channel_id = $1`, channel).Scan(&n); err != nil {
+		return uuid.Nil, err
+	}
+	if n >= maxPerChannel {
+		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("a channel can have at most %d webhooks", maxPerChannel))
+	}
+	var bot uuid.UUID
+	// "!" is no password hash: the account can never sign in (Login, sessions and
+	// re-authentication skip bots).
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO users (username, display_name, password_hash, role, is_bot)
+		VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
+		"wh-"+hex.EncodeToString(suffix), botDisplayName(name)).Scan(&bot); err != nil {
+		return uuid.Nil, err
+	}
+	var id uuid.UUID
+	err := tx.QueryRow(ctx, `
+		INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by,
+		    allow_everyone, allow_attachments, allow_embeds, allow_user_mentions, allow_identity_override)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+		channel, bot, name, hash, creator,
+		st.AllowEveryone, st.AllowAttachments, st.AllowEmbeds, st.AllowUserMentions, st.AllowIdentityOverride).Scan(&id)
+	return id, err
 }
 
 // update changes the name and the settings (nil/empty leaves them) and the

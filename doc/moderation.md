@@ -503,6 +503,33 @@ and fails when an admin route is missing from the table; an unlisted route is
 still recorded under a generic `admin.<method>` action. Refused or failed
 requests leave no entry. Reading the log is not recorded.
 
+### When an entry can be missing
+
+The entries of a message deletion or edit, a report, a registration, an
+account deletion, a new wiki page and a new event (not a series) are written
+in the same database transaction as the change: the change and its entry
+exist together or not at all, and a failed entry fails the change. Every other
+entry is written right after the change committed, in a statement of its own:
+all of the `/api/admin` middleware's, and the entries of a bulk delete
+(`message.delete` per message and `moderation.bulk_delete`), pins, ending a
+poll, the forum (post updates, settings, tags), Talks (`voice.join` and
+`voice.leave`, removing a member from one Talk, Talk settings, the removal
+of a temporary Talk), event edits,
+cancellations, series, covers, roles, role templates and comment removals,
+wiki edits, moves, deletions, restores, locks and images, role
+self-assignment, auto-delete settings and runs, automod timeouts and raid
+mode, expired bans, removed avatars, the moderation slash commands, the
+edit-history view, and the auth events (sign-in and failed sign-in, password
+change and reset mail, e-mail, second factor, sessions, data export). That
+write does not end with the request: a client that disconnects in that moment
+still leaves its entry (the write has five seconds of its own). What is left
+is a crash of the server or a database failure (an error, a restart) in that
+moment: the change stays, its request answered success, the entry is
+missing, and the server logs `audit log write failed` with the action. A
+deploy shuts the server down gracefully and does not cut that moment. The admin middleware
+works outside the handlers' transactions by design (it snapshots before and
+after any handler), so it cannot join them.
+
 ### Events besides admin actions
 
 | Action | When | What it holds |

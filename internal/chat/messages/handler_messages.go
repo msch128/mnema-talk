@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events/wire"
@@ -197,13 +198,8 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 		return err
 	}
 	userID := auth.UserFrom(r.Context()).ID
-	before := a.snapshotMessage(r.Context(), msgID, false)
-	mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content)
-	if err != nil {
-		return err
-	}
-	a.auditEdit(r.Context(), msgID, before, content)
-	msg, err := GetMessage(r.Context(), a.DB, msgID)
+	audited := func(tx pgx.Tx) error { return a.auditEdit(r.Context(), tx, msgID) }
+	msg, mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content, audited)
 	if err != nil {
 		return err
 	}
@@ -251,12 +247,14 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	snap := a.snapshotMessage(r.Context(), msgID, true)
-	keys, newest, err := deleteMessage(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages))
+	var snap *auditSnapshot
+	keys, newest, err := deleteMessageAs(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages), func(tx pgx.Tx) (err error) {
+		snap, err = a.auditDelete(r.Context(), tx, user, msgID, reason)
+		return err
+	})
 	if err != nil {
 		return err
 	}
-	a.auditDelete(r.Context(), user, msgID, snap, reason)
 	a.tellAuthor(snap, user, reason)
 	core.DeleteObjects(r.Context(), a.Objects, keys)
 	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})

@@ -58,8 +58,15 @@ func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	// Erasing touches every row the member ever wrote.
 	ctx := db.WithStatementTimeout(r.Context(), db.BulkStatementTimeout)
 	err := pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) (err error) {
-		gone, err = h.eraseOwnAccount(ctx, tx, u.ID)
-		return err
+		if gone, err = h.eraseOwnAccount(ctx, tx, u.ID); err != nil {
+			return err
+		}
+		// In the erasure's transaction: an erased account always has its entry.
+		id := u.ID
+		return h.Audit.RecordTx(ctx, tx, audit.Entry{
+			ActorID: &id, ActorName: "", Action: "auth.account_delete",
+			TargetType: "user", TargetID: id.String(), TargetName: "",
+		})
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A parallel request erased the account while this one waited for it.
@@ -105,8 +112,8 @@ func (h *API) announceUnpins(u *auth.User, unpins []pinRef) {
 	}
 }
 
-// endDeletedAccount ends what is live for the account and records the
-// deletion. The entry names the account by its id only.
+// endDeletedAccount ends what is live for the account. (Its audit entry,
+// which names the account by its id only, was written with the erasure.)
 func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 	if h.Live != nil {
 		h.Live.KickFromVoice(u.ID)
@@ -118,12 +125,4 @@ func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 	if h.Events != nil {
 		h.Events.Broadcast(wire.UserDisabled{ID: u.ID, Disabled: true})
 	}
-	if h.Audit == nil {
-		return
-	}
-	id := u.ID
-	h.Audit.RecordOrLog(ctx, audit.Entry{
-		ActorID: &id, ActorName: "", Action: "auth.account_delete",
-		TargetType: "user", TargetID: id.String(), TargetName: "",
-	})
 }

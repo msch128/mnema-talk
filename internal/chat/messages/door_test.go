@@ -30,6 +30,7 @@ var insertMessageCallers = map[string]string{
 	"internal/webhook/handler_store.go:insertMessage":        "WithMentionPolicy in execute.go; webhooks skip automod and slow mode by design",
 	"internal/chat/messages/service.go:Post":                 "Service.Post: decides and passes the rules as a value",
 	"internal/chat/messages/post.go:InsertMessage":           "the exported door itself (rulesFrom)",
+	"internal/chat/messages/post.go:InsertStoredMessage":     "the exported door that answers with the message (rulesFrom)",
 	"internal/chat/messages/post.go:insertMessageTx(Create)": "the only caller of CreateMessage",
 }
 
@@ -56,7 +57,7 @@ func callSites(t *testing.T) []site {
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.CallExpr:
-					if name := calleeName(x.Fun); name == "InsertMessage" || name == "insertMessage" || name == "CreateMessage" {
+					if name := calleeName(x.Fun); name == "InsertMessage" || name == "InsertStoredMessage" || name == "insertMessage" || name == "CreateMessage" {
 						out = append(out, site{filepath.ToSlash(rel), fn.Name.Name, name})
 					}
 				case *ast.BasicLit:
@@ -103,7 +104,7 @@ func TestEveryMessageGoesThroughTheOneDoor(t *testing.T) {
 			got = append(got, s.file+":"+s.fn)
 		case s.callee == "insertMessage" && s.file == "internal/chat/messages/post.go":
 			got = append(got, s.file+":"+s.fn)
-		case s.callee == "InsertMessage":
+		case s.callee == "InsertMessage" || s.callee == "InsertStoredMessage":
 			got = append(got, s.file+":"+s.fn)
 		}
 	}

@@ -175,11 +175,12 @@ func (a *API) ServeCreateForumPost(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	postID, err := CreateForumPost(ctx, a.DB, a.Online, chID, user.ID, canManage, req.Title, req.Content, req.TagIDs)
+	post, err := CreateForumPost(ctx, a.DB, a.Online, chID, user.ID, canManage, req.Title, req.Content, req.TagIDs)
 	if err != nil {
 		return err
 	}
-	return messages.PublishMessage(w, r, a.DB, a.Events, postID)
+	messages.PublishStored(w, r, a.DB, a.Events, post)
+	return nil
 }
 
 // ServeUpdateForumPost handles PATCH /api/channels/{channelID}/posts/{messageID}.

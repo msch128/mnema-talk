@@ -142,22 +142,34 @@ func nextPosition(ctx context.Context, q db.Querier, parent *uuid.UUID) (int, er
 
 // Create adds a page below parent (nil: at the top) as revision 1 by user.
 func (s *Store) Create(ctx context.Context, user uuid.UUID, in PageInput) (*Page, error) {
+	return s.create(ctx, user, in, nil)
+}
+
+// create is Create with audited, if set, run in the page's transaction with
+// the new page (the audit entry). The page is read in that transaction too.
+func (s *Store) create(ctx context.Context, user uuid.UUID, in PageInput, audited func(pgx.Tx, *Page) error) (*Page, error) {
 	t, err := cleanText(&in.Title, &in.Content, in.Summary)
 	if err != nil {
 		return nil, err
 	}
-	var slug string
+	var p *Page
 	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
 		if err := lockTree(ctx, tx); err != nil {
 			return err
 		}
-		slug, err = createIn(ctx, tx, user, in, t)
-		return err
+		slug, err := createIn(ctx, tx, user, in, t)
+		if err != nil {
+			return err
+		}
+		if p, err = getPage(ctx, tx, slug, false, false); err != nil || audited == nil {
+			return err
+		}
+		return audited(tx, p)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return s.Get(ctx, slug, false)
+	return p, nil
 }
 
 // Delete takes the page out of the tree; it keeps its address and its revisions and can be restored.

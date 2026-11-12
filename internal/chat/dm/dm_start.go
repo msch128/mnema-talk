@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -30,12 +31,15 @@ func (a *API) StartDM(r *http.Request, others []uuid.UUID) (dm DirectMessage, cr
 		return dm, false, err
 	}
 	me := auth.UserFrom(r.Context())
-	id, created, err := CreateDM(r.Context(), a.DB, NewDM{Creator: me.ID, Others: others})
-	if err != nil {
+	var dms []DirectMessage
+	load := func(tx pgx.Tx, id uuid.UUID) (err error) {
+		dms, err = ListDMs(r.Context(), tx, me.ID, &id)
+		return err
+	}
+	if _, created, err = CreateDM(r.Context(), a.DB, NewDM{Creator: me.ID, Others: others, Load: load}); err != nil {
 		return dm, false, err
 	}
-	dm, err = a.loadDM(r, id)
-	if err != nil {
+	if dm, err = a.firstDM(r, dms); err != nil {
 		return dm, false, err
 	}
 	if created {

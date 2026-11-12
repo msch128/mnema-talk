@@ -76,9 +76,12 @@ func (h *Handler) record(r *http.Request, action string, p *Page, details map[st
 	if h.Audit == nil || p == nil {
 		return
 	}
-	h.Audit.RecordOrLog(r.Context(), audit.Entry{
-		Action: action, TargetType: "wiki_page", TargetID: p.ID.String(), TargetName: p.Title, Details: details,
-	})
+	h.Audit.RecordOrLog(r.Context(), pageEntry(action, p, details))
+}
+
+// pageEntry is the audit entry of a change to page p.
+func pageEntry(action string, p *Page, details map[string]any) audit.Entry {
+	return audit.Entry{Action: action, TargetType: "wiki_page", TargetID: p.ID.String(), TargetName: p.Title, Details: details}
 }
 
 func pathRev(r *http.Request) (int, error) {

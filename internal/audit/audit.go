@@ -99,9 +99,23 @@ func (l *Log) RecordTx(ctx context.Context, q db.Querier, e Entry) error {
 	return err
 }
 
+// afterCommitTimeout bounds an entry written after its change committed.
+const afterCommitTimeout = 5 * time.Second
+
+// afterCommit is ctx for work that must still happen once a change has
+// committed: it keeps ctx's values (the actor, the request id) but not its
+// cancellation, so a client that disconnects in that moment cannot make the
+// work fail, and it ends after afterCommitTimeout.
+func afterCommit(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), afterCommitTimeout)
+}
+
 // RecordOrLog records e and logs a failure: the action it describes already
-// happened and must not be reported as failed.
+// happened and must not be reported as failed. The write does not end with
+// ctx (see afterCommit): a request whose client left still leaves its entry.
 func (l *Log) RecordOrLog(ctx context.Context, e Entry) {
+	ctx, cancel := afterCommit(ctx)
+	defer cancel()
 	if err := l.Record(ctx, e); err != nil {
 		slog.ErrorContext(ctx, "audit log write failed", "action", e.Action, "err", err)
 	}
