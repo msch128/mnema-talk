@@ -17,6 +17,13 @@ import SavedEntry from './SavedEntry.vue'
 import LaterList from './LaterList.vue'
 import ForumPostCard from '../../forum/components/ForumPostCard.vue'
 import ForumPostHeader from '../../forum/components/ForumPostHeader.vue'
+import EventComments from '../../events/components/EventComments.vue'
+import BlockedMessageRow from './BlockedMessageRow.vue'
+import { defineComponent, h } from 'vue'
+import * as eventApi from '../../events/lib/eventCommentsApi'
+import { commentFixture } from '../../eventRoles.fixture'
+import { pendingConfirm, type PendingConfirm } from '../../shared/lib/confirm'
+import { usePermissionsStore } from '../../stores/permissions'
 import { reminderText } from '../lib/laterNotices'
 import { attachmentFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP, messageFixture } from '../../test-fixtures.fixture'
 import { useBlocksStore } from '../../stores/blocks'
@@ -30,6 +37,10 @@ vi.mock('../../shared/lib/api', async importOriginal => ({
   ...(await importOriginal<typeof import('../../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
+vi.mock('../../events/lib/eventCommentsApi', () => ({
+  fetchComments: vi.fn(), postComment: vi.fn(), editComment: vi.fn(), deleteComment: vi.fn(), setCommentsMuted: vi.fn()
+}))
+vi.mock('../../events/lib/eventsDialog', () => ({ openEvents: vi.fn() }))
 vi.mock('../../forum/lib/forumApi', () => ({
   updateForumPost: vi.fn(), markForumPostRead: vi.fn(), fetchForumTags: vi.fn(), fetchForumSettings: vi.fn()
 }))
@@ -65,6 +76,9 @@ describe('a blocked member is folded beyond the message list', () => {
     const msg = messageFixture({ id: 'm2', user_id: BLOCKED, username: 'troll', content: WORDS })
     const w = mount(SearchResultItem, { props: { index: 0, selected: false, voice: false, terms: ['words'], msg } })
     expect(w.text()).not.toContain(WORDS)
+    // The option is the control (Enter shows it, SearchModal.test.ts): no button nested in it, and it says so.
+    expect(w.find('button').exists()).toBe(false)
+    expect(w.get('[role="option"]').text()).toContain(t('blocks.showWithEnter'))
   })
 
   it('the thread root of a search result, written by the blocked member', () => {
@@ -105,7 +119,7 @@ describe('a blocked member is folded beyond the message list', () => {
     expect(w.find('[data-testid="saved-remove"]').exists()).toBe(true)
   })
 
-  it('a forum post card: title, excerpt, picture and label', () => {
+  it('a forum post card: title, excerpt, picture and label', async () => {
     const post = messageFixture({
       id: 'm7', user_id: BLOCKED, title: 'title of the blocked member', content: WORDS,
       attachments: [attachmentFixture({ mime_type: 'image/png' })]
@@ -114,15 +128,78 @@ describe('a blocked member is folded beyond the message list', () => {
     expect(w.text()).not.toContain(WORDS)
     expect(w.text()).not.toContain('title of the blocked member')
     expect(w.find('[data-testid="forum-post-thumbnail"]').exists()).toBe(false)
-    expect(w.get('[data-testid="forum-post-card"]').attributes('aria-label')).toBe(t('blocks.collapsed'))
+    // Folded, the card is no button, so its Show is not nested in one, and nothing opens the post.
+    const card = w.get('[data-testid="forum-post-card"]')
+    expect(card.attributes('role')).toBeUndefined()
+    expect(card.attributes('tabindex')).toBeUndefined()
+    expect(card.attributes('aria-label')).toBeUndefined()
+    await card.trigger('click')
+    await card.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('select')).toBeUndefined()
   })
 
-  it('the title above an open forum post', () => {
+  it('a forum post card turns back into the button that opens the post, and takes the focus', async () => {
+    const post = messageFixture({ id: 'm13', user_id: BLOCKED, title: 'title of the blocked member', content: WORDS })
+    const w = mount(ForumPostCard, { props: { post }, attachTo: document.body })
+    await w.get('[data-testid="blocked-message-show"]').trigger('click')
+    await flushPromises()
+    const card = w.get('[data-testid="forum-post-card"]')
+    expect(card.attributes('role')).toBe('button')
+    expect(card.attributes('aria-label')).toBe('title of the blocked member')
+    expect(document.activeElement).toBe(card.element)
+    await card.trigger('click')
+    expect(w.emitted('select')).toHaveLength(1)
+  })
+
+  it('the title above an open forum post, which takes the focus when shown', async () => {
     useChatStore().activeChannel = channelFixture({ id: 'ch1', type: 'forum' })
     useChatStore().activeThread = messageFixture({ id: 'm8', channel_id: 'ch1', user_id: BLOCKED, title: 'title of the blocked member' })
-    const w = mount(ForumPostHeader, { global })
+    const w = mount(ForumPostHeader, { global, attachTo: document.body })
     expect(w.text()).not.toContain('title of the blocked member')
     expect(folded(w)).toBe(true)
+    await w.get('[data-testid="blocked-message-show"]').trigger('click')
+    await flushPromises()
+    const title = w.get('[data-testid="forum-post-title"]').element as HTMLElement
+    expect(document.activeElement).toBe(title)
+    expect(title.tabIndex).toBe(-1)
+  })
+
+  it('an event comment, and its excerpt in the delete dialog', async () => {
+    vi.spyOn(usePermissionsStore(), 'can').mockReturnValue(true)
+    pendingConfirm.value = null
+    const comment = commentFixture(3, { content: WORDS, user: { id: BLOCKED, username: 'troll', display_name: 'Troll' } })
+    vi.mocked(eventApi.fetchComments).mockResolvedValue({ comments: [comment], has_more: false, muted: false })
+    const w = mount(EventComments, { props: { eventId: fixtureId(1) }, global })
+    await flushPromises()
+    expect(w.get('[data-testid="event-comment"]').text()).not.toContain(WORDS)
+    expect(folded(w)).toBe(true)
+    await w.get('[data-testid="comment-delete"]').trigger('click')
+    const asked = (): PendingConfirm | null => pendingConfirm.value
+    expect(asked()?.excerpt).toBe(t('blocks.collapsed'))
+    asked()?.resolve(false)
+  })
+
+  it('focus moves to the revealed content, not to the page', async () => {
+    useChatStore().activeChannel = channelFixture({ id: fixtureId(2) })
+    apiMock.mockResolvedValue([messageFixture({ id: 'm14', user_id: BLOCKED, content: WORDS, is_pinned: true })])
+    const w = mount(PinnedMessages, { global, attachTo: document.body })
+    await w.get('[data-testid="pinned-button"]').trigger('click')
+    await flushPromises()
+    await w.get('[data-testid="blocked-message-show"]').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get('[data-testid="pinned-item"]').element)
+  })
+
+  it('in the message list, where the row is replaced, focus moves to the message row', async () => {
+    const msg = messageFixture({ id: 'm15', user_id: BLOCKED, content: WORDS })
+    const blocks = useBlocksStore()
+    const List = defineComponent(() => () => blocks.hides(msg)
+      ? h(BlockedMessageRow, { msg })
+      : h('div', { 'data-msg-id': msg.id, tabindex: -1 }, WORDS))
+    const w = mount(List, { global, attachTo: document.body })
+    await w.get('[data-testid="blocked-message-show"]').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get('[data-msg-id="m15"]').element)
   })
 
   it('a reminder about a message of the blocked member, in the list and in the notice', () => {

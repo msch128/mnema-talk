@@ -4342,7 +4342,8 @@
     "unblockFailed": "Die Blockierung konnte nicht aufgehoben werden. Versuche es noch einmal.",
     "full": "Deine Blockliste ist voll. Hebe zuerst eine Blockierung auf.",
     "collapsed": "Blockierte Nachricht",
-    "show": "Anzeigen"
+    "show": "Anzeigen",
+    "showWithEnter": "Drücke Enter, um sie anzuzeigen."
   },
   "raid": {
     "title": "Raid-Schutz",
