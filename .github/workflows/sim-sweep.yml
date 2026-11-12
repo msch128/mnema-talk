@@ -60,6 +60,8 @@ jobs:
           name: pool-${{ matrix.shard }}
           path: ${{ runner.temp }}/pool
           if-no-files-found: error
+          # A rerun of one shard replaces its upload; the content is deterministic.
+          overwrite: true
           retention-days: 7
 
   # The hard limit of the availability budget: all 400 seeds of both relays pooled
