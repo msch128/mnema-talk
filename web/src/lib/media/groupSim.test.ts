@@ -82,6 +82,19 @@ describe('rooms in which two groups never became one', () => {
   }, 60_000)
 })
 
+// Seeds that never settled (or took the longest) while the committer removed a silent member that the
+// members who had just joined still counted as alive: their refusal left it one epoch ahead and
+// everyone started over, again and again. The other seeds of that list pass in the nightly sweep.
+describe('rooms that used to start over again and again', () => {
+  it.each([125, 258, 119, 162])('honest relay, seed %i', async (seed) => {
+    await expectHolds(seed, { relay: 'honest' })
+  }, 60_000)
+
+  it.each([107, 150, 194, 292, 323, 362])('hostile relay, seed %i', async (seed) => {
+    await expectHolds(seed, { relay: 'hostile' })
+  }, 60_000)
+})
+
 describe('two members that renew their leaf for the same epoch', () => {
   it('end on the lower id\'s renewal, and nobody loses its group', async () => {
     const result = await runScript(RENEWAL_RACE)
