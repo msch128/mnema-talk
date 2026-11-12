@@ -98,6 +98,7 @@ export abstract class GroupEpoch extends GroupBase {
     // A package kept from before its sender was in my tree must not add it again once it was removed.
     for (const id of members.keys()) this.pending.delete(id)
     this.trackLeaves(state, members, now)
+    this.entries.observe(state, now)
     this.forgetDeparted(members)
     this.markNewMembers(members, now)
     if (this.tickTimer === null) {
@@ -250,13 +251,12 @@ export abstract class GroupEpoch extends GroupBase {
   }
 
   private absentProposals(members: Map<string, number>, now: number): Proposal[] {
-    const absent: Proposal[] = []
-    for (const [id, leaf] of members) {
-      if (id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs) {
-        absent.push({ proposalType: 'remove', remove: { removed: leaf } })
-      }
-    }
-    return absent
+    const silent = [...members].filter(([id]) => id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs)
+    // Members that came in lately would refuse the removal (see groupEntry.ts), unless it is long overdue.
+    const wait = this.timing.absentMs + Math.max(10, this.timing.maintenanceMs)
+    const ids = new Set([...silent.map(([id]) => id), this.userId])
+    const hold = this.entries.anyWithin(ids, now, wait)
+    return silent.filter(([id]) => !hold || now - (this.alive.get(id) as number) > 2 * this.timing.absentMs).map(([, leaf]) => ({ proposalType: 'remove', remove: { removed: leaf } }))
   }
 
   private rotationDue(now: number): boolean {
