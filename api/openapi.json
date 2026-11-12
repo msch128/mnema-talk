@@ -27049,7 +27049,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: you are not the author, the message is in a direct message conversation of two that cannot be written in any more (a block, or the other account disabled; the same answer as a refused new message), or cross-origin request rejected."
+            "description": "FORBIDDEN: you are not the author, the message is in a direct message conversation of two, or the chat of its Talk, that cannot be written in any more (a block, or the other account disabled; the same answer as a refused new message), or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -27740,7 +27740,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing the View channels or Add reactions permission in the channel, a vote in a direct message conversation of two after a block (withdrawing stays possible), or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+            "description": "FORBIDDEN: missing the View channels or Add reactions permission in the channel, a vote in a direct message conversation of two, or the chat of its Talk, after a block (withdrawing stays possible), or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
           },
           "404": {
             "content": {

@@ -279,10 +279,15 @@ blocker it means:
   directions: new messages (uploads, polls and commands included), edits of
   earlier messages, reactions, poll votes, forwards into the conversation and
   starting a Talk from it are refused with a 403 that does not say why (the
-  other side only sees that the member cannot be written to). Taking back stays
-  possible: each side may still delete their own messages, remove their own
-  reactions and withdraw their votes. In a group, the conversation continues,
-  but nobody can add a member who blocked them;
+  other side only sees that the member cannot be written to). The chat of the
+  conversation's Talk, if one was open before the block, follows the same rule
+  with the same answers, and its messages by the blocked member do not count
+  as unread for the blocker. Taking back stays possible in both: each side may
+  still delete their own messages, remove their own reactions and withdraw
+  their votes. The Talk itself is not touched: it stays open, and whoever sits
+  in it keeps their seat and can still be heard (removing them would tell the
+  blocked member). In a group, the conversation continues, but nobody can add
+  a member who blocked them;
 - unblocking brings the earlier inbox entries back, because nothing was
   deleted.
 
