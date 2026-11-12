@@ -68,21 +68,31 @@ func stripIDs(in []RoleInput) []RoleInput {
 	return out
 }
 
-// CreateTemplate adds an enabled template.
+// CreateTemplate adds an enabled template. The count and the insert run in
+// one transaction under a transaction-scoped advisory lock on the template
+// set, so creates that arrive together cannot pass MaxRoleTemplates; the lock
+// is held for those two statements and released at commit.
 func (s *Store) CreateTemplate(ctx context.Context, name string, roles []RoleInput, enabled bool) (RoleTemplate, error) {
 	n, clean, err := cleanTemplate(name, roles)
 	if err != nil {
 		return RoleTemplate{}, err
 	}
-	var count int
-	if err := s.DB.QueryRow(ctx, `SELECT COUNT(*) FROM event_role_templates`).Scan(&count); err != nil {
-		return RoleTemplate{}, err
-	}
-	if count >= MaxRoleTemplates {
-		return RoleTemplate{}, httpx.ErrConflict(fmt.Sprintf("there can be at most %d role templates", MaxRoleTemplates))
-	}
 	raw, _ := json.Marshal(clean)
-	t, err := scanTemplate(s.DB.QueryRow(ctx, `INSERT INTO event_role_templates (name, roles, enabled) VALUES ($1, $2, $3) RETURNING `+templateColumns, n, raw, enabled))
+	var t RoleTemplate
+	err = s.inTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('mnema.event_role_templates'))`); err != nil {
+			return fmt.Errorf("lock role templates: %w", err)
+		}
+		var count int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM event_role_templates`).Scan(&count); err != nil {
+			return err
+		}
+		if count >= MaxRoleTemplates {
+			return httpx.ErrConflict(fmt.Sprintf("there can be at most %d role templates", MaxRoleTemplates))
+		}
+		t, err = scanTemplate(tx.QueryRow(ctx, `INSERT INTO event_role_templates (name, roles, enabled) VALUES ($1, $2, $3) RETURNING `+templateColumns, n, raw, enabled))
+		return err
+	})
 	if db.IsUniqueViolation(err) {
 		return t, httpx.ErrConflict("a template called " + n + " exists")
 	}
