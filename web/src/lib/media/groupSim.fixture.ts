@@ -38,6 +38,9 @@ const EMPTY = new Uint8Array(0)
 const STATS_MS = 1000
 const QUIET_DELAY_MS = 20
 const TIMER_ID_BASE = 2 ** 40
+/** Ids nobody is behind: one that sorts above every member and one below. */
+export const GHOST_HIGH = fixtureId(0xfffff)
+export const GHOST_LOW = '00000000-0000-4000-8000-000000000000'
 
 /** mulberry32: small, seedable, and good enough to pick delays and actions. */
 export function seededRandom(seed: number): () => number {
@@ -111,7 +114,16 @@ export interface SimHooks {
   epoch(member: SimMember, verification: MediaVerification | null): void
 }
 
-interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean }
+/** A handshake on its way, as the control sees it. */
+export interface WireInfo { from: string, to: string, kind: string }
+interface Timer { id: number, at: number, owner: SimMember | null, run: () => void, wire: boolean, info?: WireInfo }
+
+/**
+ * Asked before the simulator delivers a handshake that is on its way: deliver
+ * it ('run'), lose it ('drop'), or deliver the next one on its way to the same
+ * member first ('swap'). A schedule explorer plays the relay with this.
+ */
+export type WireControl = (wire: WireInfo, pending: number) => 'run' | 'drop' | 'swap'
 
 export interface Fault { drop: number, duplicate: number, slow: number, stall: number }
 
@@ -162,6 +174,13 @@ export class GroupSim {
   /** Each member's link latency in ms, for a scripted run: a wire takes the sender's plus the recipient's. */
   latency: Map<string, number> | null = null
   events = 0
+  /** When set, decides the fate of every handshake before it is delivered. */
+  control: WireControl | null = null
+  /** Whether what a tab sends after it was closed is lost, as it is when the process is gone (a crash point leaves the tab's last step running). */
+  dropWiresOfGone = false
+  /** While set, every handshake a member sends is kept in `log`, for replayAll. */
+  record = false
+  readonly log: { from: string, text: string }[] = []
   private readonly random: () => number
   private readonly jitter: () => number
   /** Draws for the machines' clocks only, so that giving them clocks leaves the rest of a seed's run alone. */
@@ -213,9 +232,9 @@ export class GroupSim {
   }
 
   /** Runs `run` after `delay`. With an owner it waits while that tab sleeps and is dropped once the tab is gone. */
-  after(owner: SimMember | null, delay: number, run: () => void, wire = false): number {
+  after(owner: SimMember | null, delay: number, run: () => void, wire = false, info?: WireInfo): number {
     const id = ++this.timerSeq
-    this.timers.set(id, { id, at: this.now + Math.max(0, delay), owner, run, wire })
+    this.timers.set(id, { id, at: this.now + Math.max(0, delay), owner, run, wire, info })
     return id
   }
 
@@ -309,6 +328,20 @@ export class GroupSim {
     }
     this.note(`${member.label} keys ${verification ? `${epochKey(verification)} {${verification.members.map(memberNumber).join(',')}}` : 'none'}`)
     this.hooks.epoch(member, verification)
+  }
+
+  /** The tab whose code is running now, if any: the one a timer or a wire was handed to. */
+  running(): SimMember | undefined {
+    return this.context.getStore()
+  }
+
+  /** The tab is gone at the next instant, wherever its code is: a reload, as at a crash point. */
+  crashSoon(member: SimMember, seen: boolean) {
+    this.after(null, 0, () => {
+      if (member.gone || this.room.get(member.id) !== member) return
+      this.note(`crash ${member.label} (${seen ? 'the roster shows it' : 'unseen'})`)
+      this.reload(member.id, seen)
+    })
   }
 
   /** A tab enters the Talk: the server tells it who is here and tells the others. */
@@ -423,7 +456,9 @@ export class GroupSim {
   private relay(from: SimMember, text: string) {
     const wire = decodeWire(text)
     const kind = wire ? describeWire(wire) : 'garbage'
+    if (from.gone && this.dropWiresOfGone) return
     if (from.offlineUntil > this.now) return this.note(`lost ${from.label} ${kind} (socket down)`)
+    if (this.record) this.log.push({ from: from.id, text })
     for (const to of this.live()) {
       if (to === from) continue
       if (to.offlineUntil > this.now) {
@@ -440,7 +475,7 @@ export class GroupSim {
         this.after(to, this.due(to, this.delay(from, to)), () => {
           this.note(`deliver ${from.label}->${to.label} ${kind}${copy ? ' (copy)' : ''}`)
           this.enter(to, () => to.call.receive(from.id, text))
-        }, true)
+        }, true, { from: from.id, to: to.id, kind })
       }
     }
   }
@@ -449,6 +484,51 @@ export class GroupSim {
     member.previousRoster = member.roster
     member.roster = roster
     this.enter(member, () => member.call.roster(roster))
+  }
+
+  /** The server's next roster reaches everyone, and it is true. */
+  correctRosters() {
+    this.announce()
+  }
+
+  /**
+   * The server tells `id`, and nobody else, a roster that is not the room:
+   * 'hide' leaves out another member that is here, 'ghost' lists an id nobody
+   * is behind, 'lead' lists one that sorts below every member.
+   */
+  lie(id: string, kind: 'hide' | 'ghost' | 'lead') {
+    const member = this.room.get(id)
+    if (!member || member.offlineUntil > this.now) return
+    const truth = [...this.room.keys()].sort()
+    const others = truth.filter(other => other !== id)
+    const hidden = kind === 'hide' && others.length ? this.pick(others) : null
+    const roster = (hidden ? truth.filter(other => other !== hidden) : [...truth, ...(kind === 'hide' ? [] : [kind === 'ghost' ? GHOST_HIGH : GHOST_LOW])]).sort()
+    this.note(`lie to ${member.label}: room {${roster.map(memberNumber).join(',')}}`)
+    // Like every roster, it never overtakes an older one.
+    const at = Math.max(this.now + this.due(member, this.between(0, 800)), member.rosterDueAt + 1)
+    member.rosterDueAt = at
+    this.after(member, at - this.now, () => this.deliverRoster(member, roster))
+  }
+
+  /**
+   * The server says again what it relayed (see `record`): up to `most` of the
+   * handshakes, each to every member but its sender, in no order and spread
+   * over `spreadMs`; only of the given `kinds` (commit, welcome, key-package,
+   * heartbeat, capability) when named. Whoever sent one may be long gone.
+   */
+  replayAll(most: number, spreadMs: number, kinds?: readonly string[]) {
+    const kindOf = (item: { text: string }) => describeWire(decodeWire(item.text) ?? EMPTY).replace(/@.*$/, '')
+    const picked = this.log.filter(item => !kinds || kinds.includes(kindOf(item))).sort(() => this.random() - 0.5).slice(0, most)
+    this.note(`replay ${picked.length} old handshakes to ${this.room.size} members`)
+    for (const item of picked) {
+      for (const to of this.live()) {
+        if (to.id === item.from) continue
+        this.after(to, this.between(0, spreadMs), () => {
+          this.note(`replay ${memberNumber(item.from)}->${to.label} ${describeWire(decodeWire(item.text) ?? EMPTY)}`)
+          this.enter(to, () => to.call.receive(item.from, item.text))
+        }, true)
+      }
+    }
   }
 
   /** The room changed. Each member hears it after a moment, and in the order it happened. */
@@ -517,6 +597,24 @@ export class GroupSim {
     return best
   }
 
+  /** What `control` makes of the next timer, when it is a handshake: it may be lost, or another one to the same member goes first. */
+  private controlled(timer: Timer | null): Timer | null {
+    if (!timer?.wire || !timer.info || !this.control) return timer
+    const others = [...this.timers.values()].filter(other => other.wire && other.owner === timer.owner && other.info).sort((a, b) => a.at - b.at || a.id - b.id)
+    const choice = this.control(timer.info, others.length + 1)
+    if (choice === 'drop') {
+      this.note(`drop ${memberNumber(timer.info.from)}->${timer.owner?.label} ${timer.info.kind} (the schedule)`)
+      return { ...timer, run: () => undefined, wire: false, info: undefined }
+    }
+    if (choice === 'swap' && others[0]) {
+      this.timers.delete(others[0].id)
+      this.timers.set(timer.id, timer)
+      this.note(`overtake ${memberNumber(others[0].info?.from ?? '')}->${timer.owner?.label} ${others[0].info?.kind} before ${timer.info.kind}`)
+      return others[0]
+    }
+    return timer
+  }
+
   private async settle() {
     for (const member of this.touched) {
       for (let round = 0; round < 3; round++) {
@@ -531,7 +629,7 @@ export class GroupSim {
   async runUntil(limit: number, done: () => boolean = () => false): Promise<void> {
     await this.settle()
     while (!done()) {
-      const timer = this.next(limit)
+      const timer = this.controlled(this.next(limit))
       if (!timer) break
       vi.setSystemTime(this.now)
       this.events++

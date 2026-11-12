@@ -7,6 +7,7 @@
 // and delete it from the list).
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { AvailabilityBudget, availabilityOf } from './groupAvailability.fixture'
 import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
 import { report, runSeed } from './groupSimRun.fixture'
 
@@ -29,16 +30,21 @@ describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget
   it.each([['hostile', KNOWN_HOSTILE], ['honest', KNOWN_HONEST]] as const)('%s relay', async (relay, known) => {
     const failing: number[] = []
     const reports: string[] = []
+    const budget = new AvailabilityBudget(relay)
     for (let seed = 1; seed <= SEEDS; seed++) {
       if (!mine(seed)) continue
       // A run that throws counts as a failing seed and the sweep goes on.
-      const outcome = await runSeed(seed, { relay }).then(result => (result.violations.length ? report(result) : ''), (err: unknown) => `threw: ${String(err)}`)
+      const outcome = await runSeed(seed, { relay }).then((result) => {
+        budget.add(seed, known.includes(seed), availabilityOf(result))
+        return result.violations.length ? report(result) : ''
+      }, (err: unknown) => `threw: ${String(err)}`)
       if (!outcome) continue
       failing.push(seed)
       if (!known.includes(seed)) reports.push(`seed ${seed}: ${outcome}`)
     }
     const regressions = failing.filter(seed => !known.includes(seed))
     const healed = known.filter(seed => mine(seed) && !failing.includes(seed))
+    expect(budget.breaches(), `${relay} relay: member time without keys is over the budget LOST_BUDGET in groupAvailability.fixture.ts`).toEqual([])
     expect({ regressions, healed }, `${relay} relay: "regressions" fail outside the budget, "healed" are in the budget and pass now (move them to groupSim.test.ts)\n${reports.join('\n')}`).toEqual({ regressions: [], healed: [] })
   }, 3_600_000)
 })
