@@ -468,7 +468,14 @@ details and the limits.
   so it holds at most (65 + its m-lines) buffered streams for arbitrary SSRCs
   (about 1.3 MB plus 20 KB per line, under 3 MB for 70 lines) and about 16 MB
   of empty ones before the connection is closed; a client can make the empty
-  ones in about two minutes.
+  ones in about two minutes. Every sender the SFU makes on a
+  connection (one per subscription switched on, and per track that starts
+  or resumes for the viewer) leaves Pion's SRTP state for its SSRCs, about
+  160 bytes (about 240 with retransmissions), until the connection closes;
+  nothing else of a stopped sender stays. The connection is closed the same
+  way after 32 768 senders, so this is at most about 8 MB per connection,
+  and a member switching camera batches of 16 at the event budget adds at
+  most about 80 KB a second until then.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route

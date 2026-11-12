@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -16,11 +17,13 @@ import (
 // Subscription cycle (H-L8-09): one viewer switches its subscription to one
 // publisher's screen share on and off, through Room.Subscribe, the entry
 // point of the WebSocket handler's webrtc_subscribe. Each switch is one
-// event; the viewer's media connection stays up. Nothing may be retained per
-// switch: the heap in use (after two forced collections, every 100
-// switches) and the goroutine count must stay flat, and so must the offer.
+// event; the viewer's media connection stays up. Nothing of a stopped sender
+// may be retained: the heap in use (after two forced collections, every 100
+// switches) grows by at most subPerSwitchBound per switch, the goroutine
+// count and the offer stay flat. What does stay, Pion's SRTP state of each
+// sender's SSRCs, is bounded by maxSentTracks (TestSenderCapClosesTheConnection).
 //
-// Smoke runs 1000 switches; SFU_SUB_SWITCHES=n (or SFU_CYCLE_DEEP=1 for 4000)
+// Smoke runs 2000 switches; SFU_SUB_SWITCHES=n (or SFU_CYCLE_DEEP=1 for 20000)
 // runs more with the same assertions. SFU_SUB_HEAPPROFILE=path writes heap
 // profiles after the warm-up (path.base), after half the switches
 // (path.half) and at the end (path).
@@ -32,15 +35,16 @@ func subSwitches(smoke int) int {
 		}
 	}
 	if os.Getenv("SFU_CYCLE_DEEP") == "1" {
-		return 4000
+		return 20000
 	}
 	return smoke
 }
 
 // subPerSwitchBound is the heap growth per switch the cycle may show. A
-// sender kept with its writer chain costs several KB; the test clients' own
-// per-SSRC state and the collector's noise stay below this.
-const subPerSwitchBound = 1 << 10
+// stopped sender kept with its writer chain costs about 7 KB (3.5 KB a
+// switch); Pion's SRTP state of each sender on both ends of the viewer's
+// connection (about 160 bytes on each) and the collector's noise stay below.
+const subPerSwitchBound = 1536
 
 func writeHeapProfile(path string) {
 	if f, err := os.Create(path); err == nil {
@@ -78,7 +82,7 @@ func drainClient(c *client) {
 }
 
 // subscriptionCycle runs the cycle and returns the heap growth per switch
-// (least squares over the checkpoints after the first), the goroutine growth
+// (over the checkpoints after the first), the goroutine growth
 // and the size of the viewer's offer before and after.
 func subscriptionCycle(t *testing.T, switches int) (perSwitch float64, goGrowth, sdpBefore, sdpAfter int) {
 	t.Helper()
@@ -87,7 +91,7 @@ func subscriptionCycle(t *testing.T, switches int) (perSwitch float64, goGrowth,
 		runtime.MemProfileRate = 1024
 	}
 	r, viewer, publisher := subscriptionRoom(t)
-	for range 20 { // warm-up: Pion's pools and lazy goroutines
+	for range 100 { // warm-up: Pion's pools and lazy goroutines
 		toggleScreen(t, r, viewer, publisher)
 		drainClient(viewer)
 	}
@@ -135,14 +139,18 @@ func fillSendHistory(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-// slope is the least squares slope of ys over xs.
+// slope is the median of the slopes between every two checkpoints
+// (Theil-Sen): a checkpoint that caught a renegotiation in flight moves it
+// little.
 func slope(xs, ys []float64) float64 {
-	n := float64(len(xs))
-	var sx, sy, sxx, sxy float64
+	var slopes []float64
 	for i := range xs {
-		sx, sy, sxx, sxy = sx+xs[i], sy+ys[i], sxx+xs[i]*xs[i], sxy+xs[i]*ys[i]
+		for j := i + 1; j < len(xs); j++ {
+			slopes = append(slopes, (ys[j]-ys[i])/(xs[j]-xs[i]))
+		}
 	}
-	return (n*sxy - sx*sy) / (n*sxx - sx*sx)
+	slices.Sort(slopes)
+	return slopes[len(slopes)/2]
 }
 
 // offerSize is the size of the SFU's last offer to peer.
@@ -156,7 +164,7 @@ func offerSize(p *Peer) int {
 // TestSubscriptionSwitchesRetainNothing is the defender's resource test of
 // H-L8-09.
 func TestSubscriptionSwitchesRetainNothing(t *testing.T) {
-	switches := subSwitches(1000)
+	switches := subSwitches(2000)
 	perSwitch, goGrowth, sdpBefore, sdpAfter := subscriptionCycle(t, switches)
 	t.Logf("%d switches: heap %+.0f bytes per switch, goroutines %+d, offer %d -> %d bytes",
 		switches, perSwitch, goGrowth, sdpBefore, sdpAfter)
@@ -166,16 +174,32 @@ func TestSubscriptionSwitchesRetainNothing(t *testing.T) {
 	if sdpAfter > sdpBefore+256 {
 		t.Errorf("the viewer's offer grew from %d to %d bytes over %d switches", sdpBefore, sdpAfter, switches)
 	}
-	knownRetentionPerSwitch(t, perSwitch)
+	if perSwitch > subPerSwitchBound {
+		t.Errorf("each switch retains %.0f bytes (bound %d)", perSwitch, subPerSwitchBound)
+	}
 }
 
-// knownRetentionPerSwitch is the inverse assertion of H-L8-09 (known
-// failure): every switch on keeps a stopped sender with its writer chain,
-// about 4 KB per switch. It turns red when that retention is gone; then
-// assert perSwitch <= subPerSwitchBound instead.
-func knownRetentionPerSwitch(t *testing.T, perSwitch float64) {
-	t.Helper()
-	if perSwitch <= subPerSwitchBound {
-		t.Fatalf("H-L8-09 is fixed: %.0f bytes per switch retained (bound %d); assert the bound instead", perSwitch, subPerSwitchBound)
+// TestSenderCapClosesTheConnection: what Pion keeps per sender cannot be
+// dropped, so a connection that made more than its cap of senders is closed.
+// The cap is lowered for the test; up to it the viewer stays connected.
+func TestSenderCapClosesTheConnection(t *testing.T) {
+	r, viewer, publisher := subscriptionRoom(t)
+	peer := viewer.peer
+	const more = 30
+	peer.rtcp.mu.Lock()
+	peer.rtcp.senderCap = peer.rtcp.senders + more
+	peer.rtcp.mu.Unlock()
+	for range more { // one sender each
+		toggleScreen(t, r, viewer, publisher)
+		drainClient(viewer)
 	}
+	if state := peer.PC.ConnectionState(); state != webrtc.PeerConnectionStateConnected {
+		t.Fatalf("the viewer's connection is %s after %d senders, its cap", state, more)
+	}
+	if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, true); err != nil {
+		t.Fatal(err)
+	}
+	waitSFUCondition(t, "the connection closed past the cap", func() bool {
+		return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && r.GetPeer(viewer.id) == nil
+	})
 }

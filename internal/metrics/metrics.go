@@ -196,7 +196,8 @@ var (
 	// SFUIngressDropped counts publisher packets dropped over the per-track
 	// rate limit (reason "rate") and publishers closed for sustained
 	// abuse (reason "closed"); "rtcp_ssrcs" counts media connections closed
-	// for naming too many SSRCs in RTCP that nothing reads (internal/sfu).
+	// for naming too many SSRCs in RTCP that nothing reads, or for the SFU
+	// having made too many senders on them (internal/sfu).
 	SFUIngressDropped                = newVec("mnema_sfu_ingress_dropped_total", "Publisher packets dropped over the ingress limit, by reason", "reason")
 	SFUEgressBytes, SFUEgressPackets Counter
 	// SFUNackRequests counts NACK feedback messages received from

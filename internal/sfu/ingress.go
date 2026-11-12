@@ -137,6 +137,12 @@ const (
 	// rtcpDeclaredPerLine bounds the SSRCs taken from an answer per m-line
 	// (a line declares its SSRC, an RTX SSRC and maybe simulcast layers).
 	rtcpDeclaredPerLine = 4
+	// maxSentTracks: senders the SFU makes in the life of the connection.
+	// Each has SSRCs of its own, and Pion's SRTP context keeps their state
+	// (about 160 bytes a sender, more with RTX) until the connection closes,
+	// with no way to drop it; every subscription switched on makes one. The
+	// same honest count as maxQuietRTCPStreams applies.
+	maxSentTracks = 32768
 )
 
 // pionUnhandledRTCP is the line Pion's undeclaredRTCPMediaProcessor logs once
@@ -167,10 +173,13 @@ type rtcpStreamCap struct {
 	buffered, quiet            int
 	// lines is the most m-lines an answer of the client had.
 	lines int
+	// senders counts the senders made on the connection, up to senderCap
+	// (maxSentTracks; tests lower it).
+	senders, senderCap int
 }
 
 func newRTCPStreamCap(logs logging.LoggerFactory, log *slog.Logger) *rtcpStreamCap {
-	return &rtcpStreamCap{logs: logs, log: log, sent: map[uint32]bool{},
+	return &rtcpStreamCap{logs: logs, log: log, sent: map[uint32]bool{}, senderCap: maxSentTracks,
 		declared: map[uint32]struct{}{}, retired: map[uint32]struct{}{}, unknown: map[uint32]struct{}{}}
 }
 
@@ -179,14 +188,14 @@ func newRTCPStreamCap(logs logging.LoggerFactory, log *slog.Logger) *rtcpStreamC
 func (c *rtcpStreamCap) bind(pc *webrtc.PeerConnection) { c.pc.Store(pc) }
 
 // sentTrack records the SSRCs of a track the SFU now sends on the connection,
-// as long as there are fewer than buffered streams may be open.
+// as long as there are fewer than buffered streams may be open, and closes
+// the connection past maxSentTracks senders.
 func (c *rtcpStreamCap) sentTrack(sender *webrtc.RTPSender) {
 	if c == nil {
 		return
 	}
 	encodings := sender.GetParameters().Encodings
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	for _, e := range encodings {
 		if len(c.sent) < maxBufferedRTCPStreams {
 			c.sent[uint32(e.SSRC)] = true
@@ -194,6 +203,12 @@ func (c *rtcpStreamCap) sentTrack(sender *webrtc.RTPSender) {
 		if e.RTX.SSRC != 0 && len(c.sent) < maxBufferedRTCPStreams {
 			c.sent[uint32(e.RTX.SSRC)] = false
 		}
+	}
+	c.senders++
+	senders, over := c.senders, c.senders > c.senderCap
+	c.mu.Unlock()
+	if over {
+		c.trip("senders", senders)
 	}
 }
 
@@ -360,7 +375,7 @@ func (c *rtcpStreamCap) trip(count string, n int) {
 	if pc == nil || !c.closing.CompareAndSwap(false, true) {
 		return
 	}
-	c.log.Warn("sfu connection keeps too many unread RTCP streams, closing it", count, n)
+	c.log.Warn("sfu connection keeps state for too many SSRCs, closing it", count, n)
 	metrics.SFUIngressDropped.With("rtcp_ssrcs").Inc()
 	safego.Go("sfu_rtcp_cap", safego.Abandon, func() { _ = pc.Close() })
 }
