@@ -1,5 +1,45 @@
 # Changelog
 
+## [3.0.10](https://github.com/msch128/mnema-talk/compare/v3.0.9...v3.0.10) (2026-11-12)
+
+
+### Bug Fixes
+
+* a commit refused for an add the member never saw relayed is held and retried ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* a group conversation's cap, the Owner's reply and a pinned reply hold under concurrent requests ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* a hidden message, category or channel answers like a missing one ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* a name that ends in a number is no domain for a link rule ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* a read-state answer is ordered against the live events (migration 0104) ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* a role mention next to [@all](https://github.com/all) breaks a mute, a sender that may not name members does not (direct_mentions) ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* an audit entry written after the commit no longer ends with the request ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* an event comment's delete dialog shows plain text ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* audit entries of a private forum and of a removal from a private Talk reach only auditors who can see them ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* audit entries of the swept operations are written inside the change's transaction, and answers are read inside it ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* cap the RTCP streams nothing reads on a media connection ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* erasure removes retry ids and upload bookings, the export gains three settings, the orphan cleanup covers exports ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* event comments and event texts go through automod ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* Go reads signed documents as the desktop clients do ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* membership of a conversation opens its call, and the call is no community channel ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* nothing new may name an erased account (migration 0103) ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* reactions compare in one emoji form ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* refuse background jobs once the shutdown drain began ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* reminders, scheduled and saved lists are read again after a reconnect and follow deletes ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* renew a media connection at its sender cap, and budget a publisher's stop and resume ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* reset links, the first Owner and role templates hold under concurrent requests ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the bandwidth estimator forgets a stopped sender ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the follow precedes the first reply under one's own message ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the handshake pacer and the group's back-offs wait on the monotonic clock ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the Security-Floor trailer is read the same way by the pull request check and the release, and a raised floor is kept ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the SFU checks an answer against its own offer before the connection reads it ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the SFU's stored times follow a steady clock, and a layer switch continues sequence numbers and picture ids ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* the TURN relay's allocation budget is per member ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+* unread and mention counts are corrected after a delete or an edit ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+
+
+### Documentation
+
+* the fix reviews of the defect hunt's second part ([8fcf447](https://github.com/msch128/mnema-talk/commit/8fcf44700dee0c51b0f74685aa704992372fa90b))
+
 ## [3.0.9](https://github.com/msch128/mnema-talk/compare/v3.0.8...v3.0.9) (2026-11-12)
 
 
