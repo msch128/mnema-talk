@@ -4,6 +4,7 @@ package wiki
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -26,8 +27,8 @@ func TestPagesThatAlreadyShareATitleKeyStayEditable(t *testing.T) {
 	if err != nil || len(tree) != 2 {
 		t.Fatalf("both pages are listed: %+v, %v", tree, err)
 	}
-	// A decomposed query finds the composed title (the query is composed too).
-	if hits, err := w.s.Search(ctx, "Cafe\u0301"); err != nil || len(hits) == 0 || hits[0].Slug != composed.Slug {
+	// A query in either form finds both pages (TestSearchFindsBothUnicodeForms).
+	if hits, err := w.s.Search(ctx, "Cafe\u0301"); err != nil || len(hits) != 2 {
 		t.Fatalf("search in the other form: %+v, %v", hits, err)
 	}
 	if _, err := w.s.Create(ctx, w.alice, PageInput{Title: "CAF\u00c9"}); !is(err, errTitleTaken) {
@@ -48,5 +49,40 @@ func TestPagesThatAlreadyShareATitleKeyStayEditable(t *testing.T) {
 	}
 	if _, err := w.s.RestoreRevision(ctx, w.alice, "cafe-old", 1, RestoreInput{BaseRev: 3}, false); !is(err, errTitleTaken) {
 		t.Fatalf("restore onto the taken title: %v", err)
+	}
+}
+
+// Page text and old titles are stored as typed, new titles composed: a query in
+// either form finds a title and a text in either form.
+func TestSearchFindsBothUnicodeForms(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	const nfc, nfd = "R\u00e9sum\u00e9", "Re\u0301sume\u0301"
+	stored := map[string][2]string{ // slug: title, content
+		"title-nfc": {nfc + " one", "x"},
+		"title-nfd": {nfd + " two", "x"},
+		"text-nfc":  {"Three", "the " + nfc + " text"},
+		"text-nfd":  {"Four", "the " + nfd + " text"},
+	}
+	for slug, p := range stored {
+		if _, err := w.p.Exec(ctx, `INSERT INTO wiki_pages (slug, title, content) VALUES ($1, $2, $3)`, slug, p[0], p[1]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, q := range []string{nfc, nfd, strings.ToUpper(nfd)} {
+		hits, err := w.s.Search(ctx, q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := map[string]bool{}
+		for _, h := range hits {
+			found[h.Slug] = true
+			if strings.HasPrefix(h.Slug, "text-") && !strings.Contains(h.Snippet, "text") {
+				t.Errorf("%+q: snippet of %s: %q", q, h.Slug, h.Snippet)
+			}
+		}
+		if len(found) != 4 || len(hits) != 4 || !strings.HasPrefix(hits[0].Slug, "title-") || !strings.HasPrefix(hits[1].Slug, "title-") {
+			t.Errorf("%+q: %+v", q, hits)
+		}
 	}
 }
