@@ -33,6 +33,15 @@ name: Release
 #    msch128/mnema-talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
 #
+# Before a release is cut or merged, the most recent completed scheduled run
+# on main of each deep nightly sweep (sim-sweep.yml, visibility-sweep.yml,
+# store-trace.yml) must have succeeded within the last 48 hours
+# (scripts/nightly-gate.py). The one way past a red, stale or missing night is
+# a manual run of this workflow on main with `nightly_override` set to the
+# reason (an urgent security fix only, doc/development.md "Releases"); it
+# releases main's tip only when CI passed for it, and the reason and the actor
+# are printed in the job summary.
+#
 # Deploying to the self-hosted server stays manual/pull-based (see README).
 
 on:
@@ -40,14 +49,20 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  # Backfill: mirror an existing release to Docker Hub. Only the
-  # dockerhub-mirror job runs on dispatch; every other job needs the
-  # workflow_run context (release-please) or its output and is skipped.
+  # Two manual uses, one input each (setting both fails the run):
+  # - mirror_version, a backfill: mirror an existing release to Docker Hub.
+  #   Only the dockerhub-mirror job runs.
+  # - nightly_override, the documented override of the nightly gate: release
+  #   main's tip although a nightly sweep is red, stale or missing.
   workflow_dispatch:
     inputs:
       mirror_version:
-        description: Released version to mirror to Docker Hub, for example 2.0.0
-        required: true
+        description: Released version to mirror to Docker Hub, for example 2.0.0 (leave empty for an override)
+        required: false
+        type: string
+      nightly_override:
+        description: "Urgent security fix only: why main's tip must be released despite a red, stale or missing nightly sweep (printed in the job summary)"
+        required: false
         type: string
 
 permissions: {}
@@ -59,8 +74,10 @@ concurrency:
 jobs:
   release-please:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+      (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+        inputs.nightly_override != '')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -68,6 +85,7 @@ jobs:
       pull-requests: write
       statuses: write
       checks: read
+      actions: read # the nightly sweeps' runs and, for an override, CI's run
     outputs:
       release_created: ${{ steps.release.outputs.release_created || steps.publish.outputs.release_created }}
       version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
@@ -76,21 +94,73 @@ jobs:
       # CI runs for pushes to main are never cancelled (ci.yml), so an older
       # push can finish green after a newer one landed. release-please always
       # works on main's tip, so only the run for the tip may release; the run
-      # for the newer push decides about it.
+      # for the newer push decides about it. An override (dispatch) has no
+      # CI run behind it: it takes main's tip and the successful CI push run
+      # for exactly that commit, or stops.
       - name: Check that CI tested main's tip
         id: tip
         env:
           GH_TOKEN: ${{ github.token }}
           TESTED: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           set -euo pipefail
           tip=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            TESTED=$tip
+            RUN_URL=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&head_sha=$tip&per_page=1" \
+              --jq '.workflow_runs[0].html_url // empty')
+            if [ -z "$RUN_URL" ]; then
+              echo "::error::CI has not passed for main's tip $tip; the override releases only a tested commit"
+              exit 1
+            fi
+          fi
+          echo "sha=$TESTED" >> "$GITHUB_OUTPUT"
+          echo "run_url=$RUN_URL" >> "$GITHUB_OUTPUT"
           if [ "$tip" = "$TESTED" ]; then
             echo "current=true" >> "$GITHUB_OUTPUT"
           else
             echo "::notice::CI tested $TESTED but main is at $tip; the run for the newer commit releases."
             echo "current=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # The scripts that decide come from the tested commit itself.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.tip.outputs.current == 'true'
+        with:
+          persist-credentials: false
+          ref: ${{ steps.tip.outputs.sha }}
+          sparse-checkout: |
+            scripts/nightly-gate.py
+            scripts/release-checks.py
+
+      # A red night must not ship: before release-please can cut a release
+      # (or the PR below is merged), the last completed scheduled run on main
+      # of every deep nightly sweep must have succeeded within 48 hours. A run
+      # still in progress is no verdict yet, so the completed one before it
+      # decides; a sweep that has not had its first night yet (added under 48
+      # hours ago) does not block either. Stale, disabled or never-run sweeps
+      # block like red ones, so a nightly that stopped cannot look green.
+      - name: Check the nightly sweeps
+        if: steps.tip.outputs.current == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OVERRIDE: ${{ inputs.nightly_override }}
+          MIRROR: ${{ inputs.mirror_version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$OVERRIDE" ] && [ -n "$MIRROR" ]; then
+            echo "::error::set either mirror_version or nightly_override, not both"
+            exit 1
+          fi
+          work=$(mktemp -d)
+          nightlies="sim-sweep.yml visibility-sweep.yml store-trace.yml"
+          for wf in $nightlies; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" > "$work/$wf.workflow.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?branch=main&event=schedule&per_page=20" > "$work/$wf.runs.json"
+          done
+          # shellcheck disable=SC2086 # the list above is word-split on purpose
+          python3 scripts/nightly-gate.py --override "$OVERRIDE" --summary "$GITHUB_STEP_SUMMARY" "$work" $nightlies
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
@@ -99,15 +169,6 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: main
-
-      # The script that decides which checks to mirror comes from the tested
-      # commit itself.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.release.outputs.release_created != 'true' && steps.release.outputs.pr != ''
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.workflow_run.head_sha }}
-          sparse-checkout: scripts/release-checks.py
 
       # Release every green main: merge the release PR that was just
       # opened or updated ...
@@ -119,8 +180,8 @@ jobs:
           # Read in the script: fromJSON on an empty output breaks the whole
           # job when the tip guard skipped release-please.
           PR_JSON: ${{ steps.release.outputs.pr }}
-          TESTED: ${{ github.event.workflow_run.head_sha }}
-          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          TESTED: ${{ steps.tip.outputs.sha }}
+          RUN_URL: ${{ steps.tip.outputs.run_url }}
         # Only ever merge release-please's own PR, opened by the Actions bot on
         # its branch and touching nothing but the version and changelog.
         # GitHub may still be computing mergeability right after the update.
@@ -307,15 +368,16 @@ jobs:
   # mirror never fails a release. Once configured, a digest mismatch fails it.
   dockerhub-mirror:
     needs: [release-please, image]
-    # After a release: the image job built and signed it. On dispatch (main
-    # only): the version named in the input, which is verified below.
+    # After a release (also one from an override): the image job built and
+    # signed it. On a backfill dispatch (main only): the version named in the
+    # input, which is verified below.
     # !cancelled() lets the job run when release-please and image were skipped.
     if: >-
       !cancelled() && (
-        (github.event_name == 'workflow_run' &&
-          needs.release-please.outputs.release_created == 'true' &&
+        (needs.release-please.outputs.release_created == 'true' &&
           needs.image.result == 'success') ||
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+          inputs.mirror_version != '' && inputs.nightly_override == '')
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -205,6 +205,30 @@ branch) was waived when it landed there and is not reported again.
    checking that it touches nothing but `version.txt`, `CHANGELOG.md` and the
    manifest and sits directly on the tested commit); that satisfies the
    required checks on `main`.
+
+   **A red night blocks the release.** Before release-please can cut a
+   release or the release PR is merged, the workflow reads the most recent
+   completed scheduled run on `main` of each deep nightly sweep
+   (`sim-sweep.yml`, `visibility-sweep.yml`, `store-trace.yml`;
+   `scripts/nightly-gate.py`) and stops with an error when one did not
+   succeed (failure, timeout, cancelled, ...), is older than 48 hours (a
+   nightly that stopped running), or is disabled. A run still in progress is
+   no verdict, so the completed one before it decides; a sweep added less
+   than 48 hours ago that has not had its first night yet does not block.
+   Manual runs of a sweep do not count. The changes wait on `main`: the next
+   push after a green night releases them (or re-run the blocked Release run
+   once a night is green).
+
+   **Override, for an urgent security fix only.** When a security fix cannot
+   wait for the next green night, run the Release workflow by hand on `main`
+   (*Run workflow*) with `nightly_override` set to the reason, for example
+   the advisory it fixes, and `mirror_version` empty. It releases `main`'s
+   tip only if CI passed on a push of exactly that commit, still waits for
+   and mirrors every required check, and writes the nightly table, the
+   reason and the actor into the job summary (and a warning annotation), so
+   the run in the Actions history is the record. There is no other way past
+   the gate: no commit trailer, variable or label skips it. Agents never use
+   the override on their own; it is the owner's decision.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
