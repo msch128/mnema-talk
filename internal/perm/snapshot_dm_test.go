@@ -127,3 +127,72 @@ func TestAMemberWhoJoinsTheConversationGetsItsTalk(t *testing.T) {
 		t.Fatal("a new member of a group may join its Talk")
 	}
 }
+
+// H-L6-04: a conversation's call is resolved by membership, not by the
+// community's channel rules. A community that hides channels from @everyone
+// and denies everything on the call by overwrite still leaves the call to the
+// conversation's members.
+func TestMembershipAloneOpensTheCallOfAConversation(t *testing.T) {
+	f := permtest.NewFixture()
+	alice, bob := uuid.New(), uuid.New()
+	f.Everyone(DefaultEveryone &^ ViewChannel)
+	dm := f.DM(alice, bob)
+	call := f.DMTalk(dm)
+	f.RoleOverwrite(true, call, f.EveryoneID(), 0, ChannelScoped)
+	f.MemberOverwrite(true, call, bob, 0, ChannelScoped)
+	s := f.Snapshot()
+	want := ViewChannel | Connect | Speak | Video | SendMessages | AttachFiles | AddReactions
+	for name, who := range map[string]uuid.UUID{"alice": alice, "bob, denied by a member overwrite": bob} {
+		if got := s.Channel(Subject{ID: who}, call); !got.Has(want) || got.HasAny(ManageMessages|MentionEveryone) {
+			t.Errorf("%s holds %b in the call, want %b and no moderation of its chat", name, got, want)
+		}
+		if !slices.Contains(s.ViewableChannels(Subject{ID: who}), call) || !s.MayConnectAnywhere(Subject{ID: who}) {
+			t.Errorf("%s does not get the call in the lists or a relay credential", name)
+		}
+	}
+	// The server-wide rules still hold: a timeout takes the call's voice and chat, reading stays.
+	f.Timeout(alice, time.Now().Add(time.Hour), "calm down")
+	if got := f.Snapshot().Channel(Subject{ID: alice}, call); got.HasAny(Connect|Speak|SendMessages) || !got.Has(ViewChannel) {
+		t.Errorf("a timed out member holds %b in the call", got)
+	}
+}
+
+// Nobody outside the conversation gets anything from the community's rights,
+// however wide: View channels, the moderation bits, overwrites that allow
+// everything, Administrator, the Owner.
+func TestNoCommunityRightOpensTheCallOfAConversation(t *testing.T) {
+	f := permtest.NewFixture()
+	alice, bob, viewer, mod, admin, owner := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	modRole := f.Role(4, ManageChannels|DisconnectMembers|ManageStage|ManageMessages|ManageRoles|ManageMembers|KickMembers)
+	f.Owner(owner).Assign(mod, modRole).Assign(admin, f.Role(5, Administrator))
+	dm := f.DM(alice, bob)
+	call := f.DMTalk(dm)
+	f.RoleOverwrite(true, call, f.EveryoneID(), ChannelScoped, 0)
+	f.RoleOverwrite(true, call, modRole, ChannelScoped, 0)
+	f.MemberOverwrite(true, call, viewer, ChannelScoped, 0)
+	s := f.Snapshot()
+	outsiders := map[string]Subject{"a member with View channels": {ID: viewer}, "a moderator": {ID: mod},
+		"an Administrator": {ID: admin}, "the Owner": {ID: owner, Owner: true}}
+	for name, sub := range outsiders {
+		if p := s.Channel(sub, call); p != 0 {
+			t.Errorf("%s holds %b in a call they are not in", name, p)
+		}
+		if slices.Contains(s.ViewableChannels(sub), call) || s.ChannelPermissions(sub)[call] != 0 {
+			t.Errorf("%s gets the call in a list", name)
+		}
+	}
+}
+
+// A member of the conversation who moderates the community keeps the per-Talk
+// removal there (Disconnect members; doc/moderation.md: such a removal is not
+// audited), but nobody except the Owner moderates the call's chat.
+func TestAModeratorInTheConversationMayRemoveFromItsCall(t *testing.T) {
+	f := permtest.NewFixture()
+	alice, bob := uuid.New(), uuid.New()
+	f.Assign(alice, f.Role(4, DisconnectMembers|ManageMessages|MentionEveryone))
+	call := f.DMTalk(f.DM(alice, bob))
+	got := f.Snapshot().Channel(Subject{ID: alice}, call)
+	if !got.Has(DisconnectMembers) || got.HasAny(ManageMessages|MentionEveryone) {
+		t.Errorf("a moderating member holds %b in the call", got)
+	}
+}

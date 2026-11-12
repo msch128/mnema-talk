@@ -137,11 +137,31 @@ func (m refModel) channel(u uuid.UUID, ch uuid.UUID) Set {
 	if isCall && !m.st.DMs[dm][u] {
 		return 0
 	}
-	p := m.community(u, ch, isCall)
-	if isCall && !m.owner(u) {
-		p &^= refCallChat
+	if isCall {
+		return m.call(u, ch)
 	}
-	return p
+	return m.community(u, ch)
+}
+
+// call: a conversation's call Talk, for a member of the conversation
+// (doc/talks.md, "Start a Talk from a direct message"). Membership decides
+// that they see it; nothing of the community's channel rules (View channels,
+// category or channel overwrites) grants or takes anything there. What they
+// may do is their server-wide set (a timeout and pending rules included), the
+// speak wait holds the call as a whole, and nobody but the Owner moderates its
+// chat.
+func (m refModel) call(u, ch uuid.UUID) Set {
+	if m.owner(u) {
+		return All
+	}
+	if _, known := m.st.ChannelCat[ch]; !known {
+		return 0
+	}
+	p := m.unheld(u) | ViewChannel
+	if m.waits(u)[2] > 0 {
+		p &^= refCallWait
+	}
+	return p &^ refCallChat
 }
 
 // conversation: members read; writing needs Send direct messages and the
@@ -158,8 +178,8 @@ func (m refModel) conversation(u uuid.UUID, members map[uuid.UUID]bool) Set {
 	return p
 }
 
-// community resolves a channel or Talk that is not a conversation.
-func (m refModel) community(u, ch uuid.UUID, isCall bool) Set {
+// community resolves a channel or Talk that is not a conversation or its call.
+func (m refModel) community(u, ch uuid.UUID) Set {
 	if m.owner(u) {
 		return All
 	}
@@ -183,12 +203,6 @@ func (m refModel) community(u, ch uuid.UUID, isCall bool) Set {
 	}
 	if m.timedOut(u) || m.rulesPending(u) {
 		p &^= refTimeout
-	}
-	if isCall {
-		if m.waits(u)[2] > 0 {
-			p &^= refCallWait
-		}
-		return p
 	}
 	return m.hold(u, p)
 }

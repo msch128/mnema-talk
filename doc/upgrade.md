@@ -21,6 +21,17 @@ conversation's call Talk is no longer recorded; older entries of that kind
 stay in the log, readable by the Owner and Administrators (the log is
 immutable, and a call Talk is usually gone, so they cannot be told apart).
 
+## Calls in conversations no longer need View channels
+
+The Talk started from a conversation was resolved like a community channel, so
+in a community that hides its channels from @everyone a member without a role
+granting *View channels* could start a call but neither open its chat nor join
+it. Membership of the conversation now decides: no *View channels* is needed,
+and channel or category overwrites, if any were set on such a Talk, no longer
+apply there. The server-wide permissions (*Connect*, *Speak*, *Video*, *Send
+messages*, a timeout, the new-member speak wait) still do. Nobody outside the
+conversation gets anything, as before.
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters
