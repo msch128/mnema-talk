@@ -404,6 +404,31 @@ var crashOps = []crashOp{
 			return admin.put("/api/events/"+ev.ID+"/rsvp", map[string]string{"response": "going"})
 		}
 	}},
+	{"delete a channel", func(a *app) func() response {
+		admin := a.seedAdmin()
+		ch := a.createChannel(admin, "general", "text")
+		a.send(admin, ch, "goes with it")
+		admin.post("/api/admin/channels/"+ch.String()+"/webhooks", map[string]any{"name": "hook"})
+		return func() response { return admin.delete("/api/admin/channels/" + ch.String()) }
+	}},
+	{"delete a role", func(a *app) func() response {
+		admin := a.seedAdmin()
+		alice := a.register(admin, "alice")
+		role := createRole(a.t, admin, "helpers", 0)
+		assignRoles(a.t, admin, alice, role)
+		return func() response { return admin.delete("/api/admin/roles/" + role.String()) }
+	}},
+	{"create a webhook", func(a *app) func() response {
+		admin := a.seedAdmin()
+		ch := a.createChannel(admin, "general", "text")
+		return func() response {
+			return admin.post("/api/admin/channels/"+ch.String()+"/webhooks", map[string]any{"name": "hook"})
+		}
+	}},
+	{"create a category", func(a *app) func() response {
+		admin := a.seedAdmin()
+		return func() response { return admin.post("/api/admin/categories", map[string]any{"name": "Area"}) }
+	}},
 	{"create an invite", func(a *app) func() response {
 		admin := a.seedAdmin()
 		return func() response { return admin.post("/api/admin/invites", map[string]any{}) }
@@ -441,6 +466,10 @@ var knownPartial = map[string]string{
 	"assign a role | audit":           "H-L7-04",
 	"ban a member | audit":            "H-L7-04",
 	"create an invite | audit":        "H-L7-04",
+	"delete a channel | audit":        "H-L7-04",
+	"delete a role | audit":           "H-L7-04",
+	"create a webhook | audit":        "H-L7-04",
+	"create a category | audit":       "H-L7-04",
 	// H-L7-05: the result is read back after the commit; a failed read
 	// answers 500 for a change that was made (a wiki page also loses its
 	// audit entry).
@@ -452,6 +481,8 @@ var knownPartial = map[string]string{
 	"comment on an event | error after commit":  "H-L7-05",
 	"open a forum post | error after commit":    "H-L7-05",
 	"answer an event | error after commit":      "H-L7-05",
+	// The webhook's token is only in the answer of its creation.
+	"create a webhook | error after commit": "H-L7-05",
 }
 
 func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {
