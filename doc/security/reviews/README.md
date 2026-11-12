@@ -69,6 +69,7 @@ with its later rounds appended.
 |---|---|
 | [h-l8-08](2026-11-hunt/h-l8-08.md) | the SFU vets a client's answer against its own offer (media sections, one stream per section) before the connection reads it; two rounds |
 | [h-l8-07](2026-11-hunt/h-l8-07.md) | caps on RTCP streams nothing reads on a media connection; four rounds |
+| [h-l8-07-test-change](2026-11-hunt/h-l8-07-test-change.md) | a test of the stream caps that the coordinator corrected just before the merge (a rare stray buffered stream), reviewed after the release: right as it is |
 | [h-l8-09](2026-11-hunt/h-l8-09.md) | memory kept per subscription switch: the connection is renewed at a sender cap, a resume budget per publisher and source; three rounds |
 | [h-l8-03](2026-11-hunt/h-l8-03.md), [h-l8-04-06](2026-11-hunt/h-l8-04-06.md) | the bandwidth estimator forgets a stopped sender; a hub map entry left at zero; a counter for dropped presence audit entries |
 | [h-l8-02-h-c-01-03](2026-11-hunt/h-l8-02-h-c-01-03.md) | the TURN relay's allocation budget per member; mention kinds next to `@all` (the field `direct_mentions`); an event comment's delete dialog; two rounds |
