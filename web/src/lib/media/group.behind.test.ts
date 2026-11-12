@@ -4,6 +4,7 @@
 // rotation or after two heartbeats of the lowest id.
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import * as mls from 'ts-mls'
 import { MediaGroup } from './group'
 import { ROOM_CHANNEL, ROOM_IDS, TalkRoom } from './groupRoom.fixture'
 
@@ -50,6 +51,27 @@ describe('a commit that adds a key package this member never saw', () => {
     await room.inject(third, offer, [second, fourth])
     expect(await room.run(10_000, () => room.agreed())).toBe(true)
     expect(room.count('key-package')).toBe(0)
+    await room.close()
+  }, 120_000)
+
+  it('does not hold or retry a commit that was refused for another reason, whatever an earlier vetting left behind', async () => {
+    const { room, offer } = await reloaded()
+    const bob = room.groups.get(second) as MediaGroup
+    const decoded = mls.decodeMlsMessage(offer, 0)
+    if (decoded?.[0].wireformat !== 'mls_key_package') throw new Error('expected a key package')
+    // What a vetting that ended elsewhere (a rival commit of a self-update) leaves behind: a package Bob never saw.
+    const poison = () => (bob as unknown as { wasRelayed(id: string, kp: mls.KeyPackage): boolean }).wasRelayed(third, (decoded[0] as { keyPackage: mls.KeyPackage }).keyPackage)
+    // The fourth member is no committer: its commit is refused by the committer rule, not for an unseen add.
+    const other = room.groups.get(fourth) as unknown as { state: mls.ClientState, cs: mls.CiphersuiteImpl }
+    const made = await mls.createCommit({ state: other.state, cipherSuite: other.cs }, { extraProposals: [{ proposalType: 'remove', remove: { removed: 0 } }], wireAsPublicMessage: true, ratchetTreeExtension: true })
+    const steps: unknown[] = []
+    bob.onStep(step => steps.push(step))
+    poison()
+    await bob.receive(fourth, mls.encodeMlsMessage(made.commit))
+    poison()
+    await room.run(10_000)
+    expect(steps).toEqual([])
+    expect((await bob.sync(roster)).epoch).not.toBeNull()
     await room.close()
   }, 120_000)
 })

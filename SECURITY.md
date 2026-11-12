@@ -808,9 +808,9 @@ details and the limits.
   longer lists, one silent for about the absence limit by the receiver's own
   clock, or one the commit replaces. A browser that slept, and the member being
   removed itself, take a removal on the committer's word, since neither can
-  judge silence. A commit refused only because it adds a key package the relay
-  never delivered to this receiver is held for one offer wait (4 seconds), since
-  the package may be on its way, and taken then if it has come; if not, the
+  judge silence. A commit from the committer whose first violation is an add of a
+  key package the relay never delivered to this receiver is held for one offer wait (4 seconds), since
+  the package may be on its way, and taken then if it has come (it is never taken if it breaks another rule); if not, the
   receiver starts over like for a commit ahead (not more often than the reset
   limit allows), because the members that were given the package may be in the
   next epoch. A relay that gives a reloaded member's package to the committer

@@ -83,10 +83,14 @@ it works against any committer, old ones included.
 
 ## The change
 
-`validator` clears a flag, and `wasRelayed` sets it when the relay never delivered a package. Because
-`scanCommitProposals` stops at the first failing proposal, the flag is set exactly when a commit of the
-committer, verified against my tree, was refused for that reason and no other (not the committer rule, not a
-removal, not the add identity). `processCommit` hands such a refusal to `refused`:
+`validator` clears a flag, and `wasRelayed` sets it when the relay never delivered a package. The scan of
+the proposals stops at the first failing one, so the flag says that the first violation met was an unseen
+add, and the commit came from the committer by this receiver's view (the committer rule is checked before
+the proposals). A commit with another violation behind the unseen add sets it too. Such a commit is never
+taken, because the retry runs the whole validator again. What follows: a receiver may start over for a commit
+that was also otherwise illegal, and only the committer by that receiver's view can cause that, so it is no
+new power for a member or a relay (the committer can make receivers start over with a commit ahead anyway).
+`processCommit` hands such a refusal to `refused`:
 
 1. The first refusal for the epoch I hold keeps the commit and starts a timer of one offer wait.
 2. When it fires, and my epoch is unchanged, the commit is taken again. If the package arrived meanwhile the

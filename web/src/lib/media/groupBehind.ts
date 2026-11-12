@@ -5,8 +5,8 @@ import { GroupMerge } from './groupMerge'
 
 /**
  * The commit is the committer's, it verified against my tree, and the rules
- * refused it only because it adds a key package that the relay never delivered
- * to me. Others were given that package, so they may have taken the commit and
+ * refused it, the first rule it breaks being an add of a key package that the
+ * relay never delivered to me. Others were given that package, so they may have taken the commit and
  * be one epoch ahead. I wait one offer wait for the package (the relay may
  * have it on its way: the commit is then taken as it stands) and start over if
  * the commit is still refused for that reason. See SECURITY.md, "A commit that
@@ -21,7 +21,7 @@ interface Held {
 }
 
 export abstract class GroupBehind extends GroupMerge {
-  /** The rules refused the commit in hand because of an add of a package never relayed to this member. */
+  /** The first violation the rules found in the commit in hand is an add of a package never relayed to this member. */
   private unseenAdd = false
   private held: Held | null = null
 
