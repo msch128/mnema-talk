@@ -28,7 +28,9 @@ func TestAtAllWithoutThePermissionNotifiesNobodyAtEveryDoor(t *testing.T) {
 		"thread reply": func() response {
 			return f.alice.post(ch+"/messages", map[string]any{"content": "@all look", "parent_id": clean})
 		},
-		"edit": func() response { return f.alice.put(ch+"/messages/"+mine.String(), map[string]any{"content": "@all look"}) },
+		"edit": func() response {
+			return f.alice.put(ch+"/messages/"+mine.String(), map[string]any{"content": "@all look"})
+		},
 		"forward comment": func() response {
 			return f.alice.post("/api/messages/"+clean.String()+"/forward", map[string]any{"channel_id": general, "comment": "@all look"})
 		},
