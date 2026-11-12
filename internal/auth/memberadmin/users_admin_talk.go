@@ -1,6 +1,7 @@
 package memberadmin
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -93,36 +93,45 @@ func (h *API) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	kicked := false
+	kicked, audited := false, false
 	err = h.Moderated(r, id, func(db.Querier) (err error) {
 		// Refused before anything is said about who sits in the Talk.
 		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch, perm.ViewChannel|perm.DisconnectMembers); err != nil {
 			return err
 		}
+		// Decided before the removal, while the Talk exists: a call Talk
+		// left empty may be deleted by the time the entry is written.
+		audited = auditableTalk(r.Context(), h.Sessions.DB, ch)
 		kicked, err = h.kickUserFromVoice(r, id, ch)
 		return err
 	})
-	if err == nil && kicked {
+	if err == nil && kicked && audited {
 		h.auditTalkRemoval(r, id, ch)
 	}
 	return h.finishTalkKick(w, err, kicked)
+}
+
+// auditableTalk says whether a removal from the Talk may be audited. A
+// conversation's call Talk is not audited at all, not even for the Owner
+// (doc/talks.md: who called whom). A Talk that is gone may have been a
+// conversation's, and one whose kind cannot be told may be one: neither is
+// audited (fail closed, as for voice.join; see talks.IsDMTalk).
+func auditableTalk(ctx context.Context, q db.Querier, ch uuid.UUID) bool {
+	var public bool
+	err := q.QueryRow(ctx, `SELECT dm_id IS NULL FROM channels WHERE id = $1`, ch).Scan(&public)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		slog.Warn("audit log: Talk removal not recorded, DM lookup failed", "channel", ch, "err", err)
+	}
+	return err == nil && public
 }
 
 // auditTalkRemoval records a removal from one Talk. Outside the admin area, so
 // the audit middleware does not see it. It says who was in which Talk, so it
 // is a voice.* entry with its Talk as the channel: auditors who cannot view
 // the Talk do not read it, like voice.join (H-L6-03); user.talk_kick is the
-// admin-wide kick's. A conversation's call Talk is not audited at all, not
-// even for the Owner (doc/talks.md: who called whom), and when that cannot be
-// told nothing is written, as for voice.join.
+// admin-wide kick's. The caller asks auditableTalk first.
 func (h *API) auditTalkRemoval(r *http.Request, id, ch uuid.UUID) {
 	ctx := r.Context()
-	if isDM, err := talks.IsDMTalk(ctx, h.Sessions.DB, ch); err != nil || isDM {
-		if err != nil {
-			slog.Warn("audit log: Talk removal not recorded, DM lookup failed", "channel", ch, "err", err)
-		}
-		return
-	}
 	e := audit.Entry{Action: "voice.disconnect", TargetType: "user", TargetID: id.String(), ChannelID: &ch, Details: map[string]any{"channel_id": ch.String()}}
 	if u, err := auth.GetUser(ctx, h.Sessions.DB, id); err == nil {
 		e.TargetName = u.Username

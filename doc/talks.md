@@ -72,7 +72,7 @@ right, and the others see them leave the call), it shows
 in the sidebar of its members only, and it is deleted when it is empty (like any
 temporary Talk) or when the conversation is. Its chat follows the conversation's
 writing rule: after a block in a conversation of two nobody writes there any
-more, while the Talk and its seats stay as they are ([blocking](moderation.md#blocking-a-member)). Nothing about it reaches the audit log (who joined it, renamed it, was removed from it or when it went), because that would tell the Owner who called whom; removals written by older versions as `user.talk_kick` stay in the log, readable by the Owner and Administrators. It is led by whoever started it and
+more, while the Talk and its seats stay as they are ([blocking](moderation.md#blocking-a-member)). Nothing about it reaches the audit log (who joined it, renamed it, was removed from it or when it went), because that would tell the Owner who called whom. The admin-wide kick (`POST /api/admin/users/{id}/kick`) is still recorded as `user.talk_kick`, which names the member but no Talk, also when it ends a call; removals written by older versions as `user.talk_kick` stay in the log, readable by the Owner and Administrators. It is led by whoever started it and
 counts against the 5 new Talks per 10 minutes. While in a Talk, "Invite to my
 Talk" (`POST /api/talks/{id}/invites` with the conversation) posts the same card.
 
