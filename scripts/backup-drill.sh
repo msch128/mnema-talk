@@ -25,6 +25,8 @@ source "$ROOT/scripts/free-port.sh"
 source "$ROOT/scripts/backup-drill-downgrade.sh"
 # shellcheck source=scripts/backup-drill-online.sh
 source "$ROOT/scripts/backup-drill-online.sh"
+# shellcheck source=scripts/drill-digest.sh
+source "$ROOT/scripts/drill-digest.sh"
 IMAGE="${1:-mnema-talk:local}"
 START_IMAGE="$IMAGE"
 if [ -n "${FROM_VERSION:-}" ]; then
@@ -175,6 +177,13 @@ MEDIA_URL="$(api -F "file=@$DEPLOY/payload.bin;type=application/octet-stream" -F
   "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }
 
+if [ "$START_IMAGE" = "$IMAGE" ]; then
+  # The digest of every table, taken with the app stopped so that nothing
+  # writes between it and the dump; backup.sh leaves a stopped app stopped.
+  docker compose stop -t 60 app >/dev/null
+  DIGEST_BACKED_UP="$(db_digest)"
+fi
+
 echo "==> backup${DRILL_BACKUP_SCRIPTS:+ (made by the scripts in $DRILL_BACKUP_SCRIPTS)}"
 if [ -n "${DRILL_BACKUP_SCRIPTS:-}" ]; then
   cp -R "$DRILL_BACKUP_SCRIPTS" "$DEPLOY/released-scripts"
@@ -188,6 +197,7 @@ jq -e '.format == 1 and .restore_test.result == "passed"' backup-status/status.j
   || { echo "backup.sh did not report a passed restore test" >&2; exit 1; }
 
 echo "==> changing data after the backup"
+if [ "$START_IMAGE" = "$IMAGE" ]; then docker compose up -d --no-build --wait --wait-timeout 180; fi
 login
 if [ "$START_IMAGE" = "$IMAGE" ]; then
   api "$BASE/api/admin/status" | jq -e '.backup.state == "ok" and .backup.restore_test == "passed" and .backup.warn == false' >/dev/null \
@@ -208,7 +218,14 @@ echo "==> restore.sh --verify"
 scripts/restore.sh "$SNAPSHOT" --verify
 
 echo "==> restore.sh --yes"
+# A stopped app stays stopped through the restore, so the digest below sees
+# the restored rows before the app writes anything.
+if [ "$START_IMAGE" = "$IMAGE" ]; then docker compose stop -t 60 app >/dev/null; fi
 scripts/restore.sh "$SNAPSHOT" --yes
+if [ "$START_IMAGE" = "$IMAGE" ]; then
+  echo "==> comparing every table with the backed-up database"
+  compare_digests "$DIGEST_BACKED_UP" "$(db_digest)"
+fi
 docker compose up -d --no-build --wait --wait-timeout 180
 
 echo "==> checking the restored data"

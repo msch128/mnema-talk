@@ -92,7 +92,7 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 	cd e2e && npm run typecheck
 
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
-	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/backup-online.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh scripts/backup-drill-online.sh
+	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/backup-online.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh scripts/backup-drill-online.sh scripts/drill-digest.sh
 	e2e/ports_test.sh
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
