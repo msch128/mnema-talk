@@ -295,8 +295,7 @@ when the writer starts waiting less than 1 s before the erasure closes the
 cycle. A large account, whose earlier erase steps take longer than that, can
 see its deletion fail once. The probe is at
 reviews/review-bundle-integration-deadlock-probe.go.txt (put it in
-internal/server and run it with -tags=integration). (The probe is not in the repository; the finding it
-led to is H-L10-06, [doc/security/findings/2026-11-hunt/h-l10-06.md](../../findings/2026-11-hunt/h-l10-06.md).) Suggested fix, in a later
+internal/server and run it with -tags=integration). (The probe is not in the repository.) Suggested fix, in a later
 hunt branch: retry the erasure transaction on 40P01, or lock the member's
 messages (`SELECT ... FROM messages WHERE user_id = $1 FOR UPDATE`) right
 after the users row. The second is still racy for messages the member is

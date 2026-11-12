@@ -230,27 +230,24 @@ an entry leaves this list with its fix.
   member reloads, or a lossy relay and several reloads. In the simulator the
   split heals within minutes (5 to 8 at its compressed timings); the heal
   time in production is not measured. Confidentiality is not affected: each
-  part's key is held by members only. The fix needs a change of the wire
-  format.
+  part's key is held by members only. The proposed fix changes the wire
+  format (a short tag of the epoch in each heartbeat); the finding also names
+  a direction without a wire change (judge a rival welcome by the leaf
+  instead of the id). Either is a protocol decision.
   [Finding](doc/security/findings/2026-11-hunt/h-l2-06.md).
-
-- **An account deletion aborted as a deadlock (H-L10-06, S4).** When a
-  member deletes their account while they write (for example edit a message)
-  from another device at that moment, PostgreSQL can abort the deletion as a
-  deadlock. The request answers 500 and the server logs `deadlock detected
-  (SQLSTATE 40P01)`; nothing is left half deleted (the transaction rolls
-  back), and a second attempt works.
-  [Finding](doc/security/findings/2026-11-hunt/h-l10-06.md).
 
 - **The login limiter under a flood of fresh keys (H-L8-01, N, claimed S4).**
   The in-memory limiters are bounded; when one is full, a flood of new keys
   can evict an entry that has counted failures but is not locked yet (for
   example an account close to the account-wide cap), or a window that is at
-  its limit, and that count starts over. A locked entry is never evicted.
-  Each evicted count costs the flooder tens of thousands of failed sign-ins,
-  each a password hash, so the flood is bounded by the server's own hashing
-  throughput and gives fewer guesses than waiting out the lock; while it
-  lasts, sign-ins answer 503. Pinned by
+  its limit, and that count starts over. Eviction deletes the stalest entry
+  of a random sample of 32 and prefers unlocked ones, so a locked entry goes
+  only when all 32 sampled entries are locked; in the hunt's flood at the
+  full cap a locked entry survived. Each evicted count costs the flooder
+  about 67,600 failed sign-ins, each a password hash, so the flood is bounded
+  by the server's own hashing throughput: measured on a 4-core host it gives
+  10 to 15 times fewer guesses than waiting out the lock, and the break-even
+  is at about 40 cores. While it lasts, sign-ins answer 503. Pinned by
   `internal/httpx/limiter_eviction_steering_test.go`; no fix planned.
   [Finding](doc/security/findings/2026-11-hunt/h-l8-01.md).
 

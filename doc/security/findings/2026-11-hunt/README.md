@@ -3,9 +3,11 @@
 A finding file is the record a hunter wrote for one reproduced defect: the
 claim, the property it breaks (with the document or code that states it), a
 repro command, the smallest case found, who can reach it, the effect, what was
-not shown and a direction for the fix. Each finding then went to two agents
-that had not written it (one reproduced it from a clean checkout, one tried
-to defeat it), which could change its severity.
+not shown and a direction for the fix. The hunt meant every finding to go to
+two agents that had not written it (one to reproduce it from a clean
+checkout, one to try to defeat it), which could change its severity. Of the
+files here, only H-L8-01 had both; the "Checked by" column says what is true
+of each.
 
 Only the findings that are still open are here, the ones
 [SECURITY.md](../../../../SECURITY.md#known-open-defects) lists under "Known
@@ -28,10 +30,9 @@ Severity scale of the hunt:
 - S4: robustness; needs special rights or unusual conditions.
 - N: no defect today, but one change away from one. Gets a guard test.
 
-| File | Severity | Subject |
-|---|---|---|
-| [h-l2-06](h-l2-06.md) | S4 | two groups of a Talk with the same members and the same epoch number cannot see each other |
-| [h-l10-06](h-l10-06.md) | S4 | an account deletion aborted as a deadlock by the member's own write from another device |
-| [h-l8-01](h-l8-01.md) | N (claimed S4) | a flood of fresh keys evicts a login limiter entry that has counted failures |
-| [h-l8-05](h-l8-05.md) | S4 | SFU memory kept per member who joined and left, for the life of a viewer's connection |
-| [h-l7-10](h-l7-10.md) | N (claimed S4) | an edit to empty text accepted after the last attachment went while it waited; no route reaches it |
+| File | Severity | Subject | Checked by |
+|---|---|---|---|
+| [h-l2-06](h-l2-06.md) | S4 | two groups of a Talk with the same members and the same epoch number cannot see each other | found and reproduced in the simulator by the reviewer of the H-L2-05 and H-L9-02 fix; no separate reproducer or refuter |
+| [h-l8-01](h-l8-01.md) | N (claimed S4) | a flood of fresh keys evicts a login limiter entry that has counted failures | reproduced by one agent from a clean checkout; a second agent tried to defeat it and lowered it to N |
+| [h-l8-05](h-l8-05.md) | S4 | SFU memory kept per member who joined and left, for the life of a viewer's connection | one agent that had not written it tried to defeat it, measured it with a heap profile and narrowed it; no separate reproducer |
+| [h-l7-10](h-l7-10.md) | N (claimed S4) | an edit to empty text accepted after the last attachment went while it waited; no route reaches it | rated N by the coordinator; one agent (the reviewer of the H-L7-09 fix) confirmed N; no separate reproducer |
