@@ -2,11 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref, type Ref } from 'vue'
 import type { LaterReminder, LaterScheduled } from '../types/rest'
 import {
-  deleteReminder, deleteScheduled, fetchReminders, fetchScheduled, patchScheduled, postReminder, postScheduled,
+  deleteReminder, deleteScheduled, patchScheduled, postReminder, postScheduled,
   type ScheduleOptions
 } from '../chat/lib/laterApi'
 import { isApiError } from '../shared/lib/api'
 import { noticeReminderDue, noticeScheduledFailed } from '../chat/lib/laterNotices'
+import { createLaterLoading } from './laterLoading'
 
 export type { ScheduleOptions }
 
@@ -27,6 +28,15 @@ function attentionCounts(reminders: Ref<LaterReminder[]>, scheduled: Ref<LaterSc
   const dueCount = computed(() => reminders.value.filter(r => r.delivered_at !== null).length)
   const failedCount = computed(() => scheduled.value.filter(s => s.state === 'failed').length)
   return { dueCount, failedCount, attention: computed(() => dueCount.value + failedCount.value) }
+}
+
+/** Whether a reminder points at the message, or at a reply in its thread. */
+const remindsOf = (r: LaterReminder, messageId: string) => r.message !== undefined && (r.message.id === messageId || r.message.parent_id === messageId)
+
+/** The reminder after its message was deleted: kept, without the message, as unavailable. */
+function withoutMessage(r: LaterReminder, messageId: string): LaterReminder {
+  if (!remindsOf(r, messageId)) return r
+  return { id: r.id, remind_at: r.remind_at, created_at: r.created_at, delivered_at: r.delivered_at, available: false }
 }
 
 /** Puts an entry the server returned into a list, replacing an older copy of it. */
@@ -52,68 +62,14 @@ async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId:
   return { next, cleanupFailed }
 }
 
-// Bumped by reset(): a list asked for before must not fill the next account's store.
-let generation = 0
-
-/**
- * A loader that applies an answer only when its request was made after the
- * one whose answer is shown: an older answer that lands last would bring back
- * what a newer one (asked after an event or a reconnect) already left out. No
- * caller waits for anyone else's request, so a newer request that fails or
- * never answers neither holds up nor throws away an older good answer.
- */
-function newestOf<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
-  let seq = 0
-  let applied = 0
-  return async () => {
-    const mine = generation
-    const request = ++seq
-    const list = await fetch()
-    if (mine !== generation || request < applied) return
-    applied = request
-    apply(list)
-  }
-}
-
 // The member's reminders and scheduled messages (both private, both kept by
 // the server). The server tells the member's sessions about every change, so
 // the lists reload on those events instead of being patched by hand.
 export const useLaterStore = defineStore('later', () => {
   const reminders = ref<LaterReminder[]>([])
   const scheduled = ref<LaterScheduled[]>([])
-  const loading = ref(false)
-  const failed = ref(false)
-  const loaded = ref(false)
-  // The lists asked for so far: a reconnect reads those again, and only those.
-  let wanted = { reminders: false, scheduled: false }
-
+  const { loading, failed, loaded, load, refresh, loadReminders, loadScheduled, reset: resetLoading } = createLaterLoading(reminders, scheduled)
   const { dueCount, failedCount, attention } = attentionCounts(reminders, scheduled)
-
-  const loadReminders = newestOf(fetchReminders, list => { reminders.value = list })
-  const loadScheduled = newestOf(fetchScheduled, list => { scheduled.value = list })
-
-  /**
-   * Loads the lists of the features the server has. With keepShown a failure
-   * keeps lists that were shown (a read again after a reconnect): they are
-   * still what was last known, and the error panel would hide them.
-   */
-  async function load(want: { reminders: boolean; scheduled: boolean }, keepShown = false) {
-    const mine = generation
-    wanted = { reminders: wanted.reminders || want.reminders, scheduled: wanted.scheduled || want.scheduled }
-    loading.value = true
-    try {
-      await Promise.all([want.reminders ? loadReminders() : null, want.scheduled ? loadScheduled() : null])
-      if (mine !== generation) return
-      loaded.value = true
-      failed.value = false
-    } catch (error) {
-      if (mine !== generation) return
-      console.warn('Failed to load reminders and scheduled messages:', error)
-      failed.value = !(keepShown && loaded.value)
-    } finally {
-      if (mine === generation) loading.value = false
-    }
-  }
 
   async function remind(messageId: string, at: Date) {
     return keep(reminders, await postReminder(messageId, at))
@@ -154,27 +110,13 @@ export const useLaterStore = defineStore('later', () => {
     if (loaded.value) await loadScheduled().catch(() => undefined)
   }
 
-  /**
-   * The socket opened: events from before it are lost, so the lists asked
-   * for so far are read again. Lists never asked for stay unread.
-   */
-  async function refresh() {
-    if (wanted.reminders || wanted.scheduled) await load(wanted, true)
-  }
-
   /** A message was deleted: a reminder on it stays, as one for a message the member can no longer see (as the server lists it). */
   function onMessageDeleted(messageId: string) {
-    const gone = (r: LaterReminder) => r.message !== undefined && (r.message.id === messageId || r.message.parent_id === messageId)
-    if (!reminders.value.some(gone)) return
-    reminders.value = reminders.value.map(r => gone(r)
-      ? { id: r.id, remind_at: r.remind_at, created_at: r.created_at, delivered_at: r.delivered_at, available: false }
-      : r)
+    if (reminders.value.some(r => remindsOf(r, messageId))) reminders.value = reminders.value.map(r => withoutMessage(r, messageId))
   }
 
   const reset = () => {
-    ++generation; reminders.value = []; scheduled.value = []
-    loading.value = false; loaded.value = false; failed.value = false
-    wanted = { reminders: false, scheduled: false }
+    resetLoading(); reminders.value = []; scheduled.value = []
   }
 
   return {
