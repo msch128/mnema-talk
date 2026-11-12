@@ -25,7 +25,7 @@ import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDe
 import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { playMessageSoundFor } from './messageSound'
-import { fetchReadState, isReadingActiveChannel } from './readState'
+import { countedByAnswer, fetchReadState, isReadingActiveChannel, noteCounted, noteReadStateCleared } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
@@ -72,6 +72,8 @@ function onReadState(cx: Cx, p: Payload<'read_state'>) {
     fetchReadState(cx)
     return
   }
+  // Read in another session: an answer on its way was read before, like one before a read here.
+  if ('unread_count' in p) noteReadStateCleared(cx, [p.channel_id])
   const prev = cs.readStates.value[p.channel_id] || { channel_id: p.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
   cs.readStates.value = {
     ...cs.readStates.value,
@@ -84,7 +86,12 @@ function onReadState(cx: Cx, p: Payload<'read_state'>) {
 
 // A message in a channel that is not being read right now counts as unread (and as a mention if it is one).
 // Thread replies never add to the unread count (the server counts top-level messages only), but a mention in one still counts.
-function countUnread({ cs }: Cx, channelId: string, isMention: boolean, isThreadReply: boolean) {
+// A message the last read-state answer already includes is not counted twice (see readState.ts).
+function countUnread(cx: Cx, channelId: string, opts: { isMention: boolean; isThreadReply: boolean; number?: number }) {
+  const { cs } = cx
+  const { isMention, isThreadReply, number } = opts
+  if (countedByAnswer(cx, channelId, number)) return
+  if (number !== undefined) noteCounted(cx, { channel: channelId, number, unread: isThreadReply ? 0 : 1, mentions: isMention ? 1 : 0 })
   const state = cs.readStates.value[channelId] || {
     channel_id: channelId,
     unread_count: 0,
@@ -108,6 +115,7 @@ interface IncomingReadStateOptions {
   isCurrentChannel: boolean
   isMention: boolean
   isThreadReply: boolean
+  number?: number
 }
 
 function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) {
@@ -117,7 +125,7 @@ function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) 
     return
   }
   if (opts.isThreadReply && !opts.isMention) return
-  countUnread(cx, opts.channelId, opts.isMention, opts.isThreadReply)
+  countUnread(cx, opts.channelId, opts)
 }
 
 /** Tells an open forum list that something in the forum changed. */
@@ -150,7 +158,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
     if (isCurrentChannel && isReadingActiveChannel(cx)) cs.markReadThrottled.call(p.channel_id)
     return
   }
-  handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
+  handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id, number: p.number })
   if (!isOwn && p.channel_id) {
     // Everything somebody writes in a conversation is addressed to me.
     const osNotified = triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))

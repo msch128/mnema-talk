@@ -21,6 +21,11 @@ type ReadState struct {
 	MentionCount int         `json:"mention_count"`
 	LastReadAt   *time.Time  `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
 	NotifyLevel  NotifyLevel `json:"notify_level"`
+	// LastMessageNumber is the number of the channel's newest message when the
+	// counts were read (0: none yet). The counts include exactly the channel's
+	// messages up to it: a client counts a message_create with a higher number
+	// on top of this answer and one with a lower or equal number not again.
+	LastMessageNumber int64 `json:"last_message_number" binding:"optional"`
 }
 
 // ReadStateSQL is the unread summary of every channel. Messages of members
@@ -34,7 +39,7 @@ func ReadStateSQL() string {
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
 		       COALESCE(sn.notify_level, 'all'), sn.muted_until,
-		       NOW()
+		       NOW(), c.last_message_number
 		FROM channels c
 		JOIN users me ON me.id = $1
 		LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
@@ -93,7 +98,7 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		var now time.Time
 		var addressed int
 		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &addressed, &s.LastReadAt,
-			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &srv.Level, &srv.MutedUntil, &now)
+			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &srv.Level, &srv.MutedUntil, &now, &s.LastMessageNumber)
 		s.NotifyLevel = ResolveNotify(now, ch, cat, srv)
 		if s.NotifyLevel == NotifyMute {
 			s.MentionCount = addressed

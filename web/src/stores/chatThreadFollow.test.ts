@@ -146,6 +146,19 @@ describe('the followed list', () => {
     expect(chat.followedThreads.has(ROOT)).toBe(true)
     chat.handleWSEvent({ type: 'thread_follow_updated', payload: null as never })
   })
+
+  it('keeps a follow that arrives while the list is on its way, and only the newest answer', async () => {
+    const chat = useChatStore()
+    const answers: ((value: unknown) => void)[] = []
+    mockApi.mockImplementation(() => new Promise(resolve => { answers.push(resolve) }))
+    const first = chat.fetchFollowedThreads()
+    const second = chat.fetchFollowedThreads()
+    chat.handleWSEvent({ type: 'thread_follow_updated', payload: { thread_id: ROOT, channel_id: fixtureId(2), following: true } })
+    answers[1]?.({ thread_ids: [] }) // read before the follow was stored
+    answers[0]?.({ thread_ids: [fixtureId(70)] }) // older, lands last
+    await Promise.all([first, second])
+    expect([...chat.followedThreads]).toEqual([ROOT])
+  })
 })
 
 

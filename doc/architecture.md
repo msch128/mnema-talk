@@ -603,7 +603,21 @@ mention policy: a name a webhook or bot left as plain text (user mentions off,
 `allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
 web client decides from the message's `mentions` list, not from the text, so
 the live badge, the page's notification and the sound match the badge after a
-reload.
+reload. The answer of `GET /api/read-state` and the live `message_create`
+events travel separately and can cross. Each answer therefore says per channel
+`last_message_number`, the number of the newest message its counts include:
+a message draws its number and commits while its transaction holds the
+channel row's lock (`messages.insertMessageTx`, `channels.last_message_number`,
+migration 0103), so a channel's messages commit in the order of their numbers
+and the counts hold exactly the messages up to that number. The client counts
+a `message_create` on top of the answer only when its number is above the
+mark, and re-adds the ones it counted while the request was on its way the
+same way; a read in another session (`read_state` with counts) after the
+request began keeps the client's state, like a read in this one. Only the
+answer of the newest request is kept. `GET /api/threads/following` is ordered
+the same way without a mark: `thread_follow_updated` carries the whole state
+of a thread, so the changes that arrived while the list was on its way are
+applied to it again.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is

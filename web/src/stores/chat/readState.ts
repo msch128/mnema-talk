@@ -1,5 +1,5 @@
 import type { ReadState } from '../../types/domain'
-import { isChatReadState } from '../../types/rest'
+import { isChatReadState, type ChatReadState } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
 import { api } from '../../shared/lib/api'
 import { assertCommunity, type Cx } from './state'
@@ -9,12 +9,52 @@ const decodeReadStates = arrayDecoder('read states', isChatReadState)
 // One counter orders fetch starts and local clears. An answer that is not from
 // the newest fetch is dropped, and a channel cleared here after its fetch began
 // keeps the local state: the answer predates the clear and would bring the badge back.
-const sequencing = new WeakMap<object, { counter: number; latest: number; cleared: Map<string, number>; newest: Promise<unknown> | null }>()
+//
+// Answers and live messages: the server's answer says, per channel, the number
+// of the newest message its counts include (last_message_number). Messages of
+// a channel are stored in the order of their numbers (the channel row is
+// locked from the number to the commit, messages.insertMessageTx), so the
+// answer includes exactly the messages up to that number, whenever their
+// message_create arrives. A message counted here while a fetch was on its way
+// is counted again on top of the answer when its number is above the mark, and
+// one that arrives after the answer counts only when its number is above it.
+interface Counted { channel: string; number: number; unread: number; mentions: number }
+const sequencing = new WeakMap<object, {
+  counter: number; latest: number; cleared: Map<string, number>; newest: Promise<unknown> | null
+  marks: Map<string, number>; inFlight: number; counted: Counted[]
+}>()
 
 function sequenceOf(cs: object) {
   let seq = sequencing.get(cs)
-  if (!seq) sequencing.set(cs, seq = { counter: 0, latest: 0, cleared: new Map(), newest: null })
+  if (!seq) sequencing.set(cs, seq = { counter: 0, latest: 0, cleared: new Map(), newest: null, marks: new Map(), inFlight: 0, counted: [] })
   return seq
+}
+
+/** Whether the read state the client holds already counts message `number` of the channel (it was in the last answer). */
+export function countedByAnswer(cx: Cx, channelId: string, number: number | undefined): boolean {
+  const mark = sequenceOf(cx.cs).marks.get(channelId)
+  return mark !== undefined && number !== undefined && number <= mark
+}
+
+/** Notes a message counted here, so an answer on its way that does not include it gets it on top. */
+export function noteCounted(cx: Cx, entry: Counted) {
+  const seq = sequenceOf(cx.cs)
+  if (seq.inFlight > 0) seq.counted.push(entry)
+}
+
+/** The channel's state from the answer, plus what was counted here meanwhile and the answer does not include. */
+function fromAnswer(item: ChatReadState, counted: readonly Counted[]): ReadState {
+  let unread = item.unread_count || 0
+  let mentions = item.mention_count || 0
+  const mark = item.last_message_number
+  if (mark !== undefined) {
+    for (const c of counted) {
+      if (c.channel !== item.channel_id || c.number <= mark) continue
+      unread += c.unread
+      mentions += c.mentions
+    }
+  }
+  return { channel_id: item.channel_id, unread_count: unread, mention_count: mentions, last_read_at: item.last_read_at || null, notify_level: item.notify_level }
 }
 
 /** Notes that the badges of these channels were cleared here just now. */
@@ -46,6 +86,7 @@ async function loadReadState(cx: Cx) {
   const seq = sequenceOf(cs)
   const started = ++seq.counter
   seq.latest = started
+  seq.inFlight++
   try {
     const data = await api('/api/read-state', { decode: decodeReadStates })
     if (community !== cs.communityGeneration || seq.latest !== started) return {}
@@ -56,13 +97,8 @@ async function loadReadState(cx: Cx) {
         map[item.channel_id] = { ...local, notify_level: item.notify_level }
         continue
       }
-      map[item.channel_id] = {
-        channel_id: item.channel_id,
-        unread_count: item.unread_count || 0,
-        mention_count: item.mention_count || 0,
-        last_read_at: item.last_read_at || null,
-        notify_level: item.notify_level
-      }
+      map[item.channel_id] = fromAnswer(item, seq.counted)
+      if (item.last_message_number !== undefined) seq.marks.set(item.channel_id, item.last_message_number)
     }
     // Conversations are not in the server's list; their counts are kept (GET /api/dms has them).
     for (const dm of cs.dms.value) {
@@ -76,6 +112,8 @@ async function loadReadState(cx: Cx) {
   } catch (e) {
     console.warn('Failed to fetch read-state:', e)
     return {}
+  } finally {
+    if (--seq.inFlight === 0) seq.counted = []
   }
 }
 

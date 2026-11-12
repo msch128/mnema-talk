@@ -133,13 +133,16 @@ describe('saved list against a deletion', () => {
   })
 })
 
-// H-L5-04: the read state read at a (re)connect and the live message events
-// are not ordered against each other: an answer computed before a message and
-// delivered after its event drops the count; one computed after the message and
-// delivered before its event counts it twice.
+// H-L5-04 (fixed): the read state read at a (re)connect and the live message
+// events cross. The answer says per channel the number of the newest message
+// its counts include (last_message_number; the server stores a channel's
+// messages in the order of their numbers), so the client counts a message on
+// top of the answer when its number is above that mark and not again when it
+// is not, in either order.
 describe('unread counters when the resync answer and a message cross', () => {
-  const message = messageFixture({ id: fixtureId(50), channel_id: X, user_id: BOB, username: 'bob', content: 'hello' })
-  const counted = [{ channel_id: X, unread_count: 1, mention_count: 0, last_read_at: null, notify_level: 'all' }]
+  const message = messageFixture({ id: fixtureId(50), number: 3, channel_id: X, user_id: BOB, username: 'bob', content: 'hello' })
+  const state = (unread: number, newest: number) =>
+    [{ channel_id: X, unread_count: unread, mention_count: 0, last_read_at: null, notify_level: 'all', last_message_number: newest }]
 
   it('sanity: in order, the message counts once', async () => {
     await connect(true)
@@ -148,9 +151,10 @@ describe('unread counters when the resync answer and a message cross', () => {
     expect(useChatStore().readStates[X]?.unread_count).toBe(1)
   })
 
-  it.fails('an answer from before the message, delivered after its event, keeps the message counted', async () => {
+  it('an answer from before the message, delivered after its event, keeps the message counted', async () => {
     holding = true
-    await connect(true) // the read state is computed now (nothing unread) and held back
+    server['/api/read-state'] = state(0, 2) // read before message 3 was stored, and held back
+    await connect(true)
     frame('message_create', message)
     await settle()
     for (const h of held) h.release()
@@ -158,11 +162,26 @@ describe('unread counters when the resync answer and a message cross', () => {
     expect(useChatStore().readStates[X]?.unread_count).toBe(1)
   })
 
-  it.fails('an answer from after the message, delivered before its event, counts it once', async () => {
-    server['/api/read-state'] = counted // the server read the state after the message was stored
+  it('an answer from after the message, delivered before its event, counts it once', async () => {
+    server['/api/read-state'] = state(1, 3) // the server read the state after the message was stored
     await connect(true)
     frame('message_create', message)
     await settle()
     expect(useChatStore().readStates[X]?.unread_count).toBe(1)
+  })
+
+  it('two answers on their way and a reconnect between them: the newest answer counts, with what came after it', async () => {
+    holding = true
+    server['/api/read-state'] = state(0, 2)
+    await connect(true) // first answer, read before message 3
+    Socket.instances.at(-1)?.onclose?.()
+    await settle()
+    server['/api/read-state'] = state(1, 3) // second answer, read after message 3 (whose event was lost)
+    await connect(false)
+    frame('message_create', { ...message, id: fixtureId(51), number: 4 })
+    await settle()
+    for (const h of held.reverse()) h.release() // the newer answer lands first, the older one last
+    await settle()
+    expect(useChatStore().readStates[X]?.unread_count).toBe(2)
   })
 })

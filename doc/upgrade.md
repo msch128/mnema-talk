@@ -538,6 +538,7 @@ of the pre-update backup (see "Rollback" above).
 | 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
 
 | 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
+| 0103 | `channels.last_message_number`: the number of each channel's newest message, written while a new message holds the channel's lock, so `GET /api/read-state` can say exactly which messages its counts include. Adds a column and fills it once from the stored messages (one pass over `messages`); an older release ignores it. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
