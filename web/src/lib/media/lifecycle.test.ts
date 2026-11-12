@@ -420,7 +420,11 @@ describe('review fixes', () => {
     vi.setSystemTime(START + 5000)
     for (const wire of (await bob.maintain()).wires) await carol.receive(bobId, wire)
     for (const wire of (await carol.maintain()).wires) await bob.receive(carolId, wire)
+    // Bob takes over from the silent Alice after the patience (6 s), and removes her once Carol, who came
+    // in at the start, has been in for the patience and one interval: she would refuse it sooner.
     vi.setSystemTime(START + 7000)
+    expect(kinds(await bob.maintain())).not.toContain('mls_public_message')
+    vi.setSystemTime(START + 8000)
     const bobStep = await bob.maintain()
     const carolStep = await carol.maintain()
     expect(kinds(bobStep)).toContain('mls_public_message')

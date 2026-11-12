@@ -9,13 +9,13 @@ import {
 import { clock } from './clock'
 import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type MediaStep, type OwnPackage } from './groupParams'
 import { clientConfig, wipeBytes, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
-import { GroupEpoch } from './groupEpoch'
+import { GroupCommits } from './groupCommits'
 
 function roomKey(others: readonly string[]): string {
   return others.slice().sort().join(',')
 }
 
-export abstract class GroupSync extends GroupEpoch {
+export abstract class GroupSync extends GroupCommits {
   /** The package made for the group of one I hold, and the epoch it shrank to one in. */
   private lone: { own: OwnPackage, epoch: bigint } | null = null
 
