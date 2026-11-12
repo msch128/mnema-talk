@@ -11,7 +11,7 @@ beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
 const SEEDS = [4, 9, 12]
-// Seeds that pass with wall clock steps (the pacer loses members after a step back: pacer.step.test.ts, groupSweep.known.fixture.ts).
+// Seeds that pass with wall clock steps (the few that do not are listed in groupSweep.known.fixture.ts).
 const STEP_SEEDS = [2, 3, 4, 6, 7, 8]
 
 describe('members with clocks of their own', () => {
