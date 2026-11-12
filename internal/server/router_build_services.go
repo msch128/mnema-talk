@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/communityevents"
@@ -54,7 +55,8 @@ func (c *components) newChat() {
 	}
 	safego.Go("edit_history", safego.Crash, func() { messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour) })
 	safego.Go("poll_fold", safego.Crash, func() { poll.RunFold(c.ctx, d.DB, 10*time.Minute) })
-	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
+	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog,
+		Recount: readstate.Recount{DB: d.DB, Perms: c.permSvc, Online: hub, Events: c.pub}}
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}

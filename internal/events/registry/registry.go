@@ -75,6 +75,7 @@ func messageEvents() []Entry {
 		{Event: wire.ThreadFollowUpdated{}},
 		{Event: wire.ReadStateMarked{}},
 		{Event: wire.ReadStateUnread{}},
+		{Event: wire.ReadStateCounts{}},
 		{Event: wire.ReadStateChannelRefresh{}},
 		{Event: wire.ReadStateRefresh{}},
 		{Event: saved.SavedUpdated{}},

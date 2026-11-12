@@ -198,7 +198,8 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	}
 	userID := auth.UserFrom(r.Context()).ID
 	before := a.snapshotMessage(r.Context(), msgID, false)
-	if err := EditMessage(ctx, a.DB, a.Online, msgID, userID, content); err != nil {
+	mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content)
+	if err != nil {
 		return err
 	}
 	a.auditEdit(r.Context(), msgID, before, content)
@@ -207,6 +208,8 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 		return err
 	}
 	a.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
+	// Only the mentions changed: the members named before or after may count it differently now.
+	a.recount().Tell(r.Context(), msg.ChannelID, &msg.CreatedAt, append(mentioned, msg.Mentions...))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -249,7 +252,7 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	snap := a.snapshotMessage(r.Context(), msgID, true)
-	keys, err := DeleteMessageAs(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages))
+	keys, newest, err := deleteMessage(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages))
 	if err != nil {
 		return err
 	}
@@ -257,6 +260,7 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	a.tellAuthor(snap, user, reason)
 	core.DeleteObjects(r.Context(), a.Objects, keys)
 	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})
+	a.recount().Tell(r.Context(), ref.ChannelID, &newest, nil)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

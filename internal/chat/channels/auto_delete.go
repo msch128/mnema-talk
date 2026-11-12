@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
@@ -76,6 +77,9 @@ type AutoDeleter struct {
 	Objects core.ObjectDeleter
 	// Audit records one entry per channel and run; nil records nothing.
 	Audit *audit.Log
+	// Recount tells the members who had not read the removed messages their
+	// counts again; the zero value tells nobody.
+	Recount readstate.Recount
 }
 
 type autoDeleteChannel struct {
@@ -187,6 +191,10 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	if a.Events != nil {
 		for _, g := range removed {
 			a.Events.BroadcastChannel(c.id, wire.MessageDelete{ID: g.id, ChannelID: c.id, ParentID: g.parent})
+		}
+		// Every removed message and every reply that went with it is older than the cutoff.
+		if len(removed) > 0 {
+			a.Recount.Tell(ctx, c.id, &cutoff, nil)
 		}
 	}
 	return len(removed), len(keys), nil

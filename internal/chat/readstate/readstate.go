@@ -92,6 +92,11 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}
+	return scanReadStates(rows)
+}
+
+// scanReadStates reads rows of ReadStateSQL.
+func scanReadStates(rows pgx.Rows) ([]ReadState, error) {
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReadState, error) {
 		var s ReadState
 		var ch, cat, srv NotifySetting

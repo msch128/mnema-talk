@@ -618,6 +618,13 @@ answer of the newest request is kept. `GET /api/threads/following` is ordered
 the same way without a mark: `thread_follow_updated` carries the whole state
 of a thread, so the changes that arrived while the list was on its way are
 applied to it again.
+A client counts a new message itself; a delete (also a bulk delete or
+the auto-delete sweep) or an edit that changes the mentions brings nothing it
+could count, so the server sends the members whose count it may have moved
+(online, allowed to view the channel, not read up to the changed messages;
+for an edit, those it mentioned before or after) a `read_state` with their
+`unread_count` and `mention_count` of that channel, right after the
+`message_delete` or `message_update` ([`recount.go`](../internal/chat/readstate/recount.go)).
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is
