@@ -26,18 +26,27 @@ import (
 // erasure right before the statement that closes the cycle, starts the write
 // during the hold, and lets the erasure go on after holdFor.
 
-// stepHold runs fn once, on the erasure's connection, before the first
-// statement whose text contains mark.
+// stepHold runs fn on the erasure's connection before a statement whose
+// text contains mark: once, or as often as times says (once per attempt).
 type stepHold struct {
-	once sync.Once
-	mark string
-	fn   func()
-	hit  bool
+	mu    sync.Mutex
+	mark  string
+	times int
+	fn    func()
+	hits  int
 }
 
 func (h *stepHold) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.TraceQueryStartData) context.Context {
 	if strings.Contains(strings.Join(strings.Fields(d.SQL), " "), h.mark) {
-		h.once.Do(func() { h.hit = true; h.fn() })
+		h.mu.Lock()
+		hold := h.hits < max(h.times, 1)
+		if hold {
+			h.hits++
+		}
+		h.mu.Unlock()
+		if hold {
+			h.fn()
+		}
 	}
 	return ctx
 }
@@ -66,39 +75,48 @@ func stepHeldApp(t *testing.T, hold *stepHold) *app {
 		d.DB = &db.Pool{Pool: p}
 	})
 	t.Cleanup(func() {
-		if !hold.hit {
+		if hold.hits == 0 {
 			t.Errorf("the hold never saw the statement with %q", hold.mark)
 		}
 	})
 	return a
 }
 
-// eraseDuring erases member's account while write runs: write starts when the
-// erasure reaches the held statement, and the erasure goes on after holdFor.
+// eraseDuring erases member's account while write runs: write starts each
+// time the erasure reaches the held statement, and the erasure goes on after
+// holdFor. wrote is the last write's answer.
 func eraseDuring(a *app, hold *stepHold, member *client, holdFor time.Duration, write func() response) (erasure, wrote response) {
-	done := make(chan struct{})
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	hold.fn = func() {
+		wg.Add(1)
 		go func() {
-			defer close(done)
-			wrote = write()
+			defer wg.Done()
+			res := write()
+			mu.Lock()
+			wrote = res
+			mu.Unlock()
 		}()
 		time.Sleep(holdFor)
 	}
 	erasure = a.deleteAccount(member, memberPassword, "")
-	<-done
+	wg.Wait()
 	return erasure, wrote
 }
 
-// wantErased checks the erasure's answer and that it did its work.
+// wantErased checks that the erasure answered 204 and did its work: the
+// account is a tombstone and its messages are empty and unpinned.
 func wantErased(t *testing.T, a *app, member *client, erasure response) {
 	t.Helper()
-	// Known failure H-L10-06, inverse assertion: the erasure is the deadlock's
-	// victim and answers 500. Turns red the day it answers 204.
-	if erasure.status == http.StatusNoContent {
-		t.Fatalf("known failure H-L10-06 no longer reproduces (204): turn this into the plain assertion")
+	if erasure.status != http.StatusNoContent {
+		t.Fatalf("the erasure answered %d %s: a deadlock it lost must be retried", erasure.status, erasure.body)
 	}
-	if erasure.status != http.StatusInternalServerError {
-		t.Fatalf("the erasure answered %d %s", erasure.status, erasure.body)
+	id := member.user.ID
+	if n := a.countRows(`SELECT COUNT(*) FROM users WHERE id = $1 AND deleted_at IS NOT NULL`, id); n != 1 {
+		t.Fatal("the account is not erased")
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM messages WHERE user_id = $1 AND (content <> '' OR is_pinned)`, id); n != 0 {
+		t.Fatalf("%d of the member's messages kept their text or pin", n)
 	}
 }
 
@@ -115,15 +133,41 @@ func TestErasureSurvivesADeadlockWithTheMembersOwnEdit(t *testing.T) {
 				return alice.put("/api/channels/"+ch.String()+"/messages/"+msg.String(), map[string]any{"content": "edited from a second device"})
 			})
 			t.Logf("held %v: erasure %d %s; edit %d", holdFor, erasure.status, erasure.body, edit.status)
-			if holdFor < time.Second {
-				// The edit's own deadlock check runs first: the edit is the victim.
-				if erasure.status != http.StatusNoContent {
-					t.Fatalf("the erasure answered %d %s", erasure.status, erasure.body)
-				}
-				return
-			}
+			// Held 300 ms, the edit's own deadlock check runs first and the edit
+			// is the victim; held 2.5 s, the erasure's check runs first.
 			wantErased(t, a, alice, erasure)
 		})
+	}
+}
+
+// The retry is bounded: an erasure that loses the deadlock on every attempt
+// (account.eraseAttempts, 3) answers 503 UNAVAILABLE with the sentence the
+// web app shows as "The server is busy. Try again in a moment.", and nothing
+// was erased: the member is still signed in.
+func TestErasureThatKeepsLosingDeadlocksAsksToTryAgain(t *testing.T) {
+	hold := &stepHold{mark: messagesStepMark, times: 3}
+	a := stepHeldApp(t, hold)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	ch := a.createChannel(admin, "general", "text")
+	msg := a.send(alice, ch, "to be edited")
+	erasure, _ := eraseDuring(a, hold, alice, longerThanTimeout, func() response {
+		return alice.put("/api/channels/"+ch.String()+"/messages/"+msg.String(), map[string]any{"content": "edited again"})
+	})
+	if erasure.status != http.StatusServiceUnavailable {
+		t.Fatalf("the erasure answered %d %s, want 503", erasure.status, erasure.body)
+	}
+	if e := erasure.errorBody(t); e.Error.Code != "UNAVAILABLE" || e.Error.Message != "the server is busy, try again shortly" {
+		t.Fatalf("the erasure answered %s", erasure.body)
+	}
+	if hold.hits != 3 {
+		t.Fatalf("the erasure ran %d times, want 3", hold.hits)
+	}
+	if res := alice.get("/api/auth/me"); res.status != http.StatusOK {
+		t.Fatalf("after the refused erasure the member's session answers %d", res.status)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM users WHERE id = $1 AND deleted_at IS NULL`, alice.user.ID); n != 1 {
+		t.Fatal("a refused erasure changed the account")
 	}
 }
 
