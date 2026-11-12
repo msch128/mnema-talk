@@ -16,9 +16,12 @@ test('compact keeps the shape and drops the prose, flattening allOf', () => {
   })
 })
 
-// The committed file must be what the extractor makes of the tag; skipped where
-// a shallow checkout carries no tags.
-test('the committed v2.9.12 baseline is what the extractor reads from the tag', { skip: !tagExists('v2.9.12') && 'tag v2.9.12 is not in this checkout' }, () => {
+// The committed file must be what the extractor makes of the tag. A local
+// shallow clone may carry no tags, so the test skips there; in CI (CI is set)
+// the frontend job fetches the tag, and a missing tag is a failure, not a skip.
+const inCI = Boolean(process.env['CI'])
+test('the committed v2.9.12 baseline is what the extractor reads from the tag', { skip: !inCI && !tagExists('v2.9.12') && 'tag v2.9.12 is not in this checkout' }, () => {
+  assert.ok(tagExists('v2.9.12'), 'tag v2.9.12 is not in this checkout: the CI job must fetch it (git fetch --depth 1 origin tag v2.9.12)')
   const committed = readFileSync(fileURLToPath(new URL('../src/compat/baselines/v2.9.12.json', import.meta.url)), 'utf8')
   assert.deepEqual(JSON.parse(committed), extractBaseline('v2.9.12'))
 })

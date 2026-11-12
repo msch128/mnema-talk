@@ -499,6 +499,13 @@ jobs:
         with:
           persist-credentials: false
 
+      # The shallow checkout has no tags; scripts/compat-baseline.test.ts
+      # compares the committed v2.9.12 baseline with this one tag and fails
+      # in CI when it is missing. One commit, not the full history.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Fetch the tag of the committed compat baseline
+        run: git fetch --depth 1 --no-tags origin tag v2.9.12
+
       - if: ${{ needs.changes.outputs.code == 'true' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
