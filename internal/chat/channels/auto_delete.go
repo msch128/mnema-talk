@@ -78,8 +78,8 @@ type AutoDeleter struct {
 	// Audit records one entry per channel and run; nil records nothing.
 	Audit *audit.Log
 	// Recount tells the members who had not read the removed messages their
-	// counts again; the zero value tells nobody.
-	Recount readstate.Recount
+	// counts again, once per channel and run; nil tells nobody.
+	Recount *readstate.Recounter
 }
 
 type autoDeleteChannel struct {
@@ -154,6 +154,8 @@ func (a *AutoDeleter) sweepChannel(ctx context.Context, c autoDeleteChannel) err
 		}
 	}
 	if messages > 0 {
+		// Every removed message and every reply that went with it is older than the cutoff.
+		a.Recount.Tell(c.id, &cutoff, nil)
 		a.Audit.RecordOrLog(ctx, audit.Entry{
 			Action: "channel.auto_delete_run", TargetType: "channel", TargetID: c.id.String(), TargetName: c.name, ChannelID: &c.id,
 			Details: map[string]any{"days": c.days, "messages": messages, "attachments": attachments, "complete": failure == nil},
@@ -191,10 +193,6 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	if a.Events != nil {
 		for _, g := range removed {
 			a.Events.BroadcastChannel(c.id, wire.MessageDelete{ID: g.id, ChannelID: c.id, ParentID: g.parent})
-		}
-		// Every removed message and every reply that went with it is older than the cutoff.
-		if len(removed) > 0 {
-			a.Recount.Tell(ctx, c.id, &cutoff, nil)
 		}
 	}
 	return len(removed), len(keys), nil

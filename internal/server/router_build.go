@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"net"
 	"net/url"
 	"time"
@@ -89,6 +90,7 @@ type components struct {
 	engine   *automod.Engine
 
 	outgoing *webhook.Dispatcher
+	recount  *readstate.Recounter
 	webhookH *webhook.Handler
 
 	pushH           *push.Handler

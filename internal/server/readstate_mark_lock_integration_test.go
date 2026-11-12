@@ -39,7 +39,9 @@ func TestTheReadStateMarkHoldsWhileAnEarlierPostIsOpen(t *testing.T) {
 	}()
 	waitForLockWaiters(t, a, 1)
 	second := make(chan response, 1)
-	go func() { second <- owner.post("/api/channels/"+ch.String()+"/messages", map[string]any{"content": "@max second"}) }()
+	go func() {
+		second <- owner.post("/api/channels/"+ch.String()+"/messages", map[string]any{"content": "@max second"})
+	}()
 	// Either the second post commits (no channel lock) or it waits for the first.
 	select {
 	case res := <-second:

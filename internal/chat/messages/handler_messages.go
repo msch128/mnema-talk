@@ -205,7 +205,7 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	}
 	a.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
 	// Only the mentions changed: the members named before or after may count it differently now.
-	a.recount().Tell(r.Context(), msg.ChannelID, &msg.CreatedAt, append(mentioned, msg.Mentions...))
+	a.Recount.Tell(msg.ChannelID, &msg.CreatedAt, append(mentioned, msg.Mentions...))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -258,7 +258,7 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	a.tellAuthor(snap, user, reason)
 	core.DeleteObjects(r.Context(), a.Objects, keys)
 	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})
-	a.recount().Tell(r.Context(), ref.ChannelID, &newest, nil)
+	a.Recount.Tell(ref.ChannelID, &newest, nil)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

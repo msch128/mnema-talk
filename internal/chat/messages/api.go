@@ -29,6 +29,9 @@ type API struct {
 	Online mentions.OnlineSource
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// Recount tells members their counts of a channel again after a delete or
+	// an edit there (it queues; see readstate.Recounter); nil tells nobody.
+	Recount *readstate.Recounter
 	// Views remembers recent edit-history reads (see edit_history.go); it lives
 	// in the Handler so every API built from it shares one memory.
 	Views *HistoryViews
@@ -65,10 +68,4 @@ func (a *API) Mount(r chi.Router) {
 	follow.Delete("/threads/{threadID}/follow", httpx.Handle(a.deleteThreadFollow))
 	r.Get("/threads/following", httpx.Handle(a.ListFollowedThreads))
 	r.Get("/messages/by-number/{number}", httpx.Handle(a.ServeGetMessageByNumber))
-}
-
-// recount tells members their counts of a channel again after a delete or an
-// edit there (see readstate.Recount).
-func (a *API) recount() readstate.Recount {
-	return readstate.Recount{DB: a.DB, Perms: a.Guard.Perms, Online: a.Online, Events: a.Events}
 }

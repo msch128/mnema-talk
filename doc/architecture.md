@@ -648,12 +648,21 @@ the same way without a mark: `thread_follow_updated` carries the whole state
 of a thread, so the changes that arrived while the list was on its way are
 applied to it again.
 A client counts a new message itself; a delete (also a bulk delete or
-the auto-delete sweep) or an edit that changes the mentions brings nothing it
-could count, so the server sends the members whose count it may have moved
-(online, allowed to view the channel, not read up to the changed messages;
-for an edit, those it mentioned before or after) a `read_state` with their
-`unread_count` and `mention_count` of that channel, right after the
-`message_delete` or `message_update` ([`recount.go`](../internal/chat/readstate/recount.go)).
+the auto-delete sweep, once per channel and run) or an edit that changes the
+mentions brings nothing it could count, so the server sends the members whose
+count it may have moved (online, allowed to view the channel, not read up to
+the changed messages; for an edit, those it mentioned before or after) a
+`read_state` with their `unread_count`, `mention_count` and the channel's
+`last_message_number`, which the client applies like an answer of
+`GET /api/read-state` for that channel ([`recount.go`](../internal/chat/readstate/recount.go)).
+The request only queues the recount: one worker counts after the broadcast,
+with the server's context, 500 members a statement, and merges the requests
+of a channel that is already waiting (at most 256 channels wait; beyond that
+a channel is skipped and logged, and its badges heal at the next read,
+reconnect or reload). Nothing new starts once the server shuts down. The
+worker's time grows with the members told and the channel's unread backlog:
+measured, 1,000 members take 0.04 s (50 unread), 0.2 s (500) and 2 s (5,000),
+10,000 members 0.3 s, 1.8 s and 21 s; the deleting request waits for none of it.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is

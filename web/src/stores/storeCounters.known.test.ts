@@ -19,9 +19,10 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
-const mention = messageFixture({ id: fixtureId(30), channel_id: X, user_id: BOB, username: 'bob', content: '@max look', mentions: [ME] })
-const recount = (unread: number, mentions: number) =>
-  ({ type: 'read_state' as const, payload: { channel_id: X, last_read_at: null, unread_count: unread, mention_count: mentions } })
+const mention = messageFixture({ id: fixtureId(30), number: 30, channel_id: X, user_id: BOB, username: 'bob', content: '@max look', mentions: [ME] })
+// The server's counts after a delete or an edit; newest: the number of the newest message they include.
+const recount = (unread: number, mentions: number, newest = 30) =>
+  ({ type: 'read_state' as const, payload: { channel_id: X, last_read_at: null, unread_count: unread, mention_count: mentions, last_message_number: newest } })
 const counts = () => {
   const s = useChatStore().readStates[X]
   return [s?.unread_count ?? 0, s?.mention_count ?? 0]
@@ -65,5 +66,25 @@ describe('unread and mention counters of an open client against the server', () 
     chat.handleWSEvent({ type: 'message_update', payload: { ...plain, content: '@max look', mentions: [ME], is_edited: true } })
     chat.handleWSEvent(recount(1, 1))
     expect(counts()).toEqual([1, 1])
+  })
+
+  // A delete next to a new message: the counts the server sends after the
+  // delete and the new message's event can cross either way.
+  it('a new message whose event came before the recount still counts', () => {
+    const chat = useChatStore()
+    chat.handleWSEvent({ type: 'message_create', payload: mention })
+    chat.handleWSEvent({ type: 'message_create', payload: { ...mention, id: fixtureId(31), number: 31, content: 'hi', mentions: [] } })
+    chat.handleWSEvent({ type: 'message_delete', payload: { id: mention.id, channel_id: X, parent_id: null } })
+    chat.handleWSEvent(recount(0, 0, 30)) // read before message 31 was stored
+    expect(counts()).toEqual([1, 0])
+  })
+
+  it('a new message the recount already holds does not count again when its event comes after', () => {
+    const chat = useChatStore()
+    chat.handleWSEvent({ type: 'message_create', payload: mention })
+    chat.handleWSEvent({ type: 'message_delete', payload: { id: mention.id, channel_id: X, parent_id: null } })
+    chat.handleWSEvent(recount(1, 0, 31)) // read after message 31 was stored
+    chat.handleWSEvent({ type: 'message_create', payload: { ...mention, id: fixtureId(31), number: 31, content: 'hi', mentions: [] } })
+    expect(counts()).toEqual([1, 0])
   })
 })

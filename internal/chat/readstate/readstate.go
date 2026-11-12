@@ -97,19 +97,23 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 
 // scanReadStates reads rows of ReadStateSQL.
 func scanReadStates(rows pgx.Rows) ([]ReadState, error) {
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReadState, error) {
-		var s ReadState
-		var ch, cat, srv NotifySetting
-		var now time.Time
-		var addressed int
-		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &addressed, &s.LastReadAt,
-			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &srv.Level, &srv.MutedUntil, &now, &s.LastMessageNumber)
-		s.NotifyLevel = ResolveNotify(now, ch, cat, srv)
-		if s.NotifyLevel == NotifyMute {
-			s.MentionCount = addressed
-		}
-		return s, err
-	})
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReadState, error) { return scanReadState(row) })
+}
+
+// scanReadState reads one row of ReadStateSQL; before are the columns a
+// query puts in front of it.
+func scanReadState(row pgx.CollectableRow, before ...any) (ReadState, error) {
+	var s ReadState
+	var ch, cat, srv NotifySetting
+	var now time.Time
+	var addressed int
+	err := row.Scan(append(before, &s.ChannelID, &s.UnreadCount, &s.MentionCount, &addressed, &s.LastReadAt,
+		&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &srv.Level, &srv.MutedUntil, &now, &s.LastMessageNumber)...)
+	s.NotifyLevel = ResolveNotify(now, ch, cat, srv)
+	if s.NotifyLevel == NotifyMute {
+		s.MentionCount = addressed
+	}
+	return s, err
 }
 
 // messageTime returns when messageID was posted in channelID.

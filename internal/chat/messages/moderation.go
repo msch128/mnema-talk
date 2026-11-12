@@ -182,7 +182,7 @@ type bulkDeleteReport struct {
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	if len(rep.gone) > 0 {
-		defer a.recount().Tell(ctx, chID, nil, nil) // after the deletes; their replies may be newer than any root
+		defer a.Recount.Tell(chID, nil, nil) // after the deletes; their replies may be newer than any root
 	}
 	for _, m := range rep.gone {
 		a.Events.BroadcastChannel(chID, wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID})

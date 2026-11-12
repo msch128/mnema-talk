@@ -25,7 +25,7 @@ import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDe
 import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
 import { playMessageSoundFor } from './messageSound'
-import { countedByAnswer, fetchReadState, isReadingActiveChannel, noteCounted, noteReadStateCleared } from './readState'
+import { applyChannelCounts, countedByAnswer, fetchReadState, isReadingActiveChannel, noteCounted, noteReadStateCleared } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
@@ -72,6 +72,8 @@ function onReadState(cx: Cx, p: Payload<'read_state'>) {
     fetchReadState(cx)
     return
   }
+  // The server's counts after a delete or an edit: an answer for this channel.
+  if ('last_message_number' in p) return applyChannelCounts(cx, p)
   // Read in another session: an answer on its way was read before, like one before a read here.
   if ('unread_count' in p) noteReadStateCleared(cx, [p.channel_id])
   const prev = cs.readStates.value[p.channel_id] || { channel_id: p.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
