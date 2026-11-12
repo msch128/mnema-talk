@@ -62,8 +62,8 @@ export function renderMarkdown(
  * The message without its formatting, for reply quotes and previews: markers
  * disappear, code and link text stay, ||spoilers|| become "Spoiler".
  */
-export function markdownToPlain(content: string | null | undefined): string {
-  return content ? blocksPlain(parse(content)) : ''
+export function markdownToPlain(content: string | null | undefined, spoiler?: string): string {
+  return content ? blocksPlain(parse(content), spoiler) : ''
 }
 
 /** The http(s) links worth a preview card: shown as links, not in code, spoilers or <autolinks>. */

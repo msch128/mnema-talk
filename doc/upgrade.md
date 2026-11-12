@@ -9,6 +9,21 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Snippets of long messages are their plain text
+
+Places that show only the start of a message took its first 200 characters
+of Markdown, so a `||spoiler||` that closed after the cut was open in the
+snippet and its text showed: reply quotes, search thread roots, reminders
+(list, in-app notice and push) and the conversation list. A message longer
+than 200 characters is now reduced to its plain text first and cut after
+that; the snippet is that text written as Markdown, each spoiler as `||…||`
+(a shorter message is still sent as it is). This concerns `reply_to.content`
+of messages, `snippet` of search roots and reminders, and
+`last_message.text` of conversations. Clients that strip the snippet
+themselves, older web and desktop clients included, show the same text as
+before without the hidden part; a bot that reads these fields gets escaped
+plain text for long messages.
+
 ## Trusted Types in the web app's policy
 
 The web app's Content-Security-Policy now also sends

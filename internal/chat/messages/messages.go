@@ -18,14 +18,15 @@ import (
 
 // MessageSelect loads messages with author, reply count and the quoted reply
 // preview in one round trip. rm/ru are the replied-to message and its author;
-// the quoted snippet sent with every reply is bounded to 200 characters.
+// the quoted snippet sent with every reply is mdplain.Snippet of the whole
+// replied-to message (at most core.MaxMessageLen characters are read).
 const MessageSelect = `
 	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
 	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
-	       LEFT(rm.content, 200),
+	       rm.content,
 	       CASE WHEN rm.id IS NULL THEN FALSE
 	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
