@@ -68,7 +68,9 @@ at the conversation (migration 0079): the permission snapshot lets only the
 conversation's members see and join it, the Owner and Administrators included
 (like the conversation itself), a member added to a group gets it too, it shows
 in the sidebar of its members only, and it is deleted when it is empty (like any
-temporary Talk) or when the conversation is. Nothing about it reaches the audit log (who joined it, renamed it or when it went), because that would tell the Owner who called whom. It is led by whoever started it and
+temporary Talk) or when the conversation is. Its chat follows the conversation's
+writing rule: after a block in a conversation of two nobody writes there any
+more, while the Talk and its seats stay as they are ([blocking](moderation.md#blocking-a-member)). Nothing about it reaches the audit log (who joined it, renamed it or when it went), because that would tell the Owner who called whom. It is led by whoever started it and
 counts against the 5 new Talks per 10 minutes. While in a Talk, "Invite to my
 Talk" (`POST /api/talks/{id}/invites` with the conversation) posts the same card.
 

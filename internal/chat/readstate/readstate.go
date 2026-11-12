@@ -24,7 +24,9 @@ type ReadState struct {
 }
 
 // ReadStateSQL is the unread summary of every channel. Messages of members
-// the caller blocked never count as mentions.
+// the caller blocked never count as mentions, and in the chat of the Talk of
+// a conversation of two they do not count as unread either, as in the
+// conversation itself (dm.DmSelect).
 func ReadStateSQL() string {
 	return `
 		SELECT c.id, unread.n, addr.mentions, addr.addressed,
@@ -39,9 +41,14 @@ func ReadStateSQL() string {
 		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
 		LEFT JOIN server_notify sn ON sn.user_id = $1
 		CROSS JOIN LATERAL (
+		    SELECT c.dm_id IS NOT NULL AND EXISTS (
+		        SELECT 1 FROM channels d WHERE d.id = c.dm_id AND d.dm_key IS NOT NULL) AS talk
+		) pair
+		CROSS JOIN LATERAL (
 		    SELECT count(*) AS n FROM messages m
 		    WHERE m.channel_id = c.id AND m.user_id <> $1 AND m.parent_id IS NULL
 		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
+		      AND (NOT pair.talk OR ` + core.AuthorHiddenFrom("$1", "m.user_id") + `)
 		) unread
 		CROSS JOIN LATERAL (
 		    SELECT count(*) FILTER (WHERE COALESCE(rt.mine, FALSE) OR (mm.message_id IS NOT NULL
