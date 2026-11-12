@@ -94,7 +94,7 @@ describe('a muted channel follows the mentions the server resolved', () => {
 
   it('a reply to me breaks the mute whatever the list says', () => {
     const chat = setup()
-    chat.handleWSEvent({ type: 'message_create', payload: { ...unresolved('agreed'), reply_to: { id: 'r', user_id: 'me', username: 'max', display_name: 'Max', content: 'x' } } })
+    chat.handleWSEvent({ type: 'message_create', payload: { ...unresolved('agreed'), reply_to: { id: 'r', deleted: false, user_id: 'me', username: 'max', display_name: 'Max', content: 'x' } } })
     expect(required(chat.readStates[BUILDS]).mention_count).toBe(1)
   })
 })
