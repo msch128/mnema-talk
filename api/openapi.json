@@ -16426,7 +16426,7 @@
     },
     "/api/admin/media/orphans": {
       "get": {
-        "description": "Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).",
+        "description": "Objects in storage (uploads/, avatars/, banners/, covers/, exports/) that no row refers to (a media row, or for exports/ the row of a data export), older than 24 hours: left behind by a failed delete or a crash during an upload or an export. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).",
         "operationId": "getMediaOrphans",
         "responses": {
           "200": {
@@ -16511,7 +16511,7 @@
     },
     "/api/admin/media/orphans/cleanup": {
       "post": {
-        "description": "Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Owner only (403 otherwise).",
+        "description": "Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row or the row of a data export refers to, nor one younger than 24 hours. Owner only (403 otherwise).",
         "operationId": "cleanupMediaOrphans",
         "responses": {
           "200": {

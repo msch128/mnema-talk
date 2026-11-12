@@ -13,17 +13,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// knownGap is the Go form of an expected failure: holds reports whether the
-// property holds today. The test passes while it does not and fails the day it
-// does, so the entry has to be turned into a plain assertion when the gap is
-// closed.
-func knownGap(t *testing.T, finding, property string, holds bool) {
-	t.Helper()
-	if holds {
-		t.Errorf("%s is fixed (%s holds now): replace this known gap with the plain assertion", finding, property)
-	}
-}
-
 // The erasure of an account removes the two tables that expire on their own:
 // message_nonces (one row per message sent with a retry id, kept a day) and
 // upload_usage (one row per upload, kept 24 hours). SECURITY.md says
