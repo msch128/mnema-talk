@@ -103,6 +103,32 @@ func TestABlockLeavesTakingBackOpenInTheTalkChat(t *testing.T) {
 	})
 }
 
+// An erased account leaves the conversation of two (its membership goes), and
+// nobody writes to it any more there or in the chat of the conversation's
+// Talk: the same rule as for a disabled account (doc/architecture.md
+// "Starting and writing").
+func TestNoWriteReachesAnErasedAccountInAConversationOfTwoOrItsTalk(t *testing.T) {
+	f := newDMFixture(t, true)
+	dm := f.alice.mustDM(t, f.bob)
+	mine := msgID(t, f.alice.dmPost(dm.ID, "hello bob"))
+	msgID(t, f.bob.dmPost(dm.ID, "hi alice"))
+	talk := startTalk(t, f.alice, dm.ID)
+	chat := "/api/channels/" + talk.String() + "/messages"
+	inTalk := msgID(t, f.alice.post(chat, map[string]any{"content": "in the call chat"}))
+	wantStatus(t, "bob erases his account", f.a.deleteAccount(f.bob, memberPassword, ""), http.StatusNoContent)
+	conv := "/api/channels/" + dm.ID.String() + "/messages/"
+	runCells(t, []doorCell{
+		{"post in the conversation", func() response { return f.alice.dmPost(dm.ID, "are you there?") }, http.StatusForbidden},
+		{"edit in the conversation", func() response {
+			return f.alice.put(conv+mine.String(), map[string]any{"content": "new words"})
+		}, http.StatusForbidden},
+		{"post in the Talk's chat", func() response { return f.alice.post(chat, map[string]any{"content": "anyone?"}) }, http.StatusForbidden},
+		{"edit in the Talk's chat", func() response {
+			return f.alice.put(chat+"/"+inTalk.String(), map[string]any{"content": "new words"})
+		}, http.StatusForbidden},
+	})
+}
+
 func startTalk(t *testing.T, c *client, dm uuid.UUID) uuid.UUID {
 	t.Helper()
 	res := c.post("/api/dms/"+dm.String()+"/talk", nil)

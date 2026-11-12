@@ -171,7 +171,8 @@ func dmReach(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others []uuid.UUI
 
 // checkPairWritable applies the rule of a conversation with one other person
 // to channelID when it is such a conversation or the chat of its Talk: a block
-// in either direction, or the other side's account disabled or erased, refuses
+// in either direction, or the other side's account disabled or erased (then
+// no other member is left), refuses
 // the write with ErrDMSend, the refusal of a new message, which says nothing
 // more about why. Edits run it, and new messages in the Talk's chat (new
 // messages in the conversation itself go through gateDM). The Talk's chat
@@ -205,7 +206,9 @@ func checkPairWritable(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UU
 	if err != nil {
 		return err
 	}
-	if (!on && !talk) || active != len(others) || blocked > 0 {
+	// An erased account leaves the conversation (its dm_members row goes), so
+	// nobody else left is the erased case: refused like a disabled one.
+	if (!on && !talk) || len(others) == 0 || active != len(others) || blocked > 0 {
 		return core.ErrDMSend
 	}
 	return nil
