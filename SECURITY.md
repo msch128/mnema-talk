@@ -955,7 +955,24 @@ details and the limits.
   per 30 minutes per Talk and nothing per frame. A member that showed no sign
   of life for 20 minutes is removed from the group (rekeyed out, so what it
   held no longer opens anything new) and must be let in again with a fresh
-  key package when it returns. Liveness is not media (listeners are muted): every
+  key package when it returns. The committer removes a silent member only
+  once the newest member of its group has been in for the absence limit plus
+  a maintenance interval, or the silent one has been silent for twice the
+  limit. A member that came in by a welcome counts everyone as alive from
+  that moment (it heard none of their heartbeats) and refuses a removal
+  sooner (a receiver's rule, unchanged: nobody present is removed early); a
+  committer that removed by what it heard alone would be refused by every
+  newcomer, be one epoch ahead of them, and start them all over, which set
+  their clocks back so the next removal was refused again (the simulator
+  showed Talks that never settled). Waiting only delays the committer: a
+  member that is gone stays in the group, and keeps its epoch keys, for at
+  most twice the limit (40 minutes, and only while newcomers keep coming in
+  within every 20 minutes), otherwise for the limit plus one maintenance
+  interval; a receiver never accepted a removal earlier than the limit. A
+  3.0.7 committer still removes at the limit and a new receiver treats that
+  as before; a new committer among 3.0.7 receivers waits where they would
+  have refused, which is strictly better for them. No message changes.
+  Liveness is not media (listeners are muted): every
   member signs a 78-byte heartbeat (group, id, epoch, increasing time) with its
   MLS leaf key about every 5 minutes over the existing handshake channel, and
   any other handshake it sends counts too. An older copy of a heartbeat, one
