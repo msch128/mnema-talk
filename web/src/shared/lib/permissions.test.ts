@@ -33,6 +33,20 @@ describe('permission bits', () => {
     }
   })
 
+  // The helpers use 32-bit bitwise operators: every bit must stay below 2^31
+  // (internal/perm/webbits_test.go guards the server's catalog).
+  it('round-trip every permission on a set that holds all of them', () => {
+    const all = PERMISSION_KEYS.reduce((set, key) => setPermission(set, key, true), 0)
+    expect(all).toBe(PERMISSION_KEYS.reduce((sum, key) => sum + PERMISSION_BITS[key], 0))
+    for (const key of PERMISSION_KEYS) {
+      expect(PERMISSION_BITS[key]).toBeLessThan(2 ** 31)
+      expect(hasPermission(all, key)).toBe(true)
+      const without = setPermission(all, key, false)
+      expect(without).toBe(all - PERMISSION_BITS[key])
+      expect(hasPermission(without, key)).toBe(false)
+    }
+  })
+
   it('are set and cleared one at a time', () => {
     const withSpeak = setPermission(0, 'speak', true)
     expect(hasPermission(withSpeak, 'speak')).toBe(true)
