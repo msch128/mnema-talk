@@ -15,6 +15,7 @@ import { useChatStore } from '../../stores/chat'
 import { useAuthStore } from '../../stores/auth'
 import { useOnboardingStore } from '../../stores/onboarding'
 import { useToastStore } from '../../stores/toast'
+import { useBlocksStore } from '../../stores/blocks'
 import { t } from '../../i18n'
 import BaseDialog from '../../shared/components/BaseDialog.vue'
 import SearchInput from './SearchInput.vue'
@@ -33,6 +34,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const PAGE = 25
 
 const chatStore = useChatStore()
+const blocks = useBlocksStore()
 const authStore = useAuthStore()
 const onboarding = useOnboardingStore()
 const toasts = useToastStore()
@@ -174,7 +176,14 @@ async function loadMore() {
   }
 }
 
+// A folded hit (or its folded thread root) is shown first: the option is the
+// control, so Enter or a click reveals it, and the next one opens it.
 function handleSelect(msg: Message) {
+  const folded = [msg, msg.parent_id ? roots.value[msg.parent_id] : undefined].find(m => m && blocks.hides(m))
+  if (folded) {
+    blocks.reveal(folded.id)
+    return
+  }
   chatStore.goToMessage(msg)
   close()
 }

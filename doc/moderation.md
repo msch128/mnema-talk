@@ -261,10 +261,12 @@ blocker it means:
   show" (the client reads `GET /api/me/blocks` and the `block_updated` event)
   wherever another member's words are shown: the message list and threads, the
   "replied to" line, forwarded quotes, search hits and their thread roots, the
-  pin list, forum post cards and titles, saved messages and reminders (their
-  note and remove button stay). Showing one message shows it everywhere until
-  the page is reloaded. Search and these lists are not filtered by the server;
-  the client folds them, so a hit still counts in the number of results. A due
+  pin list, forum post cards and titles, event comments, saved messages and
+  reminders (their note and remove button stay). Showing one message shows it
+  everywhere until the page is reloaded; in search, Enter or a click on a folded
+  hit shows it first. Search, the forum filter and these lists are not filtered
+  by the server; the client folds them, so a hit still counts in the number of
+  results. A due
   reminder's in-app notice leaves the text out; its push, which the blocker set
   up themselves, still names the message;
 - the blocked member's mentions and replies create no entry in the mentions

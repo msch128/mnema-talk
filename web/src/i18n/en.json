@@ -4341,7 +4341,8 @@
     "unblockFailed": "Couldn’t unblock the member. Try again.",
     "full": "Your block list is full. Unblock someone first.",
     "collapsed": "Blocked message",
-    "show": "Show"
+    "show": "Show",
+    "showWithEnter": "Press Enter to show it."
   },
   "raid": {
     "title": "Raid protection",

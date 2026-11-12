@@ -14,7 +14,8 @@ import BlockedFold from '../../shared/components/BlockedFold.vue'
 // One hit. The text is shown as plain text (no Markdown markers, spoilers hidden, emoji as :name:);
 // matches are highlighted by splitting it into nodes, never as HTML. Search
 // leaves blocks to the client: a hit or thread root by a member the reader
-// blocked is folded (BlockedFold).
+// blocked is folded (BlockedFold, passive: the option is the control, and
+// choosing a folded hit shows it instead of opening it, see SearchModal).
 const props = defineProps<{
   msg: Message
   index: number
@@ -76,7 +77,7 @@ function formatDate(iso: string) {
       </div>
 
       <p v-if="root" data-search-root class="mb-1 flex min-w-0 items-baseline gap-1 border-l-2 border-mnema-border pl-2 text-xs text-mnema-tertiary">
-        <BlockedFold :msg="root" small>
+        <BlockedFold :msg="root" small passive>
           <span class="shrink-0 font-medium">{{ shownName(root) }}:</span>
           <span class="truncate">
             <template v-for="(part, i) in rootParts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
@@ -84,7 +85,7 @@ function formatDate(iso: string) {
         </BlockedFold>
       </p>
 
-      <BlockedFold :msg="msg">
+      <BlockedFold :msg="msg" passive>
         <p class="text-sm text-mnema-muted line-clamp-2 wrap-break-word">
           <template v-for="(part, i) in parts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
         </p>
