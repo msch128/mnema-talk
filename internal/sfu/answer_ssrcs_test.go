@@ -38,6 +38,13 @@ func TestAnAnswerNamesOneStreamPerMediaSection(t *testing.T) {
 		{"a stream that repairs itself", []*sdp.MediaDescription{section("ssrc-group:FID 11 11")}, false},
 		{"two groups in a circle", []*sdp.MediaDescription{section("ssrc-group:FID 11 12", "ssrc-group:FID 12 11")}, false},
 		{"two pairs", []*sdp.MediaDescription{section("ssrc-group:FID 11 12", "ssrc-group:FID 21 22")}, false},
+		{"a pair written with two spaces", []*sdp.MediaDescription{section("ssrc-group:FID 11  12", "ssrc:11 cname:a", "ssrc:12 cname:a")}, false},
+		{"a pair written with a space at the end", []*sdp.MediaDescription{section("ssrc-group:FID 11 12 ", "ssrc:11 cname:a", "ssrc:12 cname:a")}, false},
+		{"a pair written with a tab", []*sdp.MediaDescription{section("ssrc-group:FID 11\t12", "ssrc:11 cname:a", "ssrc:12 cname:a")}, false},
+		{"an SSRC with a leading zero", []*sdp.MediaDescription{section("ssrc:011 cname:a")}, false},
+		{"an SSRC with a sign", []*sdp.MediaDescription{section("ssrc:+11 cname:a")}, false},
+		{"an SSRC line that starts with a space", []*sdp.MediaDescription{section("ssrc: 11 cname:a")}, false},
+		{"an SSRC line split by a tab", []*sdp.MediaDescription{section("ssrc:11\tcname:a")}, false},
 		{"an SSRC that is no number", []*sdp.MediaDescription{section("ssrc:eleven cname:a")}, false},
 		{"an SSRC past 32 bits", []*sdp.MediaDescription{section("ssrc:4294967296 cname:a")}, false},
 		{"the same SSRC in two sections", []*sdp.MediaDescription{section("ssrc:11 cname:a"), section("ssrc:11 cname:a")}, false},
@@ -115,6 +122,7 @@ func TestAnAnswerHasTheMediaSectionsOfItsOffer(t *testing.T) {
 		{"one section fewer", []string{"0", "1"}, false},
 		{"another order", []string{"0", "2", "1"}, false},
 		{"another mid", []string{"0", "1", "9"}, false},
+		{"a mid twice", []string{"0", "1", "1"}, false},
 		{"no section", nil, false},
 	} {
 		var answer sdp.SessionDescription

@@ -192,9 +192,11 @@ func sectionSSRCs(attrs []sdp.Attribute) (map[uint32]struct{}, bool) {
 }
 
 // ssrcPair reads "FID a b" or "FEC-FR a b": a stream and the SSRC that
-// repairs it.
+// repairs it. It reads the line the way the connection does, split at single
+// spaces into exactly three parts: a line the two would read differently
+// (another separator, a second space) is refused, not interpreted.
 func ssrcPair(value string) (primary, repair uint32, ok bool) {
-	f := strings.Fields(value)
+	f := strings.Split(value, " ")
 	if len(f) != 3 || (f[0] != "FID" && f[0] != "FEC-FR") {
 		return 0, 0, false
 	}
@@ -203,7 +205,9 @@ func ssrcPair(value string) (primary, repair uint32, ok bool) {
 	return primary, repair, okA && okB && primary != repair
 }
 
+// parseSSRC reads an SSRC written as a plain decimal number: no sign, no
+// leading zero, no space, so that it is the same number to every reader.
 func parseSSRC(s string) (uint32, bool) {
 	n, err := strconv.ParseUint(s, 10, 32)
-	return uint32(n), err == nil
+	return uint32(n), err == nil && strconv.FormatUint(n, 10) == s
 }
