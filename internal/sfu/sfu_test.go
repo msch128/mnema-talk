@@ -32,6 +32,38 @@ type client struct {
 	// web client does; answerSDP is the last answer the client gave.
 	offerTweak func(string) string
 	answerSDP  atomic.Value
+	// stops ends the publishing goroutines of this client (cycle tests stop
+	// them per round instead of at the end of the test).
+	stops  []func()
+	closer *pcCloser
+}
+
+// stopPublishing ends every publishing goroutine of c.
+func (c *client) stopPublishing() {
+	for _, stop := range c.stops {
+		stop()
+	}
+}
+
+// pcCloser is the test's only long-lived reference to a client's connection:
+// the cleanup holds it, not the client, so a cycle test that releases a client
+// leaves nothing of it reachable from the test.
+type pcCloser struct{ pc *webrtc.PeerConnection }
+
+func (h *pcCloser) close() {
+	if h.pc != nil {
+		_ = h.pc.Close()
+		h.pc = nil
+	}
+}
+
+// release stops publishing and closes the connection. It runs at the end of
+// every test; cycle tests call it per round so that what stays reachable
+// afterwards is what the SFU itself keeps. The client's own fields are left
+// alone: a late signaling goroutine may still read them.
+func (c *client) release() {
+	c.stopPublishing()
+	c.closer.close()
 }
 
 func newTestSFU(t *testing.T) *SFU {
@@ -70,10 +102,11 @@ func newClientConfig(t *testing.T, adjust func(*webrtc.SettingEngine), cfg webrt
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = pc.Close() })
 	c := &client{t: t, id: uuid.New(), pc: pc,
 		tracks: make(chan *webrtc.TrackRemote, 8), plis: make(chan uint32, 64), errors: make(chan error, 8),
-		received: make(chan *rtp.Packet, 8192)}
+		received: make(chan *rtp.Packet, 8192), closer: &pcCloser{pc: pc}}
+	closer := c.closer
+	t.Cleanup(func() { closer.close() })
 	pc.OnTrack(func(tr *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		c.tracks <- tr
 		go func() {
@@ -210,7 +243,10 @@ func (c *client) publish(trackID, mime string, pt uint8, payload []byte) *webrtc
 		}
 	}()
 	stop := make(chan struct{})
-	c.t.Cleanup(func() { close(stop) })
+	var once sync.Once
+	end := func() { once.Do(func() { close(stop) }) }
+	c.stops = append(c.stops, end)
+	c.t.Cleanup(end)
 	go func() {
 		tick := time.NewTicker(20 * time.Millisecond)
 		defer tick.Stop()
