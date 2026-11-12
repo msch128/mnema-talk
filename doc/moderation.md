@@ -274,7 +274,9 @@ blocker it means:
   other side only sees that the member cannot be written to). The chat of the
   conversation's Talk, if one was open before the block, follows the same rule
   with the same answers, and its messages by the blocked member do not count
-  as unread for the blocker. Taking back stays possible in both: each side may
+  as unread for the blocker. New messages and edits in both are refused the
+  same way when the other side's account is disabled or erased. Taking back
+  stays possible in both: each side may
   still delete their own messages, remove their own reactions and withdraw
   their votes. The Talk itself is not touched: it stays open, and whoever sits
   in it keeps their seat and can still be heard (removing them would tell the
