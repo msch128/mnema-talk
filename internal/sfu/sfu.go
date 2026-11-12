@@ -44,11 +44,11 @@ const (
 )
 
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
-// Every resume makes a new sender on each viewer's connection, so a track
-// resumes at once only resumeBurst times, then once per resumeRefill: a
-// publisher that keeps stopping and sending cannot push its viewers'
-// connections to their sender cap (maxSentTracks). By hand, a camera is
-// switched off and on a few times a minute at most.
+// Every resume makes a new sender on each viewer's connection, so a source
+// resumes at once only resumeBurst times, then once per resumeRefill (see
+// resumeBudget): a publisher that keeps stopping and sending cannot push its
+// viewers' connections to their sender cap (maxSentTracks). By hand, a camera
+// is switched off and on a few times a minute at most.
 const (
 	resumeHoldoff = 500 * time.Millisecond
 	resumeBurst   = 10
@@ -68,12 +68,8 @@ type TrackInfo struct {
 	ssrc      uint32
 	lastPLI   atomic.Int64 // steadyNanos of the last keyframe request
 	// resumeAt (steadyNanos, 0 = live) is set when the publisher announced the
-	// stop; packets arriving after it publish the track again. resumes and
-	// resumesAt are the stop/resume budget (see stopUntil), guarded by the
-	// room's mu.
-	resumeAt  atomic.Int64
-	resumes   float64
-	resumesAt time.Time
+	// stop; packets arriving after it publish the track again.
+	resumeAt atomic.Int64
 	// A replaced capture must never resume or forward alongside its successor.
 	superseded atomic.Bool
 	// writeErrLogged keeps a failing forward from logging every packet.
@@ -82,25 +78,6 @@ type TrackInfo struct {
 	// layerGroup); layer 0 is the best.
 	group *layerGroup
 	layer int
-}
-
-// stopUntil spends one resume of the track's budget for a stop at now and
-// returns when the track may resume (steadyNanos, so a step of the host's
-// clock moves it by nothing): after resumeHoldoff while the budget lasts, else
-// when it has refilled by one. r.mu is held.
-func (t *TrackInfo) stopUntil(now time.Time) int64 {
-	if t.resumesAt.IsZero() {
-		t.resumes = resumeBurst
-	} else {
-		t.resumes = min(resumeBurst, t.resumes+float64(now.Sub(t.resumesAt))/float64(resumeRefill))
-	}
-	t.resumesAt = now
-	t.resumes--
-	wait := resumeHoldoff
-	if t.resumes < 0 {
-		wait = max(wait, time.Duration(-t.resumes*float64(resumeRefill)))
-	}
-	return steadyNanos(now.Add(wait))
 }
 
 // codecMime is the codec the track carries, for the logs.
@@ -228,8 +205,11 @@ type Room struct {
 	// layers; lastLayers what was announced. Both guarded by mu.
 	layerMeta  map[uuid.UUID][]Layer
 	lastLayers map[uuid.UUID][]Layer
-	notifyMu   sync.Mutex
-	notifier   *mediaNotifier
+	// resumeBudgets is each publisher's stop/resume budget per source;
+	// guarded by mu (see stopUntilLocked).
+	resumeBudgets map[sourceKey]*resumeBudget
+	notifyMu      sync.Mutex
+	notifier      *mediaNotifier
 	// iceSeen hears of every connection that completed ICE; nil in tests.
 	iceSeen *iceObserver
 }

@@ -315,6 +315,10 @@ when they happened.
 | `4013`, `4014` | invalid intents; intents the admin has not allowed for this bot |
 | `1009`, `1013` | frame too large; the bot reads too slowly (resume) |
 
+These are the bot gateway's codes. The member WebSocket (`/api/ws`) has codes of
+its own: there `4002` means "renew the media connection: reconnect and resume
+the call", not an undecodable frame.
+
 ### Intents and events
 
 IDENTIFY lists the **intents** the bot wants, using Discord's bit numbers; the

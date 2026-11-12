@@ -241,25 +241,6 @@ func (r *Room) RevokeUserSource(userID uuid.UUID, source Source) {
 	r.unpublish(userID, source)
 }
 
-func matchesSource(tInfoSource Source, source Source) bool {
-	if tInfoSource == source {
-		return true
-	}
-	return source == SourceScreen && tInfoSource == SourceScreenAudio
-}
-
-func (r *Room) stopSourceTracksLocked(userID uuid.UUID, source Source) bool {
-	changed := false
-	for id, tInfo := range r.trackLocals {
-		if tInfo.SenderID == userID && matchesSource(tInfo.Source, source) {
-			tInfo.resumeAt.Store(tInfo.stopUntil(layerNow()))
-			delete(r.trackLocals, id)
-			changed = true
-		}
-	}
-	return changed
-}
-
 func (r *Room) stopScreenShareLocked(userID uuid.UUID) {
 	r.dropScreenSubsLocked(userID)
 	delete(r.layerMeta, userID)
