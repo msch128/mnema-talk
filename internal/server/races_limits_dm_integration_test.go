@@ -47,13 +47,12 @@ func TestParallelConversationStartsStayWithinTheDailyCap(t *testing.T) {
 }
 
 // A group conversation holds ten members: with nine in it, members add
-// different people at once. Expected failure until H-L7-06 is fixed: each
-// add counts the members in the statement that locks the conversation row,
-// and a waiter's count is the one of its snapshot from before the wait.
+// different people at once and exactly one gets in (H-L7-06: the count must
+// come after the conversation's lock, not from the snapshot before the wait).
 func TestParallelAddsStayWithinTheGroupSize(t *testing.T) {
 	for _, callers := range []int{2, raceCallers} {
 		t.Run(fmt.Sprint(callers, " adders"), func(t *testing.T) {
-			sweepGroupAdds(t, callers).KnownFailure(t, "H-L7-06")
+			sweepGroupAdds(t, callers).FailOnViolation(t)
 		})
 	}
 }

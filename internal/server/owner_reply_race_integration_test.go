@@ -51,11 +51,10 @@ func TestAModeratorsDeleteThatWaitedForTheOwnersReplyKeepsIt(t *testing.T) {
 	}
 	kept := a.count(`SELECT COUNT(*) FROM messages WHERE id = $1`, reply) == 1
 	t.Logf("the moderator's delete answered %d; the Owner's reply kept: %v", status, kept)
-	// Expected failure until H-L7-07 is fixed (inverse assertion): the
-	// Owner check is a subquery of the statement that waits for the lock,
-	// evaluated on the snapshot from before the reply committed.
-	if kept || status != http.StatusNoContent {
-		t.Errorf("known failure H-L7-07 no longer reproduces (answer %d, reply kept %v): turn this into the plain assertion", status, kept)
+	// H-L7-07: the Owner check reads the thread after the root's lock, so it
+	// sees the reply that the delete waited for.
+	if !kept || status != http.StatusForbidden {
+		t.Errorf("the delete that waited for the reply answered %d and the reply kept is %v, want 403 and true", status, kept)
 	}
 
 	bulkDeleteWhileTheOwnerReplies(t, a, owner, alice, mod, ch)
@@ -97,9 +96,14 @@ func bulkDeleteWhileTheOwnerReplies(t *testing.T, a *app, owner, alice, mod *cli
 		t.Fatalf("the bulk delete answered after %v: it did not wait for the reply", took)
 	}
 	kept := a.count(`SELECT COUNT(*) FROM messages WHERE id = $1`, reply) == 1
-	t.Logf("bulk delete during the Owner's reply answered %d; reply kept %v", res.status, kept)
-	// Expected failure until H-L7-07 is fixed (inverse assertion).
-	if kept {
-		t.Errorf("known failure H-L7-07 (bulk delete) no longer reproduces: turn this into the plain assertion")
+	rootKept := a.count(`SELECT COUNT(*) FROM messages WHERE id = $1`, root) == 1
+	t.Logf("bulk delete during the Owner's reply answered %d %s; root kept %v, reply kept %v", res.status, res.body, rootKept, kept)
+	// H-L7-07: the locked messages are checked for Owner replies after the
+	// lock, so the thread stays.
+	var out struct{ Deleted int }
+	res.decode(t, &out)
+	if res.status != http.StatusOK || out.Deleted != 0 || !rootKept || !kept {
+		t.Errorf("bulk delete that waited for the reply: answer %d, deleted %d, root kept %v, reply kept %v; want 200, 0, true, true",
+			res.status, out.Deleted, rootKept, kept)
 	}
 }

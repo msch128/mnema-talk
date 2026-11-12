@@ -138,19 +138,25 @@ type lockedMessage struct {
 
 func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (lockedMessage, error) {
 	var m lockedMessage
-	// The Owner's words (the message or a reply of theirs in its thread)
-	// are only the Owner's to remove.
-	err := tx.QueryRow(ctx, `
-		SELECT m.user_id, m.channel_id, m.parent_id,
-		       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
-		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
-		               WHERE r.parent_id = m.id AND ru.role = 'admin')
-		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&m.author, &m.channel, &m.parent, &m.ownerContent)
+	err := tx.QueryRow(ctx, `SELECT user_id, channel_id, parent_id FROM messages WHERE id = $1 FOR UPDATE`, messageID).
+		Scan(&m.author, &m.channel, &m.parent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return m, fmt.Errorf("lock message: %w", err)
+	}
+	// The Owner's words (the message or a reply of theirs in its thread)
+	// are only the Owner's to remove. Read after the lock, in a statement of
+	// its own: a reply holds a key-share lock on its root until it commits,
+	// and a subquery of the statement that waited for it would not see it.
+	// Once the root is locked no new reply can be added to it.
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM users WHERE id = $2 AND role = 'admin')
+		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
+		               WHERE r.parent_id = $1 AND ru.role = 'admin')`, messageID, m.author).Scan(&m.ownerContent)
+	if err != nil {
+		return m, fmt.Errorf("check the Owner's replies: %w", err)
 	}
 	return m, nil
 }
