@@ -3,12 +3,14 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -108,5 +110,38 @@ func TestAnAutomodRuleCannotExemptACallOfAConversation(t *testing.T) {
 		if got := owner.get(path); strings.Contains(string(got.body), call.ID.String()) {
 			t.Errorf("the call's id reached %s", path)
 		}
+	}
+}
+
+// H-L6-05 (events made before the location was refused). An event that names
+// a conversation's call Talk can no longer be created, but one that predates
+// the check can be cancelled; the entry (event.talk_cancel) would carry the
+// call's id and the event's title to the Owner and the Administrators outside
+// the conversation. Such an event is not audited.
+func TestCancellingAnEventOfACallOfAConversationWritesNoAuditEntry(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	alice, bob := a.register(owner, "alice"), a.register(owner, "bobby")
+	assignRoles(t, owner, alice, createRole(t, owner, "Planners", perm.ManageEvents))
+	conv := alice.mustDM(t, bob).ID
+	wantStatus(t, "the conversation works", alice.dmPost(conv, "hi"), http.StatusCreated)
+	res := alice.post("/api/dms/"+conv.String()+"/talk", nil)
+	wantStatus(t, "start a call", res, http.StatusCreated)
+	var call struct {
+		ID uuid.UUID `json:"channel_id"`
+	}
+	res.decode(t, &call)
+
+	// The API refuses such an event now; the store does not.
+	ev, err := a.router.Events.Store.Create(context.Background(), communityevents.CreateEventRequest{
+		Title: "okapilegacy", StartTime: time.Now().Add(time.Hour), ChannelID: &call.ID}, alice.user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantStatus(t, "cancel", alice.post("/api/events/"+ev.ID.String()+"/cancel", nil), http.StatusOK)
+	got := owner.get("/api/admin/audit-log")
+	wantStatus(t, "the Owner reads the audit log", got, http.StatusOK)
+	if strings.Contains(string(got.body), "okapilegacy") || strings.Contains(string(got.body), call.ID.String()) {
+		t.Error("the cancellation of an event of a call reached the audit log")
 	}
 }

@@ -2,6 +2,7 @@ package communityevents
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -58,16 +59,12 @@ func (h *Handler) validateEventLocation(r *http.Request, chID *uuid.UUID, loc *s
 // lookup refuses the request instead of guessing.
 func (h *Handler) validateEventTalk(r *http.Request, chID uuid.UUID) error {
 	var kind string
-	err := h.DB.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, chID).Scan(&kind)
+	var isCall bool
+	err := h.DB.QueryRow(r.Context(), `SELECT type, dm_id IS NOT NULL FROM channels WHERE id = $1`, chID).Scan(&kind, &isCall)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
-	if err != nil || kind != "voice" {
-		return errNotATalk
-	}
-	if isCall, err := talks.IsDMTalk(r.Context(), h.DB, chID); err != nil {
-		return err
-	} else if isCall {
+	if err != nil || kind != "voice" || isCall {
 		return errNotATalk
 	}
 	if !h.canViewChannel(r, chID) {
@@ -86,8 +83,27 @@ func (h *Handler) validateEventPayload(r *http.Request, title, desc string, star
 	return h.validateEventLocation(r, chID, loc)
 }
 
-func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent) {
+// auditable reports whether an entry about ev may be written. An event that
+// names a conversation's call Talk (one made before such a location was
+// refused) is not audited: the entry would carry the call's id and the event's
+// title to the Owner and the Administrators outside the conversation. When
+// the lookup fails nothing is written either.
+func (h *Handler) auditable(r *http.Request, ev *CommunityEvent) bool {
 	if h.Audit == nil || ev == nil {
+		return false
+	}
+	if ev.ChannelID == nil {
+		return true
+	}
+	isCall, err := talks.IsDMTalk(r.Context(), h.DB, *ev.ChannelID)
+	if err != nil {
+		slog.WarnContext(r.Context(), "event audit skipped, Talk lookup failed", "event_id", ev.ID, "err", err)
+	}
+	return err == nil && !isCall
+}
+
+func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent) {
+	if !h.auditable(r, ev) {
 		return
 	}
 	if ev.ChannelID != nil {
