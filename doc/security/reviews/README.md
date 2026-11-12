@@ -27,6 +27,12 @@ audit.
 | [780-outbox](2026-11/780-outbox.md) | #780 | webhook queue written in the transaction, health under a storage outage |
 | [780-tt](2026-11/780-tt.md) | #780 | Trusted Types and the CI changes |
 
-Not kept (lost with a temporary directory before they were copied): the
+## 2026-11: follow-up to the hardening run (3.0.8)
+
+| Report | Change | Subject |
+|---|---|---|
+| [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; its should-fix findings S1 to S4 were fixed in the same pull request |
+
+Not kept from the hardening run (lost with a temporary directory before they were copied): the
 review of #768 (permission checks refuse without a service), the first two
 rounds for #771 and the second round for #779.
