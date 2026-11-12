@@ -1645,7 +1645,7 @@ their saved messages (ids, notes and times, not the saved text), the threads
 they follow, their reminders and unsent scheduled messages, the devices
 signed in, the direct message conversations they are in (their own messages
 are in the message file), their RSVPs and event sign-ups, their event
-comments, the wiki pages they saved (their text; the pages stay in the wiki),
+comments and comment mutes, the wiki pages they saved (their text; the pages stay in the wiki),
 audit entries about their account and their sign-in setup; nothing of other
 members. The archive's own `README.txt` lists every file. Deleting keeps an anonymised
 row and the member's messages without text, removes everything else (see

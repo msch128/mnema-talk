@@ -63,14 +63,12 @@ func TestErasureLeavesRetryIdsAndUploadBookingsOfThePerson(t *testing.T) {
 	knownGap(t, "H-L10-01", "no upload_usage row names the erased person", u == 0)
 }
 
-// The export leaves out settings the member made and words the member wrote:
-// "nobody may start a direct message with me" (dm_policy), "mute every direct
-// message" (dm_mute_all, the notification level of the whole list, which
-// settings.json, "notification levels per channel and category", does not
-// hold), the comment mute of an event (doc/events.md: the export holds the
-// comments and mute settings in event_comments.json), and the title and
-// description of the events the member created. H-L10-02.
-func TestExportLeavesOutDirectMessageSettingsCommentMutesAndOwnEvents(t *testing.T) {
+// The export holds the settings the member made: "nobody may start a direct
+// message with me" (dm_policy) and "mute every direct message" (dm_mute_all)
+// in profile.json, and the comment mute of an event (doc/events.md) in
+// event_comment_mutes.json. The events the member created are community
+// content and not exported (exportOmits). H-L10-02.
+func TestExportHoldsDirectMessageSettingsAndCommentMutes(t *testing.T) {
 	a, _ := mailApp(t)
 	admin := a.seedAdmin()
 	alice := a.register(admin, "alice")
@@ -103,10 +101,15 @@ func TestExportLeavesOutDirectMessageSettingsCommentMutesAndOwnEvents(t *testing
 	if !strings.Contains(archive, alice.user.ID.String()) || files < 20 {
 		t.Fatalf("the archive is not alice's full export: %d files", files)
 	}
-	knownGap(t, "H-L10-02", "the export holds dm_policy", strings.Contains(archive, `"nobody"`))
-	knownGap(t, "H-L10-02", "the export holds the direct message mute", strings.Contains(archive, "mute_all"))
-	knownGap(t, "H-L10-02", "the export holds the event comment mute", strings.Contains(archive, ev.ID.String()))
-	knownGap(t, "H-L10-02", "the export holds the events the member created", strings.Contains(archive, "blue blanket"))
+	for property, holds := range map[string]bool{
+		"the export holds dm_policy":               strings.Contains(archive, `"dm_policy": "nobody"`),
+		"the export holds the direct message mute": strings.Contains(archive, `"dm_mute_all": true`),
+		"the export holds the event comment mute":  strings.Contains(archive, ev.ID.String()),
+	} {
+		if !holds {
+			t.Errorf("H-L10-02: %s", property)
+		}
+	}
 }
 
 // The erasure deletes the person's files after its transaction; when that
