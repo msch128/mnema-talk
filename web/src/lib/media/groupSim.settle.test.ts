@@ -48,9 +48,12 @@ describe.skipIf(!process.env.SIM_SETTLE)('the settle time, measured again', () =
 // (64 s) and the whole absence limit (30 s); in production the relaxation is 2 minutes and the limit 20.
 // The lifetimes below keep the ratios of production: absence 800 s, heartbeat 200 s, rotation 1200 s,
 // maintenance 20 s, so that the sleeper's relaxation (100 s) is an eighth of the limit. At v3.0.8 and now
-// every seed of 1..150 settles within two hours of virtual time on both relays but hostile seed 149 (the room
-// agrees, then splits again, with and without the wait): the refusals that sleep causes (one per sleeper and
-// silent member) start nobody over in a loop.
+// every seed of 1..150 settled within two hours of virtual time on both relays but hostile seed 149 (the room
+// agreed, then split again, with and without the wait: a second key package of a reloaded member reached the
+// committer only, which swapped the leaf, and three members refused the commit and stayed one epoch behind
+// for about 14 minutes, H-L2-04). Members that refuse a commit only for an add of a package they never saw
+// now start over after one offer wait (groupBehind.ts), and every seed settles. The refusals that sleep
+// causes (one per sleeper and silent member) start nobody over in a loop.
 //   SIM_PRODUCTION=1 [SIM_PRODUCTION_SEEDS=150] npx vitest run src/lib/media/groupSim.settle.test.ts
 const PRODUCTION = { rotateMs: 1_200_000, rotateJitterMs: 120_000, absentMs: 800_000, heartbeatMs: 200_000, maintenanceMs: 20_000 }
 
@@ -61,6 +64,6 @@ describe.skipIf(!process.env.SIM_PRODUCTION)('with the lifetimes of production i
       const result = await runSeed(seed, { relay, timing: PRODUCTION, agreeWithinMs: 7_200_000 })
       if (result.violations.length) failed.push(seed)
     }
-    expect(failed).toEqual(relay === 'hostile' ? [149] : [])
+    expect(failed).toEqual([])
   }, 3_000_000)
 })

@@ -808,7 +808,14 @@ details and the limits.
   longer lists, one silent for about the absence limit by the receiver's own
   clock, or one the commit replaces. A browser that slept, and the member being
   removed itself, take a removal on the committer's word, since neither can
-  judge silence. So another member cannot remove a present member or give
+  judge silence. A commit refused only because it adds a key package the relay
+  never delivered to this receiver is held for one offer wait (4 seconds), since
+  the package may be on its way, and taken then if it has come; if not, the
+  receiver starts over like for a commit ahead (not more often than the reset
+  limit allows), because the members that were given the package may be in the
+  next epoch. A relay that gives a reloaded member's package to the committer
+  only therefore costs the others a start-over, not a split until the next
+  commit (design: `doc/security/h-l2-04-unseen-add.md`). So another member cannot remove a present member or give
   someone a second leaf (an epoch where an identity holds two leaves is
   refused and the member starts over). A malicious committer (the lowest id)
   keeps the powers the rules give the role: it can remove a member that looks
