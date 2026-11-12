@@ -208,11 +208,9 @@ export class GroupChecks implements SimHooks {
     const now = this.world.now
     seen.alive.set(from, now)
     for (const add of effects.adds) {
-      // A member that came back starts with a clean slate, like the group gives it.
-      if (add.id && before.members.includes(add.id)) {
-        seen.alive.set(add.id, now)
-        seen.beats.delete(add.id)
-      }
+      // A member that came back starts with a clean slate in the group, but only when its leaf changed: a swap that
+      // puts the very same leaf back resets nothing there. The outside view cannot tell, so it keeps the older time.
+      if (add.id && before.members.includes(add.id)) seen.beats.delete(add.id)
     }
   }
 
