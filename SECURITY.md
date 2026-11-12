@@ -467,6 +467,14 @@ details and the limits.
   plus about 16 MB of empty ones; the second takes about 16 000 subscription
   changes (one or two SSRCs each) in one connection, which the event budget
   (40 a second) stretches over a quarter of an hour.
+- **Answers are checked against what the SFU offers.** Every media section
+  the SFU offers carries one stream, so a section of a client's answer may
+  name one SSRC and, tied to it by an `a=ssrc-group` line, its retransmission
+  (`FID`) and error correction (`FEC-FR`) SSRCs; no SSRC may appear in two
+  sections. An answer that names more is refused before the connection reads
+  it, logged with the member at warn, and the offer is sent again. The
+  candidates inside an answer get the same vetting and budget as trickled
+  ones.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
