@@ -103,6 +103,8 @@ var eraseStatementsAfter = []string{
 	`UPDATE discord_imports SET created_by = NULL WHERE created_by = $1`,
 	`UPDATE discord_imports SET undone_by = NULL WHERE undone_by = $1`,
 	`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`,
+	`DELETE FROM message_nonces WHERE user_id = $1`,
+	`DELETE FROM upload_usage WHERE user_id = $1`,
 	`SELECT set_config('mnema.audit_scrub', 'on', true)`,
 	`UPDATE audit_log SET
 	actor_name  = CASE WHEN actor_id = $1 THEN '' ELSE actor_name END,

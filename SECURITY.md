@@ -420,7 +420,24 @@ details and the limits.
   forgotten. The name `deleted-…` is reserved. A deleted account is final:
   every administrative action treats it as missing (404), the account queries
   count it as inactive, and a database trigger refuses any update that would
-  re-enable it or give it a password, name, address, avatar, role or ban. *Export* is built in the
+  re-enable it or give it a password, name, display name, bio, status, address,
+  avatar, role or ban. A write of the member's that is still under way while
+  the account is erased (a second tab or device, a retry) leaves nothing
+  behind either: a trigger on every table with a foreign key to `users` (a
+  test fails for a new one without it) waits for the erasure's lock on the
+  account and then refuses a row of the member's own, and writes other
+  members' rows without the member: a reply no longer makes them follow the
+  thread, and a report no longer names them as the reported account. A role,
+  channel overwrite, block or conversation membership another member sets for
+  them in that moment is dropped (the request still answers success, as if it
+  had come a moment later, when the account no longer exists). A report's copy
+  of the conversation written after the erasure holds none of their text or
+  files, only the tombstone name and "Deleted member", like the copies the
+  erasure scrubs. Their emptied messages
+  cannot get text, link cards or a title again, and an audit entry by or about
+  the erased account is written without names and details. A file such a
+  write had already stored is deleted when its row is refused; if that delete
+  fails, the orphan cleanup finds it. *Export* is built in the
   background into the object store under `exports/` (not touched by the orphan
   cleanup), limited to one per account per 24 hours by a database lock, is
   streamed into storage while it is made (memory stays at one page of rows; the

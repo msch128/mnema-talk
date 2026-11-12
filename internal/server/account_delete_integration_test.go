@@ -68,6 +68,27 @@ func (a *app) foreignKeysToUsers() [][2]string {
 	return out
 }
 
+// requireEraseStatementsForEmptyTables fails for every foreign key to users
+// in which the fixture made no row for id: the walk after the erasure cannot
+// see a forgotten table it has no rows for, so such a column must be named by
+// an erasure statement or kept for a listed reason (erasureKeeps).
+func (a *app) requireEraseStatementsForEmptyTables(id uuid.UUID) {
+	a.t.Helper()
+	var plan []string
+	for _, st := range personalDataHandler().ErasePlan() {
+		plan = append(plan, st.SQL)
+	}
+	for _, fk := range a.foreignKeysToUsers() {
+		c := personColumn{table: strings.TrimPrefix(fk[0], "public."), column: fk[1]}
+		if a.countRows(`SELECT COUNT(*) FROM `+fk[0]+` WHERE `+fk[1]+` = $1`, id) > 0 || c.table == "users" {
+			continue
+		}
+		if _, kept := erasureKeeps[c.String()]; !kept && !erases(plan, c) {
+			a.t.Errorf("%s: the fixture has no row and no erasure statement names it, so this walk cannot prove it is erased", c)
+		}
+	}
+}
+
 // populate gives alice a footprint in every place the app keeps something
 // about a member.
 func (a *app) populate(admin, alice, bob *client, ch uuid.UUID) (aliceMsg, bobMsg uuid.UUID, files []string) {
@@ -268,6 +289,7 @@ func TestDeletionLeavesNoPersonalDataInAnyTable(t *testing.T) {
 	if before < 12 {
 		t.Fatalf("the fixture is too small to prove anything: %d rows", before)
 	}
+	a.requireEraseStatementsForEmptyTables(id)
 
 	res := a.deleteAccount(alice, memberPassword, "")
 	if res.status != http.StatusForbidden {

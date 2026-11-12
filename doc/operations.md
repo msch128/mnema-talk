@@ -1655,7 +1655,9 @@ nobody else is in is deleted with its messages and files, and in the others
 their messages stay without text; reports keep their copies for the
 moderators with the member's text blanked; files are removed from
 object storage in the same request, and anything that could not be removed is
-found by Admin > Media > orphan cleanup. The one exception is a picture a
+found by Admin > Media > orphan cleanup. A request of the member's that was
+still running while the account was erased fails (500) and stores nothing:
+the database refuses rows that name an erased account. The one exception is a picture a
 wiki page still shows: it survives the erasure, unlinked from the person
 (see [the wiki](wiki.md#privacy)). Exports are stored for at most 24 hours
 under `exports/` in the bucket and need object storage; back-ups taken in that
