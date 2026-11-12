@@ -45,7 +45,7 @@ func (l *Log) Mount(r chi.Router) {
 // list handles GET /api/admin/audit-log.
 //
 // @Summary List audit log entries
-// @Description Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). What a reader sees depends on the entry's class (doc/moderation.md): sign-in events, webhooks, system, media, settings and Owner-only account actions are only returned to the Owner and Administrators, and message and Talk entries only for channels the caller can view. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.
+// @Description Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). What a reader sees depends on the entry's class (doc/moderation.md): sign-in events, webhooks, system, media, settings and Owner-only account actions are only returned to the Owner and Administrators, and message, Talk and forum entries only for channels the caller can view; an action the class table does not name is only returned to the Owner and Administrators. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.
 // @ID listAuditLog
 // @Tags Admin
 // @Produce json
