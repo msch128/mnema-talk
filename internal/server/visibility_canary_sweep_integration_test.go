@@ -211,10 +211,14 @@ func (s *canarySweep) queryVariants(params []string) []string {
 			vals = s.searchTerms()
 		case p == "channel_id" || p == "channel":
 			vals = s.w.pool["channel"]
-		case p == "around" || p == "before" || p == "after" || p == "message_id" || p == "anchor":
+		case p == "around" || p == "before" || p == "after" || p == "message_id" || p == "anchor" || p == "before_id":
 			vals = s.w.pool["message"]
-		case p == "user_id" || p == "author_id" || p == "author":
+		case p == "user_id" || p == "author_id" || p == "author" || p == "mentions" || p == "actor":
 			vals = s.w.pool["user"]
+		case p == "target_id":
+			vals = s.values("any")
+		case p == "dm" || p == "deleted":
+			vals = []string{"1", "true"}
 		case p == "url":
 			vals = s.internalLinks()
 		}
@@ -408,6 +412,10 @@ func (s *canarySweep) check(who, route, where string, body []byte) {
 // longer leaks fails until it is removed), and no other leak may.
 var canaryKnownLeaks = map[string]string{}
 
+// canaryKnownDeepOnly are rows of canaryKnownLeaks that only the deep run is
+// sure to reach.
+var canaryKnownDeepOnly = map[string]bool{}
+
 func (s *canarySweep) leak(who, route, what, msg string) {
 	if key := who + " " + route + " " + what; canaryKnownLeaks[key] != "" {
 		s.known[key] = true
@@ -444,10 +452,22 @@ func recordFrames(t *testing.T, c *client) *frameLog {
 			log.mu.Unlock()
 		}
 	}()
-	if _, ok := ws.expect("presence_snapshot", soon); ok {
-		return log
+	// The hub's greeting says the socket is registered; events before it would
+	// be missed, so a frame not recorded could not count as a frame not sent.
+	deadline := time.Now().Add(soon)
+	for !log.has("presence_snapshot") {
+		if time.Now().After(deadline) {
+			t.Fatal("the hub did not register the observer's socket")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 	return log
+}
+
+func (l *frameLog) has(eventType string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slices.ContainsFunc(l.frames, func(ev wsEvent) bool { return ev.Type == eventType })
 }
 
 func (s *canarySweep) frames(t *testing.T, who string, log *frameLog) {
@@ -486,7 +506,7 @@ func (s *canarySweep) report(t *testing.T) {
 		t.Errorf("the control reached too few Staff words")
 	}
 	for key, id := range canaryKnownLeaks {
-		if !s.known[key] {
+		if !s.known[key] && (s.deep || !canaryKnownDeepOnly[key]) {
 			t.Errorf("known leak %s (%s) did not happen: drop it from canaryKnownLeaks", key, id)
 		}
 	}

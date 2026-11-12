@@ -24,10 +24,10 @@ var canaryKept = map[string]string{}
 
 type canarySite struct {
 	name  string
-	write func(f *canaryWorld, word string) response
+	write func(f *erasureWorld, word string) response
 }
 
-type canaryWorld struct {
+type erasureWorld struct {
 	a                 *app
 	admin, alice, bob *client
 	ch, bobMsg, dm    uuid.UUID
@@ -35,32 +35,32 @@ type canaryWorld struct {
 }
 
 var canarySites = []canarySite{
-	{"message", func(f *canaryWorld, w string) response {
+	{"message", func(f *erasureWorld, w string) response {
 		return f.alice.post("/api/channels/"+f.ch.String()+"/messages", map[string]any{"content": w})
 	}},
-	{"edited away", func(f *canaryWorld, w string) response {
+	{"edited away", func(f *erasureWorld, w string) response {
 		return f.alice.put("/api/channels/"+f.ch.String()+"/messages/"+f.aliceMsg.String(), map[string]any{"content": w})
 	}},
-	{"bio", func(f *canaryWorld, w string) response {
+	{"bio", func(f *erasureWorld, w string) response {
 		return f.alice.put("/api/users/me/profile", map[string]string{"bio": w})
 	}},
-	{"status", func(f *canaryWorld, w string) response {
+	{"status", func(f *erasureWorld, w string) response {
 		return f.alice.put("/api/users/me/status", map[string]string{"status_text": w})
 	}},
-	{"file name", func(f *canaryWorld, w string) response {
+	{"file name", func(f *erasureWorld, w string) response {
 		return f.alice.upload("/api/channels/"+f.ch.String()+"/upload", "file", w+".png", "image/png", pngBytes, map[string]string{"content": "a file"})
 	}},
-	{"direct message", func(f *canaryWorld, w string) response { return f.alice.dmPost(f.dm, w) }},
-	{"saved note", func(f *canaryWorld, w string) response {
+	{"direct message", func(f *erasureWorld, w string) response { return f.alice.dmPost(f.dm, w) }},
+	{"saved note", func(f *erasureWorld, w string) response {
 		return f.alice.put("/api/me/saved/"+f.bobMsg.String(), map[string]string{"note": w})
 	}},
-	{"report note", func(f *canaryWorld, w string) response {
+	{"report note", func(f *erasureWorld, w string) response {
 		return f.alice.post("/api/messages/"+f.bobMsg.String()+"/report", map[string]any{"category": "spam", "note": w})
 	}},
-	{"scheduled", func(f *canaryWorld, w string) response {
+	{"scheduled", func(f *erasureWorld, w string) response {
 		return f.alice.post("/api/channels/"+f.ch.String()+"/scheduled", map[string]any{"content": w, "send_at": time.Now().Add(time.Hour)})
 	}},
-	{"forwarded", func(f *canaryWorld, w string) response {
+	{"forwarded", func(f *erasureWorld, w string) response {
 		m := f.a.send(f.alice, f.ch, w)
 		return f.bob.forward(m, f.ch, "")
 	}},
@@ -68,7 +68,7 @@ var canarySites = []canarySite{
 
 func TestErasureLeavesNoWordOfThePersonOutsideTheDocumentedPlaces(t *testing.T) {
 	a, _ := mailApp(t)
-	f := &canaryWorld{a: a, admin: a.seedAdmin()}
+	f := &erasureWorld{a: a, admin: a.seedAdmin()}
 	f.alice, f.bob = a.register(f.admin, "alice"), a.register(f.admin, "bob")
 	ch := a.createChannel(f.admin, "general", "text")
 	f.ch, f.bobMsg = ch, a.send(f.bob, ch, "bob's words")
