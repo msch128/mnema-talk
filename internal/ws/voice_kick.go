@@ -151,22 +151,22 @@ func (h *Hub) EndingUser(userID uuid.UUID) {
 
 // DisconnectUser closes every live connection of userID.
 func (h *Hub) DisconnectUser(userID uuid.UUID) {
-	h.mu.Lock()
 	var clients []*Client
-	for c := range h.clients {
-		if c.User.ID == userID {
-			c.shutdown()
-			clients = append(clients, c)
+	safego.Locked(&h.mu, func() {
+		for c := range h.clients {
+			if c.User.ID == userID {
+				c.shutdown()
+				clients = append(clients, c)
+			}
 		}
-	}
-	for c := range h.pending {
-		if c.User.ID == userID {
-			delete(h.pending, c)
-			c.shutdown()
-			clients = append(clients, c)
+		for c := range h.pending {
+			if c.User.ID == userID {
+				delete(h.pending, c)
+				c.shutdown()
+				clients = append(clients, c)
+			}
 		}
-	}
-	h.mu.Unlock()
+	})
 	for _, c := range clients {
 		c.close()
 	}
@@ -186,33 +186,43 @@ func (h *Hub) enforceFailClosed(userIDs []uuid.UUID, fn func()) {
 
 // disconnectForRecheck closes every connection of userIDs (nil: everybody)
 // and ends their Talk seats, so nobody keeps what an interrupted enforcement
-// did not get to take away. Locks are released by safego.Locked and the
-// deferred unlocks of the paths below, so the hub is usable afterwards.
+// did not get to take away. Every member and every seat is handled on its own
+// under safego.Run: a panic for one is counted and logged and spares nobody
+// else. A seat is ended by kickUserFromChannel, which also removes one that
+// has no connection and no grace period.
 func (h *Hub) disconnectForRecheck(userIDs []uuid.UUID) {
-	want := wantUserIDs(userIDs)
+	users, seats := h.recheckTargets(wantUserIDs(userIDs))
+	for id := range users {
+		safego.Run("ws_perm_enforce_conn", safego.Abandon, func() { h.DisconnectUser(id) })
+	}
+	for key := range seats {
+		safego.Run("ws_perm_enforce_seat", safego.Abandon, func() { h.kickUserFromChannel(key.user, key.ch, "missing_permission") })
+	}
+}
+
+// recheckTargets lists the wanted users (nil: all) who are connected or hold
+// a seat, and the seats (listed or in a grace period) they hold.
+func (h *Hub) recheckTargets(want map[uuid.UUID]bool) (map[uuid.UUID]struct{}, map[voiceKey]struct{}) {
 	users := map[uuid.UUID]struct{}{}
+	seats := map[voiceKey]struct{}{}
 	for _, c := range h.clientsMatching(want) {
 		users[c.User.ID] = struct{}{}
 	}
+	add := func(key voiceKey) {
+		if want == nil || want[key.user] {
+			users[key.user] = struct{}{}
+			seats[key] = struct{}{}
+		}
+	}
 	safego.Locked(h.mu.RLocker(), func() {
-		for _, room := range h.voice {
+		for ch, room := range h.voice {
 			for id := range room {
-				if want == nil || want[id] {
-					users[id] = struct{}{}
-				}
+				add(voiceKey{id, ch})
 			}
 		}
 		for key := range h.grace {
-			if want == nil || want[key.user] {
-				users[key.user] = struct{}{}
-			}
+			add(key)
 		}
 	})
-	for id := range users {
-		h.DisconnectUser(id)
-	}
-	for id := range users {
-		// One member's failing seat clean-up must not spare the next one.
-		safego.Run("ws_perm_enforce_seat", safego.Abandon, func() { h.KickFromVoice(id) })
-	}
+	return users, seats
 }
