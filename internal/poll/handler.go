@@ -132,7 +132,7 @@ const votePermissions = perm.ViewChannel | perm.AddReactions
 // @Success 200 {object} Detail "The poll with the caller's votes."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): unknown or repeated option, several options in a single-choice poll."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the View channels or Add reactions permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the View channels or Add reactions permission in the channel, a vote in a direct message conversation of two after a block (withdrawing stays possible), or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such poll, or the channel is hidden from the caller."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the poll has ended, or the caller already voted in an anonymous poll."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."

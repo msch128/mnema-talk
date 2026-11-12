@@ -173,7 +173,9 @@ conversations nor write in them.
   sent because of *another member* (a block in either direction, their
   `dm_policy` of `nobody`, a disabled or erased account, a bot, an unknown id)
   the answer is the same 403 text, so none can be probed. A block makes an
-  existing 1:1 conversation unwritable in both directions, silently; in a
+  existing 1:1 conversation unwritable in both directions, silently (new
+  messages, edits, reactions and poll votes alike; deleting one's own
+  messages and taking a reaction or vote back stay possible); in a
   group, a block between two members does not stop the group, and nobody can
   add a member who blocked them. In any conversation (group or two-person),
   unread and mention counts and the last-activity time leave out messages by

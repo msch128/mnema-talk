@@ -250,6 +250,7 @@
       "srvCouldnTReactToThisMessage": "Auf diese Nachricht konnte nicht reagiert werden.",
       "srvCouldnTSendThisMessage": "Die Nachricht konnte nicht gesendet werden.",
       "srvCouldnTStartThisDirect": "Die Direktnachricht konnte nicht gestartet werden.",
+      "srvCouldnTVoteInThisPoll": "In dieser Umfrage konnte nicht abgestimmt werden.",
       "srvDiscordCouldNotBeReached": "Discord war nicht erreichbar. Versuche es später erneut.",
       "srvDiscordSentSomethingThatIs": "Discord hat etwas gesendet, das keine Server-Vorlage ist.",
       "srvMissingAccessTheBotMay": "Der Bot darf die Mitgliederliste nicht abfragen.",

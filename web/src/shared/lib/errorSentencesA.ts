@@ -24,6 +24,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['Couldn\'t react to this message.', 'srvCouldnTReactToThisMessage'],
   ['Couldn\'t send this message.', 'srvCouldnTSendThisMessage'],
   ['Couldn\'t start this direct message.', 'srvCouldnTStartThisDirect'],
+  ['Couldn\'t vote in this poll.', 'srvCouldnTVoteInThisPoll'],
   ['Discord could not be reached; try again later', 'srvDiscordCouldNotBeReached'],
   ['Discord sent something that is not a server template', 'srvDiscordSentSomethingThatIs'],
   ['Missing Access: the bot may not ask for the member list (intent GUILD_MEMBERS)', 'srvMissingAccessTheBotMay'],
