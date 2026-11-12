@@ -107,6 +107,7 @@ func TestLatePacketBeforeASwitchReusesNoSequenceNumbers(t *testing.T) {
 				t.Fatalf("%+v: the new layer's %d/%d is not after the newest sent, %d/%d", c, p.SequenceNumber, p.Timestamp, seq, ts)
 			}
 		}
+		checkPictureIDs(t, c, got)
 		if c.late < 2 {
 			inOrder++
 		} else {
@@ -118,4 +119,61 @@ func TestLatePacketBeforeASwitchReusesNoSequenceNumbers(t *testing.T) {
 		t.Fatalf("generator: %d in order, %d late", inOrder, late)
 	}
 	t.Logf("%d cases with a late packet before the switch, %d in order: no number delivered twice", late, inOrder)
+}
+
+// checkPictureIDs: the VP8 picture IDs of the new layer's frames (15 bits
+// here) are none of the frames delivered before the switch and come after
+// the newest of them, and its TL0PICIDX after the newest one (all of layer 0
+// share one).
+func checkPictureIDs(t *testing.T, c switchCase, got []rtp.Packet) {
+	t.Helper()
+	before := map[uint16]bool{}
+	var newPic uint16
+	var newTl0 uint8
+	for i, p := range got[:c.run] {
+		d, _ := parseVP8(p.Payload)
+		before[d.pic] = true
+		if i == 0 || (d.pic-newPic)&0x7fff != 0 && (d.pic-newPic)&0x7fff < 1<<14 {
+			newPic = d.pic
+		}
+		if i == 0 || int8(d.tl0-newTl0) > 0 {
+			newTl0 = d.tl0
+		}
+	}
+	for _, p := range got[c.run:] {
+		d, _ := parseVP8(p.Payload)
+		if ahead := (d.pic - newPic) & 0x7fff; before[d.pic] || ahead == 0 || ahead >= 1<<14 || int8(d.tl0-newTl0) <= 0 {
+			t.Fatalf("%+v: the new layer's picture ID %d / TL0PICIDX %d after the newest %d / %d (before: %v)", c, d.pic, d.tl0, newPic, newTl0, before)
+		}
+	}
+}
+
+// A switch marks the newest number before it, so that a late packet of the
+// new layer from before its keyframe is dropped; the mark retires once the
+// stream has moved on, before the 16-bit comparison with it turns round
+// (32768 numbers on). Every packet of a long run after a switch is delivered.
+func TestAStreamFlowsLongAfterASwitch(t *testing.T) {
+	s := newRewriteSim(t, 65000, 1, 9, 5, true)
+	s.send(0, true, false, s.now)
+	s.retarget(1)
+	s.hold(1, false, true) // sent by layer 1 before its keyframe, arrives late
+	s.send(1, true, false, s.now)
+	for range 100 {
+		s.send(1, false, true, s.now)
+	}
+	s.release(false) // late() requires it dropped while the mark holds
+	if s.arrived != nil {
+		t.Fatal("a late packet from before the keyframe of the switch was delivered")
+	}
+	delivered := 0
+	for i := range 40000 {
+		s.now = s.now.Add(time.Millisecond)
+		s.send(1, false, i%8 == 0, s.now)
+		if s.arrived != nil {
+			delivered++
+		}
+	}
+	if delivered != 40000 {
+		t.Fatalf("%d of 40000 packets after a switch delivered", delivered)
+	}
 }

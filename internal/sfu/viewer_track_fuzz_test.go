@@ -11,9 +11,12 @@ import (
 // fuzzLayers is the number of layers the simulated share sends.
 const fuzzLayers = 3
 
-// fuzzMaxOps bounds a script, so the sequence numbers delivered stay within
-// one turn of the 16-bit counter and a number seen twice means a reuse.
-const fuzzMaxOps = 4096
+// fuzzMaxOps bounds a script; fuzzBursts bounds its long runs (see burst).
+const (
+	fuzzMaxOps   = 4096
+	fuzzBursts   = 3
+	fuzzBurstLen = 20000
+)
 
 // layerSource is the sender's side of one layer: the numbers of its last
 // packet. Every layer counts on its own, as separate encoders do.
@@ -43,10 +46,12 @@ type heldPacket struct {
 	pkt   *rtp.Packet
 }
 
-// origin is the source packet an outgoing sequence number was given to.
+// origin is the source packet an outgoing sequence number was given to, and
+// the count of packets delivered when it was.
 type origin struct {
 	layer int
 	seq   uint16
+	at    int
 }
 
 // rewriteSim drives one viewer track with packets of several layers and
@@ -61,11 +66,16 @@ type rewriteSim struct {
 	last    *delivered
 	arrived *rtp.Packet
 	held    []heldPacket
-	// owner maps every sequence number delivered to its source packet.
+	// owner maps every sequence number delivered to its source packet;
+	// count is the packets delivered.
 	owner map[uint16]origin
-	// The newest sequence number and timestamp delivered.
+	count int
+	// The newest sequence number, timestamp, picture ID and TL0PICIDX delivered.
 	newSeq uint16
 	newTs  uint32
+	newPic uint16
+	newTl0 uint8
+	bursts int
 	// After a switch of a stream that had begun (rebased): the newest numbers
 	// delivered before it, and the source number of the keyframe it began at.
 	rebased        bool
@@ -103,7 +113,8 @@ func (s *rewriteSim) picMask() uint16 {
 // step runs one byte of the script. The low two bits pick a layer to send a
 // packet of, or (3) another operation chosen by the high four bits: 0 a
 // change of what the viewer should receive, 1 to 7 a packet that is late
-// (see hold), 8 to 15 the late packets arriving (see release). For a packet
+// (see hold), 8 to 15 the late packets arriving (see release) or, with bits 2
+// and 3 set, a long run of packets (see burst). For a packet
 // the high four bits are the milliseconds that pass before it, or (14, 15)
 // make its clock reading older than the clock: every layer is forwarded by a
 // goroutine of its own, which may have read the clock before another layer's
@@ -115,6 +126,8 @@ func (s *rewriteSim) step(op byte) {
 			s.retarget(int(op>>2) & 3)
 		case h < 8:
 			s.hold(int(op>>2)&3%fuzzLayers, h&4 != 0, h&2 != 0)
+		case op>>2&3 == 3:
+			s.burst()
 		default:
 			s.release(h&1 != 0)
 		}
@@ -180,6 +193,31 @@ func (s *rewriteSim) release(twice bool) {
 	s.held = s.held[:0]
 }
 
+// burst sends fuzzBurstLen packets in order of the layer the viewer is on (or
+// waits for), further than the 16-bit comparisons of a switch reach. Packets
+// still held are lost for good: they would arrive a turn of the counter late.
+func (s *rewriteSim) burst() {
+	if s.bursts == fuzzBursts {
+		return
+	}
+	s.bursts++
+	s.held = s.held[:0]
+	layer := s.vt.cur
+	if layer < 0 {
+		layer = s.vt.eff
+	}
+	for i := range fuzzBurstLen {
+		s.now = s.now.Add(time.Millisecond)
+		s.send(layer, false, i%8 == 0, s.now)
+	}
+}
+
+// marked reports whether a switch still bounds the numbers: until the stream
+// has moved on 16384 numbers after it.
+func (s *rewriteSim) marked() bool {
+	return s.rebased && s.newSeq-s.floorSeq < 1<<14
+}
+
 // write hands src to the viewer track and returns whether it switched.
 func (s *rewriteSim) write(layer int, src *rtp.Packet, at time.Time) bool {
 	sent := bytes.Clone(src.Payload)
@@ -223,7 +261,7 @@ func (s *rewriteSim) late(h heldPacket) {
 	if switched != wantSwitch {
 		s.t.Fatalf("late packet of layer %d (key %v) with the viewer on %d wanting %d: switched=%v", h.layer, h.key, before, target, switched)
 	}
-	stale := s.rebased && h.layer == s.curLayer && int16(src.SequenceNumber-uint16(s.kSrc)) < 0
+	stale := s.marked() && h.layer == s.curLayer && int16(src.SequenceNumber-uint16(s.kSrc)) < 0
 	if through := wantSwitch || h.layer == before && !stale; through != (s.arrived != nil) {
 		s.t.Fatalf("late packet %d of layer %d with the viewer on %d wanting %d (stale %v): delivered=%v",
 			src.SequenceNumber, h.layer, before, target, stale, s.arrived != nil)
@@ -287,17 +325,19 @@ func (s *rewriteSim) checkSwitch(now, prev *delivered) {
 	if ticks < 1 || ticks+1 < elapsed || ticks > elapsed+1 {
 		t.Fatalf("timestamp moved %d ticks across a switch, %d elapsed", ticks, elapsed)
 	}
-	if now.pic != (prev.pic+1)&s.picMask() || now.tl0 != prev.tl0+1 {
-		t.Fatalf("picture ID %d after %d, TL0PICIDX %d after %d across a switch", now.pic, prev.pic, now.tl0, prev.tl0)
+	// Picture ID and TL0PICIDX carry on after the newest ones delivered.
+	if now.pic != (s.newPic+1)&s.picMask() || now.tl0 != s.newTl0+1 {
+		t.Fatalf("picture ID %d after %d (newest %d), TL0PICIDX %d after %d (newest %d) across a switch",
+			now.pic, prev.pic, s.newPic, now.tl0, prev.tl0, s.newTl0)
 	}
 }
 
 // checkNewer: after a switch every packet is newer, by sequence number and
-// timestamp, than everything delivered before the switch, and the newest
-// numbers delivered move on.
+// timestamp, than everything delivered before the switch (while the switch
+// bounds the numbers), and the newest numbers delivered move on.
 func (s *rewriteSim) checkNewer(now *delivered) {
 	seq, ts := now.out.SequenceNumber, now.out.Timestamp
-	if s.rebased && (int16(seq-s.floorSeq) <= 0 || int32(ts-s.floorTs) <= 0) {
+	if s.marked() && (int16(seq-s.floorSeq) <= 0 || int32(ts-s.floorTs) <= 0) {
 		s.t.Fatalf("%d/%d delivered after a switch, not after the newest before it, %d/%d", seq, ts, s.floorSeq, s.floorTs)
 	}
 	first := len(s.owner) == 0
@@ -307,13 +347,22 @@ func (s *rewriteSim) checkNewer(now *delivered) {
 	if first || int32(ts-s.newTs) > 0 {
 		s.newTs = ts
 	}
+	if d := (now.pic - s.newPic) & s.picMask(); first || d != 0 && d <= s.picMask()/2 {
+		s.newPic = now.pic
+	}
+	if first || int8(now.tl0-s.newTl0) > 0 {
+		s.newTl0 = now.tl0
+	}
 }
 
 // checkOwner: a sequence number is never delivered for two different source
-// packets (the same packet arriving twice keeps its number).
+// packets within half a turn of the counter (the same packet arriving twice
+// keeps its number).
 func (s *rewriteSim) checkOwner(layer int, now *delivered) {
-	o := origin{layer: layer, seq: now.src.SequenceNumber}
-	if had, ok := s.owner[now.out.SequenceNumber]; ok && had != o {
+	s.count++
+	o := origin{layer: layer, seq: now.src.SequenceNumber, at: s.count}
+	had, ok := s.owner[now.out.SequenceNumber]
+	if ok && (had.layer != o.layer || had.seq != o.seq) && s.count-had.at < 1<<15 {
 		s.t.Fatalf("sequence number %d delivered for packet %d of layer %d and before for %d of layer %d",
 			now.out.SequenceNumber, o.seq, o.layer, had.seq, had.layer)
 	}
@@ -325,8 +374,10 @@ func (s *rewriteSim) checkOwner(layer int, now *delivered) {
 // numbers, timestamps, picture IDs and TL0PICIDX carry on across every
 // switch, wrap-around included, and only a keyframe of the wanted layer
 // starts a new one. Packets also arrive late, overtaken or repaired and
-// twice: no sequence number is then given to two packets, and after a switch
-// sequence numbers and timestamps are newer than everything delivered before.
+// twice: no sequence number is then given to two packets, a switch carries
+// on after the newest sequence number, timestamp, picture ID and TL0PICIDX
+// delivered, and after it sequence numbers and timestamps are newer than
+// everything delivered before. Long runs reach past a turn of the counter.
 func FuzzViewerLayerRewrite(f *testing.F) {
 	// Layer 0 from its keyframe, a move to layer 1 that waits for a keyframe,
 	// the layer taken away, and back.
@@ -347,6 +398,16 @@ func FuzzViewerLayerRewrite(f *testing.F) {
 	// A late packet of layer 0 from before its keyframe, after a switch away
 	// and back to it: it must not take a number of the stream again.
 	f.Add([]byte{0x04, 0x00, 0x13, 0x00, 0x0b, 0x06, 0x03, 0x04, 0x83, 0x00}, uint16(200), uint32(9000), uint16(9), uint8(5), true)
+	// The start of a frame of layer 0 repaired after the next frame, then a
+	// switch: picture ID and TL0PICIDX carry on after the newer frame's, in
+	// both widths of the picture ID.
+	older := []byte{0x04, 0x00, 0x23, 0x08, 0x83, 0x0b, 0x16, 0x02}
+	f.Add(older, uint16(99), uint32(1), uint16(0x7ffd), uint8(254), true)
+	f.Add(older, uint16(99), uint32(1), uint16(0x7d), uint8(5), false)
+	// A switch to layer 1 with a late packet from before its keyframe, then
+	// two long runs (40000 packets, past the reach of the switch's mark), and
+	// a switch to layer 2 after them.
+	f.Add([]byte{0x04, 0x00, 0x07, 0x17, 0x05, 0x83, 0x8f, 0x8f, 0x01, 0x0b, 0x06, 0x02}, uint16(65000), uint32(1), uint16(0x7ff0), uint8(250), true)
 	f.Fuzz(func(t *testing.T, script []byte, seq uint16, ts uint32, pic uint16, tl0 uint8, wide bool) {
 		sim := newRewriteSim(t, seq, ts, pic, tl0, wide)
 		for _, op := range script[:min(len(script), fuzzMaxOps)] {

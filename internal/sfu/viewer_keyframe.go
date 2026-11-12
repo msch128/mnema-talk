@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/pion/rtp"
 )
 
 func (vt *viewerTrack) needsKeyframe(now time.Time) bool {
@@ -68,17 +69,20 @@ func (vt *viewerTrack) requestKeyframe() {
 }
 
 // sentNumbers is what the stream of a layered viewer has carried: the newest
-// sequence number and timestamp sent and, after a layer switch, the newest
-// sequence number sent before it (base). A packet can arrive late, reordered
+// sequence number, timestamp, VP8 picture ID and TL0PICIDX sent and, after a
+// layer switch, the newest sequence number sent before it (base). A packet can arrive late, reordered
 // on the way or repaired by a retransmission after newer ones, so the last
 // packet sent is not always the newest. A switch continues after the newest:
 // continuing after a late one would give the new layer's first packets (its
 // keyframe) numbers the viewer already holds, which a receiver drops as
-// duplicates (RFC 3550 A.1), and a timestamp older than a frame it has.
+// duplicates (RFC 3550 A.1), a timestamp older than a frame it has, and a
+// picture ID of a frame it decoded.
 type sentNumbers struct {
-	seq, base uint16
-	ts        uint32
-	any       bool
+	seq, base, pic uint16
+	ts             uint32
+	tl0            uint8
+	any            bool
+	anyPic, anyTl0 bool
 	// rebased: base applies. It retires once the stream has moved on far
 	// enough that the 16-bit comparison with base would turn round.
 	rebased bool
@@ -115,4 +119,70 @@ func (n *sentNumbers) rebase() {
 // was switched at would take a number the layer before already used.
 func (n *sentNumbers) fresh(seq uint16) bool {
 	return !n.rebased || seqNewer(seq, n.base)
+}
+
+// picNewer reports whether VP8 picture ID a comes after b, both 15 bits wide
+// (wide) or 7.
+func picNewer(a, b uint16, wide bool) bool {
+	mask := uint16(0x7f)
+	if wide {
+		mask = 0x7fff
+	}
+	d := (a - b) & mask
+	return d != 0 && d <= mask/2
+}
+
+// notePic records a VP8 picture ID sent (masked to its width).
+func (n *sentNumbers) notePic(pic uint16, wide bool) {
+	if wide {
+		pic &= 0x7fff
+	} else {
+		pic &= 0x7f
+	}
+	if !n.anyPic || picNewer(pic, n.pic, wide) {
+		n.pic = pic
+	}
+	n.anyPic = true
+}
+
+// noteTl0 records a TL0PICIDX sent.
+func (n *sentNumbers) noteTl0(tl0 uint8) {
+	if !n.anyTl0 || int8(tl0-n.tl0) > 0 {
+		n.tl0 = tl0
+	}
+	n.anyTl0 = true
+}
+
+// carryVP8OffsetsLocked sets the picture ID and TL0PICIDX offsets so the
+// keyframe packet src continues after the newest ones the viewer has.
+func (vt *viewerTrack) carryVP8OffsetsLocked(src *rtp.Packet) {
+	d, ok := parseVP8(src.Payload)
+	if !ok {
+		return
+	}
+	if d.picPos >= 0 {
+		vt.picOff = vt.sent.pic + 1 - d.pic
+	}
+	if d.tl0Pos >= 0 {
+		vt.tl0Off = vt.sent.tl0 + 1 - d.tl0
+	}
+}
+
+// patchVP8Locked records the picture ID and TL0PICIDX sent and, when the
+// offsets are non-zero, rewrites them in out's payload (a copy of src).
+func (vt *viewerTrack) patchVP8Locked(out, src *rtp.Packet) {
+	d, ok := parseVP8(src.Payload)
+	if !ok {
+		return
+	}
+	if d.picPos >= 0 {
+		vt.sent.notePic(d.pic+vt.picOff, d.pic16)
+	}
+	if d.tl0Pos >= 0 {
+		vt.sent.noteTl0(d.tl0 + vt.tl0Off)
+	}
+	if vt.picOff != 0 || vt.tl0Off != 0 {
+		vt.scratch = patchVP8(vt.scratch, src.Payload, d, vt.picOff, vt.tl0Off)
+		out.Payload = vt.scratch
+	}
 }

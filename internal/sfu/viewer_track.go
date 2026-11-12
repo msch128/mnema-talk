@@ -58,8 +58,6 @@ type viewerTrack struct {
 	// The newest numbers sent to the viewer, and when the last packet went out.
 	sent    sentNumbers
 	lastAt  time.Time
-	lastPic uint16
-	lastTl0 uint8
 	scratch []byte
 	// out is the packet handed to the sink: the source with this viewer's numbers.
 	out rtp.Packet
@@ -358,43 +356,4 @@ func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
 	vt.started = true
 	vt.cur = idx
 	vt.curA.Store(int32(idx))
-}
-
-// carryVP8OffsetsLocked sets the picture ID and TL0PICIDX offsets so the
-// keyframe packet src continues the numbering the viewer last saw.
-func (vt *viewerTrack) carryVP8OffsetsLocked(src *rtp.Packet) {
-	d, ok := parseVP8(src.Payload)
-	if !ok {
-		return
-	}
-	if d.picPos >= 0 {
-		vt.picOff = vt.lastPic + 1 - d.pic
-	}
-	if d.tl0Pos >= 0 {
-		vt.tl0Off = vt.lastTl0 + 1 - d.tl0
-	}
-}
-
-// patchVP8Locked remembers the last picture ID and TL0PICIDX sent and, when
-// the offsets are non-zero, rewrites them in out's payload (a copy of src).
-func (vt *viewerTrack) patchVP8Locked(out, src *rtp.Packet) {
-	d, ok := parseVP8(src.Payload)
-	if !ok {
-		return
-	}
-	if d.picPos >= 0 {
-		vt.lastPic = d.pic + vt.picOff
-		if d.pic16 {
-			vt.lastPic &= 0x7fff
-		} else {
-			vt.lastPic &= 0x7f
-		}
-	}
-	if d.tl0Pos >= 0 {
-		vt.lastTl0 = d.tl0 + vt.tl0Off
-	}
-	if vt.picOff != 0 || vt.tl0Off != 0 {
-		vt.scratch = patchVP8(vt.scratch, src.Payload, d, vt.picOff, vt.tl0Off)
-		out.Payload = vt.scratch
-	}
 }
