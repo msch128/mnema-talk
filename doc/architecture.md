@@ -384,7 +384,11 @@ back), so it needs no public relay ports and cannot reach anything else.
    write error for one subscriber never ends the track for the others. No
    decoding, no transcoding, no recording. Viewers' keyframe requests (PLI/FIR)
    go to the publisher, rate-limited per track (300 ms), so a burst of
-   viewers costs the publisher one keyframe.
+   viewers costs the publisher one keyframe. This rate limit and the SFU's
+   other stored times (the 500 ms in which late packets of a stopped track do
+   not publish it again, a layer's last packet, resends, bitrate measurements)
+   follow the monotonic clock, so a step of the host's wall clock moves none
+   of them.
 4. **Subscriptions (opt-in).** What each viewer receives is decided per
    viewer ([`subscriptions.go`](../internal/sfu/subscriptions.go)): voice
    audio is always forwarded; cameras are on by default and can be turned off
