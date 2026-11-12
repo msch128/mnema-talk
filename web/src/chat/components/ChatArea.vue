@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { Message } from '../../types/domain'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { Hash, ArrowDown, ArrowUp, Loader2, MessageCircle, Volume2 } from '@lucide/vue'
@@ -173,7 +174,7 @@ function isSendBlocked(text: string): boolean {
 const stillIn = (channelId: string | undefined) => chatStore.activeChannel?.id === channelId
 
 async function handleSend() {
-  const text = inputMessage.value.trim()
+  const text = messageText(inputMessage.value)
   if (isSendBlocked(text)) return
 
   isSending.value = true

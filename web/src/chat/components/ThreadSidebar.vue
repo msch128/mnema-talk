@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { Message } from '../../types/domain'
 import { caughtErrorMessage } from '../../shared/lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
@@ -184,7 +185,7 @@ function isReplyBlocked(text: string): boolean {
 }
 
 async function handleSendReply() {
-  const text = replyInput.value.trim()
+  const text = messageText(replyInput.value)
   if (isReplyBlocked(text)) return
 
   // The thread and target of this send: the reader may be elsewhere or typing on when it lands.
@@ -203,7 +204,7 @@ async function handleSendReply() {
     if (!sent) return
     files?.clear()
     if (chatStore.activeThread?.id === threadId) {
-      if (replyInput.value.trim() === text) replyInput.value = ''
+      if (messageText(replyInput.value) === text) replyInput.value = ''
       if ((replyingTo.value?.id || null) === target) replyingTo.value = null
       scrollToBottom()
     } else if (threadId && authStore.user) {

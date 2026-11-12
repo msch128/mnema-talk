@@ -14,7 +14,7 @@ import { confirm } from '../../shared/lib/confirm'
 import { t, locale } from '../../i18n'
 import { caughtErrorMessage } from '../../shared/lib/api'
 import { clockTimeOptions } from '../../shared/lib/time'
-import { clampChars } from '../../shared/lib/textLength'
+import { clampChars, messageText } from '../../shared/lib/textLength'
 
 export function formatTime(dateStr: string | null | undefined) {
   if (!dateStr) return ''
@@ -87,7 +87,7 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
   }
 
   async function saveEdit(msg: Message) {
-    const text = editText.value.trim()
+    const text = messageText(editText.value)
     if (!text || isSavingEdit.value) return
     isSavingEdit.value = true
     try {
@@ -160,7 +160,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
 
   // Saving an empty text asks whether to delete the message, as Discord does.
   async function saveOrDelete(msg: Message) {
-    if (editText.value.trim()) return saveEdit(msg)
+    if (messageText(editText.value)) return saveEdit(msg)
     if (isSavingEdit.value || editingId.value !== msg.id) return
     isSavingEdit.value = true
     try {
