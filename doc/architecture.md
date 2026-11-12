@@ -627,7 +627,7 @@ events travel separately and can cross. Each answer therefore says per channel
 `last_message_number`, the number of the newest message its counts include:
 a message draws its number and commits while its transaction holds the
 channel row's lock (`messages.insertMessageTx`, `channels.last_message_number`,
-migration 0103), so a channel's messages commit in the order of their numbers
+migration 0104), so a channel's messages commit in the order of their numbers
 and the counts hold exactly the messages up to that number. The client counts
 a `message_create` on top of the answer only when its number is above the
 mark, and re-adds the ones it counted while the request was on its way the

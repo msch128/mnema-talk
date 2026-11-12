@@ -4,6 +4,9 @@
 -- GET /api/read-state can say exactly which messages its counts include (all
 -- up to this number, none above it) and a client counts no message twice or
 -- not at all when the answer and the message's event cross.
+-- A conversation's messages count down (dm_number_seq), so the backfill gives a
+-- conversation its oldest message's number and the post path its newest; both
+-- are unused, since GET /api/read-state leaves conversations out.
 ALTER TABLE channels ADD COLUMN last_message_number BIGINT NOT NULL DEFAULT 0;
 
 UPDATE channels c SET last_message_number = newest.n
