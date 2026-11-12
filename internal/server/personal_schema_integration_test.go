@@ -114,18 +114,32 @@ func (v verdicts) check(t *testing.T, items []string, covered func(string) bool)
 	return n
 }
 
-// erases reports whether a statement of the plan removes or rewrites c: it
-// deletes rows of c's table, or updates that table naming the column.
-func erases(plan []string, c personColumn) bool {
-	del := regexp.MustCompile(`(?i)\bDELETE\s+FROM\s+` + c.table + `\b`)
-	upd := regexp.MustCompile(`(?i)\bUPDATE\s+` + c.table + `\b`)
-	col := regexp.MustCompile(`\b` + c.column + `\b`)
-	for _, sql := range plan {
-		if del.MatchString(sql) || (upd.MatchString(sql) && col.MatchString(sql)) {
-			return true
+// erases reports whether a statement of the plan removes or rewrites c: a
+// DELETE from c's table whose WHERE reaches the rows through c, or an UPDATE
+// of that table that assigns c or reaches the rows through it
+// (eraseCovers, personal_erase_matcher_test.go). Deleting from the table by
+// another column does not cover c: a row that names the person only in c
+// would stay.
+func erases(plan []string, c personColumn) bool { return eraseCovers(plan, c.table, c.column) }
+
+// erasedBy reports whether the plan covers c: by a statement of its own, or,
+// for a column listed in erasedWithTheRow, by a DELETE that reaches its rows
+// through the listed column, which must be NOT NULL (so no row can name the
+// person in c alone).
+func (a *app) erasedBy(plan []string, c personColumn) bool {
+	a.t.Helper()
+	through, listed := erasedWithTheRow[c.String()]
+	if erases(plan, c) {
+		if listed {
+			a.t.Errorf("erasure: %s is covered by a statement of its own; drop it from erasedWithTheRow", c)
 		}
+		return true
 	}
-	return false
+	if !listed {
+		return false
+	}
+	notNull := a.countRows(`SELECT COUNT(*) FROM pg_attribute WHERE attrelid = $1::regclass AND attname = $2 AND attnotnull`, c.table, through) == 1
+	return notNull && eraseDeletes(plan, c.table, through)
 }
 
 func TestEveryColumnAboutAPersonIsErasedOrKeptForAReason(t *testing.T) {
@@ -143,8 +157,13 @@ func TestEveryColumnAboutAPersonIsErasedOrKeptForAReason(t *testing.T) {
 	for i, c := range cols {
 		byName[c.String()], names[i] = c, c.String()
 	}
+	for k := range erasedWithTheRow {
+		if _, ok := byName[k]; !ok {
+			t.Errorf("erasedWithTheRow names %s, which the schema no longer has", k)
+		}
+	}
 	v := verdicts{what: "erasure", reasons: erasureKeeps, gaps: erasureGaps}
-	if n := v.check(t, names, func(s string) bool { return erases(plan, byName[s]) }); n < 50 {
+	if n := v.check(t, names, func(s string) bool { return a.erasedBy(plan, byName[s]) }); n < 50 {
 		t.Fatalf("only %d columns matched an erasure statement: the matcher is broken", n)
 	}
 }

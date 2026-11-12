@@ -17,6 +17,13 @@ var erasureKeeps = map[string]string{
 	"moderation_notes.author_id":  "a note by an erased moderator shows Deleted member as its author (doc/moderation.md:472)",
 }
 
+// erasedWithTheRow are columns about a person that no erasure statement names
+// itself: they go with their row, which a DELETE reaches through the listed
+// NOT NULL column naming the same person (the oracle checks both).
+var erasedWithTheRow = map[string]string{
+	"account_tokens.email": "user_id", // the address a token was sent to, the account's own (migration 0040)
+}
+
 // erasureGaps are columns the erasure should clear and does not.
 var erasureGaps = map[string]string{}
 
