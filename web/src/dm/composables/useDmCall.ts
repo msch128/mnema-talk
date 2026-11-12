@@ -1,6 +1,7 @@
 // Starting, joining and ending the calls of direct messages. A conversation has
 // no call of its own: "Start a Talk" opens a temporary Talk and the server rings
 // the other members (doc/talks.md), "Join" is the ordinary join of that Talk.
+import type { ChatDirectMessage } from '../../types/rest'
 import { caughtErrorMessage } from '../../shared/lib/api'
 import { startConversationTalk } from '../../talk/lib/talks'
 import { navigate } from '../../shared/lib/router'
@@ -57,5 +58,16 @@ export function useDmCall() {
     await leaveVoiceChannel()
   }
 
-  return { join, start, hangUp }
+  /**
+   * Leaves a group conversation. Its Talk is for its members only, so a member
+   * in that Talk's call leaves the call first (the server ends the seat as
+   * well, for clients that do not).
+   */
+  async function leaveConversation(dm: Pick<ChatDirectMessage, 'id' | 'call'>) {
+    const current = voice.currentChannelId
+    if (current && (calls.active[dm.id]?.talkId === current || dm.call?.talk_id === current)) await leaveVoiceChannel()
+    await chat.leaveDm(dm.id)
+  }
+
+  return { join, start, hangUp, leaveConversation }
 }

@@ -276,7 +276,7 @@ func (a *API) announceAdded(dm DirectMessage, added uuid.UUID) {
 // ServeLeaveDM handles DELETE /api/dms/{id}/members/@me.
 //
 // @Summary Leave a group direct message
-// @Description Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.
+// @Description Takes the caller out of a group conversation; they lose its history and their seat in its Talk (voice_kicked reason missing_permission, and a voice_state_update leave to the others in the call). When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.
 // @ID leaveDirectMessage
 // @Tags Direct messages
 // @Security cookieAuth
@@ -310,7 +310,9 @@ func (a *API) ServeLeaveDM(w http.ResponseWriter, r *http.Request) error {
 	if len(remaining) == 0 {
 		a.closeVoiceRooms(talks)
 	}
-	a.Guard.Perms.Invalidate()
+	// The leaver loses the conversation's Talk too: Changed (not only an
+	// invalidation) lets the hub re-check their seat and end it.
+	a.Guard.Perms.Changed([]uuid.UUID{user.ID})
 	core.DeleteObjects(r.Context(), a.Objects, keys)
 	if a.Events != nil {
 		left := DMMember{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName}

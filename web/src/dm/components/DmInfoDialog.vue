@@ -11,6 +11,7 @@ import { useBlocksStore } from '../../stores/blocks'
 import { useChatStore } from '../../stores/chat'
 import { useToastStore } from '../../stores/toast'
 import { useDmActions } from '../composables/useDmActions'
+import { useDmCall } from '../composables/useDmCall'
 import { confirm } from '../../shared/lib/confirm'
 import { DM_MAX_MEMBERS, dmPeers, dmTitle } from '../lib/dm'
 import { caughtErrorMessage } from '../../shared/lib/api'
@@ -31,6 +32,7 @@ const chatStore = useChatStore()
 const toasts = useToastStore()
 // Blocking and unblocking say so in a toast, like everywhere else.
 const { toggleBlock } = useDmActions()
+const { leaveConversation } = useDmCall()
 
 const adding = ref(false)
 const title = computed(() => dmTitle(props.dm, authStore.user?.id))
@@ -47,7 +49,7 @@ async function leave() {
   })
   if (!ok) return
   try {
-    await chatStore.leaveDm(props.dm.id)
+    await leaveConversation(props.dm)
     emit('close')
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('dm.leaveFailed')))
