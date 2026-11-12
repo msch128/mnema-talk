@@ -40,12 +40,11 @@ func TestParallelTemplateCreatesStayWithinTheCap(t *testing.T) {
 			return err
 		},
 		func(round int, r racetest.Round) string {
-			if n := count(); n > MaxRoleTemplates {
+			if n := count(); n != MaxRoleTemplates || r.Succeeded() != 1 {
 				return fmt.Sprintf("round %d: %d templates, %d creates succeeded", round, n, r.Succeeded())
 			}
 			return ""
 		})
-	// Expected failure until H-L7-03 is fixed: the count and the insert are
-	// two statements on the pool with no lock.
-	res.KnownFailure(t, "H-L7-03")
+	// H-L7-03: the count and the insert run under one advisory lock.
+	res.FailOnViolation(t)
 }
