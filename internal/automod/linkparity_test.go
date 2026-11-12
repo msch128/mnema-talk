@@ -2,10 +2,13 @@ package automod
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"unicode/utf16"
 )
 
 // One rule, two implementations: the server judges the links of a message
@@ -62,9 +65,27 @@ func writeParityVectors(t *testing.T, path string, vs []parityVector) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, append(raw, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(path, append(asciiJSON(raw), '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// asciiJSON escapes every character outside printable ASCII, so the vector
+// file shows the invisible characters it tests instead of hiding them.
+func asciiJSON(raw []byte) []byte {
+	var b strings.Builder
+	for _, r := range string(raw) {
+		switch {
+		case r >= 0x20 && r < 0x7f || r == '\n':
+			b.WriteRune(r)
+		case r > 0xffff:
+			r1, r2 := utf16.EncodeRune(r)
+			fmt.Fprintf(&b, `\u%04x\u%04x`, r1, r2)
+		default:
+			fmt.Fprintf(&b, `\u%04x`, r)
+		}
+	}
+	return []byte(b.String())
 }
 
 func TestLinkParityVectors(t *testing.T) {
