@@ -3,7 +3,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { HARMLESS, liarPlan, replayPlan } from './groupPowers.fixture'
-import { occurrences, report, runSeed } from './groupSimRun.fixture'
+import { LIE_DELIVERED, occurrences, report, runSeed } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -28,7 +28,7 @@ describe('a server that lies about the roster while it interferes', () => {
     let lies = 0
     for (const seed of [4, 9, 12]) {
       const result = await runSeed(seed, liarPlan({ relay: 'honest' }))
-      lies += occurrences(result, /lie to /)
+      lies += occurrences(result, LIE_DELIVERED)
       expect(result.violations, report(result)).toEqual([])
     }
     expect(lies, 'lies told in these runs').toBeGreaterThan(0)

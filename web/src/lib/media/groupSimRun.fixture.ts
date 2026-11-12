@@ -173,6 +173,15 @@ export function occurrences(result: SimResult, pattern: RegExp): number {
   return result.trace.filter(line => pattern.test(line)).length
 }
 
+/**
+ * The trace lines that show a perturbation's effect, not its intent (GroupSim notes them after reading the effect back):
+ * a lying roster the member now holds, a wall clock step that moved the member's wall clock, an old handshake that
+ * reached a member.
+ */
+export const LIE_DELIVERED = /lie delivered to m\d+#\d+/
+export const STEP_MOVED = / step m\d+#\d+ wall clock by -?\d+ ms: it moved -?[1-9]\d* ms/
+export const REPLAY_DELIVERED = / replay \d+->m\d+#\d+ /
+
 export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResult> {
   const checks = new GroupChecks()
   const sim = new GroupSim(seed, checks)

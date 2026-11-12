@@ -341,6 +341,11 @@ export class GroupSim {
     return [...this.timers.values()].filter(timer => timer.wire && timer.info).map(timer => ({ to: timer.info?.to ?? '', kind: timer.info?.kind ?? '', due: Math.max(0, timer.at - this.now) }))
   }
 
+  /** The tabs' own timers (not handshakes on their way): whose, and how long until each runs. */
+  ownTimers(): { owner: string, due: number }[] {
+    return [...this.timers.values()].filter(timer => !timer.wire && timer.owner).map(timer => ({ owner: timer.owner?.label ?? '', due: Math.max(0, timer.at - this.now) }))
+  }
+
   /** The tab whose code is running now, if any: the one a timer or a wire was handed to. */
   running(): SimMember | undefined {
     return this.context.getStore()
@@ -417,8 +422,11 @@ export class GroupSim {
   stepWall(id: string, ms: number) {
     const member = this.room.get(id)
     if (!member) return
-    this.note(`step ${member.label} wall clock by ${ms} ms`)
+    // The effect, read back: the member's own wall clock before and after (the self-checks count a step that moved it).
+    const wall = () => this.context.run(member, () => Date.now())
+    const before = wall()
     member.skew.wallStep += ms
+    this.note(`step ${member.label} wall clock by ${ms} ms: it moved ${wall() - before} ms`)
     // Forward by more than a sleep is long, the call takes it for one: a removal then is taken on trust.
     if (ms > 60_000) member.wokeAt = this.now
   }
@@ -523,7 +531,12 @@ export class GroupSim {
     // Like every roster, it never overtakes an older one.
     const at = Math.max(this.now + this.due(member, this.between(0, 800)), member.rosterDueAt + 1)
     member.rosterDueAt = at
-    this.after(member, at - this.now, () => this.deliverRoster(member, roster))
+    this.after(member, at - this.now, () => {
+      this.deliverRoster(member, roster)
+      // The effect, read back: the member now holds this very roster, and it is not the room (the self-checks count this line).
+      const truth = [...this.room.keys()].sort().join(',')
+      if (!member.gone && member.roster === roster && roster.join(',') !== truth) this.note(`lie delivered to ${member.label}: room {${member.roster.map(memberNumber).join(',')}}`)
+    })
   }
 
   /**
