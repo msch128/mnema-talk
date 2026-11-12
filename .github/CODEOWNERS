@@ -1,6 +1,10 @@
 # Owner of the paths where a mistake costs the most: permissions, sign-in,
-# media encryption, outbound requests, release and update verification, backup
-# and restore, CI, and the rules agents read.
+# media encryption, the media server, outbound requests, release and update
+# verification, backup and restore, CI, and the rules agents read; and the
+# paths that held the heaviest defects of the 2026-11 defect hunt (the SFU,
+# automod's link rules and the client's link reader they must match, the audit
+# log's visibility, the plain text of pushes and snippets, the write gates of
+# messages, conversations and poll votes).
 #
 # This file has no effect by itself. GitHub requests a review from the owner,
 # but a pull request only waits for it once main's ruleset has "Require review
@@ -8,6 +12,14 @@
 
 /web/src/lib/media/         @msch128
 /internal/perm/             @msch128
+/internal/sfu/              @msch128
+/internal/automod/          @msch128
+/web/src/shared/lib/markdown/ @msch128
+/internal/audit/            @msch128
+/internal/mdplain/          @msch128
+/internal/chat/dm/          @msch128
+/internal/chat/messages/    @msch128
+/internal/poll/             @msch128
 /internal/auth/             @msch128
 /internal/ws/perms.go       @msch128
 /internal/ws/event_scope.go @msch128
