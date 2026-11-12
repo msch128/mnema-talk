@@ -131,7 +131,7 @@ mnema-talk/
 │   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
 │   ├── plain-sweep.yml      # Nightly: 200,000 generated messages on a new seed, what the web renderer hides against the web and server plain forms (internal/mdplain: pushes, snippets); no leak allowed
 │   ├── release-check.yml    # After each release run and daily: the latest release's GHCR image and web bundle pass TestLiveReleaseImage and TestPublishedBundlesSatisfyDesktopLayout
-│   ├── sim-sweep.yml        # Nightly: the media group simulator on seeds 1..400, both relays, against the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only shrink); and the link parity sweep (web/src/shared/lib/markdown/linkParity.sweep.test.ts: automod must judge every host the client links)
+│   ├── sim-sweep.yml        # Nightly: the media group simulator on seeds 1..400, both relays, against the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only shrink); the link parity sweep (web/src/shared/lib/markdown/linkParity.sweep.test.ts: automod must judge every host the client links); the desktop update trust chain model on generated sequences (internal/webbundle/trustchain_test.go); and the deep race and crash-point sweeps of the server (RACE_SWEEP=1, internal/testutil/racetest)
 │   ├── trust-expiry.yml     # Weekly: fails when the desktop trust statement has under 60 days left
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
 ├── release-please-config.json, .release-please-manifest.json, version.txt, CHANGELOG.md

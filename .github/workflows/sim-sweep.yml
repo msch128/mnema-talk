@@ -4,9 +4,10 @@ name: Media group sweep
 # the failure budget in web/src/lib/media/groupSim.known.fixture.ts (it may only
 # shrink), and the link parity sweep: generated messages judged by automod and
 # rendered by the client, where no rule may let a link the client opens through
-# (web/src/shared/lib/markdown/linkParity.sweep.test.ts), and the desktop update
-# trust chain model on generated sequences (internal/webbundle/trustchain_test.go).
-# Too slow for the pull request pipeline. A failed run is the alert.
+# (web/src/shared/lib/markdown/linkParity.sweep.test.ts), the desktop update
+# trust chain model on generated sequences (internal/webbundle/trustchain_test.go),
+# and the deep race and crash-point sweeps of the server (job races). Too slow
+# for the pull request pipeline. A failed run is the alert.
 on:
   schedule:
     - cron: "43 2 * * *"
@@ -100,3 +101,43 @@ jobs:
           WEBBUNDLE_TRUST_SWEEP: "200000"
           WEBBUNDLE_TRUST_SHARD: ${{ matrix.shard }}/4
         run: go test -count=1 -timeout 25m -run '^TestTrustChainSequences$' ./internal/webbundle/
+
+  # Limits and "only one" under callers released together, and an operation
+  # with each of its statements failing in turn (internal/testutil/racetest,
+  # internal/server/crash_points_integration_test.go). Known failures are
+  # inverse assertions: a sweep that stops reproducing one fails.
+  races:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Race and crash-point sweeps, deep
+        env:
+          RACE_SWEEP: "1"
+        run: >-
+          go test -tags=integration -p=1 -count=1 -timeout 50m
+          -run 'Parallel|BothSides|EveryFailingStatement|AReplyPinnedDuringTheSweep|AnEditAndADelete|AMemberWhoLeft|AModeratorsDeleteThatWaited'
+          ./internal/auth/ ./internal/auth/authn/ ./internal/communityevents/ ./internal/wiki/ ./internal/server/
