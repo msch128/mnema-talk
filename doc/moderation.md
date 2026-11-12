@@ -179,8 +179,9 @@ A sweeper runs every ten minutes, removes the messages older than the period
 in batches of 200 (at most 25 batches per channel and run, the rest on the next
 run) and deletes their attachments through the same path as a deleted message.
 Clients get `message_delete` for each. **Pinned messages stay**, and so does a
-thread root while it has a reply that is newer than the period or pinned; the
-old replies of such a thread go. Turning auto-delete off stops a run at once.
+thread root while it has a reply that is newer than the period or pinned (also
+one that is written or pinned while a run is underway); the old replies of such
+a thread go. Turning auto-delete off stops a run at once.
 Every run that removed something is one `channel.auto_delete_run` audit entry
 with the counts; changing the setting is `channel.auto_delete_set`. The
 audit entries of `message.delete` are *not* written for these deletions (they
