@@ -97,9 +97,14 @@ no accounts on someone else's platform.
   that survive a reload, an **offline outbox** (messages written offline wait, can be edited or discarded, and go out once you're back) and a **jump to the first unread message**.
 - **Anonymous polls and channels that forget.** An anonymous poll stores only
   that a member voted and how many votes each answer has, never the choice
-  (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or
-  90 days; it is shown on the channel, audited, and never touches pinned
-  messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
+  (so a vote is final). A channel can opt in to auto-delete after hours, days
+  or weeks, of everything or only the files, or follow a community default; it
+  is shown on the channel, audited, and never touches pinned messages or direct
+  messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
+- **Messages with a lifetime.** Send a message that the server deletes after a
+  minute, an hour, a week or a time of your own (60 seconds to 30 days), in
+  channels, threads and conversations; removed files keep their place as a quiet
+  "File removed" tile ([doc/timed-messages.md](doc/timed-messages.md)).
 - **Speaking addresses.** Channels, Talks, forum posts and conversations have readable web addresses (`/c/general`, `/v/lounge`, `/c/ideas/p/new-kitchen-0f3a9c1e`, `/dm/alice`) that survive renames; old links by id keep working ([doc/upgrade.md](doc/upgrade.md#speaking-urls)).
 - **Forum channels.** Structured discussions with posts as cards: coloured, ordered and moderator-only tags that authors can change afterwards, required tags and guidelines per forum, search, tag filter and sorting, pinned and solved posts, locks, unread markers with a jump to the first unread reply, and a first message with formatting and files ([doc/forums.md](doc/forums.md)).
 - **Wiki.** A shared handbook of pages in a tree beside *Events*, with a revision
@@ -456,6 +461,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Product vocabulary (en/de) used in the UI and docs, and voice and network terms | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
+| Messages with a lifetime, auto-delete, removed files | [doc/timed-messages.md](doc/timed-messages.md) |
 | Talks and Stages, forums, events, the wiki and the Discord import | [doc/talks.md](doc/talks.md), [doc/forums.md](doc/forums.md), [doc/events.md](doc/events.md), [doc/wiki.md](doc/wiki.md), [doc/import.md](doc/import.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
