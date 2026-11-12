@@ -93,7 +93,7 @@ func (s *Service) prepare(ctx context.Context, actor Actor, cmd PostCommand) (Ne
 	if err != nil {
 		return NewMessage{}, sendRules{}, err
 	}
-	if err := ValidateTarget(ctx, s.DB, cmd.ChannelID, cmd.ParentID, cmd.ReplyToID); err != nil {
+	if err := ValidateTarget(ctx, s.DB, s.Perms, actor.subject(), cmd.ChannelID, cmd.ParentID, cmd.ReplyToID); err != nil {
 		return NewMessage{}, sendRules{}, err
 	}
 	nm := NewMessage{

@@ -105,23 +105,50 @@ func LoadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Mess
 	return &ref, nil
 }
 
-// LoadReferencedMessage loads the message a request refers to. A missing one
-// is the caller's mistake (400 with notFound); any other failure is ours.
-func LoadReferencedMessage(ctx context.Context, p *db.Pool, id uuid.UUID, notFound string) (*MessageRef, error) {
+// Viewer says whether the caller may see channel ch (a conversation for its
+// members only). A nil Viewer asks nobody: the caller is a webhook, which
+// names a channel it was made for and has no account to see anything with.
+type Viewer func(ctx context.Context, ch uuid.UUID) (bool, error)
+
+// LoadReferencedMessage loads the message a request posted to channelID refers
+// to. A missing one is the caller's mistake (400 with notFound), and so is one
+// in a channel the caller cannot see: it answers exactly like a missing one, so
+// the answer never tells a hidden message from an id nobody has. Any other
+// failure is ours.
+func LoadReferencedMessage(ctx context.Context, p *db.Pool, view Viewer, channelID, id uuid.UUID, notFound string) (*MessageRef, error) {
 	ref, err := LoadMessageRef(ctx, p, id)
 	if errors.Is(err, ErrMessageNotFound) {
 		return nil, httpx.ErrInvalidInput(notFound)
 	}
-	return ref, err
+	if err != nil || view == nil || ref.ChannelID == channelID {
+		return ref, err
+	}
+	seen, err := view(ctx, ref.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+	if !seen {
+		return nil, httpx.ErrInvalidInput(notFound)
+	}
+	return ref, nil
 }
 
 // ValidateParent checks that parentID is a root message of the same channel, so
 // thread replies cannot be attached across channels or nested.
+//
+// ValidateParent asks no Viewer: it is for a webhook. A member's request goes
+// through ValidateParentFor.
 func ValidateParent(ctx context.Context, p *db.Pool, channelID uuid.UUID, parentID *uuid.UUID) error {
+	return ValidateParentFor(ctx, p, nil, channelID, parentID)
+}
+
+// ValidateParentFor is ValidateParent for a caller who sees what view lets
+// them see: a parent in a channel they cannot see is a missing parent.
+func ValidateParentFor(ctx context.Context, p *db.Pool, view Viewer, channelID uuid.UUID, parentID *uuid.UUID) error {
 	if parentID == nil {
 		return nil
 	}
-	ref, err := LoadReferencedMessage(ctx, p, *parentID, "parent message not found")
+	ref, err := LoadReferencedMessage(ctx, p, view, channelID, *parentID, "parent message not found")
 	if err != nil {
 		return err
 	}

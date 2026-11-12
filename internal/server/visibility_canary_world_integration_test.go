@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -22,16 +23,17 @@ import (
 type canaryClass int
 
 const (
-	clsOpen    canaryClass = iota // an open channel: every member
-	clsStaff                      // the Staff role's channels: Staff and the Owner
-	clsDM                         // the conversation of insider and carol
-	clsInsider                    // insider's own pending things
-	clsExOwn                      // what exstaff wrote while on Staff
-	clsReport                     // report notes and moderator notes: Manage reports and the Owner
-	clsOwner                      // the Owner alone
+	clsOpen     canaryClass = iota // an open channel: every member
+	clsStaff                       // the Staff role's channels: Staff and the Owner
+	clsDM                          // the conversation of insider and carol
+	clsInsider                     // insider's own pending things
+	clsExOwn                       // what exstaff wrote while on Staff
+	clsReport                      // report notes and moderator notes: Manage reports and the Owner
+	clsOwner                       // the Owner alone
+	clsReporter                    // carol's report note: carol and Manage reports
 )
 
-var classNames = []string{"open", "staff", "dm", "insider", "exstaff-own", "report", "owner"}
+var classNames = []string{"open", "staff", "dm", "insider", "exstaff-own", "report", "owner", "reporter"}
 
 func (c canaryClass) String() string { return classNames[c] }
 
@@ -39,12 +41,16 @@ func (c canaryClass) String() string { return classNames[c] }
 // sweep asks as. insider is the control: it must find its classes somewhere.
 var canaryMay = map[string][]canaryClass{
 	"outsider": {clsOpen},
-	"carol":    {clsOpen, clsDM},
-	"mod":      {clsOpen, clsReport},
+	"carol":    {clsOpen, clsDM, clsReporter},
+	"mod":      {clsOpen, clsReport, clsReporter},
 	"exstaff":  {clsOpen, clsExOwn},
 	"anon":     {},
 	"bot":      {clsOpen},
 	"insider":  {clsOpen, clsStaff, clsDM, clsInsider, clsExOwn},
+	// Administrators and the Owner see every channel, but no conversation
+	// they are not in and nobody's pending things (SECURITY.md, "Who can read").
+	"admin": {clsOpen, clsStaff, clsExOwn, clsReport, clsOwner, clsReporter},
+	"owner": {clsOpen, clsStaff, clsExOwn, clsReport, clsOwner, clsReporter},
 }
 
 func mayRead(who string, c canaryClass) bool {
@@ -59,6 +65,8 @@ func mayRead(who string, c canaryClass) bool {
 type canaryWorld struct {
 	a                                             *app
 	owner, insider, outsider, carol, mod, exstaff *client
+	admin                                         *client // holds Administrator, is not the Owner
+	calls                                         bool    // the conversation gets a call (even seeds)
 	bot                                           *botClient
 	staffRole, modRole                            uuid.UUID
 	open, openForum, staffText, staffForum        uuid.UUID
@@ -99,8 +107,9 @@ func newCanaryWorld(t *testing.T, seed uint64) *canaryWorld {
 	w := &canaryWorld{a: a, owner: owner, words: map[string]canaryClass{}, wordWhat: map[string]string{},
 		ids: map[string]canaryClass{}, idWhat: map[string]string{}, pool: map[string][]string{}, rng: rand.New(rand.NewPCG(seed, seed^0x9e37))}
 	w.insider, w.outsider, w.carol = a.register(owner, "insider"), a.register(owner, "outsider"), a.register(owner, "carol")
-	w.mod, w.exstaff = a.register(owner, "moderator"), a.register(owner, "exstaff")
-	for _, c := range []*client{owner, w.insider, w.outsider, w.carol, w.mod, w.exstaff} {
+	w.mod, w.exstaff, w.admin = a.register(owner, "moderator"), a.register(owner, "exstaff"), a.register(owner, "boss")
+	w.calls = seed%2 == 0
+	for _, c := range []*client{owner, w.insider, w.outsider, w.carol, w.mod, w.exstaff, w.admin} {
 		w.pool["user"] = append(w.pool["user"], c.user.ID.String())
 	}
 	w.staffRole = createRole(t, owner, "Staff", 0)
@@ -111,6 +120,7 @@ func newCanaryWorld(t *testing.T, seed uint64) *canaryWorld {
 	assignRoles(t, owner, w.insider, w.staffRole)
 	assignRoles(t, owner, w.exstaff, w.staffRole)
 	assignRoles(t, owner, w.mod, w.modRole)
+	assignRoles(t, owner, w.admin, createRole(t, owner, "Admins", perm.Administrator))
 	return w
 }
 
@@ -241,15 +251,23 @@ func (w *canaryWorld) conversation(t *testing.T) {
 	file := w.a.stage(w.insider, w.dm, "dm-"+w.word(clsDM, "dm file name")+".png")
 	w.hide(clsDM, "media", "dm file", file.ID)
 	wantStatus(t, "dm file", sendWith(w.insider, w.dm, "file "+w.word(clsDM, "dm file message"), file.ID), http.StatusCreated)
-	res := w.insider.post("/api/dms/"+w.dm.String()+"/talk", nil)
-	if res.status == http.StatusCreated || res.status == http.StatusOK {
-		var talk struct{ ID uuid.UUID }
-		res.decode(t, &talk)
-		if talk.ID != uuid.Nil {
-			w.hide(clsDM, "channel", "dm talk", talk.ID)
-			w.say(t, w.carol, clsDM, talk.ID, "dm talk chat", map[string]any{})
-		}
+	if !w.calls {
+		return // without a call an Administrator's channel list is "all" (perm.ViewableChannels nil)
 	}
+	res := w.insider.post("/api/dms/"+w.dm.String()+"/talk", nil)
+	if res.status != http.StatusCreated && res.status != http.StatusOK {
+		t.Fatalf("call: %d %s", res.status, res.body)
+	}
+	var talk struct {
+		ID uuid.UUID `json:"channel_id"`
+	}
+	res.decode(t, &talk)
+	if talk.ID == uuid.Nil {
+		t.Fatalf("call without an id: %s", res.body)
+	}
+	w.hide(clsDM, "channel", "dm talk", talk.ID)
+	wantStatus(t, "name the call", w.insider.patch("/api/talks/"+talk.ID.String(), map[string]any{"name": "call-" + w.word(clsDM, "dm talk name")}), http.StatusOK)
+	w.say(t, w.carol, clsDM, talk.ID, "dm talk chat", map[string]any{})
 }
 
 // pending is what insider keeps for later and the event of the Staff Talk.
@@ -270,9 +288,9 @@ func (w *canaryWorld) pending(t *testing.T, reported uuid.UUID) {
 		"location": "Hall", "start_time": time.Now().Add(72 * time.Hour).UTC().Format(time.RFC3339)})
 	wantStatus(t, "open event", res, http.StatusCreated)
 	w.hide(clsOpen, "event", "open event", idOf(t, res))
-	res = w.carol.post("/api/messages/"+reported.String()+"/report", map[string]any{"category": "spam", "note": w.word(clsReport, "report note")})
+	res = w.carol.post("/api/messages/"+reported.String()+"/report", map[string]any{"category": "spam", "note": w.word(clsReporter, "report note")})
 	wantStatus(t, "report", res, http.StatusCreated)
-	w.hide(clsReport, "report", "report", idOf(t, res))
+	w.hide(clsReporter, "report", "report", idOf(t, res))
 	wantStatus(t, "note", w.owner.post("/api/admin/users/"+w.outsider.user.ID.String()+"/moderation/notes", map[string]any{
 		"body": w.word(clsReport, "moderator note about outsider")}), http.StatusCreated)
 }
@@ -316,6 +334,28 @@ func (w *canaryWorld) build(t *testing.T) {
 	b := createBot(t, w.owner, "reader")
 	wantStatus(t, "bot role", w.owner.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{"role_ids": []uuid.UUID{botRole}}), http.StatusOK)
 	wantStatus(t, "bot scope", putOverwrites(w.owner, "channels", w.open, overwrite("role", botRole, perm.ViewChannel, 0)), http.StatusNoContent)
+	wantStatus(t, "intents", w.owner.patch("/api/admin/bots/"+b.ID.String(), map[string]any{"allowed_intents": allBotIn}), http.StatusOK)
 	tok := issueToken(t, w.owner, b.ID, map[string]any{"name": "test"})
 	w.bot = &botClient{t: t, a: w.a, token: tok.Secret, user: b.UserID}
+}
+
+// gatewayFrames connects the bot to its gateway with every intent it holds
+// and returns a function that hands back the dispatches received so far.
+func (w *canaryWorld) gatewayFrames(t *testing.T) func() []wsEvent {
+	t.Helper()
+	w.a.router.Gateway.SetTimings(gateway.Timings{Heartbeat: time.Minute, Identify: 10 * time.Second, Resume: time.Minute, TokenCheck: time.Second})
+	g := (&botFixture{a: w.a, client: w.bot}).dialGW("Bot " + w.bot.token)
+	g.identify("", allBotIn)
+	return func() []wsEvent {
+		var out []wsEvent
+		for {
+			fr, ok := g.next(300 * time.Millisecond)
+			if !ok {
+				return out
+			}
+			if fr.T != nil {
+				out = append(out, wsEvent{Type: *fr.T, Payload: fr.D})
+			}
+		}
+	}
 }
