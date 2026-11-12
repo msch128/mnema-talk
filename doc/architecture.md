@@ -304,6 +304,10 @@ current from the events to the member's own sessions (`saved_updated`,
 down are lost, so every socket open reads again the lists that were already
 asked for (one never opened stays unread), and an answer older than a newer
 request of the same list, or than a change made meanwhile, does not overwrite it.
+The saved list is read again as far as it was shown (up to 100 entries; older
+entries shown behind them stay until a page replaces them), and the saved marks
+follow the list that lands last. A failed read after a reconnect keeps the
+lists shown.
 On `message_delete` the client drops the saved entry (and those of the thread's
 replies) and shows a reminder on the message as unavailable, as a reload would.
 

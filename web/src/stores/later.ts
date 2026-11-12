@@ -62,11 +62,21 @@ let generation = 0
  */
 function newestOf<T>(fetch: () => Promise<T>, apply: (list: T) => void) {
   let seq = 0
-  return async () => {
+  let newest: Promise<void> | null = null
+  async function one(request: number) {
     const mine = generation
-    const request = ++seq
     const list = await fetch()
     if (mine === generation && request === seq) apply(list)
+  }
+  /** Loads the list; resolves once the newest request made meanwhile has landed too, so the caller sees its answer. */
+  return async () => {
+    const request = one(++seq)
+    newest = request
+    await request
+    for (let seen: Promise<void> | null = request; seen !== newest;) {
+      seen = newest
+      await seen?.catch(() => undefined)
+    }
   }
 }
 
@@ -87,8 +97,12 @@ export const useLaterStore = defineStore('later', () => {
   const loadReminders = newestOf(fetchReminders, list => { reminders.value = list })
   const loadScheduled = newestOf(fetchScheduled, list => { scheduled.value = list })
 
-  /** Loads the lists of the features the server has. */
-  async function load(want: { reminders: boolean; scheduled: boolean }) {
+  /**
+   * Loads the lists of the features the server has. With keepShown a failure
+   * keeps lists that were shown (a read again after a reconnect): they are
+   * still what was last known, and the error panel would hide them.
+   */
+  async function load(want: { reminders: boolean; scheduled: boolean }, keepShown = false) {
     const mine = generation
     wanted = { reminders: wanted.reminders || want.reminders, scheduled: wanted.scheduled || want.scheduled }
     loading.value = true
@@ -100,7 +114,7 @@ export const useLaterStore = defineStore('later', () => {
     } catch (error) {
       if (mine !== generation) return
       console.warn('Failed to load reminders and scheduled messages:', error)
-      failed.value = true
+      failed.value = !(keepShown && loaded.value)
     } finally {
       if (mine === generation) loading.value = false
     }
@@ -150,7 +164,7 @@ export const useLaterStore = defineStore('later', () => {
    * for so far are read again. Lists never asked for stay unread.
    */
   async function refresh() {
-    if (wanted.reminders || wanted.scheduled) await load(wanted)
+    if (wanted.reminders || wanted.scheduled) await load(wanted, true)
   }
 
   /** A message was deleted: a reminder on it stays, as one for a message the member can no longer see (as the server lists it). */
