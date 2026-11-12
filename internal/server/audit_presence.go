@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
 // presenceEvent is one join or leave of a Talk, waiting to be written.
@@ -38,6 +39,7 @@ func auditPresence(ctx context.Context, l *audit.Log, q db.Querier) func(user, c
 		select {
 		case queue <- presenceEvent{user, channel, joined}:
 		default:
+			metrics.WSDropped.With("audit_presence").Inc()
 			slog.Warn("audit log: presence queue full, event dropped", "channel", channel)
 		}
 	}

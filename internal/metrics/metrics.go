@@ -181,7 +181,7 @@ var (
 	// WSEventsReceived counts events accepted from clients.
 	WSEventsReceived Counter
 	// WSDropped counts events dropped or connections cut, by reason:
-	// slow_client, flood_frame, flood_event.
+	// slow_client, flood_frame, flood_event, voice_churn, audit_presence.
 	WSDropped = newVec("mnema_ws_dropped_total", "Realtime events dropped or connections cut, by reason", "reason")
 
 	// MLSHandshakes counts relayed or refused media_handshake messages, by

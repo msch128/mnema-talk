@@ -1534,7 +1534,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
-| `mnema_ws_dropped_total{reason}` | counter | `slow_client` (connection cut because its buffer was full), `flood_frame`, `flood_event` (per-connection budget exceeded). |
+| `mnema_ws_dropped_total{reason}` | counter | `slow_client` (connection cut because its buffer was full), `flood_frame`, `flood_event` (per-connection budget exceeded), `voice_churn` (voice join or leave refused by the rate limit), `audit_presence` (a Talk join or leave that the audit log did not record because its queue was full). |
 | `mnema_mls_handshakes_total{result}` | counter | Voice-room encryption handshakes: `relayed`, `rejected` (malformed or wrong room), `rate_limited`. `mnema_mls_handshake_bytes_total` is the relayed size. |
 | `mnema_voice_rooms`, `mnema_voice_participants` | gauge | Calls as members see them (including the reconnect grace period). |
 | `mnema_sfu_rooms`, `mnema_sfu_peers` | gauge | Rooms with media and media connections. |
