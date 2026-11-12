@@ -16,13 +16,22 @@ import (
 // lockGroupDM locks a conversation the user is in and says whether it is a
 // group and how many members it has. Anybody else gets errDMNotFound.
 func lockGroupDM(ctx context.Context, tx pgx.Tx, id, user uuid.UUID) (group bool, members int, err error) {
+	err = tx.QueryRow(ctx, `SELECT dm_key IS NULL FROM channels WHERE id = $1 AND type = 'dm' FOR UPDATE`, id).Scan(&group)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, 0, errDMNotFound
+	}
+	if err != nil {
+		return false, 0, err
+	}
+	// Membership and size are read by a statement of their own: a statement
+	// that waited for the lock above re-checks only the locked row, and a
+	// subquery of it would see the members from before the wait (an add or
+	// a leave that held the lock meanwhile).
 	var member bool
 	err = tx.QueryRow(ctx, `
-		SELECT c.dm_key IS NULL,
-		       EXISTS (SELECT 1 FROM dm_members WHERE channel_id = c.id AND user_id = $2),
-		       (SELECT COUNT(*) FROM dm_members WHERE channel_id = c.id)
-		FROM channels c WHERE c.id = $1 AND c.type = 'dm' FOR UPDATE OF c`, id, user).Scan(&group, &member, &members)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !member) {
+		SELECT COALESCE(bool_or(user_id = $2), FALSE), COUNT(*)
+		FROM dm_members WHERE channel_id = $1`, id, user).Scan(&member, &members)
+	if err == nil && !member {
 		return false, 0, errDMNotFound
 	}
 	return group, members, err
