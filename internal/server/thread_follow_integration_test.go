@@ -212,3 +212,32 @@ func TestAMemberWhoLostTheChannelGetsNoThreadFollowEvents(t *testing.T) {
 		t.Errorf("follow without access: %d", res.status)
 	}
 }
+
+// The first reply under a message makes its author follow the thread; the
+// author's open sessions must know before the reply arrives, since the web
+// client decides the reply's notification and sound from its follow list at
+// that moment (as the push does from the followers after the commit).
+func TestTheRootsAuthorLearnsOfTheFollowBeforeTheFirstReply(t *testing.T) {
+	f := newMessageModerationFixture(t, true)
+	root := f.a.send(f.user, f.channel, "question")
+	author := f.user.dialLiveWS(f.a.origin())
+	f.reply(f.peer, root, "first answer")
+
+	timeout := time.After(2 * time.Second)
+	for {
+		select {
+		case ev, ok := <-author.events:
+			if !ok {
+				t.Fatal("the socket closed")
+			}
+			switch {
+			case ev.Type == "thread_follow_updated" && strings.Contains(string(ev.Payload), root.String()):
+				return
+			case ev.Type == "message_create" && strings.Contains(string(ev.Payload), `"parent_id":"`+root.String()+`"`):
+				t.Fatalf("the reply arrived before the follow: %s", ev.Payload)
+			}
+		case <-timeout:
+			t.Fatal("neither the follow nor the reply arrived")
+		}
+	}
+}

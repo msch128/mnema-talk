@@ -31,14 +31,15 @@ beforeEach(() => {
 })
 afterEach(() => { useChatStore().closeWebSocket(); vi.unstubAllGlobals() })
 
-// H-L5-05: the first reply under a message makes its author follow the thread
-// in the reply's own transaction (internal/chat/messages/thread_follow.go,
+// H-L5-05 (fixed): the first reply under a message makes its author follow
+// the thread in the reply's own transaction (internal/chat/messages/thread_follow.go,
 // followOnReply), so the push goes to the author (push/recipients.go,
-// threadAudience). Open clients learn of the follow from the follow tap,
-// which runs after the reply was published (thread_follow_sync.go): the reply
-// arrives first, and the in-page notification and sound decide it from a list
-// without the thread. doc/architecture.md: "a reply notifies only the thread's
-// followers (push and in-page alike)".
+// threadAudience). Open clients learn of the follow from the follow tap
+// (thread_follow_sync.go), which now runs before the hub hands the reply to
+// any connection: thread_follow_updated arrives first, and the in-page
+// notification and sound decide the reply from a list with the thread.
+// doc/architecture.md: "a reply notifies only the thread's followers (push
+// and in-page alike)".
 describe('the first reply under my own message', () => {
   it('sanity: a later reply, once the follow is known, notifies', () => {
     const chat = useChatStore()
@@ -48,11 +49,11 @@ describe('the first reply under my own message', () => {
     expect(created).toHaveLength(1)
   })
 
-  it.fails('notifies in the page as the push does, in the order the server sends the two frames', () => {
+  it('notifies in the page as the push does, in the order the server sends the two frames', () => {
     const chat = useChatStore()
     chat.followKnown = true
-    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(60), user_id: BOB, username: 'bob', parent_id: ROOT, content: 'first' }) })
     chat.handleWSEvent({ type: 'thread_follow_updated', payload: { thread_id: ROOT, channel_id: fixtureId(2), following: true } })
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(60), user_id: BOB, username: 'bob', parent_id: ROOT, content: 'first' }) })
     expect(created).toHaveLength(1)
   })
 })
