@@ -65,8 +65,9 @@ func TestStartTURNHonoursTheSwitch(t *testing.T) {
 func TestStartTURNRunsInAutoWithoutExternalTURN(t *testing.T) {
 	voice := testVoice(t)
 	var relay *turnrelay.Server
-	// A free port can be taken between picking it and binding it: try again
-	// a few times, but a relay that never starts is a failure.
+	// A free port can be taken between picking it and binding it, for UDP, for
+	// TCP or for both (the probe only shows that UDP was free): try again a
+	// few times, but a relay that never starts on both is a failure.
 	for range 5 {
 		probe, err := net.ListenPacket("udp4", "127.0.0.1:0")
 		if err != nil {
@@ -78,16 +79,17 @@ func TestStartTURNRunsInAutoWithoutExternalTURN(t *testing.T) {
 		var closeRelay func()
 		relay, closeRelay = startTURN(cfg, voice)
 		defer closeRelay()
-		if relay != nil {
-			break
+		if relay == nil {
+			continue
+		}
+		if st := relay.Status(); st.UDP && st.TCP {
+			return
 		}
 	}
 	if relay == nil {
 		t.Fatal("the relay did not start in auto mode without an external TURN server")
 	}
-	if st := relay.Status(); !st.UDP || !st.TCP {
-		t.Fatalf("status = %+v", st)
-	}
+	t.Fatalf("status = %+v", relay.Status())
 }
 
 // A port that cannot be bound never stops the server: no relay, a warning for
