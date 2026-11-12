@@ -229,11 +229,11 @@ answered:
 | Probe | Endpoint | Meaning |
 | --- | --- | --- |
 | Liveness (restart when it fails) | `GET /api/health/live` | `200` whenever the process serves requests; it asks neither the database nor object storage. |
-| Readiness, startup, monitoring | `GET /api/health` | `200` when the database answers and object storage is reachable, else `503` with what is down in `unavailable`. Storage is checked live (one `HEAD` on the bucket, at most every 10 s), so it also reports storage that fails or returns while the server runs. |
+| Readiness, startup, monitoring | `GET /api/health` | `200` when the database answers and object storage is reachable, else `503` with what is down in `unavailable`. Storage is checked live (one `HEAD` on the bucket, at most every 10 s, 2 s limit), so it also reports storage that fails or returns while the server runs. One failed probe is not reported; two in a row are (the second is asked after 3 s), and a successful one clears it at once. |
 
 Do not use `/api/health` as a liveness probe. It answers `503` while object
 storage is down, although chat and Talks still work then; a restart would not
-bring storage back and would end every running Talk. For Kubernetes:
+bring storage back and would end every running Talk. The container health check (Docker or Compose, `interval` 30 s, 3 retries) calls `/api/health`: during a storage outage that lasts more than a minute or so it turns the container `unhealthy`, which only labels it (nothing restarts it); a blip of a single failed probe does not. One `/api/health` call takes at most about 4 s (database ping plus one storage probe), under the 5 s check timeout. For Kubernetes:
 
 ```yaml
 livenessProbe:
