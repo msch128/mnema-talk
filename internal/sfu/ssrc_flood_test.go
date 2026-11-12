@@ -1,10 +1,12 @@
 package sfu
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -244,7 +246,9 @@ func TestRTCPStreamCapSortsStreams(t *testing.T) {
 	for _, ssrc := range []uint32{7, 8, sentSSRC, 12} {
 		c.unhandled(ssrc)
 	}
-	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\na=ssrc:12 cname:x\r\n")
+	// SSRC 12 reported before the answer that adds its line.
+	c.declare("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:7 cname:x\r\n" +
+		"m=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:12 cname:x\r\n")
 	if unknown, buffered, quiet := c.counts(); unknown != 0 || buffered != 1 || quiet != 2 {
 		t.Fatalf("unknown %d, buffered %d, quiet %d; want 0, 1 (SSRC 11), 2", unknown, buffered, quiet)
 	}
@@ -265,6 +269,39 @@ func TestRTCPStreamCapSortsStreams(t *testing.T) {
 	waitSFUCondition(t, "connection closed", func() bool {
 		return pc.ConnectionState() == webrtc.PeerConnectionStateClosed
 	})
+}
+
+// TestDeclaringReportedSSRCsDoesNotLaunderThem is the reviewer's probe: a
+// client that reports from 32 unknown SSRCs and then sends an answer that
+// declares them, round after round, gets at most one forgiven per new
+// m-line, so it is closed near the unknown cap and not at the buffered one.
+func TestDeclaringReportedSSRCsDoesNotLaunderThem(t *testing.T) {
+	c, _ := newTestRTCPCap(t)
+	const lines, perRound = 8, 32
+	ssrc := uint32(0x40000000)
+	rounds := 0
+	for ; rounds < 40 && !c.closing.Load(); rounds++ {
+		var sdp strings.Builder
+		sdp.WriteString("v=0\r\n")
+		for i := range perRound {
+			_ = c.buffer(packetio.RTCPBufferPacket, ssrc)
+			c.unhandled(ssrc)
+			if i%(perRound/lines) == 0 {
+				sdp.WriteString("m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n")
+			}
+			fmt.Fprintf(&sdp, "a=ssrc:%d cname:x\r\n", ssrc)
+			ssrc++
+		}
+		c.declare(sdp.String())
+	}
+	unknown, buffered, _ := c.counts()
+	t.Logf("closed after %d rounds: %d unknown, %d buffered streams", rounds, unknown, buffered)
+	if !c.closing.Load() {
+		t.Fatalf("still open after %d rounds, %d buffered streams", rounds, buffered)
+	}
+	if limit := maxUnknownRTCPStreams + lines + perRound; buffered > limit {
+		t.Fatalf("%d buffered streams before the close, over %d", buffered, limit)
+	}
 }
 
 // newTestRTCPCap is the cap of a connection that sends one track, with the

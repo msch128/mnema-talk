@@ -165,6 +165,8 @@ type rtcpStreamCap struct {
 	retiredRing                [rtcpRetiredSSRCs]uint32
 	retiredNext                int
 	buffered, quiet            int
+	// lines is the most m-lines an answer of the client had.
+	lines int
 }
 
 func newRTCPStreamCap(logs logging.LoggerFactory, log *slog.Logger) *rtcpStreamCap {
@@ -250,13 +252,27 @@ func (c *rtcpStreamCap) declare(sdp string) {
 	}
 	c.mu.Lock()
 	c.declared = declared
-	// A client may report from a new line before the SFU has its answer.
+	c.forgiveNewLines(declared, lines)
+	c.mu.Unlock()
+}
+
+// forgiveNewLines takes off the unknown count the SSRCs a client reported
+// from before the SFU had the answer that declares them: a browser may start
+// on a new line before its answer arrives over the WebSocket. Their stream
+// keeps its buffer, so at most one is forgiven per m-line the connection
+// gains, once in its life. Requires c.mu.
+func (c *rtcpStreamCap) forgiveNewLines(declared map[uint32]struct{}, lines int) {
+	budget := lines - c.lines
+	c.lines = max(c.lines, lines)
 	for ssrc := range c.unknown {
+		if budget <= 0 {
+			return
+		}
 		if _, ok := declared[ssrc]; ok {
 			delete(c.unknown, ssrc)
+			budget--
 		}
 	}
-	c.mu.Unlock()
 }
 
 // buffer is the connection's BufferFactory. Pion calls it, under its stream
