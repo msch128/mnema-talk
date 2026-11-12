@@ -3342,7 +3342,8 @@
       },
       "voice": {
         "join": "Joined Talk",
-        "leave": "Left Talk"
+        "leave": "Left Talk",
+        "disconnect": "Removed from Talk"
       },
       "auth": {
         "login": "Signed in",

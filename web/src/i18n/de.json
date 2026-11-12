@@ -3342,7 +3342,8 @@
       },
       "voice": {
         "join": "Talk betreten",
-        "leave": "Talk verlassen"
+        "leave": "Talk verlassen",
+        "disconnect": "Aus Talk entfernt"
       },
       "auth": {
         "login": "Angemeldet",

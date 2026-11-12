@@ -29582,7 +29582,7 @@
     },
     "/api/channels/{id}/voice/{userID}/disconnect": {
       "post": {
-        "description": "Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as user.talk_kick.",
+        "description": "Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as voice.disconnect, read only by auditors who can view the Talk; a removal from a conversation's call Talk is not recorded.",
         "operationId": "disconnectFromTalk",
         "parameters": [
           {
