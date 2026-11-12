@@ -598,6 +598,12 @@ Levels decide who is *notified* and what the mention badge counts. A mute stays
 silent except for a message addressed to the member (by name, through a role
 they hold, or as a reply); `@all` and `@here` do not break a mute. Both the
 badge (`mention_count` in `GET /api/read-state`) and the push follow this rule.
+"Addressed by name" means the server resolved the name under the sender's
+mention policy: a name a webhook or bot left as plain text (user mentions off,
+`allowed_mentions` without `users`, the recipient cap) addresses nobody, and the
+web client decides from the message's `mentions` list, not from the text, so
+the live badge, the page's notification and the sound match the badge after a
+reload.
 Do Not Disturb silences everything. Since 1.2 a member also has a server-wide
 default (`server_notify`, migration 0073; `PUT /api/notification-settings/server`,
 `GET /api/notification-settings` lists it under `server`): the precedence is
