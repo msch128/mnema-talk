@@ -63,6 +63,30 @@ func TestSnippetDropsThePrivateMarkOfTheMessage(t *testing.T) {
 	}
 }
 
+// MaxSnippetUnits is the longest a snippet gets: every character of the cut
+// text a spoiler (||…||, five units), and the ellipsis.
+func TestSnippetIsAtMostMaxSnippetUnitsLong(t *testing.T) {
+	worst := map[string]string{
+		"spoilers":        strings.Repeat("||a||", 800),
+		"symbols in code": "`" + strings.Repeat("|*_~<[\\", 500) + "`",
+		"astral":          strings.Repeat("\U0001F600", 1500),
+	}
+	for name, in := range worst {
+		out := Snippet(in, SnippetLen)
+		if units := utf16Len(out); units > MaxSnippetUnits {
+			t.Errorf("%s: %d units, more than %d", name, units, MaxSnippetUnits)
+		}
+		t.Logf("%s: %d units", name, utf16Len(out))
+	}
+	// doc/upgrade.md and the API descriptions state this number.
+	if MaxSnippetUnits != 996 {
+		t.Errorf("MaxSnippetUnits is %d: update the documents that say 996", MaxSnippetUnits)
+	}
+	if got := utf16Len(Snippet(worst["spoilers"], SnippetLen)); got != MaxSnippetUnits {
+		t.Errorf("all spoilers: %d units, want exactly %d", got, MaxSnippetUnits)
+	}
+}
+
 var canary = regexp.MustCompile(`zq\d+_\d+`)
 
 var sweepPieces = []string{"word ", "a longer bit of text ", "**bold** ", "*it* ", "`code` ", "> ", "\n", "- ", "# ", "~~gone~~ ", "[label](https://a.example) ", "\\|| ", "| ", "`", "**", "[", strings.Repeat("x", 40) + " "}

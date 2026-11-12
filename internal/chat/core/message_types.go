@@ -171,6 +171,8 @@ type ReplyPreview struct {
 	// Content is the start of the quoted message (the whole text when it has
 	// at most 200 characters, else the first 200 characters of its plain text
 	// as Markdown, each spoiler as ||…||).
+	// Escaped plain text holds no links or formatting, and the escaping
+	// (a backslash before symbols) makes it at most 996 characters long.
 	Content        string `json:"content,omitempty" binding:"optional"`
 	HasAttachments bool   `json:"has_attachments,omitempty" binding:"optional"`
 	// IsBot and IsWebhook describe the quoted author like Message does.

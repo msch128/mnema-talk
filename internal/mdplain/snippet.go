@@ -10,6 +10,11 @@ import (
 // SnippetLen is how many characters of a message a snippet shows.
 const SnippetLen = 200
 
+// MaxSnippetUnits is the longest snippet in UTF-16 units (JavaScript's
+// length): escaping writes a spoiler as five units and a symbol as two, so a
+// cut text of SnippetLen-1 spoilers and the ellipsis is the worst case.
+const MaxSnippetUnits = 5*(SnippetLen-1) + 1
+
 const (
 	// hiddenMark stands for a spoiler while the plain text is cut; a private
 	// use character, removed from the message first.
@@ -39,9 +44,9 @@ func Snippet(content string, limit int) string {
 	if utf8.RuneCountInString(content) <= limit {
 		return content
 	}
-	plain := strings.Join(strings.Fields(Plain(strings.ReplaceAll(content, hiddenMark, ""), hiddenMark)), " ")
+	plain := strings.Join(strings.FieldsFunc(Plain(strings.ReplaceAll(content, hiddenMark, ""), hiddenMark), jsSpaceRune), " ")
 	if utf8.RuneCountInString(plain) > limit {
-		plain = strings.TrimSpace(textcut.Runes(plain, limit-1)) + "…"
+		plain = jsTrim(textcut.Runes(plain, limit-1)) + "…"
 	}
 	return escapePlain(plain)
 }
@@ -57,7 +62,9 @@ func escapePlain(plain string) string {
 		case strings.ContainsRune(escapedAnywhere, r),
 			i == 0 && strings.ContainsRune(escapedFirst, r),
 			// "1. " would start a numbered list.
-			i > 0 && digits && r == '.':
+			i > 0 && digits && r == '.',
+			// "http://" would start a link.
+			r == ':' && urlSchemeEnds(plain, i):
 			b.WriteByte('\\')
 			b.WriteRune(r)
 		default:
@@ -66,4 +73,10 @@ func escapePlain(plain string) string {
 		digits = digits && r >= '0' && r <= '9'
 	}
 	return b.String()
+}
+
+// urlSchemeEnds reports whether the ":" at i ends "http://" or "https://".
+func urlSchemeEnds(plain string, i int) bool {
+	before := strings.ToLower(plain[max(0, i-5):i])
+	return strings.HasPrefix(plain[i:], "://") && (strings.HasSuffix(before, "http") || strings.HasSuffix(before, "https"))
 }
