@@ -29,7 +29,7 @@ Each forum channel can define up to 20 curated tags:
 - **Searching**: `q` (up to 100 characters) keeps the posts whose title, first message or a reply contains the text (case-insensitive, `%` and `_` are literal).
 - **Sorting**: The post list can be sorted by latest activity (`sort=latest_activity`, default; `activity` is an alias) or newest creation (`sort=newest`). Other values answer `400`. To page by activity, send `before` (the last post of the previous page) together with `before_activity` (its `last_activity_at`), so a reply that arrives between two requests cannot shift the page boundary. **Pinned posts** lead the first page (no `before`) and are not repeated on later pages.
 - **Tag names** are unique per forum; creating or renaming a tag to a name that exists answers `409`.
-- **Audit**: tag creation, change, reorder and removal (`forum.tag_create`, `forum.tag_update`, `forum.tag_reorder`, `forum.tag_delete`), changes of the rules (`forum.settings_update`) and a moderator's change to another member's post (`forum.post_update`, with the title, solved/lock state and tags before and after) are recorded in the audit log.
+- **Audit**: tag creation, change, reorder and removal (`forum.tag_create`, `forum.tag_update`, `forum.tag_reorder`, `forum.tag_delete`), changes of the rules (`forum.settings_update`) and a moderator's change to another member's post (`forum.post_update`, with the title, solved/lock state and tags before and after) are recorded in the audit log, in its Channel class: a holder of *View audit log* reads them only while they can view the forum ([moderation.md](moderation.md#access)).
 
 ## Unread posts
 

@@ -571,13 +571,20 @@ Only the Owner and holders of the **View audit log** permission may read it
 (`GET /api/admin/audit-log`; the permission also opens the admin console on the
 *Audit log* tab). *Administrator* includes it. What a reader sees depends on the class of the entry. The table lives in code
 (`audit.Classes`, pinned action by action in a test), so a new action cannot
-quietly default to something wider than intended; this is the same table.
+quietly default to something wider than intended; this is the same table. An
+action gets the class of the first row it matches. A test reads the server's
+source for every action an entry can be written with and fails for one without
+a row of its own, and the last row, which catches everything else, is the
+narrowest class (Owner and Administrators only): a forgotten action is hidden,
+not shown to every auditor. The Auditors class names each of its actions one by
+one. The class is applied when the log is read, so older entries follow the
+current table.
 
 | Class | Who reads it | Actions |
 |---|---|---|
-| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `wiki.*` (the wiki is open to every member who may view it), and the moderation actions not listed elsewhere |
-| Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `poll.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too), `event.talk_*`, `moderation.bulk_delete` |
-| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `import.*`, `moderation.note_*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
+| Auditors | Every holder of *View audit log* | The actions of roles (`role.create`, `role.update`, `role.delete`, `role.reorder`, `role.self_assign`, `role.self_remove`), members (`user.disable`, `user.enable`, `user.sessions_revoke`, `user.status`, `user.roles_set`, `user.talk_kick`), invites (`invite.create`, `invite.vanity_link`, `invite.update`, `invite.revoke`), moderation (`moderation.timeout`, `moderation.timeout_remove`, `moderation.ban`, `moderation.unban`, `moderation.ban_expired`, `moderation.kick`), automod (`automod.rule_create`, `automod.rule_update`, `automod.rule_delete`, `automod.timeout`, `automod.raid`), custom emoji (`emoji.create`, `emoji.rename`, `emoji.delete`), events without a Talk (`event.create`, `event.edit`, `event.cancel`, `event.comment_delete`, `event.role_template_create`, `event.role_template_update`, `event.role_template_delete`) and the wiki (`wiki.create`, `wiki.edit`, `wiki.move`, `wiki.delete`, `wiki.restore`, `wiki.lock`, `wiki.image`; the wiki is open to every member who may view it) |
+| Channel | Holders of *View audit log* **who can view the entry's channel when they read**; an entry that names no channel is hidden from them | `message.*`, `poll.*`, `voice.*`, `forum.*` (post titles, their authors and tag names of a possibly private forum), `channel.*` (a private channel's name, topic and overwrites are private too), `event.talk_*`, `moderation.bulk_delete` |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `import.*`, `moderation.note_*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table), and every action without a row of its own |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

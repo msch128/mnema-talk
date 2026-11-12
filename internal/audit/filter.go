@@ -82,15 +82,49 @@ func (f *filter) parseRange(q url.Values) error {
 	return nil
 }
 
-// restrictTo hides what the reader may not see: class VisPrivileged is hidden;
-// VisChannel only for channels the reader may view right now.
+// restrictTo hides what the reader may not see. An entry gets the class of the
+// first row of Classes its action matches, the same rule as ClassOf: class
+// VisPrivileged is hidden, VisChannel shown only for channels the reader may
+// view right now (an entry without a channel is hidden), VisAuditors shown.
+// The catch-all row is VisPrivileged, so an action without a row is hidden.
 func (f *filter) restrictTo(viewer Viewer) {
 	if viewer.Privileged {
 		return
 	}
-	f.add("action NOT LIKE ALL(?)", patterns(VisPrivileged))
-	f.args = append(f.args, patterns(VisChannel), viewer.Channels)
-	f.where = append(f.where, "(action NOT LIKE ALL($"+strconv.Itoa(len(f.args)-1)+") OR channel_id = ANY($"+strconv.Itoa(len(f.args))+"))")
+	f.args = append(f.args, viewer.Channels)
+	channels := "$" + strconv.Itoa(len(f.args))
+	var b strings.Builder
+	b.WriteString("CASE")
+	for _, c := range Classes {
+		b.WriteString(" WHEN " + f.matches(c.Pattern) + " THEN " + shownSQL(c.Vis, channels))
+	}
+	b.WriteString(" ELSE FALSE END")
+	f.where = append(f.where, b.String())
+}
+
+// matches is the SQL of matchLike: a literal, or a literal prefix and %.
+func (f *filter) matches(pattern string) string {
+	if pattern == "%" {
+		return "TRUE"
+	}
+	prefix, isPrefix := strings.CutSuffix(pattern, "%")
+	f.args = append(f.args, prefix)
+	arg := "$" + strconv.Itoa(len(f.args))
+	if isPrefix {
+		return "starts_with(action, " + arg + ")"
+	}
+	return "action = " + arg
+}
+
+// shownSQL says whether a reader without privileges sees an entry of class v.
+func shownSQL(v Visibility, channels string) string {
+	switch v {
+	case VisAuditors:
+		return "TRUE"
+	case VisChannel:
+		return "COALESCE(channel_id = ANY(" + channels + "), FALSE)"
+	}
+	return "FALSE"
 }
 
 // query returns the SELECT for the newest entries matching the filter.

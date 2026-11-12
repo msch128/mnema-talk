@@ -1,6 +1,9 @@
 package audit
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The classification is a policy, so it is pinned action by action: a change
 // here is a decision about who may read what, not a refactoring.
@@ -47,6 +50,15 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"event.talk_create": VisChannel, "event.talk_edit": VisChannel, "event.talk_cancel": VisChannel,
 		"report.create": VisPrivileged, "report.resolve": VisPrivileged, "report.delete": VisPrivileged,
 		"admin.post": VisPrivileged,
+		// Written by handlers outside the admin area; found by the source scan.
+		"forum.post_update": VisChannel, "forum.settings_update": VisChannel, "forum.tag_create": VisChannel,
+		"forum.tag_update": VisChannel, "forum.tag_delete": VisChannel, "forum.tag_reorder": VisChannel,
+		"channel.auto_delete_run": VisChannel, "event.talk_comment_delete": VisChannel,
+		"moderation.kick": VisAuditors, "event.comment_delete": VisAuditors,
+		"event.role_template_create": VisAuditors, "event.role_template_update": VisAuditors, "event.role_template_delete": VisAuditors,
+		"wiki.create": VisAuditors, "wiki.edit": VisAuditors, "wiki.move": VisAuditors, "wiki.delete": VisAuditors,
+		"wiki.restore": VisAuditors, "wiki.lock": VisAuditors, "wiki.image": VisAuditors,
+		"media.avatar_removed": VisPrivileged,
 	}
 	for _, rt := range Routes {
 		if rt.Skip {
@@ -61,25 +73,27 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 			t.Errorf("%s: class %d, want %d", action, got, vis)
 		}
 	}
-	if ClassOf("something.new") != VisAuditors {
-		t.Error("unknown actions default to the auditors")
+	// A forgotten action fails closed: only the Owner and Administrators read it.
+	for _, a := range []string{"something.new", "user.something_new", "wiki.something_new", "forum"} {
+		if ClassOf(a) != VisPrivileged {
+			t.Errorf("unknown action %s is not privileged", a)
+		}
 	}
 	if matchLike("a.%", "a") || !matchLike("a.%", "a.b") || matchLike("exact", "exact2") || !matchLike("%", "x") {
 		t.Error("matchLike")
 	}
 }
 
-// An auditor without Administrator must not see categories: the filter hides
-// every pattern of the privileged class.
+// An auditor without Administrator must not see categories: the table has
+// privileged rows for them, which the filter hides.
 func TestCategoryAndLayoutEntriesAreHiddenFromAuditors(t *testing.T) {
-	hidden := patterns(VisPrivileged)
 	for _, want := range []string{"category.%", "layout.apply"} {
 		found := false
-		for _, p := range hidden {
-			found = found || p == want
+		for _, c := range Classes {
+			found = found || (c.Pattern == want && c.Vis == VisPrivileged)
 		}
 		if !found {
-			t.Errorf("%s is not hidden from auditors: %v", want, hidden)
+			t.Errorf("%s is not hidden from auditors", want)
 		}
 	}
 	for _, a := range []string{"category.create", "category.overwrites_set", "layout.apply"} {
@@ -87,4 +101,52 @@ func TestCategoryAndLayoutEntriesAreHiddenFromAuditors(t *testing.T) {
 			t.Errorf("%s is %v", a, ClassOf(a))
 		}
 	}
+}
+
+// Every action the server can write has a row of its own: the catch-all is
+// the narrowest class, so an action left to it would be hidden from the
+// auditors who should read it, and before it was the narrowest it showed the
+// forum entries of private forums to every auditor (H-L6-01). The actions are
+// found in the source, not listed by hand, so a new writer is seen.
+func TestEveryWrittenActionHasAClassOfItsOwn(t *testing.T) {
+	s := newActionScan(t, "../../internal", "../../cmd")
+	s.run()
+	for _, e := range s.errs {
+		t.Error(e)
+	}
+	if len(s.found) < 100 {
+		t.Fatalf("the scan found only %d actions: it no longer sees the writers", len(s.found))
+	}
+	for action, at := range s.found {
+		if row := ownRow(action); row == nil {
+			t.Errorf("%s (written at %s) has no row of its own in Classes: decide who may read it", action, at)
+		}
+	}
+	for _, want := range []string{"forum.post_update", "forum.tag_create", "user.two_factor_reset", "invite.create", "moderation.kick", "event.talk_*"} {
+		if _, ok := s.found[want]; !ok {
+			t.Errorf("the scan misses %s", want)
+		}
+	}
+}
+
+// ownRow is the first row covering action other than the catch-all. A scanned
+// value ending in * stands for every action with that prefix: only a prefix
+// row that covers all of them counts, and no earlier row may match some.
+func ownRow(action string) *Class {
+	prefix, open := strings.CutSuffix(action, "*")
+	for i, c := range Classes {
+		if c.Pattern == "%" {
+			return nil
+		}
+		base, isPrefix := strings.CutSuffix(c.Pattern, "%")
+		switch {
+		case !open && matchLike(c.Pattern, action):
+			return &Classes[i]
+		case open && isPrefix && strings.HasPrefix(prefix, base):
+			return &Classes[i]
+		case open && strings.HasPrefix(base, prefix):
+			return nil
+		}
+	}
+	return nil
 }

@@ -338,13 +338,7 @@ func (s *canarySweep) check(who, route, where string, body []byte) {
 // canaryKnownLeaks are the leaks of a recorded finding: observer, route and
 // object. Each must still happen (the list may only shrink: a row that no
 // longer leaks fails until it is removed), and no other leak may.
-var canaryKnownLeaks = map[string]string{
-	"mod /api/admin/audit-log staff forum":                         "H-L6-01",
-	"mod /api/admin/audit-log staff forum tag":                     "H-L6-01",
-	"mod /api/admin/audit-log staff moderated post":                "H-L6-01",
-	"mod /api/admin/audit-log staff post first title":              "H-L6-01",
-	"mod /api/admin/audit-log staff post title set by a moderator": "H-L6-01",
-}
+var canaryKnownLeaks = map[string]string{}
 
 func (s *canarySweep) leak(who, route, what, msg string) {
 	if key := who + " " + route + " " + what; canaryKnownLeaks[key] != "" {
