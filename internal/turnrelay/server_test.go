@@ -3,6 +3,7 @@ package turnrelay
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -599,5 +600,30 @@ func TestHostOf(t *testing.T) {
 	}
 	if got := hostOf(&net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 9}); got != "192.0.2.1" {
 		t.Errorf("hostOf = %q", got)
+	}
+}
+
+// The generator asks for itself whether the member may join: a request that
+// reached it although the member is refused (the quota handler normally
+// refuses it first) opens no relay socket, and one whose check fails opens
+// none either.
+func TestGeneratorRefusesAMemberWhoMayNotJoin(t *testing.T) {
+	h := newHarness(t, harnessOpts{})
+	g := &generator{s: h.srv}
+	conf := func() turn.AllocateListenerConfig {
+		return turn.AllocateListenerConfig{Network: "udp4", UserID: fmt.Sprintf("%d:%s", time.Now().Add(time.Hour).Unix(), uuid.New())}
+	}
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, nil })
+	if conn, _, err := g.AllocatePacketConn(conf()); err == nil {
+		_ = conn.Close()
+		t.Fatal("a member who may not join got a relay socket")
+	}
+	h.srv.SetRelayCheck(func(uuid.UUID) (bool, error) { return false, errors.New("database down") })
+	if conn, _, err := g.AllocatePacketConn(conf()); err == nil {
+		_ = conn.Close()
+		t.Fatal("a member whose check failed got a relay socket")
+	}
+	if n := h.srv.Status().Allocations; n != 0 {
+		t.Fatalf("allocations = %d after two refusals", n)
 	}
 }
