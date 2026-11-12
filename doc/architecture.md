@@ -565,7 +565,7 @@ every 30 minutes, every member renews its own leaf key, members that showed no
 sign of life for 20 minutes are removed and re-admitted when they return, and
 every sealed frame is signed with its sender's leaf key. The connection
 details show a **safety code** for the current epoch so members can compare
-keys out of band. The server validates who may commit but never sees keys.
+keys out of band. The server relays the handshakes, checks their framing and that the sender is in the Talk, and never sees keys; the members validate who may commit.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 
