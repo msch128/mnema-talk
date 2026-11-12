@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availability, AvailabilityBudget, EPOCH_LIFE_MS, share, SHARDS } from './groupAvailability.fixture'
+import { availability, AvailabilityBudget, EPOCH_LIFE_MS, poolBreaches, share, SHARDS } from './groupAvailability.fixture'
 
 const at = (seconds: number, text: string) => `${seconds.toFixed(3).padStart(8)} ${text}`
 
@@ -31,7 +31,7 @@ describe('availability read from a simulator trace', () => {
     expect(a.longestEpochMs).toBe(6000)
   })
 
-  it('flags a seed over its limit and a pool over the shard limit, and a known seed gets the wider limit', () => {
+  it('flags a seed over its limit, and a known seed gets the wider limit; a shard off its row is a warning', () => {
     const run = (lostMs: number, memberMs = 1000) => ({ memberMs, noKeysMs: lostMs, lostMs, startOvers: 1, longestLostMs: lostMs, longestEpochMs: 0, longestJoinMs: 0 })
     const budget = new AvailabilityBudget('honest')
     budget.add(1, false, run(100))
@@ -45,11 +45,15 @@ describe('availability read from a simulator trace', () => {
     ])
     const pooled = new AvailabilityBudget('honest', [3, SHARDS])
     for (const seed of [1, 2, 3]) pooled.add(seed, false, run(250))
-    expect(pooled.breaches().map(line => line.replace(/\d+\.\d%/g, 'N%'))).toEqual(['shard 3: pooled N% of member time lost its keys (budget N% plus 2 points)'])
-    // A shard that does better than its number must have the number lowered.
+    expect(pooled.breaches()).toEqual([])
+    expect(pooled.shardNote()).toBe('honest shard 3: pooled 25.0% of member time lost its keys, the table says 5.2% (window 2 points): measure again')
     const better = new AvailabilityBudget('honest', [3, SHARDS])
     better.add(1, false, run(10))
-    expect(better.breaches()[0]).toContain('set LOST_BUDGET.honest.shardLost[3] to 0.0100')
+    expect(better.shardNote()).toContain('pooled 1.0%')
+    const near = new AvailabilityBudget('honest', [3, SHARDS])
+    near.add(1, false, run(60))
+    expect(near.shardNote()).toBeNull()
+    expect(new AvailabilityBudget('honest').shardNote()).toBeNull()
     // A tab that waits too long for its first keys.
     const slow = new AvailabilityBudget('hostile')
     slow.add(9, false, { ...run(0), longestJoinMs: 200_000 })
@@ -60,6 +64,17 @@ describe('availability read from a simulator trace', () => {
     const budget = new AvailabilityBudget('hostile')
     budget.add(5, false, { memberMs: 1000, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: EPOCH_LIFE_MS + 1000, longestJoinMs: 0 })
     expect(budget.breaches()).toEqual([`seed 5: one epoch's keys were held for ${(EPOCH_LIFE_MS + 1000) / 1000} s (limit ${EPOCH_LIFE_MS / 1000} s)`])
+  })
+
+  it('pools the shards of both relays against the hard limit, and needs every shard once', () => {
+    const rows = (relay: 'honest' | 'hostile', lost: number) => [...Array(SHARDS).keys()].map(shard => ({ relay, shard, memberMs: 10_000, lostMs: lost }))
+    expect(poolBreaches([...rows('honest', 610), ...rows('hostile', 1282)])).toEqual([])
+    expect(poolBreaches([...rows('honest', 720), ...rows('hostile', 1282)])).toEqual(['honest: pooled 7.20% of member time lost its keys (budget 6.10% plus 1 point)'])
+    expect(poolBreaches([...rows('honest', 610), ...rows('hostile', 1100)])[0]).toContain('set LOST_BUDGET.hostile.pooled to 0.1100')
+    expect(poolBreaches([...rows('honest', 610).slice(1), ...rows('hostile', 1282), ...rows('hostile', 1282).slice(0, 1)])).toEqual([
+      'honest: the shards present are [1,2,3,4,5,6,7], not each of 0..7 once',
+      'hostile: the shards present are [0,0,1,2,3,4,5,6,7], not each of 0..7 once',
+    ])
   })
 
   it('has no share without member time', () => {

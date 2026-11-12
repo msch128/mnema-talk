@@ -6,6 +6,8 @@
 // inside it passes (the budget must shrink: move the seed to groupSim.test.ts
 // and delete it from the list).
 import { webcrypto } from 'node:crypto'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { AvailabilityBudget, availabilityOf } from './groupAvailability.fixture'
 import { KNOWN_HONEST, KNOWN_HOSTILE } from './groupSim.known.fixture'
@@ -26,6 +28,22 @@ function shard(setting: string): readonly [number, number] {
 const [index, count] = shard(process.env.SIM_SHARD ?? '0/1')
 const mine = (seed: number) => seed % count === index
 
+/**
+ * The shard's sums go to SIM_POOL_OUT (a directory) for the job that pools all shards against the hard limit
+ * (groupAvailability.pool.test.ts); its row of the per-shard table is only a warning, in the job summary when there is one.
+ */
+function record(budget: AvailabilityBudget) {
+  const sums = budget.sums()
+  if (process.env.SIM_POOL_OUT) {
+    mkdirSync(process.env.SIM_POOL_OUT, { recursive: true })
+    writeFileSync(join(process.env.SIM_POOL_OUT, `pool-${sums.relay}-${sums.shard}.json`), JSON.stringify(sums))
+  }
+  const note = budget.shardNote()
+  if (!note) return
+  console.warn(note)
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- warning: ${note}\n`)
+}
+
 describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget', () => {
   it.each([['hostile', KNOWN_HOSTILE], ['honest', KNOWN_HONEST]] as const)('%s relay', async (relay, known) => {
     const failing: number[] = []
@@ -42,6 +60,7 @@ describe.skipIf(!process.env.SIM_SWEEP)('seeds 1..400 against the failure budget
       failing.push(seed)
       if (!known.includes(seed)) reports.push(`seed ${seed}: ${outcome}`)
     }
+    record(budget)
     const regressions = failing.filter(seed => !known.includes(seed))
     const healed = known.filter(seed => mine(seed) && !failing.includes(seed))
     expect(budget.breaches(), `${relay} relay: member time without keys is over the budget LOST_BUDGET in groupAvailability.fixture.ts`).toEqual([])
