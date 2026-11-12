@@ -115,14 +115,21 @@ func TestExportHoldsDirectMessageSettingsAndCommentMutes(t *testing.T) {
 // delete fails, "anything that could not be removed is found by Admin > Media >
 // orphan cleanup" (doc/operations.md, account deletion; the comment of
 // removeObjects says the same). The finished export is one of those files, and
-// it lives under exports/, which the orphan scan never lists: the archive of
-// everything the person had stays in the bucket for good. The failed delete is
-// modelled by putting the objects back after the erasure, as old as the scan
-// wants them. H-L10-03.
-func TestAFailedDeleteOfAnErasedExportIsNeverFound(t *testing.T) {
+// it lives under exports/: the scan finds an archive no export row names, and
+// leaves another member's ready export and an archive being written alone.
+// The failed delete is modelled by putting the objects back after the
+// erasure, as old as the scan wants them. H-L10-03.
+func TestAFailedDeleteOfAnErasedExportIsFoundByTheOrphanCleanup(t *testing.T) {
 	a, _ := mailApp(t)
 	admin := a.seedAdmin()
 	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+	if res := a.requestExport(bob, memberPassword, ""); res.status != http.StatusAccepted {
+		t.Fatalf("request: %d %s", res.status, res.body)
+	}
+	if st := a.waitForExport(bob); st.State != "ready" {
+		t.Fatalf("export: %+v", st)
+	}
 	ch := a.createChannel(admin, "general", "text")
 	if res := alice.upload("/api/channels/"+ch.String()+"/upload", "file", "a.png", "image/png", pngBytes, map[string]string{"content": "x"}); res.status != http.StatusCreated {
 		t.Fatalf("upload: %d %s", res.status, res.body)
@@ -148,17 +155,25 @@ func TestAFailedDeleteOfAnErasedExportIsNeverFound(t *testing.T) {
 	if a.store.Has(exportKey) || a.store.Has(uploadKey) {
 		t.Fatal("the erasure must have deleted both files when the store works")
 	}
+	var bobKey string
+	if err := a.db.QueryRow(ctx, `SELECT s3_key FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL`, bob.user.ID).Scan(&bobKey); err != nil {
+		t.Fatalf("bob's ready export: %v", err)
+	}
 	old := time.Now().Add(-48 * time.Hour)
 	a.store.Put(exportKey, []byte("the person's archive"), old)
 	a.store.Put(uploadKey, pngBytes, old)
+	a.store.Put(bobKey, []byte("bob's archive"), old)
+	writing := "exports/" + bob.user.ID.String() + "/being-written.zip"
+	a.store.Put(writing, []byte("not named by its row yet"), time.Now())
 
 	var found struct{ Count, Deleted int64 }
 	admin.post("/api/admin/media/orphans/cleanup", nil).decode(t, &found)
-	if a.store.Has(uploadKey) {
-		t.Fatalf("the left-over upload must be found and removed: %+v", found)
+	if a.store.Has(uploadKey) || a.store.Has(exportKey) || found.Deleted != 2 {
+		t.Fatalf("the left-over upload and export must be found and removed: %+v, export stored: %v", found, a.store.Has(exportKey))
 	}
-	t.Logf("cleanup %+v; the left-over export %s stored: %v", found, exportKey, a.store.Has(exportKey))
-	knownGap(t, "H-L10-03", "the orphan cleanup removes a left-over export of an erased account", !a.store.Has(exportKey))
+	if !a.store.Has(bobKey) || !a.store.Has(writing) {
+		t.Fatalf("a ready export with its row and a young archive stay: %v %v", a.store.Has(bobKey), a.store.Has(writing))
+	}
 }
 
 // exportArchive builds and downloads c's export and returns every file but

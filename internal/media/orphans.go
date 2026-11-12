@@ -10,9 +10,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
-// Orphans are stored objects no media row refers to: left behind when an
-// object delete failed after its row was gone, or by a crash between upload
-// and insert. Nothing shows or serves them; they only take space.
+// Orphans are stored objects no row refers to: left behind when an object
+// delete failed after its row was gone (an account erasure deletes the rows
+// in its transaction and the files after the commit), or by a crash between
+// upload and insert. Nothing shows or serves them; they only take space.
 type Orphans struct {
 	Count int64 `json:"count"`
 	Bytes int64 `json:"bytes"`
@@ -22,10 +23,18 @@ type Orphans struct {
 
 // orphanPrefixes are the key spaces the app writes. Other objects in a
 // shared bucket are never looked at.
-var orphanPrefixes = []string{"uploads/", "avatars/", "banners/", "covers/"}
+var orphanPrefixes = []string{"uploads/", "avatars/", "banners/", "covers/", "exports/"}
+
+// Objects of these key spaces are referred to by media rows, except a data
+// export's archive, which its data_exports row names.
+const (
+	mediaKeys  = `SELECT s3_key FROM media WHERE s3_key = ANY($1) AND NOT is_deleted`
+	exportKeys = `SELECT s3_key FROM data_exports WHERE s3_key = ANY($1)`
+)
 
 // orphanMinAge skips objects younger than this: an upload stores its object
-// before its row is committed.
+// before its row is committed, and so does an export build (which ends
+// within minutes).
 const orphanMinAge = 24 * time.Hour
 
 // orphanBatch is how many keys one database lookup (and one delete) covers.
@@ -39,6 +48,7 @@ func FindOrphans(ctx context.Context, p *db.Pool, store Store, remove bool) (*Or
 	sc := &orphanScan{ctx: ctx, pool: p, store: store, remove: remove, res: &Orphans{}}
 	cutoff := time.Now().Add(-orphanMinAge)
 	for _, prefix := range orphanPrefixes {
+		sc.lookup = orphanLookup(prefix)
 		err := store.List(ctx, prefix, func(o ObjectInfo) error {
 			if o.LastModified.After(cutoff) {
 				return nil
@@ -59,13 +69,22 @@ func FindOrphans(ctx context.Context, p *db.Pool, store Store, remove bool) (*Or
 	return sc.res, nil
 }
 
+// orphanLookup is the query that finds which keys of prefix a row refers to.
+func orphanLookup(prefix string) string {
+	if prefix == "exports/" {
+		return exportKeys
+	}
+	return mediaKeys
+}
+
 // orphanScan collects listed objects in batches and checks each batch
-// against the media table.
+// against the table that refers to its key space (lookup).
 type orphanScan struct {
 	ctx    context.Context
 	pool   *db.Pool
 	store  Store
 	remove bool
+	lookup string
 	batch  []ObjectInfo
 	res    *Orphans
 }
@@ -99,13 +118,13 @@ func (sc *orphanScan) flush() error {
 	return nil
 }
 
-// referencedKeys returns the batch keys that a live media row points at.
+// referencedKeys returns the batch keys that a live row points at.
 func (sc *orphanScan) referencedKeys() (map[string]bool, error) {
 	keys := make([]string, len(sc.batch))
 	for i, o := range sc.batch {
 		keys[i] = o.Key
 	}
-	rows, err := sc.pool.Query(sc.ctx, `SELECT s3_key FROM media WHERE s3_key = ANY($1) AND NOT is_deleted`, keys)
+	rows, err := sc.pool.Query(sc.ctx, sc.lookup, keys)
 	if err != nil {
 		return nil, fmt.Errorf("look up media keys: %w", err)
 	}
