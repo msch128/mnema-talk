@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { messageText } from '../../shared/lib/textLength'
 import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
 import type { ContextMenuItem } from '../../shared/components/menuTypes'
@@ -68,16 +69,16 @@ const laterItem = computed<ContextMenuItem>(() => ({
   icon: CalendarClock,
   action: () => {
     const channel = chatStore.activeChannel
-    if (!channel || !text.value.trim()) return
+    if (!channel || !messageText(text.value)) return
     openLater({
-      kind: 'schedule', channelId: channel.id, content: text.value.trim(), replyToId: props.replyingTo?.id ?? null,
+      kind: 'schedule', channelId: channel.id, content: messageText(text.value), replyToId: props.replyingTo?.id ?? null,
       onScheduled: () => { emit('update:modelValue', ''); emit('cancel-reply') }
     })
   }
 }))
 const laterItems = computed(() => [laterItem.value])
 // A scheduled message is text only: files go out at once, with the message.
-const canScheduleLater = computed(() => !!text.value.trim() && !tray.count.value)
+const canScheduleLater = computed(() => !!messageText(text.value) && !tray.count.value)
 
 // On a phone the composer has room for the text: file, poll and "send later"
 // share the one "+" button instead of three buttons of their own.
@@ -217,7 +218,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <!-- Send Button -->
       <button
         @click="emit('send')"
-        :disabled="!canSend || (!text.trim() && !tray.count.value) || sending || !!limit?.blocks"
+        :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending || !!limit?.blocks"
         class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >

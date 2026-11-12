@@ -64,3 +64,17 @@ function regionalRun(points: string[], end: number): number {
   for (let i = end - 1; i >= 0 && isRegional(points[i]!.codePointAt(0)); i--) n++
   return n
 }
+
+// White space as the server trims it (Go's strings.TrimSpace, unicode.IsSpace).
+// JavaScript's trim() differs on two characters: it keeps U+0085 and removes U+FEFF.
+const SERVER_SPACE = '\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000'
+const edgeSpace = new RegExp(`^[${SERVER_SPACE}]+|[${SERVER_SPACE}]+$`, 'g')
+
+/**
+ * The text of a message as the server will take it: NUL removed (the server
+ * refuses it and nothing renders it), then trimmed with the server's white
+ * space. An empty result means there is nothing to send.
+ */
+export function messageText(draft: string): string {
+  return draft.replaceAll('\u0000', '').replace(edgeSpace, '')
+}

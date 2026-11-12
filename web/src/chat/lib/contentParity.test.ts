@@ -4,14 +4,15 @@
 // Go's white space, refuses NUL and counts runes
 // (internal/chat/core/content_parity_test.go writes its verdicts into the
 // shared file). Oracle: whatever the composer sends, the server accepts.
-// Known disagreements (finding H-L3-11 of the 2026-11 hunt) are listed below;
-// the list may only shrink. After changing the generator:
+// The composer once disagreed on U+0085 and NUL (finding H-L3-11); both are
+// fixed in messageText, and every vector must now be accepted. After changing the generator:
 //   CONTENT_PARITY_WRITE=1 npx vitest run src/chat/lib/contentParity.test.ts
 //   CONTENT_PARITY_UPDATE=1 go test -run TestContentVectorsMatchTheServer ./internal/chat/core
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { MAX_MESSAGE_LENGTH, lengthState } from './composerLimits'
+import { messageText } from '../../shared/lib/textLength'
 import { rng } from '../../shared/lib/markdown/linkParity.fixture'
 
 const file = join(import.meta.dirname, '..', '..', '..', '..', 'internal/chat/core/testdata/content_vectors.json')
@@ -24,9 +25,10 @@ const FILL = ['a', '\u00e9', '\u20ac', '😀', 'e\u0301']
 
 /** What the composer does with a draft: null when it does not send, else the text it sends. */
 export function composerSends(draft: string): string | null {
-  if (!draft.trim()) return null
+  const text = messageText(draft)
+  if (!text) return null
   if (lengthState(draft)?.over) return null
-  return draft.trim()
+  return text
 }
 
 function drafts(): string[] {
@@ -45,9 +47,6 @@ function drafts(): string[] {
 const sent = () => drafts().map(composerSends).filter((s): s is string => s !== null)
 const vectors = (): Vector[] => JSON.parse(readFileSync(file, 'utf8')) as Vector[]
 
-/** Drafts the composer sends and the server refuses, measured on 2026-11-12. */
-const KNOWN = (v: Vector) => v.sent.includes('\u0000') || /^[\s\u0085]*$/.test(v.sent)
-
 describe('message text: the composer against the server', () => {
   it.runIf(process.env.CONTENT_PARITY_WRITE === '1')('writes the vectors', () => {
     writeFileSync(file, JSON.stringify(sent().map(s => ({ sent: s, ok: false, runes: 0 })), null, 1) + '\n')
@@ -57,13 +56,13 @@ describe('message text: the composer against the server', () => {
     expect(vectors().map(v => v.sent)).toEqual(sent())
   })
 
-  it('the server accepts everything the composer sends, but for the known cases', () => {
-    const refused = vectors().filter(v => !v.ok && !KNOWN(v)).map(v => JSON.stringify(v.sent.slice(0, 40)))
-    expect(refused).toEqual([])
+  it('the server accepts everything the composer sends', () => {
+    expect(vectors().filter(v => !v.ok).map(v => JSON.stringify(v.sent.slice(0, 40)))).toEqual([])
   })
 
-  it.fails('the server accepts everything the composer sends', () => {
-    expect(vectors().filter(v => !v.ok).map(v => JSON.stringify(v.sent.slice(0, 40)))).toEqual([])
+  it('a draft of only NUL or only the server\'s white space sends nothing', () => {
+    for (const draft of ['\u0085', '\u0000', ' \u0085\u0000\n', '\u00a0\u3000'] ) expect(composerSends(draft)).toBeNull()
+    expect(composerSends('\ufeff')).toBe('\ufeff')
   })
 
   it('what the server stores is within the composer limit', () => {
