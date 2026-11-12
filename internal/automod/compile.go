@@ -127,8 +127,11 @@ type link struct {
 // be. A block list only knows the hosts it lists: it forbids every reading
 // under a listed domain, exact or not, and every opaque one, and lets
 // through what it cannot read at all.
-func (c *compiled) matchesLinks(content string) bool {
-	for _, l := range links(content) {
+func (c *compiled) matchesLinks(content string) bool { return c.forbidsLinks(links(content)) }
+
+// forbidsLinks is matchesLinks on the links of a message, read once per check.
+func (c *compiled) forbidsLinks(ls []link) bool {
+	for _, l := range ls {
 		switch c.Config.Mode {
 		case LinksBlockAll:
 			return true

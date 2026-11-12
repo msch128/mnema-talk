@@ -23,6 +23,20 @@ var benchMessages = map[string]string{
 	"parens":  strings.Repeat("https://a.example/)", 210),
 }
 
+// worstLinkMessages are the most expensive shapes the review of the fix found
+// (fixreview-H-L3-01-04, S1), each at the length limit of 4000 characters.
+var worstLinkMessages = map[string]string{
+	// One authority of non-ASCII letters with 15 closers at its end: every
+	// closer is a place to end the host, and each reading runs IDNA.
+	"idna closers": "https://" + strings.Repeat("é", 3962) + strings.Repeat("*é", 15),
+	// Nested schemes over one shared tail of trailing punctuation.
+	"nested tail": strings.Repeat("https://a", 280) + strings.Repeat(".", 1480),
+	// 40 nested links, each a non-ASCII host of 40 letters with 15 closers.
+	"nested idna": strings.Repeat("https://"+strings.Repeat("é", 25)+strings.Repeat("*é", 15)+"/", 40),
+	// One token of runs of trailing punctuation and Markdown markers.
+	"trailing runs": "https://a" + strings.Repeat(".,;:!?*_~|", 199),
+}
+
 func BenchmarkMatchesLinks(b *testing.B) {
 	rules := map[string]*compiled{
 		"allow": linksRule(LinksAllowList, "allowed.example"),
@@ -37,5 +51,16 @@ func BenchmarkMatchesLinks(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+func BenchmarkLinksWorstCase(b *testing.B) {
+	for name, msg := range worstLinkMessages {
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				links(msg)
+			}
+		})
 	}
 }

@@ -17,10 +17,11 @@ import (
 // the client could end the host is judged (linkends.go): a message passes
 // only if every reading passes.
 //
-// Every "http://" and "https://" in the text is judged, also one inside
-// another link: when the client cannot parse the outer link (a port above
-// 65535, say) it links the inner one. "www." starts a link too, as it always
-// did, although the client does not link it.
+// An "http://" or "https://" inside another link is judged too, unless the
+// client surely opens the outer link through it (linkcover.go): when the
+// client cannot parse the outer link (a port above 65535, say) or ends it
+// before the inner one, it links the inner one. "www." starts a link too, as
+// it always did, although the client does not link it.
 
 // isJSSpace is JavaScript's \s: white space and line terminators.
 func isJSSpace(r rune) bool {
@@ -38,38 +39,65 @@ func linkStop(r rune) bool {
 
 // links lists the links in content: for each link-like token, every host the
 // client could open from it, or one unreadable link when no host can be told.
+// When the message costs more work than linkWork allows, it ends with an
+// opaque link: a message that tangled may lead anywhere.
 func links(content string) []link {
-	s := strings.ReplaceAll(content, "\x00", "") // the client drops NUL before parsing
-	var out []link
-	var spans [][2]int
-	stop := -1 // the next character at or after the token that ends every link
-	for i := 0; ; {
-		k := strings.Index(s[i:], "://")
-		if k < 0 {
-			break
-		}
-		j := i + k
-		if start, ok := schemeBefore(s, j); ok {
-			if stop < j+3 {
-				stop = j + 3 + tokenLen(s[j+3:]) // nested schemes share the end: one scan
-			}
-			spans = append(spans, [2]int{start, stop})
-			out = append(out, schemeLinks(s[j+3:], s[j+3:stop], framed(s[:start]))...)
-		}
-		i = j + 1
+	sc := newScan(strings.ReplaceAll(content, "\x00", "")) // the client drops NUL before parsing
+	if !sc.schemes() || !sc.wwwLinks() {
+		return append(sc.out, link{opaque: true})
 	}
-	out = append(out, wwwLinks(s, spans)...)
-	if len(out) == 0 && !isASCII(s) && foldedLink.MatchString(fold(s)) {
+	if len(sc.out) == 0 && !isASCII(sc.s) && foldedLink.MatchString(fold(sc.s)) {
 		// Only folding shows a link (full-width letters, an invisible
 		// character inside the scheme): no client links it, but a member who
 		// copies it gets one. It counts as a link nobody can read.
-		out = append(out, link{})
+		sc.out = append(sc.out, link{})
 	}
-	return out
+	return sc.out
 }
 
 // foldedLink is a link-like token in folded text, for the case above.
 var foldedLink = regexp.MustCompile(`(?i)(?:https?://|\bwww\.)[^\s<>"'\x60]`)
+
+// schemes judges every "http://" and "https://" of the text. Nested schemes
+// share the end of their token: it is found once, and so is the run of
+// trailing punctuation at its end. false: the work budget ran out.
+func (sc *scan) schemes() bool {
+	s := sc.s
+	stop := -1 // the next character at or after the token that ends every link
+	for i := 0; ; {
+		k := strings.Index(s[i:], "://")
+		if k < 0 {
+			return true
+		}
+		j := i + k
+		i = j + 1
+		start, ok := schemeBefore(s, j)
+		if !ok {
+			continue
+		}
+		if stop < j+3 {
+			stop = j + 3 + tokenLen(s[j+3:])
+		}
+		sc.spans = append(sc.spans, [2]int{start, stop})
+		if !sc.scheme(start, j, stop) {
+			return false
+		}
+	}
+}
+
+// scheme judges the link whose scheme starts at start, "://" at j, its token
+// running to stop. An authority longer than the client's destination cap
+// (maxDestination) may be cut anywhere by the client: opaque.
+func (sc *scan) scheme(start, j, stop int) bool {
+	rest, token := sc.s[j+3:], sc.s[j+3:stop]
+	if utf16Longer(sc.s[start:j+3+authorityLen(token)], maxDestination) {
+		sc.out = append(sc.out, link{opaque: true})
+		return true
+	}
+	ls, ok := sc.schemeLinks(rest, token, j+3, framed(sc.s[:start]))
+	sc.out = append(sc.out, ls...)
+	return ok
+}
 
 // schemeBefore reports whether "http" or "https" (any case) ends at j.
 func schemeBefore(s string, j int) (int, bool) {
@@ -104,42 +132,46 @@ func authorityLen(s string) int {
 }
 
 // schemeLinks reads what follows "http://" or "https://": rest is the text
-// after it, token its start up to the first character that ends every link.
-func schemeLinks(rest, token string, framed bool) []link {
+// after it (at offset at of the message), token its start up to the first
+// character that ends every link.
+func (sc *scan) schemeLinks(rest, token string, at int, framed bool) ([]link, bool) {
 	first, _ := utf8.DecodeRuneInString(rest)
 	switch {
 	case rest == "" || isJSSpace(first) || strings.ContainsRune("<>\"`", first):
-		return nil // nothing after the scheme: not a link
+		return nil, true // nothing after the scheme: not a link
 	case first == '/' || first == '\\' || first < 0x20 || first == 0x7f:
 		// The client links none of these; a browser's address bar skips the
 		// slashes. Judge that host, but never as one that is fine.
 		if first == '/' {
+			n := len(token)
 			token = strings.TrimLeft(token, "/")
+			at += n - len(token)
 		} else { // the token ended right here: read on past the stop
-			rest = strings.TrimLeft(rest[1:], "/\\")
-			token = rest[:tokenLen(rest)]
+			trimmed := strings.TrimLeft(rest[1:], "/\\")
+			at += len(rest) - len(trimmed)
+			token = trimmed[:tokenLen(trimmed)]
 		}
-		ls := authorityLinks(token, token[:authorityLen(token)], framed)
+		ls, ok := sc.authorityLinks(token, token[:authorityLen(token)], at, framed)
 		for i := range ls {
 			ls[i].ok = false
 		}
-		return ls
+		return ls, ok
 	}
-	return authorityLinks(token, token[:authorityLen(token)], framed)
+	return sc.authorityLinks(token, token[:authorityLen(token)], at, framed)
 }
 
-// wwwLinks are the "www." tokens outside the http(s) tokens and outside each
-// other.
-func wwwLinks(s string, spans [][2]int) []link {
-	var out []link
+// wwwLinks judges the "www." tokens outside the http(s) tokens and outside
+// each other. false: the work budget ran out.
+func (sc *scan) wwwLinks() bool {
+	s := sc.s
 	for i := 0; ; {
 		k := indexFold(s[i:], "www.")
 		if k < 0 {
-			return out
+			return true
 		}
 		at := i + k
 		i = at + 4
-		if at > 0 && isWordByte(s[at-1]) || inSpan(at, spans) {
+		if at > 0 && isWordByte(s[at-1]) || inSpan(at, sc.spans) {
 			continue
 		}
 		rest := s[at:]
@@ -148,7 +180,11 @@ func wwwLinks(s string, spans [][2]int) []link {
 		}
 		token := rest[:tokenLen(rest)]
 		i = at + len(token)
-		out = append(out, authorityLinks(token, token[:authorityLen(token)], false)...)
+		ls, ok := sc.authorityLinks(token, token[:authorityLen(token)], at, false)
+		sc.out = append(sc.out, ls...)
+		if !ok {
+			return false
+		}
 	}
 }
 

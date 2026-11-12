@@ -74,3 +74,45 @@ func TestTextThatOnlyFoldingTurnsIntoALinkStillCounts(t *testing.T) {
 		}
 	}
 }
+
+// The client reads at most maxDestination UTF-16 code units of the target of
+// [text](url) and cuts there, so a longer authority may open any prefix of
+// itself: no list lets it through, masked or bare.
+func TestAnAuthorityLongerThanTheClientsTargetCapLeadsAnywhere(t *testing.T) {
+	long := "https://" + strings.Repeat("a", maxDestination) + ".allowed.example/x"
+	for _, msg := range []string{long, "[text](" + long + ")", "[text](<" + long + ">)", "[text](" + long + " 'title')"} {
+		got := links(msg)
+		if len(got) == 0 || !got[len(got)-1].opaque {
+			t.Fatalf("a %d-unit authority gave %d links, the last not opaque", maxDestination+8, len(got))
+		}
+		if !linksRule(LinksBlockList, "unrelated.example").matchesLinks(msg) || !linksRule(LinksAllowList, "allowed.example").matchesLinks(msg) {
+			t.Error("an authority the client may cut anywhere passed a list")
+		}
+	}
+	// Counted as JavaScript counts: a character outside the BMP is two units.
+	astral := "https://" + strings.Repeat("\U0001F600", maxDestination/2) + ".allowed.example"
+	if got := links(astral); len(got) == 0 || !got[len(got)-1].opaque {
+		t.Error("an authority of 2000 UTF-16 units in 1000 characters was not opaque")
+	}
+	// A long path is no long authority: the cut then falls behind the host.
+	fits := "https://allowed.example/" + strings.Repeat("a", 3*maxDestination)
+	if linksRule(LinksAllowList, "allowed.example").matchesLinks(fits) {
+		t.Error("an allowed host with a long path was refused")
+	}
+}
+
+// The scan of one message is bounded: when its budget is used up the message
+// counts as carrying a link that may lead anywhere.
+func TestAScanThatRunsOutOfWorkLeadsAnywhere(t *testing.T) {
+	msg := strings.Repeat("https://\u03b1.example*", 300)
+	sc := newScan(msg)
+	for sc.spend(linkWork / 8) {
+	}
+	if sc.spend(1) {
+		t.Fatal("the budget did not run out")
+	}
+	got := links(strings.Repeat(msg, 12))
+	if len(got) == 0 || !got[len(got)-1].opaque {
+		t.Error("a message past the work budget carried no opaque link")
+	}
+}
