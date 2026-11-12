@@ -83,7 +83,8 @@ func (f *filter) parseRange(q url.Values) error {
 }
 
 // restrictTo hides what the reader may not see. An entry gets the class of the
-// first row of Classes its action matches, the same rule as ClassOf: class
+// first row of Classes its action matches, the rule of ClassOf except for the
+// stored rows legacyTalkRemoval classes first (ClassOf sees the action only): class
 // VisPrivileged is hidden, VisChannel shown only for channels the reader may
 // view right now (an entry without a channel is hidden), VisAuditors shown.
 // The catch-all row is VisPrivileged, so an action without a row is hidden.

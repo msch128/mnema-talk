@@ -2,6 +2,7 @@ package memberadmin
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -66,7 +68,7 @@ func (h *API) finishTalkKick(w http.ResponseWriter, err error, kicked bool) erro
 // disconnectFromTalk handles POST /api/channels/{id}/voice/{userID}/disconnect.
 //
 // @Summary Disconnect a member from a Talk
-// @Description Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as voice.disconnect, read only by auditors who can view the Talk.
+// @Description Needs View channel and Disconnect members in this Talk: granted server-wide by a role, it works in every Talk; granted or denied by a role or member overwrite on the Talk or its category, only there. Members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400). 400 also when the member is not in this Talk. Recorded in the audit log as voice.disconnect, read only by auditors who can view the Talk; a removal from a conversation's call Talk is not recorded.
 // @ID disconnectFromTalk
 // @Tags Channels
 // @Produce json
@@ -101,17 +103,31 @@ func (h *API) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
 		return err
 	})
 	if err == nil && kicked {
-		// Outside the admin area, so the audit middleware does not see it. It
-		// says who was in which Talk, so it is a voice.* entry with its Talk as
-		// the channel: auditors who cannot view the Talk do not read it, like
-		// voice.join (H-L6-03). user.talk_kick is the admin-wide kick's.
-		e := audit.Entry{Action: "voice.disconnect", TargetType: "user", TargetID: id.String(), ChannelID: &ch, Details: map[string]any{"channel_id": ch.String()}}
-		if u, uerr := auth.GetUser(r.Context(), h.Sessions.DB, id); uerr == nil {
-			e.TargetName = u.Username
-		}
-		h.Audit.RecordOrLog(r.Context(), e)
+		h.auditTalkRemoval(r, id, ch)
 	}
 	return h.finishTalkKick(w, err, kicked)
+}
+
+// auditTalkRemoval records a removal from one Talk. Outside the admin area, so
+// the audit middleware does not see it. It says who was in which Talk, so it
+// is a voice.* entry with its Talk as the channel: auditors who cannot view
+// the Talk do not read it, like voice.join (H-L6-03); user.talk_kick is the
+// admin-wide kick's. A conversation's call Talk is not audited at all, not
+// even for the Owner (doc/talks.md: who called whom), and when that cannot be
+// told nothing is written, as for voice.join.
+func (h *API) auditTalkRemoval(r *http.Request, id, ch uuid.UUID) {
+	ctx := r.Context()
+	if isDM, err := talks.IsDMTalk(ctx, h.Sessions.DB, ch); err != nil || isDM {
+		if err != nil {
+			slog.Warn("audit log: Talk removal not recorded, DM lookup failed", "channel", ch, "err", err)
+		}
+		return
+	}
+	e := audit.Entry{Action: "voice.disconnect", TargetType: "user", TargetID: id.String(), ChannelID: &ch, Details: map[string]any{"channel_id": ch.String()}}
+	if u, err := auth.GetUser(ctx, h.Sessions.DB, id); err == nil {
+		e.TargetName = u.Username
+	}
+	h.Audit.RecordOrLog(ctx, e)
 }
 
 // kickUserFromVoice removes id from the Talks the caller may moderate; with

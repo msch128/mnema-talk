@@ -9,6 +9,18 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Removals from a Talk in the audit log
+
+A moderator's removal of a member from one Talk is now recorded as
+`voice.disconnect`, so in the console it moves from the *Members* ("user")
+filter group to *Talk presence* ("voice"); the admin-wide kick keeps
+`user.talk_kick`. Like `voice.join`, it is read only by auditors who can view
+the Talk, and older `user.talk_kick` entries of such a removal (they carry the
+Talk in their details) are now read the same way. A removal from a
+conversation's call Talk is no longer recorded; older entries of that kind
+stay in the log, readable by the Owner and Administrators (the log is
+immutable, and a call Talk is usually gone, so they cannot be told apart).
+
 ## Snippets of long messages are their plain text
 
 Places that show only the start of a message took its first 200 characters

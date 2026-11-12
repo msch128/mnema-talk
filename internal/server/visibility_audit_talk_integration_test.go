@@ -73,6 +73,42 @@ func TestTalkRemovalFromAPrivateTalkReachesOnlyAuditorsWhoSeeIt(t *testing.T) {
 	}
 }
 
+// doc/talks.md: nothing about a conversation's call Talk reaches the audit
+// log, "because that would tell the Owner who called whom". A member of the
+// conversation who may disconnect members removes the other one from the
+// call: the Owner, an Administrator and an auditor (none of them in the
+// conversation) read nothing about it, and the moderation history, which
+// would say the member was in some call, does not list it either.
+func TestARemovalFromACallTalkIsNotAudited(t *testing.T) {
+	f := newCallFixture(t)
+	owner, alice, bob := f.dmFixture.admin, f.dmFixture.alice, f.dmFixture.bob
+	assignRoles(t, owner, alice, createRole(t, owner, "Mods", perm.DisconnectMembers))
+	administrator := f.a.register(owner, "administrator")
+	assignRoles(t, owner, administrator, createRole(t, owner, "Admins", perm.Administrator))
+	auditor := f.a.register(owner, "auditor")
+	assignRoles(t, owner, auditor, createRole(t, owner, "Auditors", perm.ViewAuditLog))
+	talk := f.start(t)
+
+	joinTalk(t, f.a, alice.dialLiveWS(f.a.origin()), bob, talk)
+	wantStatus(t, "removal from the call", alice.post(disconnectURL(talk, bob), nil), http.StatusNoContent)
+
+	for who, c := range map[string]*client{"owner": owner, "administrator": administrator, "auditor": auditor} {
+		if strings.Contains(string(c.get("/api/admin/audit-log?limit=200").body), talk.String()) {
+			t.Errorf("%s reads the call Talk's id", who)
+		}
+		if slices.Contains(talkRemovals(t, c), bob.user.ID.String()) {
+			t.Errorf("%s reads the removal from the call", who)
+		}
+	}
+	var hist moderation.History
+	res := owner.get("/api/admin/users/" + bob.user.ID.String() + "/moderation")
+	wantStatus(t, "history", res, http.StatusOK)
+	res.decode(t, &hist)
+	if slices.ContainsFunc(hist.Events, func(e moderation.HistoryEvent) bool { return e.Kind == "talk_removal" }) {
+		t.Errorf("the moderation history lists the removal from the call: %+v", hist.Events)
+	}
+}
+
 // talkRemovals lists the targets of the Talk removals the reader sees.
 func talkRemovals(t *testing.T, c *client) []string {
 	t.Helper()
