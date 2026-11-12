@@ -1,13 +1,14 @@
 package mdplain
 
 // safeHref is the client's safeHref (link.ts): the SAFE_HREF pattern, then
-// the browser's URL parser must accept it with a host (http, https) or a
-// path (mailto). The URL parser's host rules are reproduced for ASCII hosts
-// (host.go); for other hosts (non-ASCII, percent signs, punycode, IPv6) the
-// answer is not known here: sure is false, and the caller decides whether
-// the answer matters (see decides).
-// inClass: raw is known to hold only URL units (a bare URL), so only the
-// authority is read.
+// the browser's URL parser must accept it with a host (http, https) or a path
+// (mailto), and an http(s) authority must pass the client's rule
+// (linkAuthority.ts: no user info, escapes that decode, no control or format
+// character). host.go reproduces both for hosts that are ASCII once decoded;
+// for other hosts (non-ASCII, punycode, IPv6) the answer is not known here:
+// sure is false, and the caller decides whether the answer matters (see
+// decides). inClass: raw is known to hold only URL units (a bare URL), so
+// only the authority is read.
 func (p *parser) safeHref(raw []uint16, inClass bool) (ok, sure bool) {
 	rest, mailto, ok := hrefRest(raw)
 	if !ok {

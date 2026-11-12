@@ -1,29 +1,43 @@
 package mdplain
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
 
 // The WHATWG URL parser's host rules for ASCII hosts, which the browser
-// applies in the client's safeHref (new URL()).
+// applies in the client's safeHref (new URL()), and the client's own rule
+// for the authority (linkAuthority.ts plainAuthority).
+
+// forbiddenDomain are the URL standard's forbidden domain code points (the
+// controls apart, which never reach a host here).
+const forbiddenDomain = " #%/:<>?@[\\]^|"
 
 // hostValid parses the authority of an http(s) URL; sure is false when this
-// code cannot tell what the browser decides (an IP literal, a percent sign,
-// non-ASCII, punycode).
+// code cannot tell what the browser decides (an IPv6 address, non-ASCII,
+// punycode).
 func hostValid(rest string) (sure, valid bool) {
 	authority := rest
 	if at := strings.IndexAny(rest, "/?#"); at >= 0 {
 		authority = rest[:at]
 	}
-	if at := strings.LastIndexByte(authority, '@'); at >= 0 {
-		authority = authority[at+1:]
+	if !plainAuthority(authority) {
+		return true, false
 	}
 	if strings.HasPrefix(authority, "[") {
 		return ipv6Literal(authority)
 	}
-	if strings.Contains(authority, "%") || !isASCII(authority) {
+	host, port, hasPort := strings.Cut(authority, ":")
+	if hasPort && !validPort(port) {
+		return true, false
+	}
+	// The URL parser reads the host percent-decoded (plainAuthority made sure it decodes).
+	host, _ = percentDecode(host)
+	if !isASCII(host) {
 		return false, false
 	}
-	host, port, hasPort := strings.Cut(authority, ":")
-	if (hasPort && !validPort(port)) || host == "" || strings.ContainsAny(host, "[]^|") {
+	if host == "" || strings.ContainsAny(host, forbiddenDomain) || strings.ContainsFunc(host, unicode.IsControl) {
 		return true, false
 	}
 	labels := strings.Split(strings.ToLower(host), ".")
@@ -36,6 +50,54 @@ func hostValid(rest string) (sure, valid bool) {
 		return true, true
 	}
 	return true, validIPv4(labels)
+}
+
+// plainAuthority is the client's rule (linkAuthority.ts): no user info, the
+// percent escapes decode as UTF-8, and neither the authority as written nor
+// decoded holds a control or format character. (The client also tests the
+// hostname the URL parser makes; for an ASCII host it is the decoded host,
+// for any other host this code is not sure anyway.)
+func plainAuthority(authority string) bool {
+	if strings.Contains(authority, "@") {
+		return false
+	}
+	text, ok := percentDecode(authority)
+	return ok && !hidden(authority) && !hidden(text)
+}
+
+// hidden is /[\p{Cc}\p{Cf}]/u.
+func hidden(s string) bool {
+	return strings.ContainsFunc(s, func(r rune) bool { return unicode.Is(unicode.Cc, r) || unicode.Is(unicode.Cf, r) })
+}
+
+// percentDecode is decodeURIComponent: false when an escape is malformed or
+// the escaped bytes are no UTF-8.
+func percentDecode(s string) (string, bool) {
+	if !strings.Contains(s, "%") {
+		return s, true
+	}
+	var b []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] != '%' {
+			b = append(b, s[i])
+			continue
+		}
+		if i+2 >= len(s) || !isHex(s[i+1]) || !isHex(s[i+2]) {
+			return "", false
+		}
+		b = append(b, unhex(s[i+1])<<4|unhex(s[i+2]))
+		i += 2
+	}
+	return string(b), utf8.Valid(b)
+}
+
+func isHex(c byte) bool { return (c >= '0' && c <= '9') || (c|0x20 >= 'a' && c|0x20 <= 'f') }
+
+func unhex(c byte) byte {
+	if c <= '9' {
+		return c - '0'
+	}
+	return c | 0x20 - 'a' + 10
 }
 
 // ipv6Literal judges "[...]" with an optional port: refused when it is not

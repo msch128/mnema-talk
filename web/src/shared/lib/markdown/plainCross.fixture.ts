@@ -56,7 +56,8 @@ export function leaked(hidden: readonly string[], plain: string): string[] {
 // "C" becomes a canary. The pieces aim at what decides hiding: spoiler
 // delimiters, code spans and fences, escapes, emphasis, paragraph and line
 // breaks, quotes, lists, masked links, autolinks and bare URLs (also hosts only
-// the browser's URL parser can judge).
+// the browser's URL parser can judge, user info, percent escapes and control
+// or format characters in the authority, which linkAuthority.ts refuses).
 const PIECES = [
   'word ', 'C ', 'a longer bit of text ', 'x'.repeat(40) + ' ', 'C',
   '||C||', '||C more||', '|| C ||', '||', '|', '\\||', '||C', 'C||',
@@ -70,6 +71,9 @@ const PIECES = [
   '\n', '\n\n', '> ', '>>> ', '- ', '* ', '1. ', '# ', '-# ', '\t', '  ',
   '+ ', '2) ', '***', '___', '||||', ' ||', '|| ', '`` ` ``', '~', '\\|', '&amp;', '&#124;', '<@00000000-0000-4000-8000-000000000002>', '<t:1700000000:R>',
   '\u{1f468}\u200d\u{1f469}\u200d\u{1f467}', '\u{1f1e9}\u{1f1ea}', '[C]', '[[C]](https://a.example)', '[C](https://a.example/(x)', '(C)', 'mailto:C ', '<mailto:C>', 'http://', 'https://l.example/C|| ',
+  'https://u@m.example/C ', 'https://allowed.example@n.example/C ', '[C](https://u:p@o.example)', '<https://u@p.example/C>', 'https://q%41.example/C ',
+  'https://r%zz.example/C ', 'https://s%E2%80%8B.example/C ', 'https://t\u200b.example/C ', '[C](https://v%C3%A9.example)', 'https://w\u00ad.example/C ',
+  'http://x%40y.example/C ', 'https://z.example\u2060/C ', '<https://a%2eb.example/C>', '[C](https://c%00d.example)', 'https://e%C3.example/C ',
   '\u00a0', '\u2028', '\r', '\ufeff', '\u0085', '\u{1f600}', '\u00e9', '\u0301', '<:wave:00000000-0000-4000-8000-000000000001>', '@everyone ', '\u0000'
 ]
 

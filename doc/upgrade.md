@@ -38,8 +38,8 @@ exactly like the web renderer: it is a port of the client's Markdown parser,
 checked against messages the renderer judged. Before, the two could disagree
 about where a spoiler starts (for example around code spans), and a push
 could show the text of a spoiler. Where only a browser can tell how a link
-reads (a host with non-ASCII characters or a percent sign, an IPv6 address)
-and that could move a spoiler, the server hides everything between the first
+reads (a host with non-ASCII characters, written or percent-encoded, an
+IPv6 address, punycode) and that could move a spoiler, the server hides everything between the first
 and the last `||` of the message.
 
 ## Trusted Types in the web app's policy

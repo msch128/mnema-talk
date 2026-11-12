@@ -1,30 +1,61 @@
 package mdplain
 
-import "testing"
+import (
+	"encoding/json"
+	"os"
+	"strings"
+	"testing"
+)
 
-// What new URL() answered for these hosts (Node 24, the WHATWG parser the browsers share).
-func TestHostValidAgreesWithTheURLStandard(t *testing.T) {
-	valid := []string{"a..b/", "x_y.example", "a!$&'()*+,;=~{}.x/", "1.2.3.4/", "0x7f.1/", "a.1e/", "u:p@h.x/", "@h.x/",
-		"h.x:/", "h.x:0080/", ".x/", "x./", "./", "-x-.y/", "ab_.cd/", "a.b_/", "0/", "1.2.3/", "4294967295/", "1.2.3.4./",
-		"a@b@c/", "A.B/", "{x}/", "x.y/?a", "x#y", "x?y", "a.b.c.d.e.f/", "0x/", "0xg/", "a.0xg/", "1.0x/", "a.b./",
-		"a..b..c", "..", "a...", "0.0.0.0", "00/", "0x00000000001/", "1.2.0x3/", "a.b@c.d/", "x.y:65535", "-/", "_/"}
-	invalid := []string{"1.2.3.999/", "1.2.3.4.5/", "a.0x/", "a.08/", "h.x@/", "h.x:65536/", "a|b/", "a^b/", "09/",
-		"4294967296/", "a..1/", "1..2/", "a:b@/", "a.b:12a/", "x:1:2/", "12345678901234567890/",
-		"[[zq]]/", "[::1]x/", "[/", "[zz]/", "e.example[/"}
-	unknown := []string{"a%41b/", "xn--abc/", "xn--caf-dma.example/", "x.XN--y/", "[::1]/", "[::1]:80/", "a@[::1]/", "[1:2]/", "caf\u00e9.example/"}
-	for _, host := range valid {
-		if sure, ok := hostValid(host); !sure || !ok {
-			t.Errorf("%q: sure %v valid %v, want a valid host", host, sure, ok)
+// The client's answers (safeHref: the URL standard and linkAuthority.ts),
+// recorded by web/src/shared/lib/markdown/hrefParity.test.ts, which fails
+// when the client answers otherwise. This port must give the same answer
+// wherever it claims to know it, and must know it for every ASCII host that
+// is no IPv6 address or punycode.
+func TestSafeHrefAgreesWithTheClient(t *testing.T) {
+	raw, err := os.ReadFile("testdata/hrefs.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var vectors []struct {
+		Href string `json:"href"`
+		OK   bool   `json:"ok"`
+	}
+	if err := json.Unmarshal(raw, &vectors); err != nil {
+		t.Fatal(err)
+	}
+	unsure := 0
+	for _, v := range vectors {
+		p := &parser{budget: 1 << 30}
+		ok, sure := p.safeHref(encode(v.Href), false)
+		switch {
+		case sure && ok != v.OK:
+			t.Errorf("safeHref(%q) = %v, the client says %v", v.Href, ok, v.OK)
+		case !sure && mustKnow(v.Href):
+			t.Errorf("safeHref(%q): not sure, but the host is plain ASCII", v.Href)
+		case !sure:
+			unsure++
 		}
 	}
-	for _, host := range invalid {
-		if sure, ok := hostValid(host); !sure || ok {
-			t.Errorf("%q: sure %v valid %v, want a refused host", host, sure, ok)
+	if len(vectors) < 200 {
+		t.Fatalf("only %d vectors", len(vectors))
+	}
+	t.Logf("%d hrefs, %d left to the browser", len(vectors), unsure)
+}
+
+// mustKnow: an http(s) URL whose authority, decoded, is ASCII, with no IPv6 literal and no punycode label.
+func mustKnow(href string) bool {
+	lower := strings.ToLower(href)
+	rest, ok := strings.CutPrefix(lower, "http://")
+	if !ok {
+		if rest, ok = strings.CutPrefix(lower, "https://"); !ok {
+			return true
 		}
 	}
-	for _, host := range unknown {
-		if sure, _ := hostValid(host); sure {
-			t.Errorf("%q: this code claims to know the browser's answer", host)
-		}
+	authority := rest
+	if at := strings.IndexAny(rest, "/?#"); at >= 0 {
+		authority = rest[:at]
 	}
+	decoded, valid := percentDecode(authority)
+	return !valid || (isASCII(decoded) && !strings.Contains(authority, "[") && !strings.Contains(authority, "xn--"))
 }
