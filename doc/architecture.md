@@ -437,8 +437,14 @@ new layer starts (a VP8 keyframe tag or an H.264 parameter set, both of which
 the browser's media transform leaves readable), asking the publisher for one
 when it switches. Sequence numbers, timestamps and VP8 picture IDs and
 `TL0PICIDX` are rewritten so the viewer sees one continuous stream; the sealed
-payload is never touched. The sender declares the layers (`webrtc_layers`,
-announced as `screen_layers`), a viewer picks one with `quality` on
+payload is never touched. A switch continues after the highest sequence
+number, the newest timestamp and the newest VP8 picture ID and `TL0PICIDX`
+sent, not after the last packet: a packet that arrived late (overtaken on the
+way, or repaired by a retransmission) would otherwise give the new layer's
+keyframe numbers the viewer already holds, and its browser would drop them as
+duplicates. A late packet the new layer's sender sent before the keyframe of
+the switch is dropped for the same reason. The sender declares the layers
+(`webrtc_layers`, announced as `screen_layers`), a viewer picks one with `quality` on
 `webrtc_subscribe` and is told what it receives (`screen_quality`), and the
 sender is told which layers anyone needs (`screen_layers_wanted`) so it can
 stop encoding the others. A layer nobody needs any more stays wanted for eight
