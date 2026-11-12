@@ -461,10 +461,22 @@ func recordFrames(t *testing.T, c *client) *frameLog {
 			log.mu.Unlock()
 		}
 	}()
-	if _, ok := ws.expect("presence_snapshot", soon); ok {
-		return log
+	// The hub's greeting says the socket is registered; events before it would
+	// be missed, so a frame not recorded could not count as a frame not sent.
+	deadline := time.Now().Add(soon)
+	for !log.has("presence_snapshot") {
+		if time.Now().After(deadline) {
+			t.Fatal("the hub did not register the observer's socket")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 	return log
+}
+
+func (l *frameLog) has(eventType string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slices.ContainsFunc(l.frames, func(ev wsEvent) bool { return ev.Type == eventType })
 }
 
 func (s *canarySweep) frames(t *testing.T, who string, log *frameLog) {

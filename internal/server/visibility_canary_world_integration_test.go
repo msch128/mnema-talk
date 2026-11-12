@@ -215,6 +215,16 @@ func (w *canaryWorld) staffMessages(t *testing.T) {
 	w.say(t, o, clsStaff, w.staffTalk, "staff talk chat", map[string]any{})
 }
 
+// firstStaffMessage is the first Staff text message the world posted.
+func (w *canaryWorld) firstStaffMessage() uuid.UUID {
+	for _, id := range w.pool["message"] {
+		if w.ids[id] == clsStaff {
+			return uuid.MustParse(id)
+		}
+	}
+	return uuid.Nil
+}
+
 // moderatedPost is a post of insider's in the Staff forum whose title a
 // moderator (the Owner) changes, the way a moderator tidies a forum.
 func (w *canaryWorld) moderatedPost(t *testing.T) {
@@ -247,7 +257,15 @@ func (w *canaryWorld) conversation(t *testing.T) {
 	w.dm = w.hide(clsDM, "channel", "dm insider-carol", w.insider.mustDM(t, w.carol).ID)
 	w.pool["dm"] = append(w.pool["dm"], w.dm.String())
 	w.say(t, w.insider, clsDM, w.dm, "dm first", map[string]any{})
-	w.say(t, w.carol, clsDM, w.dm, "dm answer", map[string]any{})
+	answer := w.say(t, w.carol, clsDM, w.dm, "dm answer", map[string]any{})
+	// Both members carry words out: a Staff message and a conversation message
+	// forwarded into the open channel, each with an open comment. The quote is
+	// built per reader (SECURITY.md): only those who may read the original see it.
+	for what, id := range map[string]uuid.UUID{"forward of staff": w.firstStaffMessage(), "forward of dm": answer} {
+		res := w.insider.forward(id, w.open, "fwd "+w.word(clsOpen, what+" comment"))
+		wantStatus(t, what, res, http.StatusCreated)
+		w.hide(clsOpen, "message", what, idOf(t, res))
+	}
 	file := w.a.stage(w.insider, w.dm, "dm-"+w.word(clsDM, "dm file name")+".png")
 	w.hide(clsDM, "media", "dm file", file.ID)
 	wantStatus(t, "dm file", sendWith(w.insider, w.dm, "file "+w.word(clsDM, "dm file message"), file.ID), http.StatusCreated)
