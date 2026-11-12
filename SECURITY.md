@@ -211,6 +211,73 @@ Channel addresses (`/c/general`) are slugs. What they could reveal, and what lim
 - **Hoarding.** A channel keeps its newest ten former slugs; older ones become free again and their links no longer
   resolve. Only renames by members with *Manage channels* reach the history.
 
+## Known open defects
+
+Defects that were reproduced and are not fixed in the current release. None
+lets anyone read or change what they may not. The finding files, with the
+repro and the severity scale (S1 the worst, N no defect today), are in
+[doc/security/findings/2026-11-hunt](doc/security/findings/2026-11-hunt/README.md);
+an entry leaves this list with its fix.
+
+- **A split of the media group that is invisible to it (H-L2-06, S4,
+  availability only).** Two groups of a Talk with the same members and the
+  same epoch number cannot see each other: a heartbeat names the epoch
+  number, not the epoch's state, so neither side starts over. Such a split
+  heals only by chance, at a membership change or when a rotation makes the
+  numbers differ for long enough. Members observe a Talk in two parts that
+  hear and see nothing of each other while everyone is shown as present. It
+  needs a relay that delays or drops the committer's commits while the lowest
+  member reloads, or a lossy relay and several reloads. In the simulator the
+  split heals within minutes (5 to 8 at its compressed timings); the heal
+  time in production is not measured. Confidentiality is not affected: each
+  part's key is held by members only. The fix needs a change of the wire
+  format.
+  [Finding](doc/security/findings/2026-11-hunt/h-l2-06.md).
+
+- **An account deletion aborted as a deadlock (H-L10-06, S4).** When a
+  member deletes their account while they write (for example edit a message)
+  from another device at that moment, PostgreSQL can abort the deletion as a
+  deadlock. The request answers 500 and the server logs `deadlock detected
+  (SQLSTATE 40P01)`; nothing is left half deleted (the transaction rolls
+  back), and a second attempt works.
+  [Finding](doc/security/findings/2026-11-hunt/h-l10-06.md).
+
+- **The login limiter under a flood of fresh keys (H-L8-01, N, claimed S4).**
+  The in-memory limiters are bounded; when one is full, a flood of new keys
+  can evict an entry that has counted failures but is not locked yet (for
+  example an account close to the account-wide cap), or a window that is at
+  its limit, and that count starts over. A locked entry is never evicted.
+  Each evicted count costs the flooder tens of thousands of failed sign-ins,
+  each a password hash, so the flood is bounded by the server's own hashing
+  throughput and gives fewer guesses than waiting out the lock; while it
+  lasts, sign-ins answer 503. Pinned by
+  `internal/httpx/limiter_eviction_steering_test.go`; no fix planned.
+  [Finding](doc/security/findings/2026-11-hunt/h-l8-01.md).
+
+- **SFU memory per member who joined and left (H-L8-05, S4).** For the life
+  of a viewer's media connection, the SFU keeps a few kilobytes (3 to 4 KB
+  measured) for every member who joined and left the Talk meanwhile, inside
+  the WebRTC library (Pion keeps a read stream for the late RTCP reports of
+  every stopped sender until the connection closes). Operators see the memory of long Talks with much
+  coming and going grow; it is released when the viewer leaves. Since 3.0.10
+  it is bounded by the renewal of a connection at its sender cap (see "Media
+  connection limits" under [Security model (summary)](#security-model-summary)).
+  [Finding](doc/security/findings/2026-11-hunt/h-l8-05.md).
+
+- **A stopped stream's capped buffer (residual of H-L8-07).** A report that
+  arrives in the moment a sender is made or stopped can leave one stream with
+  its small capped buffer. "Media connection limits" under
+  [Security model (summary)](#security-model-summary) states the bound; the
+  fix is described by its
+  [review](doc/security/reviews/2026-11-hunt/h-l8-07.md).
+
+- **An edit to empty text after the last attachment went (H-L7-10, N,
+  latent).** An edit to empty text that waited for the message while its last
+  attachment was removed is accepted, leaving a message with neither. No
+  route removes an attachment from a live message today, so nothing reaches
+  it; a test pins the behaviour.
+  [Finding](doc/security/findings/2026-11-hunt/h-l7-10.md).
+
 ## Security model (summary)
 
 In short: members join by invitation only. Microphone, camera, screen video
