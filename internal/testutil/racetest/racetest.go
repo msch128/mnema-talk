@@ -17,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Deep reports whether the deep sweep was asked for.
@@ -76,14 +78,15 @@ func Together(n int, fn func(i int) error) Round {
 	ready.Add(n)
 	done.Add(n)
 	for i := range n {
-		go func() {
+		// A panic in a caller ends the test binary, as it would in a test.
+		safego.Go("racetest_caller", safego.Crash, func() {
 			defer done.Done()
 			ready.Done()
 			<-start
 			r.spans[i][0] = time.Now()
 			r.Errs[i] = fn(i)
 			r.spans[i][1] = time.Now()
-		}()
+		})
 	}
 	ready.Wait()
 	close(start)
