@@ -17,11 +17,10 @@ import (
 // the client could end the host is judged (linkends.go): a message passes
 // only if every reading passes.
 //
-// An "http://" or "https://" inside another link is judged too, unless the
-// client surely opens the outer link through it (linkcover.go): when the
-// client cannot parse the outer link (a port above 65535, say) or ends it
-// before the inner one, it links the inner one. "www." starts a link too, as
-// it always did, although the client does not link it.
+// Every "http://" and "https://" in the text is judged, also one inside
+// another link: when the client cannot parse the outer link (a port above
+// 65535, say) it links the inner one. "www." starts a link too, as it always
+// did, although the client does not link it.
 
 // isJSSpace is JavaScript's \s: white space and line terminators.
 func isJSSpace(r rune) bool {
