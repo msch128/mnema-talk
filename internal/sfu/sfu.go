@@ -44,7 +44,16 @@ const (
 )
 
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
-const resumeHoldoff = 500 * time.Millisecond
+// Every resume makes a new sender on each viewer's connection, so a track
+// resumes at once only resumeBurst times, then once per resumeRefill: a
+// publisher that keeps stopping and sending cannot push its viewers'
+// connections to their sender cap (maxSentTracks). By hand, a camera is
+// switched off and on a few times a minute at most.
+const (
+	resumeHoldoff = 500 * time.Millisecond
+	resumeBurst   = 10
+	resumeRefill  = 10 * time.Second
+)
 
 // TrackInfo is one forwarded track: the publisher's remote track and the
 // local track every other peer subscribes to.
@@ -58,9 +67,13 @@ type TrackInfo struct {
 	publisher *Peer
 	ssrc      uint32
 	lastPLI   atomic.Int64 // unix nanos of the last keyframe request
-	// stoppedAt (unix nanos, 0 = live) is set when the publisher announced the
-	// stop; packets arriving later publish the track again.
-	stoppedAt atomic.Int64
+	// resumeAt (unix nanos, 0 = live) is set when the publisher announced the
+	// stop; packets arriving after it publish the track again. resumes and
+	// resumesAt are the stop/resume budget (see stopUntil), guarded by the
+	// room's mu.
+	resumeAt  atomic.Int64
+	resumes   float64
+	resumesAt time.Time
 	// A replaced capture must never resume or forward alongside its successor.
 	superseded atomic.Bool
 	// writeErrLogged keeps a failing forward from logging every packet.
@@ -69,6 +82,24 @@ type TrackInfo struct {
 	// layerGroup); layer 0 is the best.
 	group *layerGroup
 	layer int
+}
+
+// stopUntil spends one resume of the track's budget for a stop at now and
+// returns when the track may resume: after resumeHoldoff while the budget
+// lasts, else when it has refilled by one. r.mu is held.
+func (t *TrackInfo) stopUntil(now time.Time) int64 {
+	if t.resumesAt.IsZero() {
+		t.resumes = resumeBurst
+	} else {
+		t.resumes = min(resumeBurst, t.resumes+float64(now.Sub(t.resumesAt))/float64(resumeRefill))
+	}
+	t.resumesAt = now
+	t.resumes--
+	wait := resumeHoldoff
+	if t.resumes < 0 {
+		wait = max(wait, time.Duration(-t.resumes*float64(resumeRefill)))
+	}
+	return now.Add(wait).UnixNano()
 }
 
 // codecMime is the codec the track carries, for the logs.

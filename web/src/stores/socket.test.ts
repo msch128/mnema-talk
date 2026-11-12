@@ -154,6 +154,21 @@ describe('the socket store', () => {
     expect(socket.nextRetryAt).toBe(0)
   })
 
+  // 4002: the server renewed the member's media connection (the SFU's sender
+  // cap). The reconnect bumps reconnectCount, which makes App.vue resume the
+  // call (rejoinAfterReconnect) within the server's grace period.
+  it('reconnects at once after the server renews the media connection', async () => {
+    const socket = useSocketStore()
+    socket.transport().host = hostFixture().host
+    socket.open()
+    last().onopen?.()
+    last().onclose?.({ code: 4002 })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(FakeSocket.opened).toHaveLength(2)
+    last().onopen?.()
+    expect(socket.reconnectCount).toBe(1)
+  })
+
   it('drops a socket that answers no ping', async () => {
     const socket = useSocketStore()
     socket.transport().host = hostFixture().host

@@ -212,7 +212,7 @@ func TestRoomScreenAudioGoesWithTheShare(t *testing.T) {
 	if room.sourceCount(pub, SourceScreenAudio) != 0 || room.sourceCount(pub, SourceAudio) != 1 {
 		t.Fatal("stopping the share must unpublish its sound and keep the voice")
 	}
-	if sound.stoppedAt.Load() == 0 {
+	if sound.resumeAt.Load() == 0 {
 		t.Fatal("the sound is published again once its packets resume")
 	}
 	// Only screen or camera can be stopped this way.

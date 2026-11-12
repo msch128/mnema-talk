@@ -45,8 +45,10 @@ jobs:
     # Deep SFU growth probes (lane 8, shape 7): env-gated tests that are too
     # heavy for the pull request pipeline. TestUnhandledSRTCPStreamsAreCapped
     # floods two member connections with 50 000 unknown SSRCs each and holds
-    # each to the cap on unread SRTCP streams (H-L8-07). A failed run of the
-    # whole job is the alert.
+    # each to the cap on unread SRTCP streams (H-L8-07).
+    # TestSubscriptionSwitchesRetainNothing switches one subscription on and
+    # off 2000 times and bounds the heap growth per switch (H-L8-09). A failed
+    # run of the whole job is the alert.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -61,6 +63,10 @@ jobs:
         env:
           SFU_SSRC_FLOOD_DEEP: "1"
         run: go test ./internal/sfu/ -run TestUnhandledSRTCPStreamsAreCapped -count=1 -timeout 15m -v
+      - name: Subscription switch heap slope
+        env:
+          SFU_SUB_SLOPE: "1"
+        run: go test ./internal/sfu/ -run TestSubscriptionSwitchesRetainNothing -count=1 -timeout 15m -v
 
   links:
     runs-on: ubuntu-latest

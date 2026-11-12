@@ -473,10 +473,18 @@ details and the limits.
   connection (one per subscription switched on, and per track that starts
   or resumes for the viewer) leaves Pion's SRTP state for its SSRCs, about
   160 bytes (about 240 with retransmissions), until the connection closes;
-  nothing else of a stopped sender stays. The connection is closed the same
-  way after 32 768 senders, so this is at most about 8 MB per connection,
-  and a member switching camera batches of 16 at the event budget adds at
-  most about 80 KB a second until then.
+  nothing else of a stopped sender stays. After 32 768 senders the
+  connection is renewed: the SFU closes it (counted as
+  `mnema_sfu_ingress_dropped_total{reason="senders"}`), the member's
+  WebSocket is closed with code 4002, and the client reconnects and resumes
+  the call within the grace period, so this is at most about 8 MB per
+  connection, and a member switching camera batches of 16 at the event
+  budget adds at most about 80 KB a second until then. A track whose
+  publisher stops it and sends again resumes for its viewers (a new sender
+  on each) at once ten times, then once every ten seconds, so another
+  member cannot drive a viewer's connection to that cap. The caps above
+  that only abuse reaches end the member's voice with `connection_lost`
+  instead, so no seat is left without media.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route

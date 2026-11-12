@@ -127,6 +127,8 @@ func TestUnhandledSRTCPStreamsAreCapped(t *testing.T) {
 		room := uuid.New()
 		member := joinLoneMember(t, s, room)
 		peer := member.peer
+		lost := make(chan struct{})
+		peer.OnLost(func() { close(lost) })
 		heapBase := heapAfterGC()
 		sent := f.flood(member, 0x40000000, batch)
 		time.Sleep(time.Second)
@@ -146,6 +148,15 @@ func TestUnhandledSRTCPStreamsAreCapped(t *testing.T) {
 			r := s.Room(room)
 			return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && (r == nil || r.GetPeer(member.id) == nil)
 		})
+		// The owner is told, so the hub frees the seat; it is no renewal.
+		select {
+		case <-lost:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("%s: the closed connection was not reported lost", f.name)
+		}
+		if peer.Renew() {
+			t.Fatalf("%s: an abuse cap's close is reported as a renewal", f.name)
+		}
 	}
 	if got := metrics.SFUIngressDropped.With("rtcp_ssrcs").Load() - closedBefore; got != 2 {
 		t.Errorf("rtcp_ssrcs closures counted %d times, want once per connection (2)", got)

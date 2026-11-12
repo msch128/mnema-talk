@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
-	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/logging"
 	"github.com/pion/transport/v5/packetio"
 	"github.com/pion/webrtc/v4"
@@ -157,8 +156,9 @@ type rtcpStreamCap struct {
 	log  *slog.Logger
 	pc   atomic.Pointer[webrtc.PeerConnection]
 	// closing is set when the cap closes the connection; from then on Pion's
-	// new streams get a closedBuffer.
-	closing atomic.Bool
+	// new streams get a closedBuffer. renew is set with it when the sender
+	// cap, which honest use can reach, closed it (see Peer.Renew).
+	closing, renew atomic.Bool
 
 	mu sync.Mutex
 	// sent are the SSRCs of the tracks the SFU sends now, true for the one it
@@ -186,59 +186,6 @@ func newRTCPStreamCap(logs logging.LoggerFactory, log *slog.Logger) *rtcpStreamC
 // bind names the connection to close. Join binds it before the connection can
 // have exchanged any media.
 func (c *rtcpStreamCap) bind(pc *webrtc.PeerConnection) { c.pc.Store(pc) }
-
-// sentTrack records the SSRCs of a track the SFU now sends on the connection,
-// as long as there are fewer than buffered streams may be open, and closes
-// the connection past maxSentTracks senders.
-func (c *rtcpStreamCap) sentTrack(sender *webrtc.RTPSender) {
-	if c == nil {
-		return
-	}
-	encodings := sender.GetParameters().Encodings
-	c.mu.Lock()
-	for _, e := range encodings {
-		if len(c.sent) < maxBufferedRTCPStreams {
-			c.sent[uint32(e.SSRC)] = true
-		}
-		if e.RTX.SSRC != 0 && len(c.sent) < maxBufferedRTCPStreams {
-			c.sent[uint32(e.RTX.SSRC)] = false
-		}
-	}
-	c.senders++
-	senders, over := c.senders, c.senders > c.senderCap
-	c.mu.Unlock()
-	if over {
-		c.trip("senders", senders)
-	}
-}
-
-// stoppedTrack retires the SSRCs of a track the SFU no longer sends.
-func (c *rtcpStreamCap) stoppedTrack(sender *webrtc.RTPSender) {
-	if c == nil {
-		return
-	}
-	encodings := sender.GetParameters().Encodings
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, e := range encodings {
-		c.retire(uint32(e.SSRC))
-		if e.RTX.SSRC != 0 {
-			c.retire(uint32(e.RTX.SSRC))
-		}
-	}
-}
-
-// retire requires c.mu.
-func (c *rtcpStreamCap) retire(ssrc uint32) {
-	delete(c.sent, ssrc)
-	if _, ok := c.retired[ssrc]; ok {
-		return
-	}
-	delete(c.retired, c.retiredRing[c.retiredNext])
-	c.retiredRing[c.retiredNext] = ssrc
-	c.retired[ssrc] = struct{}{}
-	c.retiredNext = (c.retiredNext + 1) % rtcpRetiredSSRCs
-}
 
 // sdpOf is the SDP of a description, or "" for none.
 func sdpOf(d *webrtc.SessionDescription) string {
@@ -379,16 +326,4 @@ func (c *rtcpStreamCap) unhandled(ssrc uint32) {
 	if unknown > maxUnknownRTCPStreams {
 		c.trip("unknown", unknown)
 	}
-}
-
-// trip closes the connection once, on a goroutine of its own: Pion calls the
-// cap from the loops its SRTCP session waits for while closing.
-func (c *rtcpStreamCap) trip(count string, n int) {
-	pc := c.pc.Load()
-	if pc == nil || !c.closing.CompareAndSwap(false, true) {
-		return
-	}
-	c.log.Warn("sfu connection keeps state for too many SSRCs, closing it", count, n)
-	metrics.SFUIngressDropped.With("rtcp_ssrcs").Inc()
-	safego.Go("sfu_rtcp_cap", safego.Abandon, func() { _ = pc.Close() })
 }
