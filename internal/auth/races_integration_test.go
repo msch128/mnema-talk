@@ -207,10 +207,8 @@ func TestParallelOwnerSeedsLeaveExactlyOneOwner(t *testing.T) {
 					}
 					return ""
 				})
-			// Expected failure until H-L7-02 is fixed: hasAdminUser and the
-			// insert are two statements and nothing in the schema allows
-			// only one Owner.
-			res.KnownFailure(t, "H-L7-02")
+			// H-L7-02: the check and the insert run under one advisory lock.
+			res.FailOnViolation(t)
 		})
 	}
 }
