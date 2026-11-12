@@ -52,14 +52,10 @@ func (c *Client) emitApplicationEvent(ev events.Event, excludeSelf bool, voice *
 	if !attachView(&scope, h, view) {
 		return
 	}
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	publishScoped(h, data, scope, view, ev)
-}
-
-func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, ev events.Event) {
 	// Outgoing webhooks only hear what is really published: after the
-	// publication is authorized and live, never before.
+	// publication is authorized, never before. The taps run before the lock
+	// is taken, as in BroadcastChannel (see Hub.Tap), and before the frames
+	// are handed out, so what a tap publishes reaches each connection first.
 	if view != uuid.Nil {
 		if scope.snap.IsPrivate(view) {
 			h.dmTapped(view, ev)
@@ -67,6 +63,12 @@ func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, ev eve
 			h.tapped(view, ev)
 		}
 	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	deliverScoped(h, data, scope)
+}
+
+func deliverScoped(h *Hub, data []byte, scope eventScope) {
 	for recipient := range h.clients {
 		if scope.admits(recipient) {
 			recipient.deliver(data)

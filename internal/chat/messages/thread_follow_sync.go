@@ -13,8 +13,15 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// followSyncTimeout bounds the lookup behind one thread reply.
-const followSyncTimeout = 5 * time.Second
+// followSyncTimeout bounds the lookup behind one thread reply. The lookup
+// runs on the reply's publishing path: until it ends, the reply's sender waits
+// for the answer to the send and nobody sees the reply. A healthy lookup is one
+// indexed query (milliseconds), so a second only passes with a stalled
+// database; then the reply goes out without the follow update (logged; the
+// next list load shows the follow, and the first reply under one's message may
+// pass without an in-page notification), rather than every viewer waiting
+// longer for it.
+const followSyncTimeout = time.Second
 
 // NewFollowSync returns a hub tap that keeps the followed-thread lists of open
 // clients current. A reply makes the root's author, the replier and the members
