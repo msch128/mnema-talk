@@ -248,22 +248,44 @@ func (s *Store) swapCover(ctx context.Context, id uuid.UUID, mediaID *uuid.UUID)
 // two wait for each other.
 func (s *Store) SetRSVP(ctx context.Context, eventID, userID uuid.UUID, response string) ([]Promotion, error) {
 	var promoted []Promotion
-	err := s.inTx(ctx, func(tx pgx.Tx) error {
-		if response != RSVPGoing {
-			var err error
-			if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
-				return err
-			}
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO event_rsvps (event_id, user_id, response, created_at, updated_at)
-			VALUES ($1, $2, $3, NOW(), NOW())
-			ON CONFLICT (event_id, user_id)
-			DO UPDATE SET response = EXCLUDED.response, updated_at = NOW()`,
-			eventID, userID, response,
-		)
+	err := s.inTx(ctx, func(tx pgx.Tx) (err error) {
+		promoted, err = setRSVP(ctx, tx, eventID, userID, response)
 		return err
 	})
+	return promoted, err
+}
+
+// AnswerRSVP is SetRSVP that also returns the event as the member sees it
+// afterwards, read in the same transaction: an error means that the answer
+// was not stored (and nobody moved up unannounced).
+func (s *Store) AnswerRSVP(ctx context.Context, eventID, userID uuid.UUID, response string) (*CommunityEvent, []Promotion, error) {
+	var promoted []Promotion
+	var ev *CommunityEvent
+	err := s.inTx(ctx, func(tx pgx.Tx) (err error) {
+		if promoted, err = setRSVP(ctx, tx, eventID, userID, response); err != nil {
+			return err
+		}
+		ev, err = (&Store{DB: tx}).Get(ctx, eventID, &userID)
+		return err
+	})
+	return ev, promoted, err
+}
+
+func setRSVP(ctx context.Context, tx pgx.Tx, eventID, userID uuid.UUID, response string) ([]Promotion, error) {
+	var promoted []Promotion
+	if response != RSVPGoing {
+		var err error
+		if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
+			return nil, err
+		}
+	}
+	_, err := tx.Exec(ctx, `
+		INSERT INTO event_rsvps (event_id, user_id, response, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW(), NOW())
+		ON CONFLICT (event_id, user_id)
+		DO UPDATE SET response = EXCLUDED.response, updated_at = NOW()`,
+		eventID, userID, response,
+	)
 	return promoted, err
 }
 

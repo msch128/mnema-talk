@@ -432,7 +432,7 @@ func TestForumPostUpdateWithoutPermissionService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.String()}
+	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	if err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(other, `{"title":"x"}`, pp, "")); err == nil {
 		t.Fatal("plain member must not edit someone else's post")
 	}

@@ -198,14 +198,11 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	}
 	userID := auth.UserFrom(r.Context()).ID
 	before := a.snapshotMessage(r.Context(), msgID, false)
-	if err := EditMessage(ctx, a.DB, a.Online, msgID, userID, content); err != nil {
-		return err
-	}
-	a.auditEdit(r.Context(), msgID, before, content)
-	msg, err := GetMessage(r.Context(), a.DB, msgID)
+	msg, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content)
 	if err != nil {
 		return err
 	}
+	a.auditEdit(r.Context(), msgID, before, content)
 	a.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil

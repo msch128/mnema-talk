@@ -163,7 +163,7 @@ const DmSelect = `
 
 // ListDMs returns the caller's conversations, the most recently active first.
 // With only set, just that conversation (nil result: the caller is not in it).
-func ListDMs(ctx context.Context, p *db.Pool, user uuid.UUID, only *uuid.UUID) ([]DirectMessage, error) {
+func ListDMs(ctx context.Context, p db.Querier, user uuid.UUID, only *uuid.UUID) ([]DirectMessage, error) {
 	rows, err := p.Query(ctx, DmSelect+` ORDER BY 4 DESC NULLS LAST, c.created_at DESC, c.id LIMIT $3`, user, only, maxDMList)
 	if err != nil {
 		return nil, fmt.Errorf("list direct messages: %w", err)
@@ -208,7 +208,7 @@ func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 }
 
 // withDMMembers fills the members of each conversation, oldest member first.
-func withDMMembers(ctx context.Context, p *db.Pool, dms []DirectMessage) ([]DirectMessage, error) {
+func withDMMembers(ctx context.Context, p db.Querier, dms []DirectMessage) ([]DirectMessage, error) {
 	ids := make([]uuid.UUID, len(dms))
 	at := make(map[uuid.UUID]int, len(dms))
 	for i, d := range dms {
@@ -247,6 +247,9 @@ func dmKey(a, b uuid.UUID) string {
 type NewDM struct {
 	Creator uuid.UUID
 	Others  []uuid.UUID
+	// Load, if set, runs in the start's transaction with the conversation's
+	// id, to read what the answer shows: a failed read then starts nothing.
+	Load func(tx pgx.Tx, id uuid.UUID) error
 }
 
 // eligibleSQL counts, among $1, the members $2 may start a conversation with
@@ -300,44 +303,49 @@ func cleanDMMembers(nd NewDM) ([]uuid.UUID, error) {
 	return others, nil
 }
 
-func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, error) {
-	var id uuid.UUID
-	created := false
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// One member's starts are serialized, so the limits hold; so are the
-		// starts that count the others' group conversations.
-		group := len(nd.Others) > 1
-		locked := []uuid.UUID{nd.Creator}
-		if group {
-			locked = append(locked, nd.Others...)
-		}
-		if err := LockUsers(ctx, tx, locked); err != nil {
+func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (id uuid.UUID, created bool, err error) {
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) (err error) {
+		if id, created, err = startDMTx(ctx, tx, nd); err != nil || nd.Load == nil {
 			return err
 		}
-		var key *string
-		if !group {
-			k := dmKey(nd.Creator, nd.Others[0])
-			key = &k
-			found, err := existingDM(ctx, tx, k, &id)
-			if err != nil || found {
-				return err
-			}
-		}
-		if err := checkDMStart(ctx, tx, nd, group); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO channels (number, name, type, dm_key, dm_created_by) OVERRIDING SYSTEM VALUE
-			VALUES (nextval('dm_number_seq'), '', 'dm', $1, $2) RETURNING id`, key, nd.Creator).Scan(&id); err != nil {
-			return err
-		}
-		created = true
-		members := append([]uuid.UUID{nd.Creator}, nd.Others...)
-		_, err := tx.Exec(ctx, `
-			INSERT INTO dm_members (channel_id, user_id, added_by) SELECT $1, m, $2 FROM unnest($3::uuid[]) m`, id, nd.Creator, members)
-		return err
+		return nd.Load(tx, id)
 	})
 	return id, created, err
+}
+
+// startDMTx finds the conversation of a pair or inserts the new one in tx.
+func startDMTx(ctx context.Context, tx pgx.Tx, nd NewDM) (id uuid.UUID, created bool, err error) {
+	// One member's starts are serialized, so the limits hold; so are the
+	// starts that count the others' group conversations.
+	group := len(nd.Others) > 1
+	locked := []uuid.UUID{nd.Creator}
+	if group {
+		locked = append(locked, nd.Others...)
+	}
+	if err := LockUsers(ctx, tx, locked); err != nil {
+		return id, false, err
+	}
+	var key *string
+	if !group {
+		k := dmKey(nd.Creator, nd.Others[0])
+		key = &k
+		found, err := existingDM(ctx, tx, k, &id)
+		if err != nil || found {
+			return id, false, err
+		}
+	}
+	if err := checkDMStart(ctx, tx, nd, group); err != nil {
+		return id, false, err
+	}
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO channels (number, name, type, dm_key, dm_created_by) OVERRIDING SYSTEM VALUE
+		VALUES (nextval('dm_number_seq'), '', 'dm', $1, $2) RETURNING id`, key, nd.Creator).Scan(&id); err != nil {
+		return id, false, err
+	}
+	members := append([]uuid.UUID{nd.Creator}, nd.Others...)
+	_, err = tx.Exec(ctx, `
+		INSERT INTO dm_members (channel_id, user_id, added_by) SELECT $1, m, $2 FROM unnest($3::uuid[]) m`, id, nd.Creator, members)
+	return id, true, err
 }
 
 // existingDM reads the conversation of a pair key into id; found is false when

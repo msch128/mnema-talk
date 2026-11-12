@@ -46,11 +46,7 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 	if resp != RSVPGoing && resp != RSVPInterested && resp != RSVPNotGoing {
 		return httpx.ErrInvalidInput("response must be going, interested, or not_going")
 	}
-	promoted, err := h.Store.SetRSVP(r.Context(), id, user.ID, resp)
-	if err != nil {
-		return err
-	}
-	updated, err := h.Store.Get(r.Context(), id, &user.ID)
+	updated, promoted, err := h.Store.AnswerRSVP(r.Context(), id, user.ID, resp)
 	if err != nil {
 		return err
 	}

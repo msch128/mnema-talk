@@ -472,17 +472,9 @@ var knownPartial = map[string]string{
 	"create a category | audit":       "H-L7-04",
 	// H-L7-05: the result is read back after the commit; a failed read
 	// answers 500 for a change that was made (a wiki page also loses its
-	// audit entry).
-	"create a wiki page | error after commit":   "H-L7-05",
-	"post a message | error after commit":       "H-L7-05",
-	"start a conversation | error after commit": "H-L7-05",
-	"edit a message | error after commit":       "H-L7-05",
-	"react to a message | error after commit":   "H-L7-05",
-	"comment on an event | error after commit":  "H-L7-05",
-	"open a forum post | error after commit":    "H-L7-05",
-	"answer an event | error after commit":      "H-L7-05",
-	// The webhook's token is only in the answer of its creation.
-	"create a webhook | error after commit": "H-L7-05",
+	// audit entry). The wiki page is fixed with H-L7-04 (branch
+	// msch128/fix-h-l7-04), which writes its entry in that transaction.
+	"create a wiki page | error after commit": "H-L7-05",
 }
 
 func TestEveryFailingStatementLeavesAllOrNothing(t *testing.T) {
