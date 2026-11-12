@@ -57,8 +57,8 @@ type TrackInfo struct {
 	Source    Source
 	publisher *Peer
 	ssrc      uint32
-	lastPLI   atomic.Int64 // unix nanos of the last keyframe request
-	// stoppedAt (unix nanos, 0 = live) is set when the publisher announced the
+	lastPLI   atomic.Int64 // steadyNanos of the last keyframe request
+	// stoppedAt (steadyNanos, 0 = live) is set when the publisher announced the
 	// stop; packets arriving later publish the track again.
 	stoppedAt atomic.Int64
 	// A replaced capture must never resume or forward alongside its successor.

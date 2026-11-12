@@ -386,7 +386,7 @@ func publisherVerdict(info *TrackInfo) packetVerdict {
 // same transceiver again: the browser keeps the SSRC, so no new OnTrack fires.
 func (r *Room) resumeStoppedTrack(key string, info *TrackInfo) {
 	at := info.stoppedAt.Load()
-	if at == 0 || time.Since(time.Unix(0, at)) <= resumeHoldoff {
+	if at == 0 || steadyNanos(layerNow())-at <= int64(resumeHoldoff) {
 		return
 	}
 	if info.stoppedAt.CompareAndSwap(at, 0) {

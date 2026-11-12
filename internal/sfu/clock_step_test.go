@@ -3,30 +3,66 @@ package sfu
 import (
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
 
-// The SFU keeps three times as unix nanoseconds: a layer's last packet
-// (layerGroup.lastPkt), a track's last keyframe request (TrackInfo.lastPLI)
-// and the moment a track was stopped (TrackInfo.stoppedAt). UnixNano drops
-// the monotonic reading of time.Now, so these comparisons follow the wall
-// clock: when the host's clock is stepped by d, every later reading is off by
-// d against the stored value. The tests below model a step by shifting the
-// stored value by d, which gives the same difference now-last as shifting
-// every later reading by -d. They record today's behaviour and turn red the
-// day it is fixed (the inverse assertion of each is the wanted behaviour).
+// The SFU stores the times it compares later as steadyNanos: a layer's last
+// packet (layerGroup.lastPkt), a track's last keyframe request
+// (TrackInfo.lastPLI), the moment a track was stopped (TrackInfo.stoppedAt),
+// a resend (nackSlot.resentAt) and a bitrate measurement (layerGroup.rateAt).
+// They used to be unix nanoseconds, which follow the wall clock (lane 9,
+// H-L9-01): a step of the host's clock by d moved every deadline by d. The
+// tests below step the wall clock the way the host does: every later reading
+// of the SFU's clock keeps its monotonic reading and has its wall time moved
+// by d (wallStepped). A time without a monotonic reading cannot model this.
 
 const clockStep = time.Hour
 
-// stepBackStored makes a stored wall time look d later, as a backward step
-// of the wall clock by d does; a negative d models a forward step.
-func stepBackStored(v interface {
-	Load() int64
-	Store(int64)
-}, d time.Duration) {
-	v.Store(v.Load() + int64(d))
+// timeLayout is the layout of time.Time (src/time/time.go): with
+// hasMonotonic set in wall, bits 30 to 62 of wall are the seconds since
+// 1885 and ext is the monotonic reading.
+type timeLayout struct {
+	wall uint64
+	ext  int64
+	loc  *time.Location
+}
+
+const hasMonotonic = 1 << 63
+
+// wallStepped is at as time.Now reads it after the host's clock was stepped
+// by d (whole seconds): the same monotonic reading, the wall time moved by d.
+// Go has no API for such a reading, so the wall field is moved in place;
+// checkWallStep proves the layout before a test relies on it.
+func wallStepped(at time.Time, d time.Duration) time.Time {
+	v := (*timeLayout)(unsafe.Pointer(&at))
+	if v.wall&hasMonotonic != 0 {
+		v.wall = uint64(int64(v.wall) + int64(d/time.Second)<<30)
+	}
+	return at
+}
+
+func checkWallStep(t *testing.T) {
+	t.Helper()
+	at := time.Now()
+	got := wallStepped(at, -clockStep)
+	if got.Sub(at) != 0 || at.Round(0).Sub(got.Round(0)) != clockStep {
+		t.Fatalf("wallStepped does not model a wall clock step: monotonic moved by %v, wall by %v",
+			got.Sub(at), at.Round(0).Sub(got.Round(0)))
+	}
+}
+
+// stepWallClock makes the SFU's clock read the real time with its wall
+// clock stepped by d (negative: back) until the test ends.
+func stepWallClock(t *testing.T, d time.Duration) {
+	t.Helper()
+	checkWallStep(t)
+	prev := layerClock.Load()
+	now := func() time.Time { return wallStepped(time.Now(), d) }
+	layerClock.Store(&now)
+	t.Cleanup(func() { layerClock.Store(prev) })
 }
 
 func pliTrack(t *testing.T) *TrackInfo {
@@ -54,52 +90,42 @@ func acceptedKeyframes(info *TrackInfo, n int) int {
 	return got
 }
 
-// KNOWN DEFECT (lane 9, H-L9-01): after the wall clock steps back by d, every
-// keyframe request of a track that asked within the d before the step is
-// refused until the clock has caught up. New viewers and layer switches wait
-// for a keyframe that the SFU never asks for. Wanted: n of n accepted.
-func TestKnownDefectClockStepBackBlocksKeyframeRequests(t *testing.T) {
-	steady, stepped := pliTrack(t), pliTrack(t)
-	steady.requestKeyframe()
-	stepped.requestKeyframe()
-	if steady.lastPLI.Load() == 0 || stepped.lastPLI.Load() == 0 {
+// After the wall clock steps back, keyframe requests keyframeMinInterval
+// apart still reach the publisher (H-L9-01: none did for the size of the step).
+func TestClockStepBackKeepsKeyframeRequests(t *testing.T) {
+	info := pliTrack(t)
+	info.requestKeyframe()
+	if info.lastPLI.Load() == 0 {
 		t.Fatal("the first request was not taken")
 	}
-	stepBackStored(&stepped.lastPLI, clockStep)
-	if got := acceptedKeyframes(steady, 3); got != 3 {
-		t.Fatalf("without a step %d of 3 requests reached the publisher", got)
-	}
-	if got := acceptedKeyframes(stepped, 3); got != 0 {
-		t.Fatalf("KNOWN DEFECT fixed? %d of 3 requests passed after a step back of %v", got, clockStep)
+	stepWallClock(t, -clockStep)
+	if got := acceptedKeyframes(info, 3); got != 3 {
+		t.Fatalf("%d of 3 requests passed after a step back of %v", got, clockStep)
 	}
 }
 
-// The refusal lasts as long as the step: a step of one second blocks for
-// about one second plus keyframeMinInterval, then requests pass again.
-func TestKnownDefectKeyframeBlockLastsAsLongAsTheStep(t *testing.T) {
+// A forward step does not void the rate limit: a request right after one is
+// refused, whatever the wall clock says.
+func TestClockStepForwardKeepsTheKeyframeRateLimit(t *testing.T) {
 	info := pliTrack(t)
 	info.requestKeyframe()
-	const d = time.Second
-	stepBackStored(&info.lastPLI, d)
-	start := time.Now()
-	for info.lastPLI.Load() > time.Now().UnixNano()-int64(keyframeMinInterval) {
-		before := info.lastPLI.Load()
-		info.requestKeyframe()
-		if info.lastPLI.Load() != before {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	stepWallClock(t, clockStep)
 	before := info.lastPLI.Load()
 	info.requestKeyframe()
-	blocked := time.Since(start)
-	if info.lastPLI.Load() == before {
-		t.Fatal("the request after the block was refused")
+	if info.lastPLI.Load() != before {
+		t.Fatal("a request right after another passed after a forward step")
 	}
-	if blocked < d {
-		t.Fatalf("KNOWN DEFECT fixed? blocked for %v only after a step of %v", blocked, d)
+}
+
+// A step back of a second delays no request: the next one after
+// keyframeMinInterval passes (it used to wait for the step plus the interval).
+func TestKeyframeRateLimitIgnoresASmallStepBack(t *testing.T) {
+	info := pliTrack(t)
+	info.requestKeyframe()
+	stepWallClock(t, -time.Second)
+	if got := acceptedKeyframes(info, 1); got != 1 {
+		t.Fatal("a step back of 1s refused the next keyframe request")
 	}
-	t.Logf("a step back of %v refused keyframe requests for %v", d, blocked)
 }
 
 func stoppedRoom(t *testing.T) (*Room, *TrackInfo) {
@@ -121,38 +147,26 @@ func published(r *Room) bool {
 	return r.trackLocals["cam"] != nil
 }
 
-// KNOWN DEFECT (lane 9, H-L9-01): a camera stopped before a backward step
-// of d cannot be resumed on the same transceiver until the clock has caught
-// up: its packets flow to the SFU and nobody sees them. Wanted: published.
-func TestKnownDefectClockStepBackKeepsAResumedCameraHidden(t *testing.T) {
-	steadyRoom, steady := stoppedRoom(t)
-	stepRoom, stepped := stoppedRoom(t)
-	stepBackStored(&stepped.stoppedAt, clockStep)
+// A camera stopped before a backward step resumes on the same transceiver
+// after the holdoff (H-L9-01: it stayed hidden for the size of the step).
+func TestClockStepBackResumesAStoppedCamera(t *testing.T) {
+	r, info := stoppedRoom(t)
+	stepWallClock(t, -clockStep)
 	time.Sleep(resumeHoldoff + 50*time.Millisecond)
-	steadyRoom.resumeStoppedTrack("cam", steady)
-	stepRoom.resumeStoppedTrack("cam", stepped)
-	if !published(steadyRoom) {
-		t.Fatal("without a step the camera did not resume after the holdoff")
-	}
-	if published(stepRoom) {
-		t.Fatal("KNOWN DEFECT fixed? the camera resumed after a step back")
+	r.resumeStoppedTrack("cam", info)
+	if !published(r) {
+		t.Fatal("the camera did not resume after a step back")
 	}
 }
 
-// KNOWN DEFECT (lane 9, H-L9-01): a forward step of more than the holdoff
-// voids it: a late packet of a camera that was just stopped publishes it
-// again at once. Wanted: still stopped within resumeHoldoff.
-func TestKnownDefectClockStepForwardVoidsTheResumeHoldoff(t *testing.T) {
+// A forward step keeps the holdoff: a late packet of a camera stopped a
+// moment ago does not publish it again (H-L9-01: it did).
+func TestClockStepForwardKeepsTheResumeHoldoff(t *testing.T) {
 	r, info := stoppedRoom(t)
-	stepBackStored(&info.stoppedAt, -clockStep)
+	stepWallClock(t, clockStep)
 	r.resumeStoppedTrack("cam", info)
-	if !published(r) {
-		t.Fatal("KNOWN DEFECT fixed? a late packet after a forward step did not republish the camera")
-	}
-	steadyRoom, steady := stoppedRoom(t)
-	steadyRoom.resumeStoppedTrack("cam", steady)
-	if published(steadyRoom) {
-		t.Fatal("without a step a late packet republished the camera")
+	if published(r) {
+		t.Fatal("a late packet after a forward step republished the camera")
 	}
 }
 
@@ -163,36 +177,64 @@ func (c *fakeClock) set(at time.Time) {
 	c.mu.Unlock()
 }
 
-// KNOWN DEFECT (lane 9, H-L9-01): a camera layer its sender switched off
-// counts as flowing for the size of a backward step instead of one second.
-// The case: the sender's browser stops its best layer under a bandwidth limit
-// (the layer is wanted, so being asked for it again changes nothing). A new
-// viewer whose picture fits that layer is put on it and sees nothing,
-// although the thumbnail delivers a keyframe every minute. Wanted: the
-// viewer is carried by the flowing layer at once, as without a step
-// (TestCameraViewerOnASilentLayerIsCarriedByAFlowingOne).
-func TestKnownDefectClockStepBackKeepsASilentLayerFlowing(t *testing.T) {
-	if blind := blindAfterStep(t, 0); blind != 0 {
-		t.Fatalf("without a step the viewer saw nothing for %v", blind)
+// A camera layer its sender switched off counts as flowing for one second,
+// whatever the wall clock does. The case: the sender's browser stops its best
+// layer under a bandwidth limit (the layer is wanted, so being asked for it
+// again changes nothing). A new viewer whose picture fits that layer is
+// carried by the flowing thumbnail at once, as without a step
+// (TestCameraViewerOnASilentLayerIsCarriedByAFlowingOne). H-L9-01: it saw
+// nothing for the size of the step.
+func TestClockStepBackKeepsASilentLayerSilent(t *testing.T) {
+	checkWallStep(t)
+	for _, step := range []time.Duration{0, clockStep} {
+		if blind := blindAfterStep(t, step); blind != 0 {
+			t.Fatalf("after a step back of %v a new viewer saw nothing for %v", step, blind)
+		}
 	}
-	blind := blindAfterStep(t, clockStep)
-	if blind < clockStep-time.Minute {
-		t.Fatalf("KNOWN DEFECT fixed? the viewer saw the flowing layer after %v", blind)
+}
+
+// A packet resent before a backward step may be resent again once the
+// interval has passed (it was refused for the size of the step).
+func TestClockStepBackKeepsResends(t *testing.T) {
+	checkWallStep(t)
+	h := newHistory(1 << 20)
+	at := time.Now()
+	addPacket(h, 9, 100, at)
+	if _, _, ok := h.find(9, at, time.Second); !ok {
+		t.Fatal("the first resend was refused")
 	}
-	t.Logf("after a step back of %v a new viewer saw nothing for %v while another layer delivered", clockStep, blind)
+	if _, _, ok := h.find(9, wallStepped(at.Add(2*time.Second), -clockStep), time.Second); !ok {
+		t.Fatal("a resend after the interval was refused after a step back")
+	}
+}
+
+// The layers' bitrates are measured every rateEvery across a backward step
+// (no measurement was taken for the size of the step).
+func TestClockStepBackKeepsMeasuringBitrates(t *testing.T) {
+	checkWallStep(t)
+	g := newLayerGroup("g", uuid.New(), uuid.New(), &mediaNotifier{}, webrtc.RTPCodecCapability{MimeType: "video/VP8"})
+	at := time.Now()
+	g.sampleRates(at)
+	first := g.rateAt
+	g.sampleRates(wallStepped(at.Add(rateEvery), -clockStep))
+	if g.rateAt == first {
+		t.Fatal("no measurement after rateEvery and a step back")
+	}
 }
 
 // blindAfterStep is how long a new camera viewer whose picture fits the
 // stopped best layer sees nothing, when the wall clock stepped back by step
-// ten seconds after that layer's last packet. Measured in minutes.
+// ten seconds after that layer's last packet. Measured in minutes. The fake
+// clock starts from a real reading, so it carries a monotonic reading.
 func blindAfterStep(t *testing.T, step time.Duration) time.Duration {
 	clock := useFakeClock(t)
+	clock.set(time.Now())
 	rig := cameraRig(t)
 	rig.key(2, 200)
 	rig.key(0, 100) // the best layer's last packet, then the browser stops it
 	clock.advance(10 * time.Second)
 	rig.delta(2, 201)
-	clock.set(clock.now.Add(-step))
+	clock.set(wallStepped(clock.now, -step))
 
 	_, out := rig.viewerFit(-1, 0)
 	blind, seq := time.Duration(0), uint16(202)

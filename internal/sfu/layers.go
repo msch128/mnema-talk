@@ -41,12 +41,31 @@ const (
 // later test installs its own.
 var layerClock atomic.Pointer[func() time.Time]
 
-// layerNow is the clock of timestamp rewriting.
+// layerNow is the clock of timestamp rewriting and of the times the SFU
+// stores (see steadyNanos).
 func layerNow() time.Time {
 	if now := layerClock.Load(); now != nil {
 		return (*now)()
 	}
 	return time.Now()
+}
+
+// steadyStart is the moment the package was loaded, with its monotonic
+// reading, and steadyStartUnix the wall clock at that moment.
+var (
+	steadyStart     = time.Now()
+	steadyStartUnix = steadyStart.UnixNano()
+)
+
+// steadyNanos is t in unix nanoseconds that do not follow the wall clock: the
+// wall time at steadyStart plus the monotonic time elapsed since. The SFU
+// stores the times it compares later (a keyframe request, a stop, a layer's
+// last packet, a resend, a bitrate measurement) as these, so a step of the
+// host's clock moves none of its deadlines; t.UnixNano would drop the
+// monotonic reading of time.Now. A time without a monotonic reading (a test's
+// fake clock) gives its own UnixNano, and zero still means "long ago".
+func steadyNanos(t time.Time) int64 {
+	return steadyStartUnix + int64(t.Sub(steadyStart))
 }
 
 // Layer describes one encoding of a screen share as its sender declares it.
@@ -161,13 +180,13 @@ type layerGroup struct {
 	// layers the sender announced (0 when it did not).
 	live     atomic.Uint32
 	declared atomic.Int32
-	// lastPkt is when a packet of layer i last arrived (unix nanoseconds).
+	// lastPkt is when a packet of layer i last arrived (steadyNanos).
 	lastPkt [maxLayers]atomic.Int64
 	// sent counts the bytes of layer i that arrived; rate is its bitrate in
 	// bits per second over the last measurement (zero when nothing came) and
 	// last the most recent bitrate that was not zero, which stays as the size
-	// of a layer the sender has switched off. rateAt and seen are the time and
-	// the byte counts of the last measurement.
+	// of a layer the sender has switched off. rateAt and seen are the time
+	// (steadyNanos) and the byte counts of the last measurement.
 	sent   [maxLayers]atomic.Uint64
 	rate   [maxLayers]atomic.Int64
 	last   [maxLayers]atomic.Int64
@@ -291,7 +310,7 @@ func (g *layerGroup) stopTimerLocked() {
 func (g *layerGroup) flowing(want int, now time.Time) int {
 	recent := func(i int) bool {
 		return i >= 0 && i < maxLayers && g.live.Load()&(1<<i) != 0 &&
-			now.UnixNano()-g.lastPkt[i].Load() < int64(time.Second)
+			steadyNanos(now)-g.lastPkt[i].Load() < int64(time.Second)
 	}
 	for d := 0; d < maxLayers; d++ {
 		if recent(want + d) {

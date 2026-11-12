@@ -55,7 +55,7 @@ func handleFeedback(p rtcp.Packet, attrs interceptor.Attributes, ssrc uint32, ke
 
 // requestKeyframe asks the publisher for a fresh keyframe of this track.
 func (t *TrackInfo) requestKeyframe() {
-	now := time.Now().UnixNano()
+	now := steadyNanos(layerNow())
 	last := t.lastPLI.Load()
 	if now-last < int64(keyframeMinInterval) || !t.lastPLI.CompareAndSwap(last, now) {
 		return
@@ -252,7 +252,7 @@ func (r *Room) stopSourceTracksLocked(userID uuid.UUID, source Source) bool {
 	changed := false
 	for id, tInfo := range r.trackLocals {
 		if tInfo.SenderID == userID && matchesSource(tInfo.Source, source) {
-			tInfo.stoppedAt.Store(time.Now().UnixNano())
+			tInfo.stoppedAt.Store(steadyNanos(layerNow()))
 			delete(r.trackLocals, id)
 			changed = true
 		}
