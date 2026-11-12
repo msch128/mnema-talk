@@ -1,10 +1,12 @@
 # Owner of the paths where a mistake costs the most: permissions, sign-in,
-# media encryption, the media server, outbound requests, release and update
-# verification, backup and restore, CI, and the rules agents read; and the
-# paths that held the heaviest defects of the 2026-11 defect hunt (the SFU,
-# automod's link rules and the client's link reader they must match, the audit
-# log's visibility, the plain text of pushes and snippets, the write gates of
-# messages, conversations and poll votes).
+# media encryption, the media server and the TURN relay, outbound requests,
+# release and update verification (the release scripts, the desktop bundle
+# signing and its trust files), backup and restore, CI, the rules agents read
+# and this file; and the paths that held the heaviest defects of the 2026-11
+# defect hunt (the SFU, automod's link rules and the client's link reader they
+# must match, the audit log's visibility, the plain text of pushes and
+# snippets, the write gates of messages, conversations, poll votes and Talks,
+# the channel visibility, the enforcement that removes a member from a Talk).
 #
 # This file has no effect by itself. GitHub requests a review from the owner,
 # but a pull request only waits for it once main's ruleset has "Require review
@@ -20,6 +22,10 @@
 /internal/chat/dm/          @msch128
 /internal/chat/messages/    @msch128
 /internal/poll/             @msch128
+/internal/chat/talks/       @msch128
+/internal/chat/channels/    @msch128
+/internal/ws/voice_kick.go  @msch128
+/internal/turnrelay/        @msch128
 /internal/auth/             @msch128
 /internal/ws/perms.go       @msch128
 /internal/ws/event_scope.go @msch128
@@ -28,7 +34,15 @@
 /internal/httpx/            @msch128
 /internal/imageverify/      @msch128
 /internal/updaterd/         @msch128
+/internal/webbundle/        @msch128
+/desktop-trust/             @msch128
+/web/desktop-compat.json    @msch128
+/web/desktop-signing.pub    @msch128
+/scripts/nightly-gate.py    @msch128
+/scripts/release-checks.py  @msch128
+/scripts/security-floor.sh  @msch128
 /.github/workflows/         @msch128
 /scripts/backup.sh          @msch128
 /scripts/restore.sh         @msch128
 /AGENTS.md                  @msch128
+/.github/CODEOWNERS         @msch128
