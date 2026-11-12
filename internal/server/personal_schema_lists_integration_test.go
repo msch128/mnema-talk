@@ -41,14 +41,12 @@ var exportOmits = map[string]string{
 	"slow_mode_posts":        "the time of the last post for the slow mode limit, overwritten on every post",
 	"upload_usage":           "byte bookings of the daily upload budget; uploads.json lists the files",
 	"message_nonces":         "retry ids of sent messages, pruned after a day; messages.json holds the messages",
+	"events":                 "community content made with Manage events; the event stays at erasure with its creator set to empty (doc/events.md), and the export lists RSVPs, sign-ups and comments only",
+	"event_series":           "community content like its events; a series holds nothing personal besides its creator, set to empty at erasure (doc/events.md)",
 }
 
 // exportGaps are tables the export should read and does not.
-var exportGaps = map[string]string{
-	"events":              "H-L10-02",
-	"event_series":        "H-L10-02",
-	"event_comment_mutes": "H-L10-02",
-}
+var exportGaps = map[string]string{}
 
 // profileOmits are columns of users that profile.json and the other files
 // leave out.
@@ -72,7 +70,4 @@ var profileOmits = map[string]string{
 }
 
 // profileGaps are columns of users the export should hold and does not.
-var profileGaps = map[string]string{
-	"dm_policy":   "H-L10-02",
-	"dm_mute_all": "H-L10-02",
-}
+var profileGaps = map[string]string{}

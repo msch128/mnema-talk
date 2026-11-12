@@ -20,13 +20,14 @@ func Register(r *userdata.Registry) {
 	r.Register(d, d)
 }
 
-// Export writes the member's RSVPs, sign-ups and comments for the personal data
+// Export writes the member's RSVPs, sign-ups, comments and comment mutes for the personal data
 // archive; each file is cut at the shared limits instead of failing the export.
 func (accountData) Export(ctx context.Context, q db.Querier, user uuid.UUID, _ userdata.Channels, limits userdata.Limits) ([]userdata.File, error) {
 	return []userdata.File{
 		rsvpFile(ctx, q, user, limits),
 		signupFile(ctx, q, user, limits),
 		commentFile(ctx, q, user, limits),
+		commentMuteFile(ctx, q, user, limits),
 	}, nil
 }
 
@@ -94,5 +95,15 @@ func commentFile(ctx context.Context, q db.Querier, user uuid.UUID, limits userd
 	return rowsFile("event_comments.json", userdata.FileEventComments, func() ([]commentRow, bool, error) {
 		return userdata.FetchRows[commentRow](ctx, q, limits.MaxRows, `SELECT event_id, content, created_at, edited_at
 		FROM event_comments WHERE user_id = $1 ORDER BY created_at LIMIT $2`, user)
+	})
+}
+
+func commentMuteFile(ctx context.Context, q db.Querier, user uuid.UUID, limits userdata.Limits) userdata.File {
+	type muteRow struct {
+		EventID uuid.UUID `json:"event_id" db:"event_id"`
+	}
+	return rowsFile("event_comment_mutes.json", userdata.FileCommentMutes, func() ([]muteRow, bool, error) {
+		return userdata.FetchRows[muteRow](ctx, q, limits.MaxRows, `SELECT event_id
+		FROM event_comment_mutes WHERE user_id = $1 ORDER BY event_id LIMIT $2`, user)
 	})
 }

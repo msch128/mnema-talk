@@ -170,6 +170,7 @@ func TestArchiveFilesStayInTheOriginalOrder(t *testing.T) {
 		"rsvps.json",
 		"event_signups.json",
 		"event_comments.json",
+		"event_comment_mutes.json",
 		"wiki_revisions.json",
 		"messages.json",
 	}
