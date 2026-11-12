@@ -1,12 +1,11 @@
 // One rule, two implementations: when two wiki titles are "the same page".
-// The server refuses a title that SQL lower() maps onto an existing one; the
-// client resolves [[Title]] with toLowerCase(). The pairs and the server's
-// verdicts are in internal/server/testdata/wiki_title_pairs.json
+// The server refuses a title whose key (internal/wiki/title_key.go) an existing
+// page has; the client resolves [[Title]] with the same key (wikiTitleKey.ts).
+// The pairs and the server's verdicts are in internal/server/testdata/wiki_title_pairs.json
 // (internal/server/wiki_title_fold_integration_test.go). The check: the server
 // refuses the second title exactly when the client would resolve [[second]]
 // to the first page, and two titles that look the same (one NFC form) never
-// both exist. Finding H-L3-09 of the 2026-11 hunt: canonically equivalent
-// titles (NFC against NFD) are two pages. After changing the pairs:
+// both exist (finding H-L3-09 of the 2026-11 hunt). After changing the pairs:
 //   WIKI_PAIRS_WRITE=1 npx vitest run src/wiki/lib/wikiTitleFold.test.ts
 //   WIKI_PAIRS_UPDATE=1 go test -tags=integration -run TestWikiTitlePairsMatchTheServer ./internal/server
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -53,15 +52,12 @@ describe('wiki titles: the server against the client', () => {
     expect(vectors().map(p => [p.a, p.b])).toEqual(pairs().map(p => [p.a, p.b]))
   })
 
-  it('the server refuses a title exactly when the client resolves it to the existing page, but for canonical equivalents and the known list', () => {
-    const disagree = vectors().filter(p => !looksSame(p) && p.conflict !== clientSame(p)).map(p => `${JSON.stringify(p.b)} next to ${JSON.stringify(p.a)}: server ${p.conflict}, client ${clientSame(p)}`)
-    // Known (H-L3-09): SQL lower() takes U+0130 to i, toLowerCase() to i and a combining dot,
-    // so the server calls the titles one page and [[\u0130stanbul]] finds none. The list may only shrink.
-    expect(disagree).toEqual(['"\u0130stanbul" next to "Istanbul": server true, client false'])
+  it('the server refuses a title exactly when the client resolves it to the existing page', () => {
+    const disagree = vectors().filter(p => p.conflict !== clientSame(p)).map(p => `${JSON.stringify(p.b)} next to ${JSON.stringify(p.a)}: server ${p.conflict}, client ${clientSame(p)}`)
+    expect(disagree).toEqual([])
   })
 
-  // Expected failure: canonically equivalent titles look identical and are two pages.
-  it.fails('two titles that look the same are never both pages', () => {
+  it('two titles that look the same are never both pages', () => {
     expect(vectors().filter(p => looksSame(p) && !p.conflict).map(p => [p.a, p.b])).toEqual([])
   })
 })

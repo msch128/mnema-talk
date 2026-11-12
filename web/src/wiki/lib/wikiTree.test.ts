@@ -43,4 +43,11 @@ describe('wiki tree', () => {
     expect(resolveWikiLink(all, '   ')).toBeNull()
     expect(resolveWikiLink(all, 'Missing')).toBeNull()
   })
+
+  it('resolves a link in either Unicode form, and two old pages that share a title to the first the server lists', () => {
+    const shared = [page('1', 'Caf\u00e9', null, { slug: 'cafe' }), page('2', 'Cafe\u0301', null, { slug: 'cafe-2' })]
+    expect(resolveWikiLink(shared, 'CAFE\u0301')).toBe('cafe')
+    expect(resolveWikiLink([...shared].reverse(), 'caf\u00e9')).toBe('cafe-2')
+    expect(resolveWikiLink([page('3', '\u0130stanbul', null, { slug: 'istanbul' })], '\u0130STANBUL')).toBe('istanbul')
+  })
 })
