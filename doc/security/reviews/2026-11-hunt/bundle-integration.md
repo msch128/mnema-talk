@@ -295,11 +295,13 @@ when the writer starts waiting less than 1 s before the erasure closes the
 cycle. A large account, whose earlier erase steps take longer than that, can
 see its deletion fail once. The probe is at
 reviews/review-bundle-integration-deadlock-probe.go.txt (put it in
-internal/server and run it with -tags=integration). (The probe is not in the repository.) Suggested fix, in a later
+internal/server and run it with -tags=integration). (The probe is not in the repository; the finding it
+led to is H-L10-06, [doc/security/findings/2026-11-hunt/h-l10-06.md](../../findings/2026-11-hunt/h-l10-06.md).) Suggested fix, in a later
 hunt branch: retry the erasure transaction on 40P01, or lock the member's
 messages (`SELECT ... FROM messages WHERE user_id = $1 FOR UPDATE`) right
 after the users row. The second is still racy for messages the member is
 about to edit, so a retry is simpler. Severity: availability, low (S4).
+(Fixed later as H-L10-06: the erasure transaction is retried up to three times when the database aborts it as a deadlock; after that the request answers 503 "the server is busy" and the member stays signed in; fix review: [h-l10-06.md](h-l10-06.md).)
 
 **H-L6-03 together with the erasure's audit scrub** (NOTE, by design of both).
 `legacyTalkRemoval` (internal/audit/filter.go:116) classes an old per-Talk
