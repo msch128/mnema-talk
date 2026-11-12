@@ -1,7 +1,7 @@
 // The documents state numbers that the code defines elsewhere; a test that
 // imports the constant stays green when the sentence goes wrong. These pin the
-// sentences to the constants. The it.fails cases are documentation findings of
-// the 2026-11 hunt (H-L3-07): they turn red the day the sentence is corrected.
+// sentences to the constants, so a sentence and its constant cannot drift apart
+// again (H-L3-07).
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -16,31 +16,33 @@ describe('numbers in the documents against the code', () => {
     expect(doc('SECURITY.md')).toContain(`previous epoch's key for ${PREVIOUS_EPOCH_MS / 1000} seconds`)
   })
 
-  // SECURITY.md:796 gives a second, different retention for the same key.
-  it.fails('SECURITY.md states one retention for the previous epoch key', () => {
+  it('SECURITY.md states one retention for the previous epoch key', () => {
     expect(doc('SECURITY.md')).not.toContain("The previous epoch's key is kept until the next rotation")
   })
 
-  // doc/architecture.md:371: an empty DTX frame sealed is the overhead plus a payload byte or two.
-  it.fails('doc/architecture.md: the size of a sealed empty DTX frame', () => {
-    const stated = Number(/sealed they would be (\d+) bytes each/.exec(doc('doc/architecture.md'))?.[1])
-    expect(stated).toBeGreaterThan(FRAME_OVERHEAD_BYTES)
+  it('doc/architecture.md: the export holds participation in an anonymous poll, never the choice', () => {
+    expect(doc('doc/architecture.md')).not.toContain('has no entry for anonymous polls')
   })
 
-  // doc/operations.md:1478 and the alert: 800 MB of the 1g compose default.
-  it.fails('doc/operations.md: the memory alert as a share of the default limit', () => {
+  // An empty DTX frame sealed is the overhead plus one or two payload bytes.
+  it('doc/architecture.md: the size of a sealed empty DTX frame', () => {
+    const stated = Number(/sealed they would be (\d+) bytes of overhead/.exec(doc('doc/architecture.md'))?.[1])
+    expect(stated).toBe(FRAME_OVERHEAD_BYTES)
+  })
+
+  // The alert fires at 800 MB of the 1g compose default.
+  it('doc/operations.md: the memory alert as a share of the default limit', () => {
     const limit = /mem_limit: \$\{APP_MEM_LIMIT:-(\d+)g\}/.exec(doc('docker-compose.yml'))?.[1]
     const share = Math.round((800e6 / (Number(limit) * 2 ** 30)) * 100)
-    expect(doc('doc/operations.md')).toContain(`above 800 MB (${share}% of the default limit)`)
+    expect(doc('doc/operations.md')).toContain(`above 800 MB (about ${share}% of the default limit)`)
   })
 
-  // SECURITY.md Key lifetime: the jitter is in the sentence, the maintenance
-  // tick that notices an old epoch is not (I7 D2).
-  it.fails('SECURITY.md: the stated key lifetime bounds the longest one the code allows', () => {
-    const m = /A key never outlives (\d+) minutes \(plus or minus a random (\w+)-minute jitter/.exec(doc('SECURITY.md'))
+  // The longest key the code allows: the rotation, its jitter and the maintenance tick that notices the old epoch.
+  it('SECURITY.md: the stated key lifetime is the longest one the code allows', () => {
+    const text = doc('SECURITY.md')
+    const m = /it lasts at most (\d+(?:\.\d+)?) minutes, and a committer that sleeps or is skipped can extend that/.exec(text)
     expect(m).not.toBeNull()
-    const words: Record<string, number> = { one: 1, two: 2, three: 3 }
-    const stated = (Number(m?.[1]) + (words[m?.[2] ?? ''] ?? Number.NaN)) * 60_000
-    expect(ROTATE_MS + ROTATE_JITTER_MS + MAINTENANCE_MS).toBeLessThanOrEqual(stated)
+    expect(Number(m?.[1]) * 60_000).toBe(ROTATE_MS + ROTATE_JITTER_MS + MAINTENANCE_MS)
+    expect(text).toContain('by a time that has not been measured')
   })
 })
