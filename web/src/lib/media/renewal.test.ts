@@ -166,6 +166,21 @@ describe('a member renewing its own leaf', () => {
     await closeAll(groups.values())
   }, 60_000)
 
+  it('counts a renewal that won against a rival one, as it counts any other', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    vi.setSystemTime(START + DUE)
+    const fromBob = await bob.maintain()
+    const fromCarol = await carol.maintain()
+    // The server's order: Carol's renewal first, then Bob's, the lower id's, which Alice goes back to.
+    await alice.receive(carolId, fromCarol.wires[0] as Uint8Array)
+    await alice.receive(bobId, fromBob.wires[0] as Uint8Array)
+    const epoch = (await alice.sync(roster)).epoch
+    // Another empty commit at once from Bob, whose renewal she took, is ignored.
+    const step = await alice.receive(bobId, await forgedEmpty(bob))
+    expect(step.epoch).toBe(epoch)
+    await closeAll(groups.values())
+  }, 60_000)
+
   it('goes back to the committer\'s commit when a renewal and a rotation met in the same epoch', async () => {
     const { groups, alice, bob, carol } = await trio()
     vi.setSystemTime(START + DUE)
