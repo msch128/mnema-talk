@@ -159,13 +159,15 @@ func (c *Client) notifyPermissions() {
 // longer connect to or view their Talk is removed from it at once, and the media they may still send is narrowed to
 // what they may. nil userIDs means everybody.
 func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
-	want := wantUserIDs(userIDs)
-	var clients []*Client
-	safego.Locked(h.mu.RLocker(), func() { clients = filterPermClients(h.clients, want) })
-	for _, c := range clients {
-		c.notifyPermissions()
-	}
-	h.enforcePermissions(userIDs)
+	h.enforceFailClosed(userIDs, func() {
+		want := wantUserIDs(userIDs)
+		var clients []*Client
+		safego.Locked(h.mu.RLocker(), func() { clients = filterPermClients(h.clients, want) })
+		for _, c := range clients {
+			c.notifyPermissions()
+		}
+		h.enforcePermissions(userIDs)
+	})
 }
 
 // enforcePermissions removes members from Talks and stages they may no longer
@@ -188,7 +190,8 @@ func (h *Hub) enforcePendingPermissions() {
 	if h.isClosed() {
 		return
 	}
-	h.enforcePermissions(h.permRetry.take())
+	users := h.permRetry.take()
+	h.enforceFailClosed(users, func() { h.enforcePermissions(users) })
 }
 
 // permRetry remembers whose permissions still have to be enforced after a

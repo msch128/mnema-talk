@@ -1,13 +1,18 @@
 package ws
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // A panic in the timer that ends one member's seat after the grace time is
@@ -74,6 +79,10 @@ func TestGraceTimerPanicStillTellsTheOthers(t *testing.T) {
 
 	h.unregister(bad)
 	waitCounted(t, "ws_voice_grace", before+1)
+	waitSeat(t, h, ch.ID, bad.User.ID, false) // nobody keeps the seat the timer ended
+	if !inRoom(h, ch.ID, other.User.ID) {
+		t.Fatal("the member who did not leave lost their seat")
+	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		types := drainTypes(t, other)
@@ -128,6 +137,65 @@ func TestPanicInVoiceTimeTimerKeepsTheSecondsAndTheLock(t *testing.T) {
 	h.vtimes.m[bad].timer.Stop()
 	clear(h.vtimes.m)
 	h.vtimes.mu.Unlock()
+}
+
+// A panic part-way through enforcing a permission change must not leave a
+// member with the seat the change took away. The change is committed and
+// nothing else re-checks live connections, so the enforcement fails closed:
+// the process lives, the caller (an HTTP handler) is not handed the panic, the
+// hub lock is free, and every member the change concerned is disconnected and
+// out of the Talk. A member it did not concern is untouched.
+func TestPanicInPermissionEnforcementFailsClosed(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		ids       func(a, b uuid.UUID) []uuid.UUID
+		bystander bool // whether the member the change does not concern keeps the seat
+	}{
+		{"named members", func(a, b uuid.UUID) []uuid.UUID { return []uuid.UUID{a, b} }, true},
+		{"everybody", func(_, _ uuid.UUID) []uuid.UUID { return nil }, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := permtest.NewFixture()
+			svc := perm.NewServiceFrom(func(context.Context, time.Time) (*perm.Snapshot, error) { return f.Snapshot(), nil })
+			h := NewHub(nil, nil, nil, nil, svc)
+			t.Cleanup(h.Close)
+			talk := &core.ChannelInfo{ID: f.Channel(uuid.Nil), Type: core.ChannelTypeVoice}
+			a := testClient(h, auth.User{ID: uuid.New(), Username: "a"})
+			b := testClient(h, auth.User{ID: uuid.New(), Username: "b"})
+			keep := testClient(h, auth.User{ID: uuid.New(), Username: "keep"})
+			for _, c := range []*Client{a, b, keep} {
+				h.joinVoice(c, talk)
+			}
+			var first atomic.Bool
+			h.Presence = func(_, _ uuid.UUID, joined bool) {
+				if !joined && first.CompareAndSwap(false, true) {
+					panic("enforcement bug")
+				}
+			}
+			before := metrics.GoroutinePanics.With("ws_perm_enforce").Load()
+
+			// The change takes Connect from everyone; the first removal panics.
+			f.RoleOverwrite(true, talk.ID, f.EveryoneID(), 0, perm.Connect)
+			svc.Invalidate()
+			h.PermissionsChanged(tc.ids(a.User.ID, b.User.ID)) // must not panic
+
+			if got := metrics.GoroutinePanics.With("ws_perm_enforce").Load(); got != before+1 {
+				t.Fatalf("counted %d panics, want %d", got, before+1)
+			}
+			assertHubUsable(t, h)
+			for _, c := range []*Client{a, b} {
+				if inRoom(h, talk.ID, c.User.ID) {
+					t.Fatalf("%s kept the seat the change took away", c.User.Username)
+				}
+				if !c.closed.Load() {
+					t.Fatalf("%s kept a connection that was not re-checked", c.User.Username)
+				}
+			}
+			if stays := inRoom(h, talk.ID, keep.User.ID); stays != tc.bystander {
+				t.Fatalf("the unconcerned member's seat = %v, want %v", stays, tc.bystander)
+			}
+		})
+	}
 }
 
 func graceCount(h *Hub) int {
