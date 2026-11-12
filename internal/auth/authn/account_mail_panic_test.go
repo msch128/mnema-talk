@@ -18,7 +18,13 @@ func TestPanicInAMailJobFreesItsSlot(t *testing.T) {
 		h.background(func(context.Context) { panic("mail job failed") })
 		waitDrained(t, h)
 	}
-	if got := metrics.GoroutinePanics.With("account_mail").Load() - before; got != 2*mailJobs {
+	// A panic is counted after the job's own deferred calls, so after the wait
+	// group is done: the last count can land a moment after the drain returns.
+	counted := func() int64 { return int64(metrics.GoroutinePanics.With("account_mail").Load() - before) }
+	for deadline := time.Now().Add(5 * time.Second); counted() != 2*mailJobs && time.Now().Before(deadline); {
+		time.Sleep(time.Millisecond)
+	}
+	if got := counted(); got != 2*mailJobs {
 		t.Fatalf("panics counted: %d, want %d", got, 2*mailJobs)
 	}
 	if n := len(h.rec.slots); n != 0 {
