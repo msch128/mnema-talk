@@ -1,10 +1,10 @@
 package authn
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -34,7 +34,11 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	u, err := auth.Register(r.Context(), h.Sessions.DB, strings.TrimSpace(req.Username), req.DisplayName, req.Password, req.InviteCode)
+	// The entry is written with the account: no account without it.
+	audited := func(tx pgx.Tx, u *auth.User) error {
+		return h.Audit.RecordTx(r.Context(), tx, userEntry(u, "auth.register"))
+	}
+	u, err := auth.RegisterAudited(r.Context(), h.Sessions.DB, strings.TrimSpace(req.Username), req.DisplayName, req.Password, req.InviteCode, audited)
 	if err != nil {
 		setRetryIfBusy(w, err)
 		return err
@@ -42,14 +46,13 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, 0); err != nil {
 		return err
 	}
-	h.announceRegistered(r.Context(), u)
+	h.announceRegistered(u)
 	httpx.WriteJSON(w, http.StatusCreated, auth.UserEnvelope{User: h.withRulesPending(r.Context(), u)})
 	return nil
 }
 
-// announceRegistered audits a new account and tells the clients about it.
-func (h *Handler) announceRegistered(ctx context.Context, u *auth.User) {
-	h.AuditUser(ctx, u, "auth.register")
+// announceRegistered tells the clients about a new account.
+func (h *Handler) announceRegistered(u *auth.User) {
 	if h.Events != nil {
 		h.Events.Broadcast(auth.MemberJoined(u.Public()))
 	}

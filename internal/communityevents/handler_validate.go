@@ -77,12 +77,17 @@ func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent
 	if h.Audit == nil || ev == nil {
 		return
 	}
+	h.Audit.RecordOrLog(r.Context(), eventEntry(action, ev))
+}
+
+// eventEntry is the audit entry of action on ev.
+func eventEntry(action string, ev *CommunityEvent) audit.Entry {
 	if ev.ChannelID != nil {
 		// A Talk event names a possibly private Talk: only auditors who can
 		// view that Talk read it (class event.talk_%).
 		action = "event.talk_" + strings.TrimPrefix(action, "event.")
 	}
-	h.Audit.RecordOrLog(r.Context(), audit.Entry{
+	return audit.Entry{
 		Action:     action,
 		TargetType: "event",
 		TargetID:   ev.ID.String(),
@@ -95,7 +100,7 @@ func (h *Handler) auditRecord(r *http.Request, action string, ev *CommunityEvent
 			"location":   ev.Location,
 			"status":     ev.Status,
 		},
-	})
+	}
 }
 
 func validStatus(s string) bool {

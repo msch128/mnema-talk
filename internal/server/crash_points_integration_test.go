@@ -451,29 +451,22 @@ var crashOps = []crashOp{
 // and class (partialClass). It may only shrink: an entry that no longer
 // reproduces fails the test, as does a partial write that is not listed.
 var knownPartial = map[string]string{
-	// H-L7-04: the audit entry is written after the change committed, on its
-	// own (audit.RecordOrLog, or the edit's before-and-after read): a failed
-	// or killed write leaves a change that answered success with no entry.
-	"register with an invite | audit": "H-L7-04",
-	"create a channel | audit":        "H-L7-04",
-	"delete a message | audit":        "H-L7-04",
-	"delete an account | audit":       "H-L7-04",
-	"create a wiki page | audit":      "H-L7-04",
-	"edit a message | audit":          "H-L7-04",
-	"report a message | audit":        "H-L7-04",
-	"create an event | audit":         "H-L7-04",
-	"create a role | audit":           "H-L7-04",
-	"assign a role | audit":           "H-L7-04",
-	"ban a member | audit":            "H-L7-04",
-	"create an invite | audit":        "H-L7-04",
-	"delete a channel | audit":        "H-L7-04",
-	"delete a role | audit":           "H-L7-04",
-	"create a webhook | audit":        "H-L7-04",
-	"create a category | audit":       "H-L7-04",
+	// H-L7-04, left open by decision (doc/moderation.md "Audit log"): the
+	// admin middleware records a request below /api/admin after its handler
+	// committed, outside the handler's transaction, so a failed or killed
+	// write leaves a change that answered success with no entry. The other
+	// swept operations write their entry in the change's transaction.
+	"create a channel | audit":  "H-L7-04",
+	"create a role | audit":     "H-L7-04",
+	"assign a role | audit":     "H-L7-04",
+	"ban a member | audit":      "H-L7-04",
+	"create an invite | audit":  "H-L7-04",
+	"delete a channel | audit":  "H-L7-04",
+	"delete a role | audit":     "H-L7-04",
+	"create a webhook | audit":  "H-L7-04",
+	"create a category | audit": "H-L7-04",
 	// H-L7-05: the result is read back after the commit; a failed read
-	// answers 500 for a change that was made (a wiki page also loses its
-	// audit entry).
-	"create a wiki page | error after commit":   "H-L7-05",
+	// answers 500 for a change that was made.
 	"post a message | error after commit":       "H-L7-05",
 	"start a conversation | error after commit": "H-L7-05",
 	"edit a message | error after commit":       "H-L7-05",

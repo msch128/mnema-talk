@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/communityevents/recurrence"
@@ -33,7 +34,9 @@ func (h *Handler) followingScope(r *http.Request, ev *CommunityEvent) (bool, err
 // next weeks right away.
 func (h *Handler) createOrStartSeries(r *http.Request, req CreateEventRequest, userID uuid.UUID) (*CommunityEvent, error) {
 	if req.Recurrence == nil {
-		return h.Store.Create(r.Context(), req, userID)
+		return h.Store.create(r.Context(), req, userID, func(tx pgx.Tx, ev *CommunityEvent) error {
+			return h.Audit.RecordTx(r.Context(), tx, eventEntry("event.create", ev))
+		})
 	}
 	rec := *req.Recurrence
 	if !recurrence.ValidFrequency(rec.Frequency) {
@@ -46,6 +49,7 @@ func (h *Handler) createOrStartSeries(r *http.Request, req CreateEventRequest, u
 	if err != nil {
 		return nil, err
 	}
+	h.auditRecord(r, "event.create", ev)
 	ids, err := h.Store.GenerateSeries(r.Context(), seriesID, time.Now())
 	if err != nil {
 		slog.ErrorContext(r.Context(), "create the first occurrences failed", "series_id", seriesID, "err", err)

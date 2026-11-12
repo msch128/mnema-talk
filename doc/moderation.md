@@ -503,6 +503,21 @@ and fails when an admin route is missing from the table; an unlisted route is
 still recorded under a generic `admin.<method>` action. Refused or failed
 requests leave no entry. Reading the log is not recorded.
 
+### When an entry can be missing
+
+The entries of a message deletion or edit, a report, a registration, an
+account deletion, a new wiki page and a new event (not a series) are written
+in the same database transaction as the change: the change and its entry
+exist together or not at all, and a failed entry fails the change. Every other
+entry, including all of the `/api/admin` middleware's, is written right after
+the change committed, in a statement of its own. When that write fails (a
+database error or restart, or the server dying in that moment) the change
+stays, its request still answers success, the entry is missing, and the
+server logs `audit log write failed` with the action. A deploy shuts the
+server down gracefully and does not cut that moment. The admin middleware
+works outside the handlers' transactions by design (it snapshots before and
+after any handler), so it cannot join them.
+
 ### Events besides admin actions
 
 | Action | When | What it holds |

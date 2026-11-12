@@ -96,22 +96,38 @@ func newUserRef(id uuid.UUID, username, displayName string, avatarKey *string) U
 // start is not in the future) is created active, so it never waits for the
 // scheduler to show up as running.
 func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID) (*CommunityEvent, error) {
+	return s.create(ctx, req, creatorID, nil)
+}
+
+// create is Create with audited, if set, run in the same transaction with
+// the new event (the audit entry).
+func (s *Store) create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID, audited func(pgx.Tx, *CommunityEvent) error) (*CommunityEvent, error) {
 	status := StatusScheduled
 	now := time.Now()
 	if !req.StartTime.After(now) {
 		status = StatusActive
 	}
 
-	row, err := scanEvent(s.DB.QueryRow(ctx, `
-		INSERT INTO events (title, description, start_time, end_time, channel_id, location, status, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-		RETURNING `+eventColumns,
-		req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location, status, creatorID,
-	))
+	var ev *CommunityEvent
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		row, err := scanEvent(tx.QueryRow(ctx, `
+			INSERT INTO events (title, description, start_time, end_time, channel_id, location, status, created_by, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+			RETURNING `+eventColumns,
+			req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location, status, creatorID,
+		))
+		if err != nil {
+			return fmt.Errorf("create event: %w", err)
+		}
+		if ev = row.toEvent(); audited == nil {
+			return nil
+		}
+		return audited(tx, ev)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("create event: %w", err)
+		return nil, err
 	}
-	return row.toEvent(), nil
+	return ev, nil
 }
 
 // Get loads one event with its RSVP counts, the caller's own answer (when

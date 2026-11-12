@@ -21,6 +21,12 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
+	return editMessage(ctx, p, online, messageID, userID, content, nil)
+}
+
+// editMessage is EditMessage with audited, if set, run in the edit's
+// transaction after the new text is stored (the audit entry).
+func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string, audited func(pgx.Tx) error) error {
 	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
 	if err != nil {
 		return err
@@ -29,6 +35,11 @@ func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
 		if err != nil {
 			return err
+		}
+		if audited != nil {
+			if err := audited(tx); err != nil {
+				return err
+			}
 		}
 		return RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil)
 	})
@@ -101,6 +112,13 @@ func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 // the storage keys of the media that went with it; their rows are removed by
 // cascade, the caller deletes the objects.
 func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
+	return deleteMessageAs(ctx, p, messageID, user, canManage, nil)
+}
+
+// deleteMessageAs is DeleteMessageAs with audited, if set, run in the
+// deletion's transaction once the message is locked and the deletion allowed,
+// while the message can still be read (the audit entry).
+func deleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool, audited func(pgx.Tx) error) ([]string, error) {
 	var keys []string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Locking the message first blocks a concurrent thread reply or
@@ -112,6 +130,11 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		}
 		if err := checkDeleteAuthorized(user, m.author, m.ownerContent, canManage); err != nil {
 			return err
+		}
+		if audited != nil {
+			if err := audited(tx); err != nil {
+				return err
+			}
 		}
 		if err := CollectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
