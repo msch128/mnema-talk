@@ -214,7 +214,9 @@ Holders of *Manage messages* in a channel can:
   /api/channels/{channelID}/messages/bulk-delete` with `user_id`, `count` 1 to
   100 and a reason): replies and attachments go with them. It needs a higher
   role than the member (checked in the same transaction as the delete) and
-  leaves threads that hold a reply of the Owner alone. Every message gets its own
+  leaves threads that hold a reply of the Owner alone (also one whose reply is
+  committed while the delete runs; the delete then takes fewer messages than
+  asked, the summary has both numbers). Every message gets its own
   audit entry with its text, plus one `moderation.bulk_delete` summary.
 - **Read the edit history** of an edited message (`GET
   /api/channels/{channelID}/messages/{messageID}/edits`, "Edit history" in the
