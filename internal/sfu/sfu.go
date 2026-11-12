@@ -66,8 +66,8 @@ type TrackInfo struct {
 	Source    Source
 	publisher *Peer
 	ssrc      uint32
-	lastPLI   atomic.Int64 // unix nanos of the last keyframe request
-	// resumeAt (unix nanos, 0 = live) is set when the publisher announced the
+	lastPLI   atomic.Int64 // steadyNanos of the last keyframe request
+	// resumeAt (steadyNanos, 0 = live) is set when the publisher announced the
 	// stop; packets arriving after it publish the track again. resumes and
 	// resumesAt are the stop/resume budget (see stopUntil), guarded by the
 	// room's mu.
@@ -99,7 +99,7 @@ func (t *TrackInfo) stopUntil(now time.Time) int64 {
 	if t.resumes < 0 {
 		wait = max(wait, time.Duration(-t.resumes*float64(resumeRefill)))
 	}
-	return now.Add(wait).UnixNano()
+	return steadyNanos(now.Add(wait))
 }
 
 // codecMime is the codec the track carries, for the logs.

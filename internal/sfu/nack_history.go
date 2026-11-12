@@ -99,7 +99,7 @@ func putNackBuf(b *nackBuf) {
 // nackSlot is one remembered packet (24 bytes).
 type nackSlot struct {
 	buf *nackBuf
-	// resentAt is when it was last resent (unix nanoseconds, 0 = never).
+	// resentAt is when it was last resent (steadyNanos, 0 = never).
 	resentAt int64
 	// size is the bytes it holds, buffer capacity and slot included.
 	size   int32
@@ -305,7 +305,7 @@ func (h *nackHistory) find(seq uint16, now time.Time, interval time.Duration) (r
 		if s == nil || !h.mayResend(s, now, interval) {
 			return
 		}
-		s.resentAt = now.UnixNano()
+		s.resentAt = steadyNanos(now)
 		raw = append([]byte{}, s.buf.b...)
 		hdrLen, pad = int(s.hdrLen), s.padding
 	})
@@ -333,7 +333,7 @@ func (h *nackHistory) slot(seq uint16) *nackSlot {
 
 // mayResend reports whether slot s was not resent within interval.
 func (h *nackHistory) mayResend(s *nackSlot, now time.Time, interval time.Duration) bool {
-	return s.resentAt == 0 || now.UnixNano()-s.resentAt >= int64(interval)
+	return s.resentAt == 0 || steadyNanos(now)-s.resentAt >= int64(interval)
 }
 
 // size is the bytes packet seq takes on the wire if it is remembered and may

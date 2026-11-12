@@ -294,26 +294,26 @@ func TestStopResumeBudget(t *testing.T) {
 	info := &TrackInfo{}
 	now := time.Unix(1_000_000, 0)
 	for i := range resumeBurst {
-		if wait := time.Duration(info.stopUntil(now) - now.UnixNano()); wait != resumeHoldoff {
+		if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeHoldoff {
 			t.Fatalf("stop %d waits %v, want %v", i+1, wait, resumeHoldoff)
 		}
 	}
-	if wait := time.Duration(info.stopUntil(now) - now.UnixNano()); wait != resumeRefill {
+	if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeRefill {
 		t.Fatalf("a stop past the budget waits %v, want %v", wait, resumeRefill)
 	}
 	// A publisher that keeps cycling as fast as it may resumes once per refill.
 	for range 20 {
-		now = time.Unix(0, info.stopUntil(now)).Add(time.Millisecond)
+		now = now.Add(time.Duration(info.stopUntil(now) - steadyNanos(now))).Add(time.Millisecond)
 	}
 	start := now
 	for range 30 {
-		now = time.Unix(0, info.stopUntil(now)).Add(time.Millisecond)
+		now = now.Add(time.Duration(info.stopUntil(now) - steadyNanos(now))).Add(time.Millisecond)
 	}
 	if per := now.Sub(start) / 30; per < resumeRefill-time.Second {
 		t.Fatalf("a cycling publisher resumes every %v, want about %v", per, resumeRefill)
 	}
 	now = now.Add(time.Duration(resumeBurst) * resumeRefill)
-	if wait := time.Duration(info.stopUntil(now) - now.UnixNano()); wait != resumeHoldoff {
+	if wait := time.Duration(info.stopUntil(now) - steadyNanos(now)); wait != resumeHoldoff {
 		t.Fatalf("after a long pause a stop waits %v, want %v", wait, resumeHoldoff)
 	}
 }
