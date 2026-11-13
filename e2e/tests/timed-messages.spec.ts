@@ -4,7 +4,8 @@ import { test, expect } from './fixtures'
 import { apiFetch, bounds, responseString } from './helpers'
 
 // Timed messages on every screen (doc/timed-messages.md): with a lifetime
-// chosen, the reply field of the thread stays wide enough to type in, the help
+// chosen, the fields of the channel and of the thread stay wide enough to
+// type in, also side by side, the field comes first when the tools wrap below it, the help
 // line shows in full, the timer menu stays on a phone screen, a removed
 // picture keeps to its column and shows as removed at once, and the image
 // viewer closes when its message is gone. In English and German.
@@ -20,13 +21,15 @@ const DESKTOP = { width: 1132, height: 820 }
 const VIEWPORTS = [
   PHONE,
   { width: 820, height: 1180 },
+  // Just too narrow for the member list: the channel and an open thread share the window.
+  { width: 1090, height: 820 },
   DESKTOP,
   { width: 1366, height: 768 },
   { width: 1920, height: 1080 }
 ]
 const LANGUAGES = [
-  { locale: 'en-US', oneHour: '1 h' },
-  { locale: 'de-DE', oneHour: '1 Std' }
+  { locale: 'en-US', oneHour: '1 h', oneWeek: '1 week' },
+  { locale: 'de-DE', oneHour: '1 Std', oneWeek: '1 Woche' }
 ]
 // About the narrowest a reply field may get and still take a sentence.
 const MIN_FIELD = 150
@@ -105,6 +108,33 @@ async function expectWholeLine(line: Locator, where: string) {
   expect(cut, `the help line is cut ${where}`).toBe(false)
 }
 
+// The width of target once the layout around it has stopped moving.
+async function settledWidth(target: Locator): Promise<number> {
+  let last = -1
+  for (let i = 0; i < 20; i++) {
+    const width = (await bounds(target)).width
+    if (Math.abs(width - last) < 0.5) return width
+    last = width
+    await target.page().waitForTimeout(100)
+  }
+  return last
+}
+
+// When the tools wrap to a row below the field, the field also comes first for
+// Tab and a screen reader; on one row the tools before it come first.
+async function expectFieldFirstWhenWrapped(composer: Locator, where: string) {
+  const order = await composer.evaluate(root => {
+    const field = root.querySelector('textarea')
+    const plus = root.querySelector('[data-testid="composer-plus"]')
+    if (!field || !plus) return null
+    const wrapped = plus.getBoundingClientRect().top >= field.getBoundingClientRect().bottom
+    const fieldFirst = !!(field.compareDocumentPosition(plus) & Node.DOCUMENT_POSITION_FOLLOWING)
+    return { wrapped, fieldFirst }
+  })
+  if (!order) return
+  expect(order.fieldFirst, `the field comes first in the tab order exactly when it is drawn first ${where}`).toBe(order.wrapped)
+}
+
 async function expectWithinScreen(page: Page, target: Locator, where: string) {
   const box = await bounds(target)
   const width = page.viewportSize()?.width ?? 0
@@ -127,7 +157,7 @@ test.afterAll(async ({ browser }) => {
   await page.context().close()
 })
 
-for (const { locale, oneHour } of LANGUAGES) {
+for (const { locale, oneHour, oneWeek } of LANGUAGES) {
   for (const viewport of VIEWPORTS) {
     test(`with a lifetime chosen, the composers keep their field and their whole help line (${locale}, ${viewport.width}×${viewport.height})`, async ({ browser }) => {
       const page = await signedIn(browser, locale, viewport)
@@ -136,11 +166,13 @@ for (const { locale, oneHour } of LANGUAGES) {
       const root = page.locator('[data-msg-id]', { hasText: 'Thread root for the timer' }).first()
       await expect(root).toBeVisible()
 
-      // The channel composer.
+      // The channel composer, with the longest preset in its chip.
       const composer = page.getByTestId('chat-composer')
-      await chooseLifetime(page, composer, oneHour)
+      const channelField = composer.locator('textarea')
+      await chooseLifetime(page, composer, oneWeek)
       await expectWholeLine(composer.getByTestId('lifetime-help'), `in the channel ${where}`)
-      expect((await bounds(composer.locator('textarea'))).width, `channel field ${where}`).toBeGreaterThanOrEqual(MIN_FIELD)
+      expect((await bounds(channelField)).width, `channel field ${where}`).toBeGreaterThanOrEqual(MIN_FIELD)
+      await expectFieldFirstWhenWrapped(composer, where)
 
       // The thread, with the member list open where there is room for it.
       const members = page.getByRole('button', { name: /Mitgliederliste|member list/ })
@@ -148,6 +180,20 @@ for (const { locale, oneHour } of LANGUAGES) {
       await root.hover()
       await root.getByTestId('msg-open-thread').click()
       const thread = page.locator('aside').filter({ has: page.getByTestId('thread-close') })
+      await expect(thread).toBeVisible()
+      // On a wide screen the thread opens beside the channel, which keeps a
+      // field to type in with the member list open and closed.
+      if (viewport.width >= 1024) {
+        await expect(channelField).toBeVisible()
+        for (let turn = 0; turn < 2; turn++) {
+          const open = (await members.getAttribute('aria-pressed')) === 'true'
+          const state = `beside the thread, member list ${open ? 'open' : 'closed'} ${where}`
+          expect(await settledWidth(channelField), `channel field ${state}`).toBeGreaterThanOrEqual(MIN_FIELD)
+          await expectFieldFirstWhenWrapped(composer, state)
+          await members.click()
+          await expect(members).toHaveAttribute('aria-pressed', open ? 'false' : 'true')
+        }
+      }
       await chooseLifetime(page, thread, oneHour)
       await expect(thread.getByTestId('lifetime-button')).toHaveAttribute('aria-label', new RegExp(oneHour))
       await expectWholeLine(thread.getByTestId('lifetime-help'), `in the thread ${where}`)

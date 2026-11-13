@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The composer's timer: one calm icon button that opens the lifetimes (Off,
 // the presets, Custom). The chosen lifetime shows in the button itself, next
-// to the send button, and stays for this conversation on this device
+// to the send button, where the composer is wide enough for it (a container
+// query, so an open thread or member list counts, not only the window), and stays for this conversation on this device
 // (stores/lifetime.ts), and for each thread on its own. Nothing shows while
 // the community allows none.
 import { computed, nextTick, ref, watch } from 'vue'
@@ -65,13 +66,13 @@ function closeCustom() {
       v-tooltip="label"
       :class="[
         'focus-ring h-8 max-md:h-11 flex items-center justify-center gap-1 shrink-0 rounded-full transition disabled:opacity-50',
-        chosen && !iconOnly ? 'px-2 bg-mnema-surface text-mnema-text max-lg:w-8 max-lg:px-0 max-md:w-11' : 'w-8 max-md:w-11',
+        chosen && !iconOnly ? 'px-2 bg-mnema-surface text-mnema-text @max-[36rem]:px-0 md:@max-[36rem]:w-8 max-md:w-11' : 'w-8 max-md:w-11',
         chosen ? 'bg-mnema-surface text-mnema-accent' : 'text-mnema-tertiary hover:bg-mnema-surface hover:text-mnema-text'
       ]"
       @click="open = !open"
     >
       <Timer class="w-4 h-4 shrink-0" aria-hidden="true" />
-      <span v-if="chosen && !iconOnly" class="text-xs tabular-nums whitespace-nowrap max-lg:hidden" data-testid="lifetime-chip">{{ lifetimeLabel(chosen) }}</span>
+      <span v-if="chosen && !iconOnly" class="text-xs tabular-nums whitespace-nowrap @max-[36rem]:hidden" data-testid="lifetime-chip">{{ lifetimeLabel(chosen) }}</span>
     </button>
     <ContextMenu v-model="open" :anchor="button" :items="items" :aria-label="$t('lifetime.menuTitle')" />
     <LifetimeCustomDialog
