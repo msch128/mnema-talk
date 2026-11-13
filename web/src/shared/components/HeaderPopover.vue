@@ -12,8 +12,9 @@ defineProps({
 // Beside an open member list the chat column can be narrower than the card,
 // whose right edge sits under its icon: the card is moved and narrowed to stay
 // inside the column instead of being cut off at its left edge.
+// `place` runs only between mount and unmount, while the card is there.
 const card = ref<HTMLElement | null>(null)
-const place = () => { if (card.value) keepInsideColumn(card.value) }
+const place = () => keepInsideColumn(card.value as HTMLElement)
 onMounted(() => {
   place()
   window.addEventListener('resize', place)
