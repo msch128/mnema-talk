@@ -294,7 +294,7 @@ Both are small. Fix them on current main and re-run the gates, and the branch is
 **R1. BLOCKER: `make english-check` fails** (exit 2):
 ```
 German text outside the allowlist (the code and docs are English only):
-internal/chat/core/components_validate_test.go:184: ... strings.Repeat("ä", MaxInputLen+1) ...
+internal/chat/core/components_validate_test.go:184: ... strings.Repeat(<a two-byte letter>, MaxInputLen+1) ...
 ```
 The test needs a multi-byte rune, not a German one. Fix: use `"é"`, `"日"` or `"é"`. Do not add an allowlist entry for it.
 
