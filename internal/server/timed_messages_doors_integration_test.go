@@ -186,3 +186,52 @@ func TestABulkDeleteLeavesAnEndedMessageToTheSweeper(t *testing.T) {
 		t.Error("the live message was not deleted")
 	}
 }
+
+// One ended message that fails to delete does not stop the others: it is
+// held back and tried again after a pause, and the next end the sweeper sleeps
+// to is that retry, not the failed row (review round 2, finding 5).
+func TestAMessageThatFailsToDeleteDoesNotStopTheOthers(t *testing.T) {
+	w := newTimedWorld(t)
+	a := w.a
+	bad := sendTimed(t, w.alice, w.ch, map[string]any{"content": "stuck", "lifetime_seconds": 60})
+	good := sendTimed(t, w.alice, w.ch, map[string]any{"content": "goes", "lifetime_seconds": 60})
+	a.endLifetime(bad.ID)
+	a.endLifetime(good.ID)
+	ctx := context.Background()
+	if _, err := a.db.Exec(ctx, `CREATE FUNCTION expiry_test_refuse() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN RAISE EXCEPTION 'refused for the test'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.db.Exec(ctx, `CREATE TRIGGER expiry_test_refuse BEFORE DELETE ON messages FOR EACH ROW
+		WHEN (OLD.id = '`+bad.ID.String()+`') EXECUTE FUNCTION expiry_test_refuse()`); err != nil {
+		t.Fatal(err)
+	}
+	dropped := false
+	drop := func() {
+		if !dropped {
+			dropped = true
+			_, _ = a.db.Exec(ctx, `DROP TRIGGER IF EXISTS expiry_test_refuse ON messages; DROP FUNCTION IF EXISTS expiry_test_refuse()`)
+		}
+	}
+	t.Cleanup(drop)
+
+	s := expiry.New(expiry.Config{DB: a.db, Events: a.events, Objects: a.store})
+	if err := s.RemoveEnded(ctx); err == nil {
+		t.Fatal("the failed delete was not reported")
+	}
+	if a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1`, good.ID) != 0 {
+		t.Fatal("one failing message stopped the others")
+	}
+	next, err := s.NextEnd(ctx)
+	if err != nil || !next.After(time.Now()) || next.After(time.Now().Add(2*time.Second)) {
+		t.Fatalf("next end %v (%v): want the retry of the held message, about a second ahead", next, err)
+	}
+	drop()
+	time.Sleep(1100 * time.Millisecond)
+	if err := s.RemoveEnded(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1`, bad.ID) != 0 {
+		t.Fatal("the held message was not tried again")
+	}
+}

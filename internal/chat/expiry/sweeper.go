@@ -5,6 +5,7 @@ package expiry
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -48,6 +49,7 @@ type Config struct {
 // end and wakes early when a message with an earlier end is stored.
 type Sweeper struct {
 	Config
+	held heldBack
 	wake chan struct{}
 	// target is when the loop wakes next, in Unix nanoseconds; 0 while a
 	// pass runs, so a message stored meanwhile always signals.
@@ -117,7 +119,7 @@ func (s *Sweeper) pass(ctx context.Context) time.Duration {
 		return worker.IgnoreDone(ctx, err)
 	})
 	switch {
-	case failed:
+	case failed && next.IsZero():
 		return retry
 	case next.IsZero():
 		return idle
@@ -128,14 +130,16 @@ func (s *Sweeper) pass(ctx context.Context) time.Duration {
 // Sweep deletes every message whose lifetime ended, in batches, and returns
 // the next end (zero when no message has a lifetime).
 func (s *Sweeper) Sweep(ctx context.Context) (time.Time, error) {
-	if err := s.RemoveEnded(ctx); err != nil {
-		return time.Time{}, err
-	}
-	return s.NextEnd(ctx)
+	removeErr := s.RemoveEnded(ctx)
+	next, err := s.NextEnd(ctx)
+	return next, errors.Join(removeErr, err)
 }
 
-// RemoveEnded deletes every message whose lifetime ended, in batches.
+// RemoveEnded deletes every message whose lifetime ended, in batches. A
+// message that fails is logged, held back for a growing pause and left out
+// meanwhile, so the others still go; the pass then reports the failure.
 func (s *Sweeper) RemoveEnded(ctx context.Context) error {
+	var failed error
 	for {
 		ids, err := s.ended(ctx)
 		if err != nil {
@@ -143,32 +147,46 @@ func (s *Sweeper) RemoveEnded(ctx context.Context) error {
 		}
 		for _, id := range ids {
 			if err := s.remove(ctx, id); err != nil {
-				return err
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				slog.Warn("message expiry: delete failed, tried again later", "message", id, "err", err)
+				s.held.fail(id, time.Now())
+				failed = err
+				continue
 			}
+			s.held.done(id)
 		}
 		if len(ids) < batch {
-			return nil
+			return failed
 		}
 	}
 }
 
-// NextEnd is the earliest end of a message still stored, zero for none.
+// NextEnd is the earliest end of a message still stored, zero for none. A
+// message held back after a failure counts by when it is tried again.
 func (s *Sweeper) NextEnd(ctx context.Context) (time.Time, error) {
+	skip, retry := s.held.waiting(time.Now())
 	var next *time.Time
-	if err := s.DB.QueryRow(ctx, `SELECT min(expires_at) FROM messages WHERE expires_at IS NOT NULL`).Scan(&next); err != nil {
+	if err := s.DB.QueryRow(ctx, `SELECT min(expires_at) FROM messages WHERE expires_at IS NOT NULL AND NOT (id = ANY($1))`, skip).Scan(&next); err != nil {
 		return time.Time{}, err
 	}
-	if next == nil {
-		return time.Time{}, nil
+	switch {
+	case next == nil:
+		return retry, nil
+	case !retry.IsZero() && retry.Before(*next):
+		return retry, nil
 	}
 	return *next, nil
 }
 
-// ended reads the next batch of ended messages, oldest end first.
+// ended reads the next batch of ended messages, oldest end first, without the
+// ones held back after a failure.
 func (s *Sweeper) ended(ctx context.Context) ([]uuid.UUID, error) {
+	skip, _ := s.held.waiting(time.Now())
 	rows, err := s.DB.Query(ctx, `
-		SELECT id FROM messages WHERE expires_at IS NOT NULL AND expires_at <= clock_timestamp()
-		ORDER BY expires_at LIMIT $1`, batch)
+		SELECT id FROM messages WHERE expires_at IS NOT NULL AND expires_at <= clock_timestamp() AND NOT (id = ANY($2))
+		ORDER BY expires_at LIMIT $1`, batch, skip)
 	if err != nil {
 		return nil, err
 	}
