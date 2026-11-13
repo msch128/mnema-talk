@@ -4194,6 +4194,7 @@
       "exportPending": "Dein Export wird vorbereitet …",
       "exportReady": "Herunterladen (gültig bis {when})",
       "exportFailed": "Der Export konnte nicht erstellt werden. Versuche es später erneut.",
+      "exportDownloadedAt": "Am {at} heruntergeladen. Du kannst den Export bis {until} noch einmal herunterladen, danach wird er entfernt.",
       "exportDownloaded": "Der letzte Export wurde heruntergeladen und entfernt.",
       "exportExpired": "Der letzte Export ist abgelaufen und wurde entfernt.",
       "exportNext": "Den nächsten Export kannst du ab {when} anfordern.",

@@ -61,7 +61,19 @@ describe('data export', () => {
     // The name a desktop client's save dialog proposes before the server sends its own.
     expect(link.attributes('download')).toBe('mnema-talk-export.zip')
 
-    // After the download the file is gone; the next one waits for the day to pass.
+    expect(w.find('[data-testid="export-downloaded-at"]').exists()).toBe(false)
+
+    // Downloaded: the same file can be taken again until the end of the hour.
+    apiMock.mockResolvedValue({ state: 'ready', size_bytes: 1234, downloaded_at: '2026-10-22T11:00:00Z', expires_at: '2026-10-22T12:00:00Z', next_request_at: '2099-01-01T00:00:00Z' })
+    await link.trigger('click')
+    await vi.advanceTimersByTimeAsync(1600)
+    await flushPromises()
+    const again = w.get('[data-testid="export-downloaded-at"]').text()
+    expect(again).toMatch(/^Downloaded on .+\. You can download it again until .+; then it is removed\.$/)
+    expect(again).not.toContain('{')
+    expect(w.get('[data-testid="export-download"]').text()).toContain('valid until')
+
+    // After the hour the file is gone; the next one waits for the day to pass.
     apiMock.mockResolvedValue({ state: 'downloaded', size_bytes: 1234, next_request_at: '2099-01-01T00:00:00Z' })
     await link.trigger('click')
     await vi.advanceTimersByTimeAsync(1600)

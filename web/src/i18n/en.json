@@ -4194,6 +4194,7 @@
       "exportPending": "Preparing your export…",
       "exportReady": "Download (valid until {when})",
       "exportFailed": "Couldn’t build the export. Try again later.",
+      "exportDownloadedAt": "Downloaded on {at}. You can download it again until {until}; then it is removed.",
       "exportDownloaded": "The last export was downloaded and removed.",
       "exportExpired": "The last export expired and was removed.",
       "exportNext": "You can request the next export from {when}.",
