@@ -12,6 +12,8 @@ export interface ViewerItem {
   mimeType?: string
   width?: number
   height?: number
+  /** The file was removed: the viewer shows the "File removed" tile in its place. */
+  removed?: boolean
 }
 
 export interface ViewerMessage {

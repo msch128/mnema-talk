@@ -20,6 +20,9 @@ import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
 import PollDialog from './PollDialog.vue'
+import LifetimeButton from './LifetimeButton.vue'
+import { useLifetimeStore } from '../../stores/lifetime'
+import { lifetimeLabel } from '../../shared/lib/lifetime'
 import { useCompactLayout } from '../../shared/composables/useCompactLayout'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
@@ -46,6 +49,9 @@ const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cance
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
+// The lifetime chosen for this conversation; the line under the composer says what it does and what it does not.
+const lifetimes = useLifetimeStore()
+const lifetime = computed(() => lifetimes.forChannel(chatStore.activeChannel?.id))
 const permissions = usePermissionsStore()
 // The upload limit is told before a file is picked, not after it was refused.
 const uploadLabel = computed(() => (isCompact.value ? t('chat.moreActions') : permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
@@ -215,6 +221,8 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
+      <LifetimeButton v-if="chatStore.activeChannel && canSend" :channel-id="chatStore.activeChannel.id" :disabled="sending" />
+
       <!-- Send Button -->
       <button
         @click="emit('send')"
@@ -255,6 +263,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
     <div class="h-5 px-1 pt-0.5 flex items-center justify-between gap-3 text-xs text-mnema-tertiary">
       <span class="truncate" role="status" aria-live="polite" data-testid="typing-indicator">{{ typingText }}</span>
+      <span v-if="lifetime && !typingText" class="min-w-0 truncate" v-tooltip="$t('lifetime.help', { time: lifetimeLabel(lifetime) })" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</span>
       <span
         v-if="limit"
         :class="['shrink-0 tabular-nums', limit.tone === 'warn' ? 'text-mnema-danger' : 'text-mnema-muted']"

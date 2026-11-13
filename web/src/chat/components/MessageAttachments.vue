@@ -9,6 +9,7 @@ import type { MediaAttachment, Message } from '../../types/domain'
 import { computed } from 'vue'
 import { FileText, Maximize2 } from '@lucide/vue'
 import AttachmentImage from './AttachmentImage.vue'
+import MediaPlaceholder from '../../shared/components/MediaPlaceholder.vue'
 import { formatFileSize } from '../../shared/lib/fileSize'
 import { locale } from '../../i18n'
 import { openViewer, viewerMessageFrom } from '../../shared/composables/useMediaViewer'
@@ -89,7 +90,7 @@ function openImage(att: MediaAttachment) {
   const chat = props.message ? useChatStore() : null
   const channelName = props.message ? chat?.allChannels.find(c => c.id === props.message?.channel_id)?.name : undefined
   openViewer({
-    items: images.value.map(a => ({ src: a.url, name: a.original_filename, sizeBytes: a.size_bytes, mimeType: a.mime_type })),
+    items: images.value.map(a => ({ src: a.url, name: a.original_filename, sizeBytes: a.size_bytes, mimeType: a.mime_type, removed: a.is_deleted })),
     index: Math.max(0, images.value.indexOf(att)),
     ...(props.message ? { message: viewerMessageFrom(props.message, channelName) } : {})
   })
@@ -135,8 +136,9 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
       >
         <span :class="GALLERY_CELL.chip" aria-hidden="true"><Maximize2 class="h-3.5 w-3.5" /></span>
       </AttachmentImage>
+      <MediaPlaceholder v-else-if="att.is_deleted" state="gone" :kind="kind(att) === 'video' ? 'video' : 'file'" :name="att.original_filename" :class="[s.gone, 'rounded-none border-0']" />
       <video v-else-if="kind(att) === 'video'" :src="att.url" controls :class="s.video"></video>
-      <div v-if="!bare(att)" :class="s.footer">
+      <div v-if="!bare(att) && !(att.is_deleted && kind(att) !== 'image')" :class="s.footer">
         <div :class="s.name">
           <FileText :class="s.icon" />
           <a :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">

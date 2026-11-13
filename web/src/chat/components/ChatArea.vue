@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLifetimeStore } from '../../stores/lifetime'
 import { messageText } from '../../shared/lib/textLength'
 import type { Message } from '../../types/domain'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
@@ -173,6 +174,7 @@ function isSendBlocked(text: string): boolean {
 // resolves after a channel switch must not touch them.
 const stillIn = (channelId: string | undefined) => chatStore.activeChannel?.id === channelId
 
+const lifetimes = useLifetimeStore()
 async function handleSend() {
   const text = messageText(inputMessage.value)
   if (isSendBlocked(text)) return
@@ -186,7 +188,8 @@ async function handleSend() {
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    await chatStore.sendMessage(text, null, replyTo, ids, sentIn)
+    const lifetime = lifetimes.forChannel(sentIn)
+    await (lifetime ? chatStore.sendMessage(text, null, replyTo, ids, sentIn, lifetime) : chatStore.sendMessage(text, null, replyTo, ids, sentIn))
     files?.clear()
     limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {

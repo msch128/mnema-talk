@@ -1,3 +1,4 @@
+import { useLifetimeStore } from '../lifetime'
 import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../types/events'
 import { useToastStore } from '../toast'
 import { useEmojiStore } from '../emoji'
@@ -229,7 +230,8 @@ const HANDLERS: Handlers = {
   presence_snapshot: onPresenceSnapshot,
   presence_update: onPresenceUpdate,
   member_joined: cx => { fetchMembers(cx) },
-  channels_changed: cx => { fetchChannels(cx) },
+  // The lifetime settings change with it (doc/timed-messages.md).
+  channels_changed: cx => { fetchChannels(cx); void useLifetimeStore().load() },
   // My roles, a role of mine or a channel's overwrites changed.
   permissions_changed: cx => {
     usePermissionsStore().load()

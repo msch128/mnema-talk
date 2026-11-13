@@ -5,6 +5,7 @@ import type { MediaAttachment } from '../../types/domain'
 // from storage (the attachment says so, or the file is no longer served), a
 // box of the size the image would have had saying so. A failure that may pass
 // shows a box that tries again.
+import { computed } from 'vue'
 import { useMediaImage } from '../../shared/composables/useMediaImage'
 import MediaPlaceholder from '../../shared/components/MediaPlaceholder.vue'
 
@@ -20,6 +21,14 @@ const props = defineProps({
 const emit = defineEmits<{ open: [] }>()
 
 const { state, attempt, onError, retry } = useMediaImage(() => props.attachment.url, () => props.attachment.is_deleted)
+// A removed picture keeps its place: the size the server measured, scaled
+// like the picture (at most 448 by 320 px), so nothing moves.
+const keptSize = computed(() => {
+  const { width: w, height: h } = props.attachment
+  if (props.compact || !w || !h) return undefined
+  const scale = Math.min(1, 448 / w, 320 / h)
+  return { width: `${Math.round(w * scale)}px`, height: `${Math.round(h * scale)}px`, maxWidth: '100%', aspectRatio: `${w} / ${h}` }
+})
 </script>
 
 <template>
@@ -43,5 +52,5 @@ const { state, attempt, onError, retry } = useMediaImage(() => props.attachment.
     />
     <slot />
   </button>
-  <MediaPlaceholder v-else :state="state" :compact="compact" :class="placeholderClass" @retry="retry" />
+  <MediaPlaceholder v-else :state="state" :compact="compact" kind="image" :name="attachment.original_filename" :class="placeholderClass" :style="state === 'gone' ? keptSize : undefined" @retry="retry" />
 </template>

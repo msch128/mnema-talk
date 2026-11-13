@@ -53,7 +53,7 @@ describe('MessageAttachments', () => {
     expect(btn.find('img')!.attributes('alt')).toBe('shot.png')
     await btn.trigger('click')
     expect(viewerState.open).toBe(true)
-    expect(viewerState.items).toEqual([{ src: image.url, name: 'shot.png', sizeBytes: 1048576, mimeType: 'image/png' }])
+    expect(viewerState.items).toEqual([{ src: image.url, name: 'shot.png', sizeBytes: 1048576, mimeType: 'image/png', removed: false }])
     expect(viewerState.message).toBeNull()
   })
 

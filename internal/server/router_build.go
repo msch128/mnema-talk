@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"github.com/msch128/mnema-talk/internal/chat/expiry"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"net"
 	"net/url"
@@ -95,6 +96,7 @@ type components struct {
 
 	pushH           *push.Handler
 	later           *later.Service
+	expiry          *expiry.Sweeper
 	eventsH         *communityevents.Handler
 	wikiH           *wiki.Handler
 	eventsScheduler *communityevents.Scheduler

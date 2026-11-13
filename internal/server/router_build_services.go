@@ -75,8 +75,8 @@ func (c *components) startExpiry() {
 	if d.Store != nil {
 		timed.Objects = d.Store
 	}
-	sweeper := expiry.New(timed)
-	safego.Go("message_expiry", safego.Crash, func() { sweeper.Run(c.ctx) })
+	c.expiry = expiry.New(timed)
+	safego.Go("message_expiry", safego.Crash, func() { c.expiry.Run(c.ctx) })
 }
 
 // newImport builds the Discord structure import.
