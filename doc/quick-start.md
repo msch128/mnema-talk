@@ -130,8 +130,8 @@ Run directly on the host (not in the `docker run` container) it also checks
 Docker Compose and free ports. It ends with a numbered "What to do next" list. The Owner's first password is
 printed once and also stored as `ADMIN_INITIAL_PASSWORD` in `.env`; sign in as
 your Owner user name, change the password, then delete that line. The assistant
-never overwrites an existing `.env`: new secrets would not fit an existing
-database.
+**leaves an existing `.env` or `docker-compose.yml` alone**: it stops with a
+message instead, because new secrets would not fit an existing database.
 
 No terminal (scripts, NAS web UI)? Pass everything as flags and see
 `setup --help` for the rest:
@@ -146,6 +146,13 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnem
 `--lan-ip` (this machine's LAN address), `--auto-update` and `--check`, which
 only reads the `.env` in the folder and lists every required setting that is
 missing or still a placeholder.
+
+`--force` makes the assistant replace both files anyway. Use it only for a
+folder you want to start over in, never on a running installation: it generates
+**new secrets** (the session signing key, the database password, the object storage keys and the updater token), and a
+database or object store created with the old ones refuses them, so the app
+would not start against its existing data. Copy the old `.env` somewhere safe
+first, and keep it if you ever need the old secrets back.
 
 ## Step 2: start it
 
