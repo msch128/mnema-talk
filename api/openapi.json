@@ -1346,9 +1346,13 @@
             "type": "boolean"
           },
           "granted": {
-            "description": "Granted is the set the choice grants (a bit set of channel\npermissions); in mode \"channels\" the union over SelectedChannelIDs.",
+            "description": "Granted is the set the choice grants (a bit set of channel\npermissions); in mode \"channels\" what every one of SelectedChannelIDs\nallows.",
             "minimum": 0,
             "type": "integer"
+          },
+          "mixed": {
+            "description": "Mixed is true in mode \"channels\" when the selected channels allow\ndifferent sets (set by hand): saving the choice applies one set to all.",
+            "type": "boolean"
           },
           "mode": {
             "description": "Mode is the bot's access choice: \"all\" (its own role holds its channel\npermissions server-wide) or \"channels\" (only overwrites of its own\nrole in the listed channels).",
@@ -1376,6 +1380,7 @@
           "channels",
           "elevated",
           "granted",
+          "mixed",
           "mode",
           "permissions",
           "selected_channel_ids"

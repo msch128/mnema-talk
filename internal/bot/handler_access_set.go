@@ -131,13 +131,23 @@ func (h *Handler) addChoice(r *http.Request, snap *perm.Snapshot, botUser uuid.U
 	if out.Mode == AccessAll {
 		out.Granted = server & perm.BotChannelPerms
 	}
+	first := true
 	for _, o := range list {
 		if !snap.Channel(caller, o.Channel).Has(perm.ViewChannel) {
 			continue
 		}
 		out.SelectedChannelIDs = append(out.SelectedChannelIDs, o.Channel)
-		if out.Mode == AccessChannels {
-			out.Granted |= o.Allow & perm.BotChannelPerms
+		if out.Mode != AccessChannels {
+			continue
+		}
+		// What every selected channel allows; where they differ, saving
+		// would apply one set to all of them, which the panel says.
+		allow := o.Allow & perm.BotChannelPerms
+		if first {
+			out.Granted, first = allow, false
+		} else {
+			out.Mixed = out.Mixed || allow != out.Granted
+			out.Granted &= allow
 		}
 	}
 	return nil

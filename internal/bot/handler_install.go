@@ -277,8 +277,8 @@ func (h *Handler) installIn(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 // for explain. It refuses nothing for that: the bot invariant does.
 func checkInstallChannels(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, actor perm.Subject, plan installPlan, run *installRun) error {
 	if plan.all {
-		if name := snap.Global(actor).MissingName(plan.perms); name != "" {
-			run.lacking = name
+		if err := noteLackAcrossChannels(ctx, tx, snap, actor, plan, run); err != nil {
+			return err
 		}
 	}
 	for _, ch := range plan.channels {
@@ -326,4 +326,26 @@ func accessName(all bool) string {
 		return AccessAll
 	}
 	return AccessChannels
+}
+
+// noteLackAcrossChannels names the first kept permission the installer lacks,
+// server-wide or in one of the channels the bot would reach with access "all"
+// (the channels members see by default), for explain.
+func noteLackAcrossChannels(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, actor perm.Subject, plan installPlan, run *installRun) error {
+	if name := snap.Global(actor).MissingName(plan.perms); name != "" {
+		run.lacking = name
+		return nil
+	}
+	reach := snap.ChannelsEveryoneSees()
+	slices.SortFunc(reach, uuidCompare)
+	for _, ch := range reach {
+		if name := snap.Channel(actor, ch).MissingName(plan.perms); name != "" {
+			if err := tx.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, ch).Scan(&run.lackingIn); err != nil {
+				return fmt.Errorf("load channel: %w", err)
+			}
+			run.lacking = name
+			return nil
+		}
+	}
+	return nil
 }

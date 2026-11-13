@@ -25,11 +25,13 @@ const error = ref('')
 const mode = ref<AccessMode>('channels')
 const permissions = ref<string[]>([])
 const channels = ref<string[]>([])
+const mixed = ref(false)
 
 function adopt(access: BotAccess) {
   mode.value = access.mode
   permissions.value = botPermissionKeys(access.granted)
   channels.value = [...access.selected_channel_ids]
+  mixed.value = access.mixed
 }
 
 async function load() {
@@ -68,6 +70,7 @@ onMounted(load)
   <section v-if="loaded" class="min-w-0 stack-3" data-testid="bot-channel-access" :aria-busy="busy ? 'true' : 'false'">
     <h4 class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.choice.sectionTitle') }}</h4>
     <p class="text-sm text-mnema-tertiary">{{ $t('bots.choice.settingsHint') }}</p>
+    <p v-if="mixed" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-muted" data-testid="bot-channel-access-mixed">{{ $t('bots.choice.mixedNote') }}</p>
     <fieldset class="stack-2">
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.choice.permissionsTitle') }}</legend>
       <label v-for="key in BOT_CHANNEL_PERMISSIONS" :key="key" class="flex items-start gap-2 text-sm text-mnema-text">

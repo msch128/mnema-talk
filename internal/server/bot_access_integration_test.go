@@ -329,3 +329,55 @@ func TestAccessToAllChannelsKeepsAPrivateCategoryPrivate(t *testing.T) {
 		t.Fatalf("the private category is listed: %+v", tree.Categories)
 	}
 }
+
+func TestSelectedChannelsReplaceCategoryOverwritesAndReportDifferences(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	one := a.createChannel(owner, "one", "text")
+	two := a.createChannel(owner, "two", "text")
+	var cat struct{ ID uuid.UUID }
+	owner.post("/api/admin/categories", map[string]any{"name": "Team"}).decode(t, &cat)
+	wantStatus(t, "channel in the category", owner.post("/api/admin/channels", map[string]any{"name": "inside", "type": "text", "category_id": cat.ID}), http.StatusCreated)
+	b := installAll(t, owner, "Mnemo", allKeys).Bot
+	role, _ := ownRoleOf(t, owner, b.UserID)
+	path := "/api/admin/bots/" + b.ID.String() + "/access"
+	wantStatus(t, "to channels", owner.put(path, accessBody("channels", []string{"view_channel"}, one)), http.StatusOK)
+
+	// Different sets by hand: reported, and the shared set is what both allow.
+	wantStatus(t, "by hand", putOverwrites(owner, "channels", two, overwrite("role", role.ID, perm.ViewChannel|perm.SendMessages, 0)), http.StatusNoContent)
+	if acc := accessOf(t, owner, b); !acc.Mixed || acc.Granted != perm.ViewChannel {
+		t.Fatalf("access: %+v", acc)
+	}
+
+	// An allow on the category is a way in too: choosing channels removes it.
+	wantStatus(t, "category", putOverwrites(owner, "categories", cat.ID, overwrite("role", role.ID, perm.ViewChannel, 0)), http.StatusNoContent)
+	bc := &botClient{t: t, a: a, token: installTokenOf(t, owner, b), user: b.UserID}
+	if len(botChannels(t, bc)) != 3 {
+		t.Fatalf("the category did not open its channel: %v", botChannels(t, bc))
+	}
+	wantStatus(t, "selected", owner.put(path, accessBody("channels", []string{"view_channel"}, one)), http.StatusOK)
+	if seen := botChannels(t, bc); !slices.Equal(seen, []uuid.UUID{one}) {
+		t.Fatalf("bot sees %v after choosing channels", seen)
+	}
+	if acc := accessOf(t, owner, b); acc.Mixed {
+		t.Fatalf("still mixed: %+v", acc)
+	}
+}
+
+func TestInstallWithAccessToAllNamesTheChannelWhereThePermissionIsLacking(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	a.createChannel(owner, "open", "text")
+	muted := a.createChannel(owner, "muted", "text")
+	maker := a.register(owner, "maker")
+	makers := createRole(t, owner, "Bot makers", perm.ManageBots)
+	assignRoles(t, owner, maker, makers)
+	wantStatus(t, "deny send", putOverwrites(owner, "channels", muted, overwrite("role", makers, 0, perm.SendMessages)), http.StatusNoContent)
+	body := installBody(testManifest("x"), []string{"view_channel", "send_messages"}, nil)
+	body["access"] = "all"
+	res := maker.post("/api/admin/bots/install", body)
+	wantStatus(t, "send in one channel", res, http.StatusForbidden)
+	if !strings.Contains(string(res.body), "send messages in #muted") {
+		t.Fatalf("the refusal does not name the channel: %s", res.body)
+	}
+}

@@ -35,8 +35,12 @@ type Access struct {
 	// role in the listed channels).
 	Mode string `json:"mode" enums:"channels,all"`
 	// Granted is the set the choice grants (a bit set of channel
-	// permissions); in mode "channels" the union over SelectedChannelIDs.
+	// permissions); in mode "channels" what every one of SelectedChannelIDs
+	// allows.
 	Granted perm.Set `json:"granted" swaggertype:"integer" minimum:"0"`
+	// Mixed is true in mode "channels" when the selected channels allow
+	// different sets (set by hand): saving the choice applies one set to all.
+	Mixed bool `json:"mixed"`
 	// SelectedChannelIDs are the channels the caller can view where the bot's
 	// own role has an overwrite: its channels in mode "channels", the private
 	// channels it may also see in mode "all".

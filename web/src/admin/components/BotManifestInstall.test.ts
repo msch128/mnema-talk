@@ -56,7 +56,7 @@ beforeEach(() => {
     if (path.endsWith('/avatar')) return { ...newBot, avatar_url: '/api/media/avatar' }
     if (path === '/api/admin/bots' && !options?.method) return []
     if (path === '/api/roles') return []
-    if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, selected_channel_ids: [], channels: [] }
+    if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, mixed: false, selected_channel_ids: [], channels: [] }
     if (/\/(tokens|commands)$/.test(path)) return []
     return undefined
   })

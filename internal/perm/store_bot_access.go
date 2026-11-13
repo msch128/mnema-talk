@@ -30,8 +30,9 @@ type BotAccess struct {
 	Channels []uuid.UUID
 	// With Restrict, only overwrites in the channels of Within are replaced:
 	// what someone cannot see is not theirs to take away.
-	Within   []uuid.UUID
-	Restrict bool
+	Within           []uuid.UUID
+	WithinCategories []uuid.UUID
+	Restrict         bool
 }
 
 // ApplyBotAccess stores the choice on the bot's own role. It must run in a
@@ -104,6 +105,25 @@ func clearBotOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 			return err
 		}
 	}
+	return clearBotCategoryOverwrites(ctx, tx, a)
+}
+
+// clearBotCategoryOverwrites does the same for the own role's overwrites of
+// categories, so "selected channels" are the only way in; a category counts
+// only for someone who sees all of its channels (a category overwrite reaches
+// them all). Category overwrites have no temporary Talk copies.
+func clearBotCategoryOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE permission_overwrites SET allow = allow & ~$2::bigint
+		WHERE role_id = $1 AND category_id IS NOT NULL AND allow & $2::bigint <> 0
+		  AND (NOT $3::bool OR category_id = ANY($4::uuid[]))`,
+		a.Role, int64(BotChannelPerms), a.Restrict, append([]uuid.UUID{}, a.WithinCategories...)); err != nil {
+		return fmt.Errorf("drop bot category overwrites: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE role_id = $1 AND category_id IS NOT NULL AND allow = 0 AND deny = 0 AND (NOT $2::bool OR category_id = ANY($3::uuid[]))`,
+		a.Role, a.Restrict, append([]uuid.UUID{}, a.WithinCategories...)); err != nil {
+		return fmt.Errorf("drop empty bot category overwrites: %w", err)
+	}
 	return nil
 }
 
@@ -133,6 +153,7 @@ func (s *Service) SetBotAccess(ctx context.Context, actor Subject, botUser uuid.
 		// nil means every channel: nothing to restrict.
 		a.Within = snap.ViewableChannels(actor)
 		a.Restrict = a.Within != nil && !snap.IsOwner(actor)
+		a.WithinCategories = snap.CategoriesSeenInFull(actor)
 		if err := ApplyBotAccess(ctx, tx, a); err != nil {
 			return nil, err
 		}
@@ -149,6 +170,29 @@ func CheckBotChannels(snap *Snapshot, actor Subject, channels []uuid.UUID) error
 		}
 	}
 	return nil
+}
+
+// CategoriesSeenInFull lists the categories whose channels sub can all view.
+func (s *Snapshot) CategoriesSeenInFull(sub Subject) []uuid.UUID {
+	out := []uuid.UUID{}
+	for cat := range s.categories {
+		if s.CanSeeAllChannelsIn(sub, cat) {
+			out = append(out, cat)
+		}
+	}
+	return out
+}
+
+// ChannelsEveryoneSees lists the channels every member sees through @everyone
+// alone: where a bot with access to every channel works without being listed.
+func (s *Snapshot) ChannelsEveryoneSees() []uuid.UUID {
+	out := []uuid.UUID{}
+	for ch := range s.channelCat {
+		if s.EveryoneCanView(ch) {
+			out = append(out, ch)
+		}
+	}
+	return out
 }
 
 // HasAllChannelAccess reports whether the bot was given access to every

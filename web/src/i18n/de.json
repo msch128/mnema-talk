@@ -4055,6 +4055,7 @@
       "elevated": "Dieser Bot hat Administrator- oder Admin-Bereich-Rechte. Er kann den Server weit über das Schreiben von Nachrichten hinaus verändern."
     },
     "choice": {
+      "mixedNote": "Der Bot hat in den Kanälen unterschiedliche Berechtigungen. Beim Speichern erhalten die ausgewählten Kanäle die hier angehakten Berechtigungen.",
       "sectionTitle": "Kanalzugriff",
       "title": "Zugriff",
       "settingsHint": "Lege fest, wo dieser Bot arbeiten darf. Administrator- oder Admin-Rechte bekommt er dadurch nie.",

@@ -26,7 +26,7 @@ const view = PERMISSION_BITS.view_channel
 const send = PERMISSION_BITS.send_messages
 
 function access(overrides: Partial<BotAccess> = {}): BotAccess {
-  return { permissions: 0, elevated: false, channels: [], mode: 'channels', granted: view | send, selected_channel_ids: [general.id], ...overrides }
+  return { permissions: 0, elevated: false, channels: [], mode: 'channels', granted: view | send, mixed: false, selected_channel_ids: [general.id], ...overrides }
 }
 
 let current: BotAccess
@@ -91,6 +91,14 @@ describe('the access choice in a bot’s settings', () => {
     const w = await mountPanel()
     expect((w.get('[data-access="all"]').element as HTMLInputElement).checked).toBe(true)
     expect(w.find('[data-testid="bot-access-private-note"]').exists()).toBe(true)
+  })
+
+  it('says so when the selected channels allow different sets, and not otherwise', async () => {
+    const quiet = await mountPanel()
+    expect(quiet.find('[data-testid="bot-channel-access-mixed"]').exists()).toBe(false)
+    current = access({ mixed: true })
+    const w = await mountPanel()
+    expect(w.get('[data-testid="bot-channel-access-mixed"]').text()).toContain('different permissions')
   })
 
   it('shows a refusal inline, keeps the choice and does not say it was saved', async () => {

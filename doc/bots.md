@@ -335,7 +335,10 @@ settings the channels are listed under "private channels too". Nothing else of
 `@everyone` applies to bots, with or without this choice: a bot with access to
 all channels may therefore write in a channel where `@everyone` is denied
 *Send messages* (an announcement channel); a member who lacks *Send messages*
-there cannot give the bot that permission everywhere, and the refusal says so.
+there cannot give the bot that permission everywhere, and the refusal names the
+channel. If `@everyone` does not hold *View channels* server-wide and members
+get it through a role, every channel counts as private for this choice: list
+the channels the bot should work in.
 
 Nothing about who may grant what changes. *All channels* only ever grants
 channel permissions a manifest may ask for (view, send, attach, react, manage
@@ -348,19 +351,22 @@ denied it in any channel. For the same reason they cannot change a bot that
 reaches a channel they cannot view.
 
 **Switching back** to *Selected channels* removes the server-wide grants and
-writes overwrites for the channels chosen at that moment; the allow
-overwrites of the bot's own role in channels the caller can view are replaced
-(a deny written by an admin stays, and so do overwrites of categories). Switching
-to *All channels* replaces the bot's server-wide channel permissions with the
-chosen ones. Other permissions of the own role (and any role the bot holds)
-are not touched.
+writes overwrites for the channels chosen at that moment. What the bot's own
+role allowed before, in channels and categories the caller can view in full,
+is replaced, so the chosen channels are the only way in. A deny that an admin
+set on the own role stays, except for a permission that is ticked and listed:
+the explicit choice wins there. Switching to *All channels* replaces the bot's
+server-wide channel permissions with the chosen ones. Other permissions of the
+own role (and any role the bot holds) are not touched. If the selected
+channels allow different sets (set by hand), the access view says `mixed` and
+the settings say so: saving gives every selected channel the ticked set.
 
 `PUT /api/admin/bots/{id}/access` takes
 `{"access": "all" | "channels", "permissions": ["view_channel", ...], "channel_ids": [...]}`:
 `permissions` are permission keys (the six channel permissions of a manifest) and replace what the choice granted
 before; `channel_ids` are the channels of the bot's own overwrites (with
 `all`: the private channels it may also see), at most 500, each one the caller
-can view. It answers `200` with the access view (`mode`, `granted`,
+can view. It answers `200` with the access view (`mode`, `granted`, `mixed` and
 `selected_channel_ids` next to what `GET` already showed), `400` for an
 unknown access or a key that is not a manifest permission, `404` for a channel
 the caller cannot view, `403` for the bot invariant, and is logged as

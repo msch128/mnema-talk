@@ -114,7 +114,8 @@ func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 	p := base
 	if s.botsAll[sub.ID] && !s.EveryoneCanView(ch) {
 		// A bot with access to every channel does not see what members cannot
-		// see by default; an overwrite of its own role below may still allow it.
+		// see by default. The View channels its roles hold does not open it; an
+		// allow in an overwrite of one of its roles or of the bot itself still does.
 		p &^= ViewChannel
 	}
 	if cat != uuid.Nil {

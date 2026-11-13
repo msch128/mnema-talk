@@ -4055,6 +4055,7 @@
       "elevated": "This bot holds Administrator or admin-area permission. It can change the server far beyond messaging."
     },
     "choice": {
+      "mixedNote": "The bot has different permissions in different channels. Saving gives the selected channels the permissions ticked here.",
       "sectionTitle": "Channel access",
       "title": "Access",
       "settingsHint": "Choose where this bot may work. This never gives it Administrator or admin-area permissions.",
