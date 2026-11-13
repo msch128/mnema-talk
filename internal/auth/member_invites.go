@@ -24,7 +24,7 @@ const (
 	memberInviteMemory = 24 * time.Hour
 )
 
-// MemberInviteLimits are the bounds the Owner and Administrators set for the
+// MemberInviteLimits are the bounds the holders of Manage invites set for the
 // invites members create.
 type MemberInviteLimits struct {
 	// MaxExpiresInHours is the longest an invite of a member may stay valid.

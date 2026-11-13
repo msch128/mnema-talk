@@ -35014,7 +35014,7 @@
     },
     "/api/me/invites": {
       "get": {
-        "description": "The invites the signed-in member created, newest first, with the limits new ones must stay within. Needs the Create invites permission (403 otherwise).",
+        "description": "The invites the signed-in member created, newest first, with the limits new ones must stay within. Needs a session only, so a member whose right was withdrawn still sees (and can revoke) what they made.",
         "operationId": "listOwnInvites",
         "responses": {
           "200": {
@@ -35077,7 +35077,7 @@
         ]
       },
       "post": {
-        "description": "Needs the Create invites permission, in the channel when one is named (403 otherwise; a channel the member cannot see answers 404). The invite always expires and has a use limit, both within the bounds the Owner and Administrators set; omitted fields take safe defaults (24 hours, 10 uses). The number of active invites and of invites per hour is limited per member. A lockdown that pauses invites refuses it (409).",
+        "description": "Needs the Create invites permission, in the channel when one is named (403 otherwise; a channel the member cannot see answers 404). The invite always expires and has a use limit, both within the bounds the holders of Manage invites set; omitted fields take safe defaults (24 hours, 10 uses). The number of active invites and of invites per hour is limited per member. A lockdown that pauses invites refuses it (409).",
         "operationId": "createMemberInvite",
         "requestBody": {
           "content": {

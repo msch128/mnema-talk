@@ -49,7 +49,7 @@ func TestCatalogIsConsistent(t *testing.T) {
 		t.Fatalf("permissions removed: %v", want)
 	}
 	// Migration 0017 seeds @everyone with this number, migration 0050 adds Send direct messages, 0089 View wiki,
-	// and 0107 Create invites on a fresh install (an existing install keeps what it has).
+	// and 0108 Create invites on a fresh install (an existing install keeps what it has).
 	if DefaultEveryone != 990|SendDirectMessages|ViewWiki|CreateMemberInvites {
 		t.Fatalf("DefaultEveryone = %d, migrations 0017, 0050, 0089 and 0107 seed %d", DefaultEveryone, 990|SendDirectMessages|ViewWiki|CreateMemberInvites)
 	}

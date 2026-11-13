@@ -24,7 +24,7 @@ func (h *API) mountMemberInvites(r chi.Router) {
 // listOwnInvites handles GET /api/me/invites.
 //
 // @Summary List my invites
-// @Description The invites the signed-in member created, newest first, with the limits new ones must stay within. Needs the Create invites permission (403 otherwise).
+// @Description The invites the signed-in member created, newest first, with the limits new ones must stay within. Needs a session only, so a member whose right was withdrawn still sees (and can revoke) what they made.
 // @ID listOwnInvites
 // @Tags Invites
 // @Produce json
@@ -48,7 +48,7 @@ func (h *API) listOwnInvites(w http.ResponseWriter, r *http.Request) error {
 // createMemberInvite handles POST /api/me/invites.
 //
 // @Summary Create an invite as a member
-// @Description Needs the Create invites permission, in the channel when one is named (403 otherwise; a channel the member cannot see answers 404). The invite always expires and has a use limit, both within the bounds the Owner and Administrators set; omitted fields take safe defaults (24 hours, 10 uses). The number of active invites and of invites per hour is limited per member. A lockdown that pauses invites refuses it (409).
+// @Description Needs the Create invites permission, in the channel when one is named (403 otherwise; a channel the member cannot see answers 404). The invite always expires and has a use limit, both within the bounds the holders of Manage invites set; omitted fields take safe defaults (24 hours, 10 uses). The number of active invites and of invites per hour is limited per member. A lockdown that pauses invites refuses it (409).
 // @ID createMemberInvite
 // @Tags Invites
 // @Accept json

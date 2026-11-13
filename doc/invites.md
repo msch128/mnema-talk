@@ -34,7 +34,7 @@ invites*: it never lists, edits or revokes someone else's invite.
 - **Safe defaults and limits.** A member's invite always expires and always has
   a use limit; omitted fields default to 24 hours and 10 uses, cut down to the
   limits below. Custom codes are an admin feature. Under **Admin, Invites,
-  Member invites** the Owner and Administrators set the longest expiry (default
+  Member invites** the holders of *Manage invites* (the Owner and Administrators among them) set the longest expiry (default
   7 days), the most uses of one invite (25), how many invites one member may
   have active at once (10) and how many one member may create per hour (10;
   revoking an invite does not reset that count). Holders of *Manage invites* are

@@ -104,7 +104,7 @@ const (
 	// ViewWiki reads the wiki. On for @everyone.
 	ViewWiki Set = 1 << 29
 	// CreateMemberInvites lets a member create invites within the bounds the
-	// Owner and Administrators set, and see and revoke their own
+	// holders of Manage invites set, and see and revoke their own
 	// (doc/roles-and-permissions.md). Separate from CreateInvites ("manage
 	// invites"), which lists, edits and revokes every invite. A channel
 	// overwrite may allow or deny it: an invite that lands in a channel needs
