@@ -7,7 +7,7 @@ func TestUsernameBaseIsTheReadableNameOfTheBot(t *testing.T) {
 		"Mnemo":                                "mnemo",
 		"Mnema Bot":                            "mnema_bot",
 		"  --Deploy.Helper!  ":                 "deploy_helper",
-		"Müller":                               "m_ller",
+		"Caf\u00e9 Bot":                        "caf_bot",
 		"a":                                    "",
 		"!!":                                   "",
 		"日本語":                                  "",

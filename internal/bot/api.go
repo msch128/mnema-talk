@@ -42,7 +42,7 @@ type Self struct {
 	// Name is the bot's name as members see it (its display name).
 	Name string `json:"username"`
 	// Handle is the account's unique name, the one members mention
-	// (@bot-...); Discord calls this the username.
+	// (for example @mnemo); Discord calls this the username.
 	Handle string `json:"handle,omitempty" binding:"optional"`
 	Bot    bool   `json:"bot" enums:"true"`
 	Avatar string `json:"avatar_url,omitempty" binding:"optional"`
