@@ -258,9 +258,10 @@ const otherScenes: Scene[] = [
     reach: async (s) => {
       // A post of this combo's own, opened by its address: a click on a card of
       // the list could land while the list was still being redrawn.
-      const title = `Forum post of ${comboLabel(s.combo)} with a title long enough to need two lines ${'or more '.repeat(4)}`
+      // Titles hold at most 100 characters (internal/chat/forum).
+      const title = `Post of ${comboLabel(s.combo)}, a title long enough to need two lines ${'or more '.repeat(6)}`.slice(0, 100).trim()
       const post = await apiFetch(s.page, 'POST', `/api/channels/${s.world.forum.id}/posts`, { title, content: `Body. ${s.world.suffix}` })
-      expect(post.status).toBe(201)
+      expect(post.status, JSON.stringify(post.json)).toBe(201)
       await open(s.page, `/c/${s.world.forum.id}/t/${responseString(post, 'id')}`)
       await expect(s.page.getByTestId('forum-post-header')).toContainText(title.slice(0, 40))
     },
