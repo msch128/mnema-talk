@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { boxOf, needsSheet, placeNear, pointBox, submenuOffsets } from './floatingPosition'
+import { describe, expect, it, vi } from 'vitest'
+import { boxOf, needsSheet, placeNear, pointBox, submenuOffsets, visibleArea } from './floatingPosition'
 
 const view = { width: 1000, height: 800 }
 const menu = { width: 200, height: 300 }
@@ -65,5 +65,20 @@ describe('needsSheet', () => {
   it('asks for a sheet only when the menu is taller than the window less its margins', () => {
     expect(needsSheet(780, 800)).toBe(false)
     expect(needsSheet(790, 800)).toBe(true)
+  })
+})
+
+describe('visibleArea', () => {
+  it('is the visual viewport less the safe-area insets #app keeps clear', () => {
+    const app = document.createElement('div')
+    app.id = 'app'
+    app.style.paddingTop = '47px'
+    app.style.paddingBottom = '34px'
+    document.body.appendChild(app)
+    vi.stubGlobal('visualViewport', { offsetTop: 0, height: 844, width: 390 })
+    expect(visibleArea()).toEqual({ top: 47, bottom: 810, width: 390 })
+    vi.unstubAllGlobals()
+    app.remove()
+    expect(visibleArea().top).toBe(0)
   })
 })

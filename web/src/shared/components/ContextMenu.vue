@@ -4,7 +4,7 @@ import type { ContextMenuItem, MenuAnchor, MenuItemId, MenuSubmenu } from './men
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
-import { needsSheet, placeNear, pointBox, submenuOffsets, type AnchorBox } from '../lib/floatingPosition'
+import { needsSheet, placeNear, pointBox, submenuOffsets, visibleArea, type AnchorBox } from '../lib/floatingPosition'
 import { rowTarget, typeAhead } from '../lib/menuKeys'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
@@ -62,14 +62,18 @@ function baseBox(): AnchorBox {
 // that would leave the window (see shared/lib/floatingPosition).
 function adjustPosition() {
   if (!menuEl.value) return
+  // The opening animation draws the menu scaled down for a moment: take the larger of its layout size and its box.
   const rect = menuEl.value.getBoundingClientRect()
-  sheet.value = needsSheet(rect.height, window.innerHeight)
+  const size = { width: Math.max(menuEl.value.offsetWidth, rect.width), height: Math.max(menuEl.value.offsetHeight, rect.height) }
+  const area = visibleArea()
+  sheet.value = needsSheet(size.height, area.bottom - area.top)
   if (sheet.value) return
   const box = baseBox()
   // A gap between the menu and what it belongs to; a point has no edge to keep clear of.
-  const { x, y } = placeNear(box, rect, { width: window.innerWidth, height: window.innerHeight }, { gap: box.bottom > box.top ? 4 : 0 })
+  const { x, y } = placeNear(box, size, { width: area.width, height: area.bottom }, { gap: box.bottom > box.top ? 4 : 0 })
   posX.value = x
-  posY.value = y
+  // Below a notch or a scrolled-off visual viewport top.
+  posY.value = area.top > 0 ? Math.max(y, area.top + 8) : y
 }
 
 // The menu level the focus is in: the root or an open submenu.

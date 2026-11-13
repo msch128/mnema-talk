@@ -58,3 +58,13 @@ test('the full-text marker counts only with the title it promises', async ({ pag
   expect(rules(list, '#marker')).toEqual(['truncated-without-full-text'])
   expect(rules(list, '#titled')).toEqual([])
 })
+
+test('a menu panel that runs past the window edge is reported, even with its items whole', async ({ page }) => {
+  const list = await findings(page, `
+    <div id="past" role="menu" style="position:fixed;left:20px;top:300px;width:200px;height:106px;padding-bottom:8px;background:#222">
+      <button style="display:block;height:30px">Reply</button><button style="display:block;height:30px">Delete</button>
+    </div>
+    <div id="inside" role="menu" style="position:fixed;left:300px;top:200px;width:200px;height:100px;background:#222"></div>`)
+  expect(rules(list, '#past')).toEqual(['outside-viewport'])
+  expect(rules(list, '#inside')).toEqual([])
+})

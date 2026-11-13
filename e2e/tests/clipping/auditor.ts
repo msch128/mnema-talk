@@ -32,7 +32,8 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
   const vh = document.documentElement.clientHeight
 
   const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [role="switch"], [role="checkbox"], [tabindex]:not([tabindex="-1"])'
-  const LEAF = 'button, a, input, select, textarea, img, svg, video, canvas, label, h1, h2, h3, h4, p, span, li, td, th, code, kbd, time, [role="img"]'
+  // Floating panels count too: a menu whose border and padding run past the window is cut even when its items are whole.
+  const LEAF = 'button, a, input, select, textarea, img, svg, video, canvas, label, h1, h2, h3, h4, p, span, li, td, th, code, kbd, time, [role="img"], [role="menu"], [role="dialog"], [role="listbox"]'
 
   // Computed styles are live objects; one per element is enough for a whole audit.
   const styles = new Map<Element, CSSStyleDeclaration>()

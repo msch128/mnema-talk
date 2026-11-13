@@ -79,3 +79,19 @@ export function submenuOffsets(panel: AnchorBox & { width: number }, row: Anchor
 export function needsSheet(menuHeight: number, viewportHeight: number): boolean {
   return menuHeight > viewportHeight - 2 * PAD
 }
+
+/**
+ * The part of the window a floating panel may use: the visual viewport (what
+ * a zoomed or keyboard-covered page really shows), less the safe-area insets
+ * of a notch or home indicator (the padding #app takes for them).
+ */
+export function visibleArea(): { top: number; bottom: number; width: number } {
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  const app = typeof document !== 'undefined' ? document.getElementById('app') : null
+  const pad = app ? getComputedStyle(app) : null
+  const insetTop = parseFloat(pad?.paddingTop ?? '') || 0
+  const insetBottom = parseFloat(pad?.paddingBottom ?? '') || 0
+  const top = (vv?.offsetTop ?? 0) + insetTop
+  const bottom = (vv ? vv.offsetTop + vv.height : window.innerHeight) - insetBottom
+  return { top, bottom, width: vv?.width ?? window.innerWidth }
+}
