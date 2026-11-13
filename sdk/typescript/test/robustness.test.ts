@@ -86,12 +86,14 @@ describe('retry_after from the server', () => {
       sendJson(res, 200, { id: req.url })
     })
     const rest = new RestClient({ baseUrl: server.url, token: 'mnb_secret' })
+    // Each request has its own deadline: without the cap the client would wait
+    // (or spin) for weeks, and the test must fail fast instead of hanging.
     const start = Date.now()
-    const err = await rest.getMe().catch((e: unknown) => e)
-    assert.ok(err instanceof RestError)
+    const err = await rest.request('GET', '/users/@me', { signal: AbortSignal.timeout(3000) }).catch((e: unknown) => e)
+    assert.ok(err instanceof RestError, `a 429 beyond the cap fails at once, got ${String(err)}`)
     assert.equal(err.status, 429)
     assert.equal(err.retryAfter, 3_000_000)
-    const other = await rest.listChannels()
+    const other = await rest.request('GET', '/channels', { signal: AbortSignal.timeout(3000) })
     assert.ok(other)
     assert.ok(Date.now() - start < 2000)
   })

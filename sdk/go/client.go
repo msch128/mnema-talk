@@ -164,7 +164,9 @@ type dispatcher struct {
 	// loop waits too: the server then holds the events back (its buffer and
 	// resume cover a slow bot) instead of the bot's memory filling up.
 	queued chan struct{}
-	wg     sync.WaitGroup
+	// dropped counts the events shed because the queue was full.
+	dropped atomic.Int64
+	wg      sync.WaitGroup
 }
 
 func (c *Client) newDispatcher(ctx context.Context) *dispatcher {
@@ -175,10 +177,12 @@ func (c *Client) newDispatcher(ctx context.Context) *dispatcher {
 // dispatchQueueFactor times HandlerConcurrency events may wait for a slot.
 const dispatchQueueFactor = 16
 
-// dispatch starts the handlers of one event in a goroutine and returns, so
-// the read loop (and with it the heartbeat ACKs) does not wait for a handler
-// while fewer than the queue's bound wait for a slot. Beyond that it blocks
-// until one is free, so goroutines never grow without bound.
+// dispatch starts the handlers of one event in a goroutine and returns at
+// once, so the read loop, and with it the heartbeat ACKs, never waits for a
+// handler. When the queue in front of the handler slots is full (handlers
+// that block far longer than events arrive), the event is shed with a
+// warning instead: blocking the read loop would leave ACKs unread, turn the
+// connection into a zombie and replay the same flood after the resume.
 func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 	run := d.c.handlerFunc(name, raw)
 	if run == nil {
@@ -186,7 +190,8 @@ func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 	}
 	select {
 	case d.queued <- struct{}{}:
-	case <-d.ctx.Done():
+	default:
+		d.shed(name)
 		return
 	}
 	d.wg.Add(1)
@@ -209,6 +214,14 @@ func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 }
 
 func (d *dispatcher) wait() { d.wg.Wait() }
+
+// shed logs a dropped event: the first one, then every 1000th, with the total.
+func (d *dispatcher) shed(name string) {
+	if n := d.dropped.Add(1); n == 1 || n%1000 == 0 {
+		d.c.logger.Warn("mnema: handlers are too slow, events dropped", "event", name, "dropped", n,
+			"queue", cap(d.queued), "concurrency", cap(d.sem))
+	}
+}
 
 // handlerFunc returns the work for one event: decoding it and calling its
 // handlers in order, or nil when no handler wants it.

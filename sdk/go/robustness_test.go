@@ -58,8 +58,8 @@ func TestADispatchFloodWithASlowHandlerKeepsGoroutinesBounded(t *testing.T) {
 	fc.expect(t, opIdentify)
 	fc.ready(t, "s1")
 	before := runtime.NumGoroutine()
-	// The read loop stops reading once the queue is full, so the writes are
-	// done from a goroutine that may block on the socket.
+	// Written from a goroutine so that a client that stops reading cannot
+	// block the test itself.
 	go func() {
 		for i := int64(0); i < 2000; i++ {
 			if fc.ws.WriteJSON(map[string]any{"op": 0, "t": "MESSAGE_CREATE", "s": i + 2, "d": map[string]any{"id": "m", "channel_id": "c", "content": "x"}}) != nil {
@@ -109,5 +109,47 @@ func TestRetryAfterSecondsThatDoNotFitADurationAreCapped(t *testing.T) {
 	}
 	if got := seconds(-1); got != 0 {
 		t.Fatalf("seconds(-1) = %v", got)
+	}
+}
+
+func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing.T) {
+	g := newFakeGateway(t, 200)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	c.OnMessageCreate(func(ctx context.Context, _ *Message) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	// Far more events than the queue holds, then heartbeats answered for five
+	// intervals: a client that stopped reading would miss the ACKs and drop
+	// the connection as a zombie.
+	for i := int64(0); i < 5000; i++ {
+		fc.dispatch(t, i+2, "MESSAGE_CREATE", map[string]any{"id": "m", "channel_id": "c", "content": "x"})
+	}
+	deadline := time.After(time.Second)
+	for done := false; !done; {
+		select {
+		case f, ok := <-fc.frames:
+			if !ok {
+				t.Fatal("the client closed the connection")
+			}
+			if f.Op == opHeartbeat {
+				fc.write(t, opHeartbeatACK, nil)
+			}
+		case <-deadline:
+			done = true
+		}
+	}
+	select {
+	case <-g.conns:
+		t.Fatal("the client reconnected: the flood stalled its read loop")
+	default:
 	}
 }
