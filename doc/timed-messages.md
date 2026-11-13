@@ -96,7 +96,8 @@ from them are never touched by auto-delete.
 - **Auto-delete default**: off (the default), or a period and a scope that
   every channel without a setting of its own follows. A channel opts out with
   *Off*. Turning it on or shortening it shows the counts across all channels
-  that follow it and asks for confirmation.
+  that follow it and asks for confirmation; the confirmation says that every
+  channel without a period of its own follows it.
 
 Changing the default is the audit entry `settings.auto_delete_default_set`,
 changing the lifetime settings `settings.message_lifetimes_set`. The channel
@@ -134,7 +135,7 @@ All changes are additive ([API stability](api-stability.md)).
 |---|---|
 | `POST /api/channels/{id}/messages` | Optional `lifetime_seconds` (60 to 2,592,000, at most the community's ceiling). Refused with `400 INVALID_INPUT` when out of bounds, when lifetimes are off, or in a forum channel's root. |
 | `POST /api/channels/{id}/upload` | Optional form field `lifetime_seconds`, as above. |
-| `POST /api/channels/{id}/scheduled`, `PATCH /api/me/scheduled/{id}` | Optional `lifetime_seconds`; checked when scheduling and again when the server posts it (a refusal there turns the scheduled message into a failed draft as usual). |
+| `POST /api/channels/{id}/scheduled` | Optional `lifetime_seconds`; checked when scheduling and again when the server posts it (a refusal there turns the scheduled message into a failed draft as usual). It is fixed when scheduling: `PATCH /api/me/scheduled/{id}` does not change it (delete and schedule again). The scheduled message carries `lifetime_seconds`. |
 | Bot API `POST /api/bot/v1/channels/{id}/messages` | Optional `lifetime_seconds`, as for members: a bot posts through the same path. |
 | Incoming webhooks | Not accepted: the request follows Discord's execute format, which has no such field, and a webhook's channel is better served by auto-delete. |
 | Message payload (REST, `message_create`, `message_update`, bot gateway, outgoing webhooks) | `expires_at` (RFC 3339), present only on a message with a lifetime. |
@@ -143,10 +144,10 @@ All changes are additive ([API stability](api-stability.md)).
 | `GET /api/admin/message-settings` | Owner and Administrators: the lifetime switch and ceiling, the auto-delete default (`auto_delete_default_hours`, `auto_delete_default_scope`) and `auto_delete_next_run_at`. |
 | `PUT /api/admin/message-settings/lifetimes` | Owner and Administrators: `message_lifetimes_enabled`, `message_lifetime_max_seconds` (audited as `settings.message_lifetimes_set`). |
 | `PUT /api/admin/message-settings/auto-delete` | Owner and Administrators: `hours` (0 to 8760), `scope` (audited as `settings.auto_delete_default_set`). |
-| `POST /api/admin/message-settings/auto-delete/preview` | Owner and Administrators: the same body; the messages and files the default would delete at its next run, over all channels that follow it. |
+| `POST /api/admin/message-settings/auto-delete/preview` | Owner and Administrators: the same body; the messages and files the default would delete of what exists now, over its next runs (a run removes at most 5,000 per channel), across all channels that follow it. Files removed before are not counted. |
 | `PUT /api/admin/channels/{id}/auto-delete` | Still takes `days` (0, 1, 7, 30, 90). New: `hours` (0 to 8760; wins over `days`), `scope` (`all`, `attachments`), `use_default` (follow the community default). |
-| `POST /api/admin/channels/{id}/auto-delete/preview` | *Manage channels* (the editor of the setting; the counts are of a channel they can read anyway): the same body; the messages and files it would delete at its next run, and when that is. |
-| Channel payload | New: `auto_delete_hours` (the effective period, 0 = off), `auto_delete_scope`, `auto_delete_follows_default`. `auto_delete_days` keeps its meaning for whole days and otherwise answers the effective period rounded down to whole days, at least 1 while it is on; with the scope *Files only* it answers 0, as no message is deleted. |
+| `POST /api/admin/channels/{id}/auto-delete/preview` | *Manage channels* (the editor of the setting; the counts are of a channel they can read anyway): the same body; the messages and files it would delete of what exists now, over its next runs, and when the next run is. |
+| Channel payload | New: `auto_delete_hours` (the effective period, 0 = off), `auto_delete_scope`, `auto_delete_follows_default`. `auto_delete_days` keeps its meaning for whole days and otherwise answers the effective period rounded down to whole days, held within 1 to 90 while it is on (the range older clients and the 3.0 OpenAPI document accept: a period of a year answers 90); with the scope *Files only*, and when off, it answers 0, as no message is deleted. `auto_delete_follows_default` is never set for a conversation or its call Talk. |
 | Attachment payload | New: `width`, `height` for pictures the server measured. |
 
 ## Limits
@@ -156,4 +157,10 @@ All changes are additive ([API stability](api-stability.md)).
 - The worker deletes up to 100 ended messages per batch; a backlog after a long
   downtime is worked off in a loop of batches at start.
 - Auto-delete: 1 hour to 365 days (stored in hours); runs every ten minutes,
-  at most 25 batches of 200 messages per channel and run.
+  at most 25 batches of 200 messages (or files) per channel and run. Each
+  batch holds the channel's row and the settings with a share lock and reads
+  the setting again first, so a change stops a run at once.
+- Upgrading: a channel whose auto-delete was off by its own setting (its last
+  `channel.auto_delete_set` entry) stays off; every other channel without a
+  period follows the community default, which is off until set
+  ([upgrade notes](upgrade.md#messages-with-a-lifetime-auto-delete-in-hours-migration-0105)).

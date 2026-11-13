@@ -262,16 +262,37 @@ anonymous polls that existed before 1.2 the same way (see
 
 ## Per-channel auto-delete
 
-`channels.auto_delete_days` (0, 1, 7, 30 or 90; a check constraint also
-forbids it on direct messages) is read by `chat.AutoDeleter`
+`channels.auto_delete_hours` (NULL follows `instance_settings.auto_delete_default_hours`,
+0 is off, up to 8760) and `auto_delete_scope` (`all` or `attachments`; a check
+constraint forbids a period on conversations and their call Talks, migration
+0105) are read by `channels.AutoDeleter`
 ([`internal/chat/channels/auto_delete.go`](../internal/chat/channels/auto_delete.go)), a
-background loop started with the router. Each pass lists the channels that
-opted in and works through each in transactions of at most 200 messages:
-lock the expired rows (`FOR UPDATE ... SKIP LOCKED`, which also holds off
-concurrent replies and uploads, so the list of attachment keys is complete),
-collect their media keys, delete the rows, then delete the objects and
-broadcast `message_delete`. The setting is re-checked inside every batch.
-The audit entry per run is written by the sweeper itself.
+background loop started with the router that runs on whole multiples of ten
+minutes. Each pass lists the channels with an effective period and works
+through each in transactions of at most 200 messages (or files): share-lock
+the channel row and the settings, read the effective setting again in a
+statement of its own (a change stops the run), lock the expired rows
+(`FOR UPDATE ... SKIP LOCKED`, which also holds off concurrent replies and
+uploads, so the list of attachment keys is complete), collect their media
+keys, delete the rows, then delete the objects and broadcast
+`message_delete`. With the scope `attachments` the media rows are marked
+removed instead (`is_deleted`, the message stays) and `message_update` is
+broadcast. The audit entry per run is written by the sweeper itself.
+
+## Messages with a lifetime
+
+`messages.expires_at` is set at the insert from the same clock reading as
+`created_at` and never changes (a trigger refuses it; checks keep it within
+60 seconds to 30 days and off pinned messages). `expiry.Sweeper`
+([`internal/chat/expiry/sweeper.go`](../internal/chat/expiry/sweeper.go))
+sleeps until the next end (`min(expires_at)` through a partial index); the
+message door wakes it after the commit of a message with an earlier end
+(`messages.OnExpiry`). It deletes each ended message in a transaction of its
+own through `messages.DeleteExpired`, the path of an own delete
+(`removeLocked`: the author's row, then the message's, then the end read
+again), then deletes the objects, broadcasts `message_delete` and recounts.
+Reads do not wait for it: `core.LiveMessages` and `core.LiveSQL` leave out a
+row whose end has passed in every read (doc/timed-messages.md).
 
 ## Forwarding and saved messages
 
