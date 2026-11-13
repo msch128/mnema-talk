@@ -29,6 +29,9 @@ function writeChoices(choices: Record<string, number>) {
   }
 }
 
+/** The key a thread's lifetime choice is kept under, apart from its channel's. */
+export const threadLifetimeKey = (threadId: string) => `thread:${threadId}`
+
 export const useLifetimeStore = defineStore('lifetime', () => {
   const features = useServerFeaturesStore()
   const enabled = ref(false)
@@ -64,7 +67,7 @@ export const useLifetimeStore = defineStore('lifetime', () => {
     return loaded
   }
 
-  /** The lifetime chosen for a conversation, 0 for none; a choice the community no longer allows counts as none. */
+  /** The lifetime chosen for a conversation or a thread (threadLifetimeKey), 0 for none; a choice the community no longer allows counts as none. */
   function forChannel(channelId: string | undefined | null): number {
     if (!channelId || !available.value) return 0
     const s = choices.value[channelId] ?? 0

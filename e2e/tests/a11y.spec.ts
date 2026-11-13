@@ -47,6 +47,16 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
   await expect(page.getByRole('menu')).toBeVisible()
   await expectNoViolations(page, 'the composer timer')
   await page.keyboard.press('Escape')
+  // The thread composer has the same timer, remembered for the thread on its own.
+  const hello = page.locator('[data-msg-id]', { hasText: 'Hello' }).first()
+  await hello.hover()
+  await hello.getByTestId('msg-open-thread').click()
+  const threadTimer = page.getByRole('complementary').getByTestId('lifetime-button')
+  await threadTimer.click()
+  await page.getByRole('menuitem', { name: '1 Std.' }).click()
+  await expect(page.getByRole('complementary').getByTestId('lifetime-chip')).toHaveText('1 Std.')
+  await expectNoViolations(page, 'the thread composer timer')
+  await page.getByTestId('thread-close').click()
 
   await page.getByRole('article').filter({ hasText: 'Hello' }).click({ button: 'right' })
   await expect(page.getByRole('menu')).toBeVisible()

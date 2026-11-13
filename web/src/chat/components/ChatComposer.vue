@@ -221,7 +221,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
-      <LifetimeButton v-if="chatStore.activeChannel && canSend" :channel-id="chatStore.activeChannel.id" :disabled="sending" />
+      <LifetimeButton v-if="chatStore.activeChannel && canSend" :memory-key="chatStore.activeChannel.id" :disabled="sending" />
 
       <!-- Send Button -->
       <button

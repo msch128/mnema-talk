@@ -2,7 +2,8 @@
 // The composer's timer: one calm icon button that opens the lifetimes (Off,
 // the presets, Custom). The chosen lifetime shows in the button itself, next
 // to the send button, and stays for this conversation on this device
-// (stores/lifetime.ts). Nothing shows while the community allows none.
+// (stores/lifetime.ts), and for each thread on its own. Nothing shows while
+// the community allows none.
 import { computed, ref, watch } from 'vue'
 import { Timer, Check } from '@lucide/vue'
 import type { ContextMenuItem } from '../../shared/components/menuTypes'
@@ -14,7 +15,9 @@ import { LIFETIME_PRESETS, lifetimeLabel, validLifetime } from '../../shared/lib
 import { t } from '../../i18n'
 
 const props = defineProps({
-  channelId: { type: String, required: true },
+  // What the choice is remembered for: a channel or conversation id, or
+  // "thread:<id>" for a thread (lifetimeKey).
+  memoryKey: { type: String, required: true },
   disabled: { type: Boolean, default: false }
 })
 
@@ -23,7 +26,7 @@ const features = useServerFeaturesStore()
 // Read once the server says it knows lifetimes; a change comes with channels_changed.
 watch(() => features.has('messages.lifetime'), known => { if (known) void lifetimes.ensure() }, { immediate: true })
 
-const chosen = computed(() => lifetimes.forChannel(props.channelId))
+const chosen = computed(() => lifetimes.forChannel(props.memoryKey))
 const button = ref<HTMLElement | null>(null)
 const open = ref(false)
 const custom = ref(false)
@@ -33,9 +36,9 @@ const label = computed(() => (chosen.value ? t('lifetime.chosen', { time: lifeti
 const mark = (s: number) => (chosen.value === s ? { icon: Check } : {})
 const items = computed((): ContextMenuItem[] => [
   { type: 'label', label: t('lifetime.menuTitle') },
-  { label: t('lifetime.off'), ...mark(0), action: () => lifetimes.choose(props.channelId, 0) },
+  { label: t('lifetime.off'), ...mark(0), action: () => lifetimes.choose(props.memoryKey, 0) },
   ...LIFETIME_PRESETS.filter(s => validLifetime(s, lifetimes.maxSeconds)).map((s): ContextMenuItem => ({
-    label: lifetimeLabel(s), ...mark(s), action: () => lifetimes.choose(props.channelId, s)
+    label: lifetimeLabel(s), ...mark(s), action: () => lifetimes.choose(props.memoryKey, s)
   })),
   { label: t('lifetime.custom'), action: () => { custom.value = true } },
   { type: 'separator' },
@@ -68,7 +71,7 @@ const items = computed((): ContextMenuItem[] => [
       v-if="custom"
       :initial="chosen"
       :max="lifetimes.maxSeconds"
-      @pick="s => { lifetimes.choose(channelId, s); custom = false }"
+      @pick="s => { lifetimes.choose(memoryKey, s); custom = false }"
       @close="custom = false"
     />
   </template>

@@ -39,8 +39,8 @@ device) until it is set to *Off*. The clock starts when the message is sent,
 not when somebody reads it. The shortest lifetime is 60 seconds, the longest 30
 days or less when the community set a lower ceiling. Lifetimes work in
 channels, Talk chats, conversations and group conversations, and in threads:
-the web app's timer sits in the composer of the channel or conversation, and a
-reply in a thread takes a lifetime through the API (bots, scripts). Files sent
+the thread composer has the same timer, and a thread keeps its choice apart
+from its channel's. Files sent
 with the message go with it. A message written offline keeps its lifetime in
 the outbox; the lifetime starts when the server stores it.
 

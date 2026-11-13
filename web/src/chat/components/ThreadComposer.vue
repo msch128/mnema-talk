@@ -9,6 +9,9 @@ import AttachmentTray from './AttachmentTray.vue'
 import EmojiButton from '../../shared/components/EmojiButton.vue'
 import MarkdownHelp from '../../shared/components/MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import LifetimeButton from './LifetimeButton.vue'
+import { threadLifetimeKey, useLifetimeStore } from '../../stores/lifetime'
+import { lifetimeLabel } from '../../shared/lib/lifetime'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
 import { useComposerFiles } from '../composables/useComposerFiles'
@@ -44,6 +47,10 @@ const tray = useAttachmentTray(() => (chatStore.activeThread && chatStore.active
   : null))
 const { attachFiles, onPaste, onPick } = useComposerFiles({ add: tray.add, canAttach: () => props.canAttach, busy: () => props.sending })
 defineExpose({ tray, attachFiles, focus: () => textAreaEl.value?.focus() })
+// A thread keeps a lifetime of its own, apart from its channel's.
+const lifetimes = useLifetimeStore()
+const lifetimeKey = computed(() => (chatStore.activeThread ? threadLifetimeKey(chatStore.activeThread.id) : ''))
+const lifetime = computed(() => lifetimes.forChannel(lifetimeKey.value))
 
 function handleKeyDown(e: KeyboardEvent) {
   handleComposerKeydown(e, { consumers: [assist.onKeydown, k => tray.onKeydown(k, text.value)], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
@@ -114,6 +121,8 @@ function handleKeyDown(e: KeyboardEvent) {
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
+      <LifetimeButton v-if="lifetimeKey && canSend" :memory-key="lifetimeKey" :disabled="sending" />
+
       <button
         @click="emit('send')"
         :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending"
@@ -123,6 +132,7 @@ function handleKeyDown(e: KeyboardEvent) {
         <ArrowUp class="w-4 h-4" />
       </button>
     </div>
+    <p v-if="lifetime" class="mt-1 truncate px-1 text-xs text-mnema-tertiary" v-tooltip="$t('lifetime.help', { time: lifetimeLabel(lifetime) })" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</p>
     <p v-if="looksLikeCommand" data-testid="thread-command-hint" role="status" class="mt-1 px-1 text-xs text-mnema-tertiary">{{ $t('thread.commandHint') }}</p>
   </div>
 </template>
