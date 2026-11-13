@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { api } from '../../shared/lib/api'
 import { decodeChatMessageSettingsView, type ChatMessageSettingsView } from '../../types/rest'
 import { normalise, useSettingsDraft } from '../../shared/composables/useSettingsDraft'
+import { saveKeys } from '../../shared/composables/draftGuard'
 import { MAX_AUTO_DELETE_HOURS, UNIT_HOURS, confirmAutoDelete, periodLabel, type AutoDeleteScope, type AutoDeleteUnit } from '../../shared/lib/autoDelete'
 import { previewDefaultAutoDelete } from '../lib/autoDeletePreview'
 import { timeShort } from '../../shared/lib/time'
@@ -53,12 +54,14 @@ async function save() {
   }
   await form.save()
 }
+// Enter and the save shortcut ask with the counts too, as the Save button does.
+const onKeydown = saveKeys(save)
 const field = 'rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm text-mnema-text outline-hidden focus:border-mnema-accent'
 </script>
 
 <template>
   <div class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="auto-delete-default">
-    <form @submit.prevent="save" @keydown="form.onKeydown">
+    <form @submit.prevent="save" @keydown="onKeydown">
       <div class="space-y-3 p-4">
         <div class="text-sm font-semibold text-mnema-text">{{ $t('admin.messages.defaultTitle') }}</div>
         <p class="text-xs text-mnema-tertiary">{{ $t('admin.messages.defaultHint') }}</p>
