@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect } from '../fixtures'
 import type { Combo } from './matrix'
-import { IMAGE, type World } from './seed'
+import { IMAGE, LONG_WORD, type World } from './seed'
 import { type Socket, joinTalk, seatParticipants } from './talk'
 
 // Every view and state the sweep audits, as a table: a name, whether it runs
@@ -255,9 +255,10 @@ const otherScenes: Scene[] = [
   {
     name: 'forum post',
     reach: async (s) => {
-      await open(s.page, `/c/${s.world.forum.id}`)
-      await s.page.getByTestId('forum-post-card').first().click()
-      await expect(s.page.getByTestId('forum-post-header')).toBeVisible()
+      // The seeded post, opened by its address: a click on a card of the list
+      // could land while the list was still being redrawn.
+      await open(s.page, `/c/${s.world.forum.id}/t/${s.world.forum.postId}`)
+      await expect(s.page.getByTestId('forum-post-header')).toContainText(LONG_WORD.slice(0, 20))
     },
   },
   { name: 'wiki page', smoke: true, reach: async (s) => { await open(s.page, `/wiki/${s.world.wikiSlug}`); await expect(s.page.getByTestId('wiki-title')).toBeVisible() } },

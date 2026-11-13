@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """scripts/nightly-gate.py: a red, re-run, stale or missing night blocks a release."""
 from contextlib import redirect_stdout
+from datetime import timedelta
 import importlib.util
 import io
 import json
@@ -91,6 +92,27 @@ class Verdicts(unittest.TestCase):
         status, out, _, _ = gate(all_green(store_trace=(young, [])))
         self.assertEqual(status, 0)
         self.assertIn('store-trace.yml has no completed scheduled run yet; it was added 16 h ago', out)
+
+    def test_a_new_sweep_with_pull_request_runs_only_passes_while_young(self):
+        # clip-sweep.yml also runs on pull requests: those runs are no night.
+        young = workflow(created='2026-11-13T20:00:00Z')
+        prs = [run(2, '2026-11-14T01:00:00Z', 'failure', event='pull_request', branch='fix'),
+               run(1, '2026-11-13T21:00:00Z', event='pull_request', branch='fix')]
+        status, out, _, _ = gate(all_green(clip_sweep=(young, prs)))
+        self.assertEqual(status, 0)
+        self.assertIn('clip-sweep.yml has no completed scheduled run yet; it was added 16 h ago', out)
+        status, out, _, _ = gate(all_green(clip_sweep=(workflow(), prs)))
+        self.assertEqual(status, 1)
+        self.assertIn('clip-sweep.yml has no completed scheduled run on main although it was added', out)
+
+    def test_a_night_behind_more_than_a_page_of_pull_request_runs_still_decides(self):
+        prs = [run(300 - i, '2026-11-14T10:00:00Z', event='pull_request', branch='fix') for i in range(150)]
+        status, out, _, _ = gate(all_green(clip_sweep=(workflow(), prs + [run(150, '2026-11-14T04:11:00Z')])))
+        self.assertEqual(status, 0, out)
+        red = [run(150, '2026-11-14T04:11:00Z', 'failure')]
+        status, out, _, _ = gate(all_green(clip_sweep=(workflow(), prs + red)))
+        self.assertEqual(status, 1)
+        self.assertIn('clip-sweep.yml: the last scheduled run concluded failure', out)
 
     def test_no_run_at_all_blocks_once_the_first_nights_should_have_run(self):
         status, out, _, _ = gate(all_green(store_trace=(workflow(), [])))
@@ -227,6 +249,16 @@ class ScheduledWorkflows(unittest.TestCase):
         found = schedules()
         for name in ng.GATED:
             self.assertTrue(any(daily(c) for c in found[name]), name)
+
+    def test_release_yml_reads_every_run_of_the_last_49_hours(self):
+        # One page of 100 runs would let pull request runs push the deciding night off it.
+        release = (ROOT / '.github' / 'workflows' / 'release.yml').read_text()
+        fetch = re.search(r'gh api --paginate --slurp "[^"]*/actions/workflows/\$wf/runs\?([^"]*)"', release)
+        self.assertIsNotNone(fetch, 'release.yml must page through the runs')
+        self.assertIn('created=>=$since', fetch.group(1))
+        hours = re.search(r"since=\$\(date -u -d '-(\d+) hours'", release)
+        self.assertIsNotNone(hours)
+        self.assertGreater(timedelta(hours=int(hours.group(1))), ng.MAX_AGE)
 
     def test_release_yml_judges_exactly_the_gated_list(self):
         release = (ROOT / '.github' / 'workflows' / 'release.yml').read_text()

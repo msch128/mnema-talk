@@ -530,6 +530,7 @@ describe('server ICE configuration initialization', () => {
     // The real call cannot seal in jsdom (no frame transform) and would refuse the join.
     ;(await import('../../lib/media/api')).installMediaCall(permissiveMediaCall)
     const chat = useChatStore()
+    chat.isConnected = true
     chat.sendWSEvent = vi.fn()
     const fetch = vi.mocked(globalThis.fetch)
     fetch.mockRejectedValueOnce(new Error('offline'))
@@ -554,6 +555,7 @@ describe('server ICE configuration initialization', () => {
     // The real call cannot seal in jsdom (no frame transform) and would refuse the join.
     ;(await import('../../lib/media/api')).installMediaCall(permissiveMediaCall)
     useChatStore().sendWSEvent = vi.fn()
+    useChatStore().isConnected = true
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(null, { status: 503 }))
     const join = isolated.joinVoiceChannel('local-only')
     await grantMic()

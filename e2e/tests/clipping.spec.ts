@@ -19,8 +19,9 @@ import { fakeDisplayMedia, routeSocket } from './clipping/talk'
 // cases go on clipping/exceptions.ts with a reason.
 //
 // The app ships one theme (style.css @theme, color-scheme dark), so there is no
-// theme axis. CLIP_SWEEP=full runs the whole matrix (its own CI job, sharded
-// like the e2e jobs); without it the smoke subset runs with the other specs.
+// theme axis. CLIP_SWEEP=full runs the whole matrix (its own workflow,
+// clip-sweep.yml, sharded like the e2e jobs, nightly and on pull requests that
+// touch web/ or e2e/); without it the smoke subset runs with the other specs.
 
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
@@ -116,7 +117,8 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   expect((await apiFetch(mp, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   await mp.goto('/')
   const welcome = mp.getByRole('dialog')
-  if (await welcome.isVisible({ timeout: 10_000 }).catch(() => false)) await audit(mp, info, 'welcome flow', report)
+  // isVisible answers at once (it takes no timeout): wait for the dialog instead.
+  if (await welcome.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)) await audit(mp, info, 'welcome flow', report)
   else report.push({ scene: 'welcome flow', findings: [], unreached: 'the welcome flow did not open' })
   await member.close()
 }

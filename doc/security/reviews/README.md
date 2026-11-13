@@ -37,6 +37,8 @@ audit.
 | [bot-platform](2026-11/bot-platform.md) | the bot platform | manifest install, message components and modals, interactions, both SDKs and the release packaging; seven rounds, every finding fixed in the same branch and checked by reverting its fix |
 | [bot-platform-web](2026-11/bot-platform-web.md) | the bot platform | the web UI: the add-bot flow, components, selects, forms and their states, at six viewports in two browsers; two rounds |
 | [webhook-call-chat](2026-11/webhook-call-chat.md) | #803 | an outgoing webhook of a conversation's call Talk heard its call chat (releases up to 3.0.13; fixed in 3.1.0): the routes, the queue insert and the delivery each refuse a private channel |
+| [819](2026-11/819.md) | #819 | a Talk join sent before the realtime socket was up was dropped and the call never connected: the join waits for the socket, backs out with its microphone released, and a reconnect sends no resume beside it; two findings fixed in the same pull request |
+| [clip-sweep](2026-11/clip-sweep.md) | #820 | the full clipping sweep moves out of ci.yml into a nightly workflow that the release gate judges; the gate reads every run of the last 49 hours, so pull request runs cannot push the deciding night off a page; one round |
 
 ## 2026-11: defect hunt on 3.0.8
 
