@@ -11,20 +11,17 @@ import (
 
 // announceRemoved sends message_update for the message a removed file was
 // attached to, so open clients show "File removed" at once instead of after a
-// reload. A file of no message (an avatar, a cover) or of a message that is
-// gone sends nothing.
+// reload. A file of no message (an avatar, a cover), of a message that is
+// gone, or of one whose lifetime has ended sends nothing: an ended message is
+// never shown again.
 func (h *Handler) announceRemoved(ctx context.Context, mediaID uuid.UUID) {
-	if h.Events == nil {
-		return
-	}
-	var messageID *uuid.UUID
-	if err := h.DB.QueryRow(ctx, `SELECT message_id FROM media WHERE id = $1`, mediaID).Scan(&messageID); err != nil || messageID == nil {
-		return
-	}
-	msg, err := messages.GetMessage(ctx, h.DB, *messageID)
+	// MessageSelect reads only live messages: an ended one is left out.
+	msgs, err := messages.QueryMessages(ctx, h.DB, messages.MessageSelect+` WHERE m.id = (SELECT message_id FROM media WHERE id = $1)`, mediaID)
 	if err != nil {
-		slog.Debug("media: reload message of a removed file", "message", *messageID, "err", err)
+		slog.Warn("media: reload the message of a removed file", "media", mediaID, "err", err)
 		return
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
+	for i := range msgs {
+		h.Events.BroadcastChannel(msgs[i].ChannelID, (*core.MessageUpdate)(&msgs[i]))
+	}
 }
