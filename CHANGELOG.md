@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.11](https://github.com/msch128/mnema-talk/compare/v3.0.10...v3.0.11) (2026-11-13)
+
+
+### Bug Fixes
+
+* an account deletion aborted by the database as a deadlock is run again ([4178b72](https://github.com/msch128/mnema-talk/commit/4178b7269e6abe96d0b89071fb699097d657f2e2))
+
+
+### Documentation
+
+* the known open defects in SECURITY.md, their finding files and four review reports ([4178b72](https://github.com/msch128/mnema-talk/commit/4178b7269e6abe96d0b89071fb699097d657f2e2))
+
 ## [3.0.10](https://github.com/msch128/mnema-talk/compare/v3.0.9...v3.0.10) (2026-11-12)
 
 
