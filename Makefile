@@ -102,6 +102,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_openapi_diff.py
 	python3 scripts/tests/test_security_floor.py
 	python3 scripts/tests/test_release_checks.py
+	python3 scripts/tests/test_nightly_gate.py
 	python3 scripts/tests/test_gate_tool_failure.py
 	python3 scripts/tests/test_repo_guard_skip.py
 	node --test scripts/bench-compare.test.mjs

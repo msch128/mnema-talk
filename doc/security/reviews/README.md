@@ -69,6 +69,7 @@ with its later rounds appended.
 |---|---|
 | [h-l8-08](2026-11-hunt/h-l8-08.md) | the SFU vets a client's answer against its own offer (media sections, one stream per section) before the connection reads it; two rounds |
 | [h-l8-07](2026-11-hunt/h-l8-07.md) | caps on RTCP streams nothing reads on a media connection; four rounds |
+| [h-l8-07-test-change](2026-11-hunt/h-l8-07-test-change.md) | a test of the stream caps that the coordinator corrected just before the merge (a rare stray buffered stream), reviewed after the release: right as it is |
 | [h-l8-09](2026-11-hunt/h-l8-09.md) | memory kept per subscription switch: the connection is renewed at a sender cap, a resume budget per publisher and source; three rounds |
 | [h-l8-03](2026-11-hunt/h-l8-03.md), [h-l8-04-06](2026-11-hunt/h-l8-04-06.md) | the bandwidth estimator forgets a stopped sender; a hub map entry left at zero; a counter for dropped presence audit entries |
 | [h-l8-02-h-c-01-03](2026-11-hunt/h-l8-02-h-c-01-03.md) | the TURN relay's allocation budget per member; mention kinds next to `@all` (the field `direct_mentions`); an event comment's delete dialog; two rounds |
@@ -84,7 +85,9 @@ with its later rounds appended.
 | [h-l7-04-05](2026-11-hunt/h-l7-04-05.md), [h-l7-08](2026-11-hunt/h-l7-08.md) | audit entries inside the change's transaction; answers read inside it; no background job after the shutdown drain began |
 | [h-l10-01-04](2026-11-hunt/h-l10-01-04.md), [h-l10-05](2026-11-hunt/h-l10-05.md) | account erasure and export: what was left out; nothing new may name an erased account (migration 0103), with a dump and restore comparison |
 | [h-l11-01-03](2026-11-hunt/h-l11-01-03.md) | the security floor of the desktop bundle: the trailer is read the same way by the pull request check and the release; Go reads signed documents as the desktop clients do; three rounds |
+| [h-l10-06](2026-11-hunt/h-l10-06.md) | an account deletion aborted by the database as a deadlock with the member's own write is retried (found by the integration review, fixed after 3.0.10) |
 | [follow-ups](2026-11-hunt/follow-ups.md) | event comments and event texts go through automod; reactions compared in one emoji form |
+| [release-gate](2026-11-hunt/release-gate.md) | a red, stale or missing night of the deep sweeps blocks the release, with one deliberate override; more paths in CODEOWNERS; the known open defects named in SECURITY.md; two rounds |
 | [bundle-integration](2026-11-hunt/bundle-integration.md) | the collection branch as a whole: every merge with a hand resolution, the coordinator's own commits, interactions between fixes |
 
 Not kept from the hardening run (lost with a temporary directory before they were copied): the
