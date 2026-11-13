@@ -39,6 +39,7 @@ audit.
 | [webhook-call-chat](2026-11/webhook-call-chat.md) | #803 | an outgoing webhook of a conversation's call Talk heard its call chat (releases up to 3.0.13; fixed in 3.1.0): the routes, the queue insert and the delivery each refuse a private channel |
 | [816](2026-11/816.md) | #816 | the flaky ws, sfu and macOS stage tests fixed at their cause: each stated cause checked against the code, two reproduced on main, and each test shown to fail again when the product behaviour it guards is broken |
 | [824](2026-11/824.md) | #824 | each lower camera layer encodes its own copy of the capture, so a bandwidth-cut best layer no longer shrinks the thumbnail; the clones' lifecycle (camera light), the frame encryption of their lines, and the e2e noise filter turned off from the fixture |
+| [829](2026-11/829.md) | #829 | a bot can be given access to every channel in one step: the install and settings endpoints under the bot invariant, the snapshot rule that keeps private channels and categories hidden from such a bot, replace semantics when switching back; three rounds, the findings of the first two fixed in the same pull request |
 
 ## 2026-11: defect hunt on 3.0.8
 
