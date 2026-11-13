@@ -102,6 +102,9 @@ const inConversation = computed(() => chatStore.isDm(chatStore.activeChannel?.id
 // Phones: the channel list is a drawer, the thread and member list fill the screen.
 const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
+// A window that shrinks into the phone layout (the desktop client at its minimum) would turn an open
+// member list into a full-screen panel over the chat and the button that opens the channels.
+watch(isCompact, compact => { if (compact) chatStore.showMemberList = false })
 watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
 watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.dialogOpen) openSettings('audio') })
