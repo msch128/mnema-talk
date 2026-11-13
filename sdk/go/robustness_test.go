@@ -182,7 +182,9 @@ func TestAnInteractionFloodBeyondTheBoundIsResumedNotDroppedOrGrown(t *testing.T
 }
 
 func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing.T) {
-	g := newFakeGateway(t, 200)
+	// A long interval: no heartbeat of the client's own is due during the
+	// test, so the outcome does not depend on how fast the machine is.
+	g := newFakeGateway(t, 41250)
 	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
 	block := make(chan struct{})
 	t.Cleanup(func() { close(block) })
@@ -196,26 +198,14 @@ func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing
 	fc := g.next(t)
 	fc.expect(t, opIdentify)
 	fc.ready(t, "s1")
-	// Far more events than the queue holds, then heartbeats answered for five
-	// intervals: a client that stopped reading would miss the ACKs and drop
-	// the connection as a zombie.
+	// Far more events than the queue holds, then a heartbeat request (op 1)
+	// behind them: the client answers it only once its read loop has read
+	// every event before it, which a loop blocked by the full queue never does.
 	for i := int64(0); i < 5000; i++ {
 		fc.dispatch(t, i+2, "MESSAGE_CREATE", map[string]any{"id": "m", "channel_id": "c", "content": "x"})
 	}
-	deadline := time.After(time.Second)
-	for done := false; !done; {
-		select {
-		case f, ok := <-fc.frames:
-			if !ok {
-				t.Fatal("the client closed the connection")
-			}
-			if f.Op == opHeartbeat {
-				fc.write(t, opHeartbeatACK, nil)
-			}
-		case <-deadline:
-			done = true
-		}
-	}
+	fc.write(t, opHeartbeat, nil)
+	fc.expect(t, opHeartbeat)
 	select {
 	case <-g.conns:
 		t.Fatal("the client reconnected: the flood stalled its read loop")
