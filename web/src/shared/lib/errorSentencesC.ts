@@ -47,6 +47,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['the confirmation e-mail could not be sent', 'emailSendFailed', []],
   ['the connection test could not be set up', 'srvTheConnectionTestCouldNot'],
   ['the download can only be started from this site', 'exportSameSite', []],
+  ['the download cannot be prefetched', 'exportPrefetch', []],
   ['the emoji file exceeds %d KiB', 'srvTheEmojiFileExceedsKib'],
   ['the file cannot be read', 'fileUnreadable', []],
   ['the file must be between 1 byte and %d KiB', 'emojiSize', ['size']],

@@ -469,6 +469,7 @@
   "the confirmation e-mail could not be sent",
   "the connection test could not be set up",
   "the download can only be started from this site",
+  "the download cannot be prefetched",
   "the emoji file exceeds %d KiB",
   "the file cannot be read",
   "the file must be between 1 byte and %d KiB",

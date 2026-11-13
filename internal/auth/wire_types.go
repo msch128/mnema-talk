@@ -247,9 +247,11 @@ type ExportStatus struct {
 	// State is none, pending, ready, failed, downloaded or expired.
 	State       string     `json:"state" enums:"none,pending,ready,failed,downloaded,expired"`
 	RequestedAt *time.Time `json:"requested_at,omitempty" binding:"optional" format:"date-time"`
-	// ExpiresAt is when a ready export stops being downloadable.
+	// ExpiresAt is when a ready export stops being downloadable (after a download, the end of the hour in which it can be downloaded again).
 	ExpiresAt *time.Time `json:"expires_at,omitempty" binding:"optional" format:"date-time"`
-	SizeBytes int64      `json:"size_bytes"`
+	// DownloadedAt is when the export was first downloaded completely.
+	DownloadedAt *time.Time `json:"downloaded_at,omitempty" binding:"optional" format:"date-time"`
+	SizeBytes    int64      `json:"size_bytes"`
 	// NextRequestAt is when a new export may be requested; omitted if now.
 	NextRequestAt *time.Time `json:"next_request_at,omitempty" binding:"optional" format:"date-time"`
 }

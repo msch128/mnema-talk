@@ -226,6 +226,7 @@ export function isAuthExportRequest(value: unknown): value is AuthExportRequest 
 export const decodeAuthExportRequest = decoder("auth.ExportRequest", isAuthExportRequest)
 
 export type AuthExportStatus = {
+  downloaded_at?: string
   expires_at?: string
   next_request_at?: string
   requested_at?: string
@@ -235,6 +236,7 @@ export type AuthExportStatus = {
 
 export function isAuthExportStatus(value: unknown): value is AuthExportStatus {
   return isRecord(value)
+    && (!hasOwn(value, "downloaded_at") || isTimestamp(value["downloaded_at"]))
     && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (!hasOwn(value, "next_request_at") || isTimestamp(value["next_request_at"]))
     && (!hasOwn(value, "requested_at") || isTimestamp(value["requested_at"]))
