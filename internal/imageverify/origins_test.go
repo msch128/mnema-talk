@@ -80,12 +80,14 @@ func TestVerifyRefusesAnOwnersSignatureOverTheOtherOwnersProvenance(t *testing.T
 }
 
 func TestVerifyRefusesAThirdOwner(t *testing.T) {
-	for _, owner := range []string{"mnemaxyz", "someone-else", "msch128-fork", "mnema-xyz-fork"} {
-		t.Run(owner, func(t *testing.T) {
+	// Other owners, and the two owners under the other one's repository name
+	// (mnema-xyz/mnema-talk never released; msch128/talk is not ours).
+	for _, repo := range []string{"mnemaxyz/talk", "mnemaxyz/mnema-talk", "someone-else/mnema-talk", "msch128-fork/mnema-talk", "mnema-xyz-fork/talk", "mnema-xyz/mnema-talk", "msch128/talk", "mnema-xyz/talk-fork"} {
+		t.Run(repo, func(t *testing.T) {
 			f := newFixture(t)
-			source := "https://github.com/" + owner + "/mnema-talk"
+			source := "https://github.com/" + repo
 			rel := pushBuiltBy(f, "1.0", source)
-			f.Sign(rel, "https://github.com/"+owner+"/mnema-talk/.github/workflows/release.yml@refs/heads/main", rel.Digest)
+			f.Sign(rel, source+"/.github/workflows/release.yml@refs/heads/main", rel.Digest)
 			expectUntrusted(t, f, "1.0", "no valid signature")
 		})
 	}
