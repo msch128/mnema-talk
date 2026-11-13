@@ -192,6 +192,11 @@ func TestAnOutgoingWebhookDoesNotHearACallChat(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.a.send(f.dmFixture.alice, talk, "private words")
+	// The row would be written in the message's own transaction: counting it
+	// now cannot miss a delivery that would only come with the next poll.
+	if n := f.a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE webhook_id = $1`, hook.ID); n != 0 {
+		t.Fatalf("%d queue rows for a webhook of a call chat", n)
+	}
 	rc.none(t)
 }
 

@@ -1,0 +1,225 @@
+package mnema
+
+// What a hostile or broken server can send must not exhaust the bot's memory,
+// grow its goroutines without bound or pause every route for weeks.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
+)
+
+func TestAFrameAboveTheReadLimitEndsTheConnectionUndelivered(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages})
+	got := make(chan int, 1)
+	c.OnDispatch(func(_ context.Context, name string, data json.RawMessage) {
+		if name == "BIG" {
+			got <- len(data)
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	big := `{"op":0,"t":"BIG","s":2,"d":"` + strings.Repeat("x", MaxGatewayFrame) + `"}`
+	// The client may close while the frame is still being written.
+	_ = fc.ws.WriteMessage(websocket.TextMessage, []byte(big))
+	// The client drops the connection and comes back on a new one.
+	g.next(t)
+	select {
+	case n := <-got:
+		t.Fatalf("a %d-byte dispatch was delivered", n)
+	default:
+	}
+}
+
+func TestADispatchFloodWithASlowHandlerKeepsGoroutinesBounded(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	c.OnMessageCreate(func(ctx context.Context, _ *Message) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	before := runtime.NumGoroutine()
+	// Written from a goroutine so that a client that stops reading cannot
+	// block the test itself.
+	go func() {
+		for i := int64(0); i < 2000; i++ {
+			if fc.ws.WriteJSON(map[string]any{"op": 0, "t": "MESSAGE_CREATE", "s": i + 2, "d": map[string]any{"id": "m", "channel_id": "c", "content": "x"}}) != nil {
+				return
+			}
+		}
+	}()
+	time.Sleep(500 * time.Millisecond)
+	if grown := runtime.NumGoroutine() - before; grown > dispatchQueueFactor+10 {
+		t.Fatalf("goroutines grew by %d with one blocked handler", grown)
+	}
+}
+
+func TestARetryAfterBeyondTheCapFailsAtOnceAndPausesNothing(t *testing.T) {
+	n := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n++
+		if n == 1 {
+			writeJSON(w, http.StatusTooManyRequests, map[string]any{"message": "You are being rate limited.", "retry_after": 3e6, "global": true})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"id": "u"})
+	}))
+	t.Cleanup(srv.Close)
+	r, err := NewREST(Options{BaseURL: srv.URL, Token: testToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err = r.Me(ctx)
+	var re *RESTError
+	if !errors.As(err, &re) || re.Status != http.StatusTooManyRequests || re.RetryAfter < MaxRetryAfter {
+		t.Fatalf("first request: %v", err)
+	}
+	if _, err := r.Channels(ctx); err != nil {
+		t.Fatalf("an unrelated later request: %v", err)
+	}
+	if n != 2 {
+		t.Fatalf("requests seen: %d, want 2", n)
+	}
+}
+
+func TestRetryAfterSecondsThatDoNotFitADurationAreCapped(t *testing.T) {
+	if got := seconds(1e300); got != time.Duration(1<<63-1) {
+		t.Fatalf("seconds(1e300) = %v", got)
+	}
+	if got := seconds(-1); got != 0 {
+		t.Fatalf("seconds(-1) = %v", got)
+	}
+}
+
+func TestAnInteractionIsNeverShedEvenWhenTheQueueIsFull(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	c.OnMessageCreate(func(ctx context.Context, _ *Message) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	got := make(chan string, 1)
+	c.OnInteraction(func(_ context.Context, i *Interaction) { got <- i.ID })
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	n := int64(dispatchQueueFactor + 50)
+	for i := int64(0); i < n; i++ {
+		fc.dispatch(t, i+2, "MESSAGE_CREATE", map[string]any{"id": "m", "channel_id": "c", "content": "x"})
+	}
+	fc.dispatch(t, n+2, "INTERACTION_CREATE", map[string]any{"id": "i-1", "token": "t", "type": 2,
+		"member": map[string]any{"user": map[string]any{"id": "u1", "username": "max"}}, "data": map[string]any{"name": "ping"}})
+	time.Sleep(100 * time.Millisecond)
+	close(block)
+	if id := waitFor(t, got, "the interaction behind a full queue"); id != "i-1" {
+		t.Fatalf("interaction = %q", id)
+	}
+}
+
+func TestAnInteractionFloodBeyondTheBoundIsResumedNotDroppedOrGrown(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	c.OnInteraction(func(ctx context.Context, _ *Interaction) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	before := runtime.NumGoroutine()
+	go func() {
+		for i := int64(0); i < 20000; i++ {
+			if fc.ws.WriteJSON(map[string]any{"op": 0, "t": "INTERACTION_CREATE", "s": i + 2, "d": map[string]any{"id": "i", "token": "t", "type": 2,
+				"member": map[string]any{"user": map[string]any{"id": "u1", "username": "max"}}, "data": map[string]any{"name": "ping"}}}) != nil {
+				return
+			}
+		}
+	}()
+	// The client closes the connection at the first interaction it cannot
+	// hold and resumes before it, so the server sends it again.
+	fc2 := g.next(t)
+	f := fc2.expect(t, opResume)
+	var r struct {
+		Seq int64 `json:"seq"`
+	}
+	_ = json.Unmarshal(f.D, &r)
+	if want := int64(maxUnshedInFlight + 1); r.Seq != want {
+		t.Fatalf("resumed at seq %d, want %d (the last interaction handed on)", r.Seq, want)
+	}
+	if grown := runtime.NumGoroutine() - before; grown > maxUnshedInFlight+20 {
+		t.Fatalf("goroutines grew by %d", grown)
+	}
+}
+
+func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing.T) {
+	// A long interval: no heartbeat of the client's own is due during the
+	// test, so the outcome does not depend on how fast the machine is.
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	c.OnMessageCreate(func(ctx context.Context, _ *Message) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	// Far more events than the queue holds, then a heartbeat request (op 1)
+	// behind them: the client answers it only once its read loop has read
+	// every event before it, which a loop blocked by the full queue never does.
+	for i := int64(0); i < 5000; i++ {
+		fc.dispatch(t, i+2, "MESSAGE_CREATE", map[string]any{"id": "m", "channel_id": "c", "content": "x"})
+	}
+	fc.write(t, opHeartbeat, nil)
+	fc.expect(t, opHeartbeat)
+	select {
+	case <-g.conns:
+		t.Fatal("the client reconnected: the flood stalled its read loop")
+	default:
+	}
+}
+
+func TestAConnectionEndedByAnInteractionFloodIsNotHealthy(t *testing.T) {
+	cn := newConn(nil, nil)
+	cn.healthy.Store(true)
+	if out := cn.outcome(errUnshedOverflow); out.healthy {
+		t.Fatal("a flooded connection counts as healthy, so the backoff would start over")
+	}
+	if out := cn.outcome(errors.New("read: connection reset")); !out.healthy {
+		t.Fatal("an ordinary drop of a healthy connection must stay healthy")
+	}
+}

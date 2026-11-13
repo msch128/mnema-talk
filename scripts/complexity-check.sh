@@ -15,7 +15,7 @@ allow="scripts/complexity-allowlist.txt"
 # "go: downloading" lines of a cold module cache and gocognit's one-time
 # "note:" about recursion are not findings.
 finding='^[0-9]+ [^ ]+ [^ ]+ [^ ]+\.go:[0-9]+:[0-9]+$'
-raw="$( (go run "github.com/uudashr/gocognit/cmd/gocognit@${version}" -over 15 -ignore '_test\.go' cmd internal loadtest/viewer 2>&1 || true) |
+raw="$( (go run "github.com/uudashr/gocognit/cmd/gocognit@${version}" -over 15 -ignore '_test\.go' cmd internal loadtest/viewer sdk/go 2>&1 || true) |
 	sed -e '/^exit status 1$/d' -e '/^go: downloading /d' -e '/^gocognit: note: /d')"
 
 # A line that is not a finding is a failure of the tool itself (no network, a

@@ -140,7 +140,13 @@
       "scheduled": "scheduled",
       "active": "live",
       "completed": "completed",
-      "cancelled": "cancelled"
+      "cancelled": "cancelled",
+      "permViewChannels": "View channels",
+      "permSendMessages": "Send messages",
+      "permAttachFiles": "Attach files",
+      "permAddReactions": "Add reactions",
+      "permManageMessages": "Manage messages",
+      "permMentionEveryone": "Mention @all and @here"
     },
     "detail": {
       "invalidInvite": "Invalid invite code.",
@@ -207,6 +213,7 @@
       "fileUnreadable": "The file couldn’t be read.",
       "storageOff": "File storage isn’t set up on this server.",
       "exportNone": "There is no export to download.",
+      "exportPrefetch": "The download cannot be loaded ahead of time. Start it with the button.",
       "exportSameSite": "The download can only be started from this site.",
       "exportBusy": "Exports of other members are being built right now. Try again in a few minutes.",
       "pushOff": "Push notifications are turned off on this server.",
@@ -561,7 +568,6 @@
       "srvTooManySearchesAtOnce": "Too many searches at once. Wait for the running ones to finish.",
       "srvTooManyUnsentFilesAt": "Too many unsent files (at most {a}). Send or remove some first.",
       "srvTypeMustBeTextVoice": "The type must be “text”, “voice” or “forum”.",
-      "srvTypeMustBe4Or": "The type must be 4 or 5.",
       "srvTypeMustBeRoleOr": "The type must be “role” or “member”.",
       "srvTypeTheServerNameOr": "Type the community name or IMPORT to confirm.",
       "srvUnknownEventForThisWebhook": "Unknown event for this webhook: {a}.",
@@ -663,7 +669,41 @@
       "srvSeriesNotFound": "This series was not found.",
       "srvThisEventIsNotPartOf": "This event is not part of a series.",
       "srvTimezoneMustBeAnIana": "The time zone must be an IANA name such as Europe/Berlin.",
-      "srvUntilMustBeAfterStart": "The end date must be after the start."
+      "srvUntilMustBeAfterStart": "The end date must be after the start.",
+      "srvManifestCannotAskFor": "A manifest cannot ask for the permission “{permission}”. Only the Owner grants that, by hand.",
+      "srvAtMostChannels": "Tick at most {a} channels.",
+      "srvHomepageMustBeHttps": "The homepage must be an https address.",
+      "srvIntentNotInManifest": "“{intent}” is not among the events the manifest asks for.",
+      "srvManifestVersionMustBe": "This manifest is for another version: “manifest_version” must be {a}.",
+      "srvPermissionNotInManifest": "“{permission}” is not among the permissions the manifest asks for.",
+      "srvUnknownIntent": "Unknown event in the manifest: “{intent}”.",
+      "srvUnknownPermission": "Unknown permission in the manifest: “{permission}”.",
+      "srvBotInstallLacking": "You do not have “{permission}” in #{channel}, so the bot cannot get it there. Untick the channel or the permission.",
+      "srvButtonTakesNoValues": "A button takes no values.",
+      "srvModalSubmitNoModal": "A form that was sent cannot be answered with another form.",
+      "srvAnswerInvalidChars": "An answer contains characters that are not allowed.",
+      "srvAnswerLength": "An answer must be {min} to {max} characters long.",
+      "srvCallbackComponentOnly": "Callback type {a} only answers a button or select menu.",
+      "srvComponentNotFound": "This button or menu no longer exists.",
+      "srvComponentsActionRows": "Components must be a list of action rows.",
+      "srvDataRequiredType7": "Callback type 7 needs data.",
+      "srvDataRequiredType9": "Callback type 9 needs data with custom_id, title and components.",
+      "srvFillRequiredFields": "Fill in every required field.",
+      "srvFlagsOnOriginal": "Flags cannot be set when editing the original response: the first response decides whether the answer is ephemeral.",
+      "srvInvalidModalId": "Invalid form.",
+      "srvModalNotFound": "This form expired. Start again from the bot.",
+      "srvInteractionAnsweredModal": "The interaction was answered with a form: answer its submission instead.",
+      "srvNoOriginalResponse": "The interaction has no original response yet.",
+      "srvValuesChannels": "Pick only channels that you and the bot can see.",
+      "srvValuesOnce": "Pick each value only once.",
+      "srvValuesMembers": "Pick only members of this channel.",
+      "srvValuesNotAChoice": "That is not one of the choices of this menu.",
+      "srvValuesRoles": "Pick only roles of this community.",
+      "srvValuesCount": "This menu takes {min} to {max} values.",
+      "srvValuesUnknownInput": "The form has no field “{input}”.",
+      "srvYouAreTimedOut": "You are in a timeout.",
+      "srvTypeMustBeCallback": "The type must be 4, 5, 6, 7 or 9.",
+      "srvMemberCannotSeeChannel": "The member can no longer see this channel."
     },
     "field": {
       "content": "Message",
@@ -700,7 +740,8 @@
       "thread": "Thread",
       "token": "Token",
       "user": "Member",
-      "summary": "Summary"
+      "summary": "Summary",
+      "homepage": "Homepage"
     }
   },
   "connection": {
@@ -3436,7 +3477,8 @@
         "token_regenerate": "Bot token regenerated",
         "token_revoke": "Bot token revoked",
         "command_update": "Bot command edited",
-        "command_delete": "Bot command deleted"
+        "command_delete": "Bot command deleted",
+        "installed": "Bot added from a manifest"
       },
       "automod": {
         "rule_create": "Automod rule created",
@@ -3981,7 +4023,6 @@
   "bots": {
     "title": "Bots",
     "intro": "Bots are accounts for programs: they post messages, answer slash commands and react to events through the bot API (see the bot documentation). A new bot can do nothing until you give it a role, allow its intents and issue a token. Every change here lands in the audit log.",
-    "badge": "Bot",
     "new": "New bot",
     "namePlaceholder": "Name of the new bot",
     "nameRequired": "A bot needs a name.",
@@ -4100,7 +4141,46 @@
       "deleted": "/{name} deleted."
     },
     "emptyHint": "Name a bot above to create it and get its token.",
-    "loadFailed": "Couldn’t load the bots. Try again."
+    "loadFailed": "Couldn’t load the bots. Try again.",
+    "manifest": {
+      "add": "Add from manifest",
+      "title": "Add a bot from its manifest",
+      "intro": "A bot written by someone else describes itself in a manifest, usually in its README. Paste it here to see what the bot asks for. Nothing is created until you confirm.",
+      "pasteLabel": "Manifest (JSON)",
+      "check": "Check manifest",
+      "notJson": "This is not valid JSON. Copy the whole manifest, from the first { to the last }.",
+      "notObject": "A manifest is a JSON object: it starts with { and ends with }.",
+      "badLink": "This add link is damaged. Paste the manifest from the bot’s README instead.",
+      "confirmTitle": "Add this bot?",
+      "avatarProblem": {
+        "type": "The avatar is not a PNG, JPEG or WebP image, so the bot starts without one.",
+        "size": "The avatar is larger than 256 KB, so the bot starts without one.",
+        "data": "The avatar is not an embedded image, so the bot starts without one. Remote images are never loaded."
+      },
+      "intentsTitle": "Events it asks for",
+      "untickHint": "Untick what the bot should not get.",
+      "noIntents": "It asks for no events.",
+      "permissionsTitle": "Permissions it asks for",
+      "noPermissions": "It asks for no permissions.",
+      "commandsTitle": "Slash commands",
+      "noCommands": "It registers no slash commands.",
+      "channelsTitle": "Channels it may work in",
+      "channelsHint": "The permissions above apply only in the channels you tick here, never across the whole community. None is ticked: without a channel the bot can see nothing yet.",
+      "noCategory": "Without a category",
+      "noChannels": "There are no text or forum channels you can see.",
+      "back": "Back",
+      "install": "Add bot",
+      "installed": "{name} added. Copy its token now.",
+      "avatarFailed": "The bot was added, but its avatar could not be uploaded. Set one in the bot’s settings.",
+      "needsManageBots": "Adding a bot needs the Manage bots permission. Ask the Owner or a member who has it to open the link.",
+      "fromManifest": "From the bot’s manifest",
+      "homepage": "Homepage:",
+      "externalSite": "(external site)",
+      "offAtFirst": "Off at first: tick it only if the bot really needs it.",
+      "botCommand": "The bot’s",
+      "besideBuiltin": "Has the name of the built-in /{name}. It does not replace it: members see both.",
+      "overridesBotRole": "What you allow here applies even where the shared Bot role is denied in a ticked channel."
+    }
   },
   "appSettings": {
     "installTitle": "Install",
@@ -4220,12 +4300,13 @@
     "privacy": {
       "title": "Your data",
       "exportTitle": "Download a copy of your data",
-      "exportIntro": "A ZIP of JSON files with your profile, settings, roles, messages, reactions, uploads and the log entries about your account. It contains nothing of other members. One per day; you can download it once within 24 hours.",
+      "exportIntro": "A ZIP of JSON files with your profile, settings, roles, messages, reactions, uploads and the log entries about your account. It contains nothing of other members. One per day; you can download it within 24 hours, and an hour after the first download it is removed.",
       "exportRequest": "Request export",
       "exportStarted": "Your export is being prepared.",
       "exportPending": "Preparing your export…",
       "exportReady": "Download (valid until {when})",
       "exportFailed": "Couldn’t build the export. Try again later.",
+      "exportDownloadedAt": "Downloaded on {at}. You can download it again until {until}; then it is removed.",
       "exportDownloaded": "The last export was downloaded and removed.",
       "exportExpired": "The last export expired and was removed.",
       "exportNext": "You can request the next export from {when}.",
@@ -5261,5 +5342,37 @@
     "noPin": "A message with a lifetime can’t be pinned.",
     "markPrefix": "Disappears in",
     "hoursMinutes": "{h} h {m} min"
+  },
+  "components": {
+    "notConnected": "{bot} is not connected right now. Try again later.",
+    "gone": "This button no longer works.",
+    "slowDown": "Slow down a little, then try again.",
+    "failed": "That did not work. Try again.",
+    "choose": "Choose",
+    "search": "Search",
+    "noMatches": "Nothing matches.",
+    "confirm": "Confirm",
+    "pickExactly": {
+      "one": "Pick {count}",
+      "other": "Pick {count}"
+    },
+    "pickRange": "Pick {min} to {max}",
+    "opensLink": "{label}, opens {host}",
+    "unsupported": "This bot sent something this app cannot show.",
+    "working": "{bot} is working…",
+    "noAnswer": "{bot} did not answer. Try again in a moment.",
+    "takingLonger": "{bot} is taking longer…"
+  },
+  "modals": {
+    "from": "A form from {bot}",
+    "optional": "(optional)",
+    "required": "Fill this in.",
+    "tooShort": {
+      "one": "At least {count} character.",
+      "other": "At least {count} characters."
+    },
+    "send": "Send",
+    "expired": "This form expired. Start again from the bot.",
+    "failed": "The form could not be sent. Try again."
   }
 }

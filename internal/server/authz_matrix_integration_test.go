@@ -165,6 +165,8 @@ var adminMatrix = map[string]string{
 	"GET /api/admin/bans":                                    "Admin,Ban",
 	"GET /api/admin/bots":                                    "Admin,Bots",
 	"POST /api/admin/bots":                                   "Admin,Bots",
+	"POST /api/admin/bots/install":                           "Admin,Bots",
+	"POST /api/admin/bots/manifests/check":                   "Admin,Bots",
 	"DELETE /api/admin/bots/{id}":                            "Admin,Bots",
 	"GET /api/admin/bots/{id}":                               "Admin,Bots",
 	"PATCH /api/admin/bots/{id}":                             "Admin,Bots",

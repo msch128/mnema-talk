@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/ssrf"
@@ -108,7 +109,29 @@ func (d *Dispatcher) loadActiveWebhook(ctx context.Context, j job) (*outgoingRec
 		slog.Warn("outgoing webhooks: load webhook", "err", err) // the lease makes the row due again
 		return nil, false
 	}
+	public, err := channelIsPublic(ctx, d.DB, rec.ChannelID)
+	if err != nil {
+		slog.Warn("outgoing webhooks: load channel", "err", err) // the lease makes the row due again
+		return nil, false
+	}
+	if !public {
+		// Nothing writes such a row any more (Record, Wants); one from an
+		// edited database or an older release is dropped, never sent.
+		if dropErr := dropRow(ctx, d.DB, j.seq); dropErr != nil {
+			slog.Warn("outgoing webhooks: drop", "err", dropErr)
+		}
+		d.count("private_channel", 1)
+		return nil, false
+	}
 	return rec, true
+}
+
+// channelIsPublic reports whether outgoing webhooks may hear the channel
+// (publicChannel): a channel that is gone counts as not public.
+func channelIsPublic(ctx context.Context, q db.Querier, channel uuid.UUID) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM channels c WHERE c.id = $1 AND `+publicChannel+`)`, channel).Scan(&ok)
+	return ok, err
 }
 
 func (d *Dispatcher) recordDeliveryResult(ctx context.Context, rec *outgoingRec, j job, del Delivery, retryAfter time.Duration) {

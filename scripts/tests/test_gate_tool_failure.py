@@ -35,7 +35,7 @@ def tree_with(source):
     (root / 'scripts').mkdir()
     for name in ('complexity-check.sh', 'complexity-allowlist.txt'):
         shutil.copy(ROOT / 'scripts' / name, root / 'scripts' / name)
-    for d in ('cmd', 'internal/bad', 'loadtest/viewer'):
+    for d in ('cmd', 'internal/bad', 'loadtest/viewer', 'sdk/go'):
         (root / d).mkdir(parents=True)
     (root / 'internal' / 'bad' / 'bad.go').write_text(source)
     return tmp, root

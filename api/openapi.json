@@ -408,8 +408,13 @@
       },
       "auth.ExportStatus": {
         "properties": {
+          "downloaded_at": {
+            "description": "DownloadedAt is when the export was first downloaded completely.",
+            "format": "date-time",
+            "type": "string"
+          },
           "expires_at": {
-            "description": "ExpiresAt is when a ready export stops being downloadable.",
+            "description": "ExpiresAt is when a ready export stops being downloadable (after a download, the end of the hour in which it can be downloaded again).",
             "format": "date-time",
             "type": "string"
           },
@@ -1372,9 +1377,18 @@
             "format": "uuid",
             "type": "string"
           },
+          "description": {
+            "description": "Description and Homepage come from the manifest the bot was added\nfrom; omitted for a bot created by hand.",
+            "maxLength": 200,
+            "type": "string"
+          },
           "disabled": {
             "description": "Disabled bots cannot use any token or gateway connection.",
             "type": "boolean"
+          },
+          "homepage": {
+            "maxLength": 512,
+            "type": "string"
           },
           "id": {
             "format": "uuid",
@@ -1413,16 +1427,61 @@
         ],
         "type": "object"
       },
+      "bot.CallbackData": {
+        "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the message of type 4, or the new text of\ntype 7, notifies, as on a post."
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
+          "content": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "custom_id": {
+            "description": "CustomID and Title belong to a modal (type 9); its components are rows of text inputs.",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "embeds": {
+            "items": {
+              "$ref": "#/components/schemas/chat.InEmbed"
+            },
+            "type": "array"
+          },
+          "flags": {
+            "description": "Flags: 64 makes the message of type 4, or the answer that follows type 5, ephemeral.",
+            "enum": [
+              0,
+              64
+            ],
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 45,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "bot.CallbackRequest": {
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/bot.ResponseData"
+            "$ref": "#/components/schemas/bot.CallbackData"
           },
           "type": {
-            "description": "Type is 4 (reply with a message) or 5 (acknowledge now, answer later\nwith follow-ups).",
+            "description": "Type is 4 (reply with a message), 5 (acknowledge now, answer later),\n6 (acknowledge a click), 7 (update the message the component is on) or\n9 (open a modal); which answer which interaction is in doc/bots.md.",
             "enum": [
               4,
-              5
+              5,
+              6,
+              7,
+              9
             ],
             "type": "integer"
           }
@@ -1507,6 +1566,57 @@
         ],
         "type": "object"
       },
+      "bot.CheckedManifest": {
+        "properties": {
+          "commands": {
+            "items": {
+              "$ref": "#/components/schemas/bot.CommandInput"
+            },
+            "type": "array"
+          },
+          "description": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "homepage": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "intents": {
+            "items": {
+              "$ref": "#/components/schemas/bot.ManifestIntent"
+            },
+            "type": "array"
+          },
+          "manifest_version": {
+            "enum": [
+              1
+            ],
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/bot.ManifestPermission"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "commands",
+          "description",
+          "homepage",
+          "intents",
+          "manifest_version",
+          "name",
+          "permissions"
+        ],
+        "type": "object"
+      },
       "bot.Command": {
         "properties": {
           "bot_id": {
@@ -1587,6 +1697,25 @@
         ],
         "type": "object"
       },
+      "bot.ComponentUse": {
+        "properties": {
+          "custom_id": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "values": {
+            "description": "Values are what a select menu got: option values of a string select,\nmember, role or channel IDs of the others. Left out for a button.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "custom_id"
+        ],
+        "type": "object"
+      },
       "bot.CreateRequest": {
         "properties": {
           "allowed_intents": {
@@ -1602,6 +1731,57 @@
         },
         "required": [
           "name"
+        ],
+        "type": "object"
+      },
+      "bot.InstallRequest": {
+        "properties": {
+          "channel_ids": {
+            "description": "ChannelIDs are the channels the bot may work in (none: it sees nothing\nyet). Each must be a channel the installer can view.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "intents": {
+            "description": "Intents are names from the manifest's intents; none means none.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/bot.Manifest"
+          },
+          "permissions": {
+            "description": "Permissions are keys from the manifest's permissions; none means none.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "channel_ids",
+          "intents",
+          "manifest",
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "bot.InstallResponse": {
+        "properties": {
+          "bot": {
+            "$ref": "#/components/schemas/bot.Bot"
+          },
+          "token": {
+            "$ref": "#/components/schemas/bot.NewTokenResponse"
+          }
+        },
+        "required": [
+          "bot",
+          "token"
         ],
         "type": "object"
       },
@@ -1633,6 +1813,118 @@
         },
         "required": [
           "interaction_id"
+        ],
+        "type": "object"
+      },
+      "bot.Manifest": {
+        "properties": {
+          "avatar": {
+            "description": "Avatar is a data: URL the web app uploads through the avatar route. The\nserver ignores it and never fetches anything.",
+            "type": "string"
+          },
+          "commands": {
+            "description": "Commands are registered as by PUT /api/bot/v1/commands; at most 50.",
+            "items": {
+              "$ref": "#/components/schemas/bot.CommandInput"
+            },
+            "type": "array"
+          },
+          "description": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "homepage": {
+            "description": "Homepage is an https URL, shown as a link.",
+            "maxLength": 512,
+            "type": "string"
+          },
+          "intents": {
+            "description": "Intents are names: GUILDS, GUILD_MEMBERS, GUILD_MESSAGES, GUILD_MESSAGE_REACTIONS.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "manifest_version": {
+            "enum": [
+              1
+            ],
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          },
+          "permissions": {
+            "description": "Permissions are permission keys, channel permissions only: view_channel,\nsend_messages, attach_files, add_reactions, manage_messages, mention_everyone.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "manifest_version",
+          "name"
+        ],
+        "type": "object"
+      },
+      "bot.ManifestIntent": {
+        "properties": {
+          "bit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "enum": [
+              "GUILDS",
+              "GUILD_MEMBERS",
+              "GUILD_MESSAGES",
+              "GUILD_MESSAGE_REACTIONS"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "bit",
+          "name"
+        ],
+        "type": "object"
+      },
+      "bot.ManifestPermission": {
+        "properties": {
+          "bit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "description": "Name is the permission in words, as in error messages.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bit",
+          "key",
+          "name"
+        ],
+        "type": "object"
+      },
+      "bot.ModalSubmit": {
+        "properties": {
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Values maps the custom_id of each text input to what the member typed;\nan input left out is not filled in.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "values"
         ],
         "type": "object"
       },
@@ -1735,8 +2027,44 @@
         ],
         "type": "object"
       },
+      "bot.OriginalEdit": {
+        "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the new text notifies, as on a post."
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
+          "content": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "embeds": {
+            "items": {
+              "$ref": "#/components/schemas/chat.InEmbed"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "bot.ResponseData": {
         "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the message notifies, as on a post."
+          },
+          "components": {
+            "description": "Components are buttons and select menus (doc/bots.md, Message components).",
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
           "content": {
             "maxLength": 4000,
             "type": "string"
@@ -1797,12 +2125,17 @@
             "format": "uuid",
             "type": "string"
           },
+          "handle": {
+            "description": "Handle is the account's unique name, the one members mention\n(@bot-...); Discord calls this the username.",
+            "type": "string"
+          },
           "id": {
             "description": "ID is the bot's user ID: the author of its messages (user_id).",
             "format": "uuid",
             "type": "string"
           },
           "username": {
+            "description": "Name is the bot's name as members see it (its display name).",
             "type": "string"
           }
         },
@@ -1896,6 +2229,24 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "chat.ActionRow": {
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/chat.Component"
+            },
+            "type": "array"
+          },
+          "type": {
+            "description": "Type is 1 (an action row).",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type"
+        ],
         "type": "object"
       },
       "chat.AddDMMemberRequest": {
@@ -2029,6 +2380,13 @@
             "$ref": "#/components/schemas/chat.BotAllowedMentions",
             "description": "AllowedMentions limits who is notified. Default: members mentioned by\n@username are, @all and @here are not."
           },
+          "components": {
+            "description": "Components are buttons and select menus in up to 5 action rows\n(doc/bots.md, Message components).",
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
           "content": {
             "description": "Content is the message text (Markdown), at most 4000 characters.",
             "maxLength": 4000,
@@ -2066,6 +2424,30 @@
           "embeds",
           "message_reference"
         ],
+        "type": "object"
+      },
+      "chat.BotEditMessageRequest": {
+        "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the new text notifies, as on a post (and on\ncallback 7 and @original). An edit that sends it counts towards the\nper-channel limit of posts."
+          },
+          "components": {
+            "description": "Components replace the message's buttons and select menus; [] removes them.",
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
+          "content": {
+            "description": "Content is the new text. It may be empty while the message keeps an\nattachment, embeds or components.",
+            "maxLength": 4000,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
         "type": "object"
       },
       "chat.BotMember": {
@@ -2413,6 +2795,78 @@
           "ChannelTypeVoice",
           "ChannelTypeForum"
         ]
+      },
+      "chat.Component": {
+        "properties": {
+          "custom_id": {
+            "description": "CustomID is the bot's own value, returned with every click (1 to 100 characters).",
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "emoji": {
+            "$ref": "#/components/schemas/chat.ComponentEmoji",
+            "description": "Emoji of a button: a Unicode emoji."
+          },
+          "label": {
+            "type": "string"
+          },
+          "max_length": {
+            "type": "integer"
+          },
+          "max_values": {
+            "type": "integer"
+          },
+          "min_length": {
+            "description": "MinLength, MaxLength, Required and Value belong to a text input.",
+            "type": "integer"
+          },
+          "min_values": {
+            "description": "MinValues and MaxValues bound how many values a select takes (default 1).",
+            "type": "integer"
+          },
+          "options": {
+            "description": "Options of a string select (1 to 25).",
+            "items": {
+              "$ref": "#/components/schemas/chat.SelectOption"
+            },
+            "type": "array"
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "style": {
+            "description": "Style of a button (1 to 5) or a text input (1 short, 2 paragraph).",
+            "type": "integer"
+          },
+          "type": {
+            "description": "Type is 2 button, 3 string select, 4 text input, 5 user select, 6 role\nselect or 8 channel select.",
+            "type": "integer"
+          },
+          "url": {
+            "description": "URL of a link button (http or https).",
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
+      "chat.ComponentEmoji": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "chat.CreateCategoryRequest": {
         "properties": {
@@ -3512,6 +3966,13 @@
             "format": "uuid",
             "type": "string"
           },
+          "components": {
+            "description": "Components are the buttons and select menus of a bot's message, in\naction rows (doc/bots.md, Message components). Only bots set them.",
+            "items": {
+              "$ref": "#/components/schemas/chat.ActionRow"
+            },
+            "type": "array"
+          },
           "content": {
             "maxLength": 4000,
             "type": "string"
@@ -4595,6 +5056,26 @@
           "snippet",
           "username"
         ],
+        "type": "object"
+      },
+      "chat.SelectOption": {
+        "properties": {
+          "default": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "emoji": {
+            "$ref": "#/components/schemas/chat.ComponentEmoji"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "chat.ServerNotify": {
@@ -11486,6 +11967,238 @@
           }
         ],
         "summary": "Create a bot",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/install": {
+      "post": {
+        "description": "Owner or Manage bots. In one transaction under the permission lock: creates the bot with the manifest's name, description and homepage and the kept intents, allows the kept permissions to the bot's own role in each listed channel (nothing server-wide), registers the manifest's commands and issues a token named after the bot, whose secret is in the answer and shown only once. The kept permissions and intents must be the manifest's; in each channel the installer must hold every kept permission (the Owner holds all). Anything refused creates nothing. Logged as bot.installed.",
+        "operationId": "installBot",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.InstallRequest"
+              }
+            }
+          },
+          "description": "The manifest and what was kept ticked.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.InstallResponse"
+                }
+              }
+            },
+            "description": "Added; the token's secret is shown once."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the manifest is invalid, or a kept permission or intent is not in it; the message names it."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage bots permission, a kept permission the installer lacks in a listed channel (the message names both), or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: a listed channel does not exist, is not a channel, or the installer cannot view it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot limit is reached, or a listed channel is a temporary Talk."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: the body exceeds 1 MiB."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Add a bot from a manifest",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/manifests/check": {
+      "post": {
+        "description": "Owner or Manage bots. Validates a manifest and answers it normalised: cleaned text, its intents with their bits and its permissions with their names, in a fixed order, without duplicates. Unknown fields are ignored; the avatar is not part of the answer. Nothing is stored.",
+        "operationId": "checkBotManifest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.Manifest"
+              }
+            }
+          },
+          "description": "The manifest.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.CheckedManifest"
+                }
+              }
+            },
+            "description": "The manifest as the server understands it."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: the manifest is invalid or asks for a permission a manifest cannot ask for; the message names it."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage bots permission, or cross-origin request rejected."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: the body exceeds 1 MiB."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Check a bot manifest",
         "tags": [
           "Bots"
         ]
@@ -24609,7 +25322,7 @@
         ]
       },
       "post": {
-        "description": "Posts as the bot (author name, avatar and the BOT badge). Needs View channels and Send messages in the channel. At least one of content or embeds. @all and @here notify only when the bot may mention everyone and allowed_mentions.parse asks for \"everyone\". Limit: 5 messages per 5 seconds per channel, on top of 50 requests per second per bot. For files use the upload route.",
+        "description": "Posts as the bot (author name, avatar and the BOT badge). Needs View channels and Send messages in the channel. At least one of content, embeds or components (buttons and select menus, stored with the message and part of message_create). @all and @here notify only when the bot may mention everyone and allowed_mentions.parse asks for \"everyone\". Limit: 5 messages per 5 seconds per channel, on top of 50 requests per second per bot. For files use the upload route.",
         "operationId": "botCreateMessage",
         "parameters": [
           {
@@ -24916,7 +25629,7 @@
         ]
       },
       "patch": {
-        "description": "Only the bot's own messages; needs Send messages in the channel. The content may be empty when the message has an attachment.",
+        "description": "Only the bot's own messages; needs Send messages in the channel. content and components are each optional and stay as they are when left out; \"components\": [] removes them. The content may be empty while the message keeps an attachment, embeds or components. An edit that keeps the content does not mark the message edited. Broadcasts message_update (MESSAGE_UPDATE on the gateway).",
         "operationId": "botEditMessage",
         "parameters": [
           {
@@ -24944,11 +25657,11 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/chat.EditMessageRequest"
+                "$ref": "#/components/schemas/chat.BotEditMessageRequest"
               }
             }
           },
-          "description": "New content.",
+          "description": "New content and components.",
           "required": true
         },
         "responses": {
@@ -25769,7 +26482,7 @@
     },
     "/api/bot/v1/interactions/{interactionID}/{token}/callback": {
       "post": {
-        "description": "The first response to an interaction a member created by running a command. Type 4 posts a message in the channel as the bot (or, with flags 64, shows it to the member only); type 5 only acknowledges, and follow-ups answer. An interaction can be answered for 15 minutes, with at most 5 responses in total. The bot needs Send messages in the channel at that moment.",
+        "description": "The first response to an interaction: a command run, a component click or a modal submit. Type 4 posts a message in the channel as the bot (or, with flags 64, shows it to the member only); type 5 only acknowledges, and the answer follows with PATCH @original or follow-ups (with flags 64 it is ephemeral); type 6 acknowledges a click without changing anything; type 7 updates the message the component is on (absent fields stay); type 9 opens a modal (not for a modal submit). Types 6 and 7 need a component's message: a click, or a modal opened from one. An interaction can be answered for 15 minutes, with at most 5 messages in total. Posting or updating needs Send messages in the channel at that moment.",
         "operationId": "botInteractionCallback",
         "parameters": [
           {
@@ -25815,7 +26528,7 @@
                 }
               }
             },
-            "description": "Invalid form body (50035) or empty message (50006)."
+            "description": "Invalid form body (50035), empty message (50006), or a callback type the interaction does not take."
           },
           "401": {
             "content": {
@@ -25845,7 +26558,7 @@
                 }
               }
             },
-            "description": "Unknown interaction (10062)."
+            "description": "Unknown interaction (10062), or the message to update is gone (10008)."
           },
           "409": {
             "content": {
@@ -25855,7 +26568,7 @@
                 }
               }
             },
-            "description": "Already answered, or too many responses."
+            "description": "Already answered."
           },
           "429": {
             "content": {
@@ -25881,7 +26594,7 @@
     },
     "/api/bot/v1/interactions/{interactionID}/{token}/followups": {
       "post": {
-        "description": "After the first response: another message for the same interaction (public, or ephemeral with flags 64). Counts towards the 5 responses.",
+        "description": "After the first response (not a modal): another message for the same interaction (public, or ephemeral with flags 64). Counts towards the 5 messages.",
         "operationId": "botInteractionFollowup",
         "parameters": [
           {
@@ -25996,6 +26709,217 @@
           }
         ],
         "summary": "Send a follow-up to an interaction",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/interactions/{interactionID}/{token}/messages/@original": {
+      "delete": {
+        "description": "Deletes the original response of an interaction (see the PATCH of @original): a message is deleted as by DELETE /channels/{id}/messages/{id}, an ephemeral note disappears from the member's view. Works for the 15 minutes of the interaction.",
+        "operationId": "botDeleteOriginalResponse",
+        "parameters": [
+          {
+            "description": "Interaction ID.",
+            "in": "path",
+            "name": "interactionID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Interaction token from the INTERACTION_CREATE event.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown interaction (10062), or no original response (10008)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Respond first."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Delete the original response",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "patch": {
+        "description": "Edits the original response of an interaction: the message of callback 4, or for a component answered with 6 or 7 the message the component is on. After callback 5 the first PATCH posts the answer (ephemeral when callback 5 had flags 64) and counts towards the 5 messages. Absent fields stay as they are. An ephemeral original is replaced in the member's view (204). Works for the 15 minutes of the interaction; needs Send messages in the channel.",
+        "operationId": "botEditOriginalResponse",
+        "parameters": [
+          {
+            "description": "Interaction ID.",
+            "in": "path",
+            "name": "interactionID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Interaction token from the INTERACTION_CREATE event.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.OriginalEdit"
+              }
+            }
+          },
+          "description": "The new content, embeds and components.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The edited or posted message."
+          },
+          "204": {
+            "description": "The member's ephemeral note was replaced, or posted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035) or empty message (50006)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown interaction (10062), or no original response (10008)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Respond first, or too many responses."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Edit the original response",
         "tags": [
           "Bot API"
         ]
@@ -26756,6 +27680,144 @@
           }
         ],
         "summary": "List the slash commands of a channel",
+        "tags": [
+          "Commands"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/ephemeral/{noteID}/components": {
+      "post": {
+        "description": "Like using a component of a message, for a bot's ephemeral response (interaction_response with components). Only the member who sees the note, for the 15 minutes of the interaction that made it; afterwards, or after a restart of the server, 404. The bot receives message {id, flags: 64, content, components}.",
+        "operationId": "useNoteComponent",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Note ID (id of interaction_response).",
+            "in": "path",
+            "name": "noteID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.ComponentUse"
+              }
+            }
+          },
+          "description": "The component and the chosen values.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Invoked"
+                }
+              }
+            },
+            "description": "Delivered to the bot."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): values that do not fit the component."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the member is timed out, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel or note, it is not the caller's or has expired; the component is gone or disabled, or its bot can no longer take it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot is not connected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Use a component of an ephemeral note",
         "tags": [
           "Commands"
         ]
@@ -27801,6 +28863,144 @@
         ]
       }
     },
+    "/api/channels/{channelID}/messages/{messageID}/components": {
+      "post": {
+        "description": "A click on a button or a choice in a select menu of a bot's message. Needs View channels; a timed-out member cannot. The message must still have that enabled component, select values must fit it (options of a string select, between min_values and max_values; members who can view the channel, roles that exist, channels the member and the bot can view). Creates a new interaction (type 3) and delivers it to the bot. At most 30 clicks and modal submits a minute per member.",
+        "operationId": "useMessageComponent",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.ComponentUse"
+              }
+            }
+          },
+          "description": "The component and the chosen values.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Invoked"
+                }
+              }
+            },
+            "description": "Delivered to the bot."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): values that do not fit the component."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the member is timed out, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel or message, or it is hidden from the caller; the component is gone or disabled, or its bot is disabled, deleted or cannot view the channel."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot is not connected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Use a component of a bot's message",
+        "tags": [
+          "Commands"
+        ]
+      }
+    },
     "/api/channels/{channelID}/messages/{messageID}/edits": {
       "get": {
         "description": "The earlier versions of an edited message, newest first (at most 50). Needs the Manage messages permission in the channel (the Owner always); the author and other members cannot read it. Not searched and not part of any export except the author's own. Rate limited per member. A read of another member's message is recorded in the audit log (message.edit_history_view), once per reader and message every ten minutes. An unedited message has an empty list.",
@@ -28499,6 +29699,144 @@
         "summary": "Vote in a poll",
         "tags": [
           "Polls"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/modals/{modalID}": {
+      "post": {
+        "description": "Sends the answers of a modal a bot opened (interaction_modal) to the bot as an interaction of type 5. Only the member it was opened for, once, within 15 minutes; after a restart of the server an open modal is gone (404). The answers are trimmed and must fit their inputs (required, min_length, max_length). Needs View channels; a timed-out member cannot. At most 30 clicks and modal submits a minute per member. When the bot is not connected (409) the modal can be submitted again.",
+        "operationId": "submitModal",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Modal ID (id of interaction_modal).",
+            "in": "path",
+            "name": "modalID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.ModalSubmit"
+              }
+            }
+          },
+          "description": "The answers.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Invoked"
+                }
+              }
+            },
+            "description": "Delivered to the bot."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): an unknown input, a required one left out, or an answer of the wrong length."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the member is timed out, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel or modal, it was opened for someone else, already submitted or expired; or its bot can no longer take it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot is not connected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Submit a modal",
+        "tags": [
+          "Commands"
         ]
       }
     },
@@ -39708,7 +41046,7 @@
     },
     "/api/users/me/export": {
       "get": {
-        "description": "The caller's newest export: none, pending, ready (with the time it expires), failed, downloaded or expired, and when a new one may be requested.",
+        "description": "The caller's newest export: none, pending, ready (with the time it stops being downloadable), failed, downloaded or expired, and when a new one may be requested. After a complete download the export stays ready for one more hour (never past its expiry) with downloaded_at set, then reads downloaded.",
         "operationId": "getDataExport",
         "responses": {
           "200": {
@@ -39779,7 +41117,7 @@
         ]
       },
       "post": {
-        "description": "GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded once within 24 hours and is then deleted. Needs object storage. Size-bounded; nothing of other members' personal data is included.",
+        "description": "GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded within 24 hours and is deleted one hour after the first complete download. Needs object storage. Size-bounded; nothing of other members' personal data is included.",
         "operationId": "requestDataExport",
         "requestBody": {
           "content": {
@@ -39885,7 +41223,7 @@
     },
     "/api/users/me/export/download": {
       "get": {
-        "description": "The finished ZIP, once: the file is spent and deleted only after it was sent completely, so an interrupted download can be repeated. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site). 404 when there is no ready export, it expired or it was downloaded already.",
+        "description": "The finished ZIP with its Content-Length. An interrupted download leaves the export as it was; after the first complete download the file can be downloaded again for one hour (never past its expiry) and is then deleted, so a copy the client lost after the server sent it is not gone. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site) and prefetches (Sec-Purpose or Purpose: prefetch). 404 when there is no ready export, it expired or its hour after the download is over.",
         "operationId": "downloadDataExport",
         "responses": {
           "200": {
@@ -39909,6 +41247,12 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "Content-Length": {
+                "description": "Size of the archive in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
               }
             }
           },
@@ -39930,7 +41274,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none)."
+            "description": "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none), or it is a prefetch."
           },
           "404": {
             "content": {
@@ -39940,7 +41284,7 @@
                 }
               }
             },
-            "description": "NOT_FOUND: no export is ready, it expired or was downloaded already."
+            "description": "NOT_FOUND: no export is ready, it expired, or the hour after its download is over."
           },
           "429": {
             "content": {

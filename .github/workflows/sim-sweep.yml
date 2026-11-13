@@ -355,7 +355,7 @@ jobs:
           RACE_SWEEP: "1"
         run: >-
           go test -tags=integration -p=1 -count=1 -timeout 50m
-          -run 'Parallel|BothSides|EveryFailingStatement|AReplyPinnedDuringTheSweep|AnEditAndADelete|AMemberWhoLeft|AModeratorsDeleteThatWaited|TheEndOfALifetimeRaces|DeletingAWebhook'
+          -run 'Parallel|BothSides|EveryFailingStatement|AReplyPinnedDuringTheSweep|AnEditAndADelete|AMemberWhoLeft|AModeratorsDeleteThatWaited|TheEndOfALifetimeRaces|DeletingAWebhook|AClickRacing|InstallRacing'
           ./internal/auth/ ./internal/auth/authn/ ./internal/communityevents/ ./internal/wiki/ ./internal/server/
       - name: Jobs against the shutdown drain, under the race detector
         env:

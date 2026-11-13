@@ -226,8 +226,8 @@ func TestDownloadRefusesRequestsFromOtherSitesAndDoesNotBurnTheExport(t *testing
 	}
 	w := httptest.NewRecorder()
 	download(h, member, w, "same-origin")
-	if w.Code != http.StatusOK || store.count() != 0 {
-		t.Fatalf("same-origin: %d, files %d", w.Code, store.count())
+	if w.Code != http.StatusOK || w.Body.Len() == 0 {
+		t.Fatalf("same-origin: %d, %d bytes", w.Code, w.Body.Len())
 	}
 }
 
@@ -247,8 +247,11 @@ func TestAnInterruptedDownloadKeepsTheExportForAnotherTry(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	download(h, member, w, "same-origin")
-	if w.Code != http.StatusOK || w.Body.Len() == 0 || store.count() != 0 {
-		t.Fatalf("second try: %d %d files=%d", w.Code, w.Body.Len(), store.count())
+	if w.Code != http.StatusOK || w.Body.Len() == 0 {
+		t.Fatalf("second try: %d %d", w.Code, w.Body.Len())
+	}
+	if err := pool.QueryRow(context.Background(), `SELECT downloaded_at IS NOT NULL FROM data_exports WHERE id = $1`, id).Scan(&downloaded); err != nil || !downloaded {
+		t.Fatalf("the complete copy is recorded: %v %v", downloaded, err)
 	}
 }
 

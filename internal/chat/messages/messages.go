@@ -71,7 +71,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 	return msgs, rows.Err()
 }
 
-// Enrich loads attachments, reactions, mentions and polls for msgs.
+// Enrich loads attachments, reactions, mentions, polls and components for msgs.
 func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
 	if len(msgs) == 0 {
 		return nil
@@ -83,7 +83,7 @@ func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
 		ids[i] = m.ID
 	}
 	for _, load := range []func(context.Context, db.Querier, []core.Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails,
+		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails, core.LoadComponents,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
 			return err

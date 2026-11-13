@@ -176,11 +176,11 @@ func TestInteractionStoreBounds(t *testing.T) {
 	// An interaction answers for 15 minutes only.
 	id := uuid.New()
 	tok, _ := s.add(id, &interaction{botID: bot})
-	if _, err := s.claim(id, tok, bot, true); err != nil {
+	if _, err := s.find(id, tok, bot); err != nil {
 		t.Fatal(err)
 	}
 	now = now.Add(interactionTTL + time.Second)
-	if _, err := s.claim(id, tok, bot, false); err == nil {
+	if _, err := s.find(id, tok, bot); err == nil {
 		t.Fatal("expired")
 	}
 	if _, ok := s.m[id]; ok {

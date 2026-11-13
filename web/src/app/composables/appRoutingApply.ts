@@ -8,6 +8,7 @@ import { useVoiceStore } from '../../stores/voice'
 import { useToastStore } from '../../stores/toast'
 import { navigate, resolveRoute, targetOf } from '../../shared/lib/router'
 import { isSettingsTab, settingsTab } from '../../shared/lib/settingsDialog'
+import { dropPendingBotManifest, hasPendingBotManifest } from '../../shared/lib/botAddLink'
 import type { useAccountStore } from '../../stores/account'
 import { pathDms } from '../../dm/lib/dm'
 import { channelPath, postPath, postShortId, isUuid, textPath, talkPath } from '../../shared/lib/routePaths'
@@ -201,9 +202,13 @@ async function admitRoute(ctx: RoutingContext, route: Route, superseded: Superse
     await permissions.load()
     if (superseded()) return false
   }
-  if (permissions.canOpenAdmin) return true
+  // An add link for a bot (shared/lib/botAddLink) says plainly what it needs.
+  const addingBot = route.tab === 'bots' && hasPendingBotManifest()
+  if (addingBot && permissions.can('manage_bots')) return true
+  if (!addingBot && permissions.canOpenAdmin) return true
+  if (addingBot) dropPendingBotManifest()
   ctx.showAdminModal.value = false
-  ctx.toasts.error(t('nav.noAccess'))
+  ctx.toasts.error(t(addingBot ? 'bots.manifest.needsManageBots' : 'nav.noAccess'))
   navigate('/', { replace: true })
   return false
 }

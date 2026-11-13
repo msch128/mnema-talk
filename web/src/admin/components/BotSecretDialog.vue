@@ -40,7 +40,8 @@ async function copy(text: string) {
       </div>
       <div class="space-y-1">
         <p class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.secret.try') }}</p>
-        <pre class="overflow-x-auto rounded-sm bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-curl">{{ curl }}</pre>
+        <!-- It scrolls sideways on a narrow screen: a Tab stop, so the keyboard can scroll it too. -->
+        <pre tabindex="0" role="region" :aria-label="$t('bots.secret.try')" class="focus-ring overflow-x-auto rounded-sm bg-mnema-surface px-2 py-1.5 font-mono text-xs text-mnema-text" data-testid="bot-secret-curl">{{ curl }}</pre>
       </div>
       <div class="flex justify-end">
         <button type="button" class="btn btn-primary" data-testid="bot-secret-done" @click="emit('close')">{{ $t('bots.secret.done') }}</button>

@@ -365,6 +365,32 @@ func (w *canaryWorld) build(t *testing.T) {
 	wantStatus(t, "intents", w.owner.patch("/api/admin/bots/"+b.ID.String(), map[string]any{"allowed_intents": allBotIn}), http.StatusOK)
 	tok := issueToken(t, w.owner, b.ID, map[string]any{"name": "test"})
 	w.bot = &botClient{t: t, a: w.a, token: tok.Secret, user: b.UserID}
+	w.botComponents(t, botRole)
+}
+
+// botComponents has the bot post a message with a button and a string select
+// in the open channel and, while it may still see it, in the Staff text
+// channel, whose label and option carry words of their own: components are
+// read only where their message is (messages.Enrich), so a loader that
+// bypassed it would hand them out.
+func (w *canaryWorld) botComponents(t *testing.T, botRole uuid.UUID) {
+	t.Helper()
+	post := func(cls canaryClass, ch uuid.UUID, what string) {
+		res := w.bot.post(botPath(ch, "/messages"), map[string]any{"content": what + " " + w.word(cls, what), "components": []map[string]any{
+			{"type": 1, "components": []map[string]any{{"type": 2, "style": 1, "custom_id": "go", "label": "go " + w.word(cls, what+" button")}}},
+			{"type": 1, "components": []map[string]any{{"type": 3, "custom_id": "pick", "options": []map[string]any{
+				{"label": "pick " + w.word(cls, what+" option label"), "value": w.word(cls, what+" option value"), "description": w.word(cls, what+" option description")}}}}},
+		}})
+		wantStatus(t, "bot post "+what, res, http.StatusCreated)
+		w.hide(cls, "message", what, idOf(t, res))
+	}
+	post(clsOpen, w.open, "open bot components")
+	wantStatus(t, "bot sees staff", putOverwrites(w.owner, "channels", w.staffText,
+		overwrite("role", everyoneID(t, w.owner), 0, perm.ViewChannel),
+		overwrite("role", w.staffRole, perm.ViewChannel, 0),
+		overwrite("role", botRole, perm.ViewChannel, 0)), http.StatusNoContent)
+	post(clsStaff, w.staffText, "staff bot components")
+	w.private(t, "channels", w.staffText)
 }
 
 // gatewayFrames connects the bot to its gateway with every intent it holds

@@ -74,6 +74,9 @@ type PostCommand struct {
 	// Embeds are a bot's embeds as they came in; a member's message has none.
 	// A bot's message needs text or an embed.
 	Embeds []InEmbed
+	// HasComponents says a bot's message carries components (InTx stores
+	// them): it may then have neither text nor an embed.
+	HasComponents bool
 	// AllowedMentions narrows whom a bot's message notifies. Without it a bot
 	// notifies only the members it names, never @all, @here or a role: a bot
 	// posts unattended and must ask for the wide mentions. A member's mentions

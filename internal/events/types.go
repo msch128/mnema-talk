@@ -26,6 +26,8 @@ const (
 	PermissionsChanged  = "permissions_changed"
 	SystemUpdate        = "system_update"
 	InteractionResponse = "interaction_response"
+	InteractionModal    = "interaction_modal"
+	InteractionDeferred = "interaction_deferred"
 	WebrtcMediaState    = "webrtc_media_state"
 	PresenceUpdate      = "presence_update"
 	UserStats           = "user_stats"

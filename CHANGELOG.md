@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.13](https://github.com/msch128/mnema-talk/compare/v3.0.12...v3.0.13) (2026-11-13)
+
+
+### Documentation
+
+* the README names the server's own outgoing calls, not only the release check ([#800](https://github.com/msch128/mnema-talk/issues/800)) ([eb03a1e](https://github.com/msch128/mnema-talk/commit/eb03a1e5277b0900eceefd0f4e2769259335afed))
+
+## [3.0.12](https://github.com/msch128/mnema-talk/compare/v3.0.11...v3.0.12) (2026-11-13)
+
+
+### Bug Fixes
+
+* a data export stays downloadable for an hour after its download and is sent with its length ([#798](https://github.com/msch128/mnema-talk/issues/798)) ([815cb71](https://github.com/msch128/mnema-talk/commit/815cb71a36bbf777dfe74ae7efebcae0626e7377))
+
 ## [3.0.11](https://github.com/msch128/mnema-talk/compare/v3.0.10...v3.0.11) (2026-11-13)
 
 

@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -25,6 +25,7 @@ const intentGuildMembers = 1 << 1
 // checks are the same ones, decided for the bot's roles and overwrites.
 // send wraps the routes that post messages (the per-channel send limit).
 func (a *API) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
+	a.send = send
 	r.Get("/channels", httpx.HandleDiscord(a.botListChannels))
 	r.Get("/channels/{channelID}/messages", httpx.HandleDiscord(a.botListMessages))
 	r.Get("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(a.botGetMessage))
@@ -132,12 +133,15 @@ type BotMessageReference struct {
 
 // BotCreateMessageRequest is the body of posting a message as a bot: the
 // subset of Discord's create-message payload Mnema Talk uses. Unknown fields
-// (tts, components, flags, ...) are accepted and ignored.
+// (tts, flags, ...) are accepted and ignored.
 type BotCreateMessageRequest struct {
 	// Content is the message text (Markdown), at most 4000 characters.
 	Content string `json:"content" maxLength:"4000"`
 	// Embeds are rich cards (at most 10).
 	Embeds []core.Embed `json:"embeds"`
+	// Components are buttons and select menus in up to 5 action rows
+	// (doc/bots.md, Message components).
+	Components []core.ActionRow `json:"components" binding:"optional"`
 	// AllowedMentions limits who is notified. Default: members mentioned by
 	// @username are, @all and @here are not.
 	AllowedMentions *BotAllowedMentions `json:"allowed_mentions"`
@@ -154,6 +158,7 @@ type BotCreateMessageRequest struct {
 type rawBotMessage struct {
 	Content          string               `json:"content"`
 	Embeds           []messages.InEmbed   `json:"embeds"`
+	Components       []core.ActionRow     `json:"components"`
 	AllowedMentions  *BotAllowedMentions  `json:"allowed_mentions"`
 	MessageReference *BotMessageReference `json:"message_reference"`
 	ParentID         *uuid.UUID           `json:"parent_id"`
@@ -208,15 +213,16 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 }
 
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
-// a response to a command): the same rules, one message needs one of them.
-func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed) (string, []core.Embed, error) {
-	return messages.ValidateBotMessage(rawContent, rawEmbeds)
+// a response to a command): the same rules, one message needs one of them or
+// components (hasComponents).
+func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed, hasComponents bool) (string, []core.Embed, error) {
+	return messages.ValidateBotMessage(rawContent, rawEmbeds, hasComponents)
 }
 
 // botCreateMessage handles POST /api/bot/v1/channels/{channelID}/messages.
 //
 // @Summary Post a message
-// @Description Posts as the bot (author name, avatar and the BOT badge). Needs View channels and Send messages in the channel. At least one of content or embeds. @all and @here notify only when the bot may mention everyone and allowed_mentions.parse asks for "everyone". Limit: 5 messages per 5 seconds per channel, on top of 50 requests per second per bot. For files use the upload route.
+// @Description Posts as the bot (author name, avatar and the BOT badge). Needs View channels and Send messages in the channel. At least one of content, embeds or components (buttons and select menus, stored with the message and part of message_create). @all and @here notify only when the bot may mention everyone and allowed_mentions.parse asks for "everyone". Limit: 5 messages per 5 seconds per channel, on top of 50 requests per second per bot. For files use the upload route.
 // @ID botCreateMessage
 // @Tags Bot API
 // @Accept json
@@ -246,9 +252,20 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 		}
 		return err
 	}
+	comps, err := core.ValidateComponents(req.Components)
+	if err != nil {
+		if refusal := a.Messages.Posts.Refusal(r.Context(), actor, chID); refusal != nil {
+			return refusal
+		}
+		return err
+	}
 	cmd := messages.PostCommand{
 		ChannelID: chID, Content: req.Content, Embeds: req.Embeds, ParentID: req.ParentID,
 		AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions), LifetimeSeconds: messages.LifetimeOf(req.LifetimeSeconds),
+		HasComponents: len(comps) > 0,
+	}
+	if len(comps) > 0 {
+		cmd.InTx = func(tx pgx.Tx, id uuid.UUID) error { return core.SaveComponents(r.Context(), tx, id, comps) }
 	}
 	if req.MessageReference != nil {
 		cmd.ReplyToID = &req.MessageReference.MessageID
@@ -259,44 +276,6 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	messages.WritePosted(w, posted)
 	return nil
-}
-
-// botEditMessage handles PATCH /api/bot/v1/channels/{channelID}/messages/{messageID}.
-//
-// @Summary Edit the bot's own message
-// @Description Only the bot's own messages; needs Send messages in the channel. The content may be empty when the message has an attachment.
-// @ID botEditMessage
-// @Tags Bot API
-// @Accept json
-// @Produce json
-// @Security botAuth
-// @Param channelID path string true "Channel ID." Format(uuid)
-// @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body messages.EditMessageRequest true "New content."
-// @Success 200 {object} core.Message "The updated message."
-// @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
-// @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
-// @Failure 403 {object} httpx.DiscordError "Missing Permissions (50013), or not the bot's own message."
-// @Failure 404 {object} httpx.DiscordError "Unknown Channel (10003) or Unknown Message (10008)."
-// @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
-// @Failure 500 {object} httpx.DiscordError "Server failure."
-// @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [patch]
-func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
-	return a.Messages.EditMessageWith(w, r, a.botEditContext)
-}
-
-// botEditContext is the mention context of a bot's edit: the policy of its
-// sends (messages.BotMentionPolicy), so an edit never reaches more than a send does.
-func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	user := auth.UserFrom(r.Context())
-	snap, p, err := ChannelPermsOf(r.Context(), a.Guard.Perms, user, ch)
-	if err != nil {
-		return nil, err
-	}
-	if err := snap.Deny(user.Subject(), p, need); err != nil {
-		return nil, err
-	}
-	return mentions.WithMentionPolicy(r.Context(), messages.BotMentionPolicy(snap, ch, p, nil)), nil
 }
 
 // botDeleteMessage handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}.

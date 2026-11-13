@@ -93,7 +93,7 @@ describe('slash commands in the composer', () => {
   it('shows a private reply below the messages and lets it go', async () => {
     useChatStore().handleWSEvent({
       type: 'interaction_response',
-      payload: { channel_id: CH, bot_id: BOT, bot_name: 'helper', content: 'only for you', embeds: null, created_at: '2026-01-01T00:00:00Z' }
+      payload: { id: '00000000-0000-4000-8000-0000000000e1', channel_id: CH, bot_id: BOT, bot_name: 'helper', content: 'only for you', embeds: null, created_at: '2026-01-01T00:00:00Z' }
     })
     await flushPromises()
     expect(w.text()).toContain('only for you')

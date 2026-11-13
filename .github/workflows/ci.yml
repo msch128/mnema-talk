@@ -454,9 +454,85 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # The required check: unchanged name, one verdict for the three jobs above.
+  # -- Bot SDKs: both SDKs' own tests, the npm package, and their contract
+  # tests against a real server (TestSDKContract in internal/server starts it
+  # from the integration helpers and runs both suites against it).
+  # Node 24 is the oldest the TypeScript SDK supports, 26 what the web build uses.
+  sdk:
+    name: sdk (node ${{ matrix.node }})
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: TypeScript SDK
+        working-directory: sdk/typescript
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+          npm pack --dry-run
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go SDK
+        working-directory: sdk/go
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then echo "gofmt: $unformatted"; exit 1; fi
+          go vet ./...
+          go vet -tags=contract ./...
+          go test -race ./...
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Contract tests against a real server
+        env:
+          SDK_CONTRACT: '1'
+        run: go test -tags=integration -count=1 -run '^TestSDKContract$' ./internal/server
+
+  # The required check: unchanged name, one verdict for the jobs above.
   backend:
-    needs: [backend-checks, backend-integration, backend-coverage]
+    needs: [backend-checks, backend-integration, backend-coverage, sdk]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -500,6 +576,18 @@ jobs:
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+      # The nested modules are not part of ./... above: the bot SDK ships to
+      # users, the load-test viewer runs on server hosts.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: govulncheck (bot SDK)
+        working-directory: sdk/go
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: govulncheck (load-test viewer)
+        working-directory: loadtest/viewer
         run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
   # -- Frontend: lint, test, build, audit ------------------------------------
@@ -978,7 +1066,7 @@ jobs:
           # runs on macOS WebKit locally (evidence in doc/product-status.md); this
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
-            only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
+            only: "--project=webkit a11y.spec.ts account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-install-layout.spec.ts bot-members.spec.ts bot-platform.spec.ts bots.spec.ts browser-sealing.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           # The runner has no audio output device, and Firefox then never starts an
           # AudioContext. The specs that need audio played out follow with an audio
           # device: late-join.spec.ts (AI noise filter) and audio-stall.spec.ts, whose

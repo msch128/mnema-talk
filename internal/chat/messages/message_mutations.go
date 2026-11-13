@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -20,7 +19,7 @@ import (
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
-	_, _, err := editMessage(ctx, p, online, messageID, userID, content, nil)
+	_, _, err := editMessage(ctx, p, online, messageID, userID, textEdit{content: &content}, nil)
 	return err
 }
 
@@ -28,8 +27,8 @@ func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 // edit's transaction: an error means that nothing was changed. audited, if
 // set, runs in that transaction after the new text is stored (the audit
 // entry). It also returns the members the message mentioned before the edit.
-func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string, audited func(pgx.Tx) error) (*core.Message, []uuid.UUID, error) {
-	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
+func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, edit textEdit, audited func(pgx.Tx) error) (*core.Message, []uuid.UUID, error) {
+	pending, err := checkEditAutomod(ctx, p, messageID, userID, edit.text())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,7 +39,7 @@ func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 		if before, err = mentionedBy(ctx, tx, messageID); err != nil {
 			return err
 		}
-		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
+		channel, err := editTx(ctx, tx, online, messageID, userID, edit)
 		if err != nil {
 			return err
 		}
@@ -66,6 +65,10 @@ func editMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 // version and stores the new text with its mentions. It returns the message's
 // channel.
 func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) (uuid.UUID, error) {
+	return editTx(ctx, tx, online, messageID, userID, textEdit{content: &content})
+}
+
+func editTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messageID, userID uuid.UUID, edit textEdit) (uuid.UUID, error) {
 	var author, channel uuid.UUID
 	var hasMedia, isPoll, forwarded bool
 	err := tx.QueryRow(ctx, `
@@ -87,7 +90,11 @@ func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource,
 	if err := checkPairWritable(ctx, tx, channel, userID); err != nil {
 		return uuid.Nil, err
 	}
-	if content == "" && !hasMedia && !forwarded {
+	if edit.content == nil {
+		return channel, nil
+	}
+	content := *edit.content
+	if content == "" && !hasMedia && !forwarded && !edit.mayBeEmpty {
 		_, err := core.ValidateContent(content, false)
 		return uuid.Nil, err
 	}
@@ -100,23 +107,6 @@ func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource,
 		return uuid.Nil, fmt.Errorf("update message: %w", err)
 	}
 	return channel, mentions.RecordMentions(ctx, tx, online, messageID, userID, content)
-}
-
-// checkEditAutomod applies the automod rules to the new text of an edit. Only
-// the author's own edit is checked; whoever else tries gets the refusal of the
-// edit itself.
-func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, content string) (*automod.Pending, error) {
-	ref, err := core.LoadMessageRef(ctx, p, messageID)
-	if errors.Is(err, core.ErrMessageNotFound) {
-		return nil, nil // the edit itself answers 404
-	}
-	if err != nil {
-		return nil, err
-	}
-	if ref.AuthorID != userID || content == "" {
-		return nil, nil
-	}
-	return automod.Of(p).Check(ctx, automod.Post{ChannelID: ref.ChannelID, UserID: userID, Content: content, MessageID: messageID})
 }
 
 // CollectKeys appends the first column of query's rows to keys.
