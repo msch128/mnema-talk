@@ -797,22 +797,22 @@ export const decodeBlocksBlockedMember = decoder("blocks.BlockedMember", isBlock
 export type BotAccess = {
   channels: Array<BotChannelAccess>
   elevated: boolean
-  granted: number
-  mixed: boolean
-  mode: "channels" | "all"
+  granted?: number
+  mixed?: boolean
+  mode?: "channels" | "all"
   permissions: number
-  selected_channel_ids: Array<string>
+  selected_channel_ids?: Array<string>
 }
 
 export function isBotAccess(value: unknown): value is BotAccess {
   return isRecord(value)
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isBotChannelAccess(item)))
     && (hasOwn(value, "elevated") && typeof value["elevated"] === 'boolean')
-    && (hasOwn(value, "granted") && (isInteger(value["granted"]) && value["granted"] >= 0))
-    && (hasOwn(value, "mixed") && typeof value["mixed"] === 'boolean')
-    && (hasOwn(value, "mode") && (value["mode"] === "channels" || value["mode"] === "all"))
+    && (!hasOwn(value, "granted") || (isInteger(value["granted"]) && value["granted"] >= 0))
+    && (!hasOwn(value, "mixed") || typeof value["mixed"] === 'boolean')
+    && (!hasOwn(value, "mode") || (value["mode"] === "channels" || value["mode"] === "all"))
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
-    && (hasOwn(value, "selected_channel_ids") && isArrayOf(value["selected_channel_ids"], item => isIdentifier(item)))
+    && (!hasOwn(value, "selected_channel_ids") || isArrayOf(value["selected_channel_ids"], item => isIdentifier(item)))
 }
 
 export const decodeBotAccess = decoder("bot.Access", isBotAccess)

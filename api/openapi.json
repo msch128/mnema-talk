@@ -1379,11 +1379,7 @@
         "required": [
           "channels",
           "elevated",
-          "granted",
-          "mixed",
-          "mode",
-          "permissions",
-          "selected_channel_ids"
+          "permissions"
         ],
         "type": "object"
       },

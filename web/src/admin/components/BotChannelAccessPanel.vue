@@ -28,10 +28,11 @@ const channels = ref<string[]>([])
 const mixed = ref(false)
 
 function adopt(access: BotAccess) {
-  mode.value = access.mode
-  permissions.value = botPermissionKeys(access.granted)
-  channels.value = [...access.selected_channel_ids]
-  mixed.value = access.mixed
+  // A server older than this choice leaves the fields out.
+  mode.value = access.mode ?? 'channels'
+  permissions.value = botPermissionKeys(access.granted ?? 0)
+  channels.value = [...(access.selected_channel_ids ?? [])]
+  mixed.value = access.mixed ?? false
 }
 
 async function load() {

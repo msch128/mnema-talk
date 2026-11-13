@@ -33,18 +33,18 @@ type Access struct {
 	// Mode is the bot's access choice: "all" (its own role holds its channel
 	// permissions server-wide) or "channels" (only overwrites of its own
 	// role in the listed channels).
-	Mode string `json:"mode" enums:"channels,all"`
+	Mode string `json:"mode" binding:"optional" enums:"channels,all"`
 	// Granted is the set the choice grants (a bit set of channel
 	// permissions); in mode "channels" what every one of SelectedChannelIDs
 	// allows.
-	Granted perm.Set `json:"granted" swaggertype:"integer" minimum:"0"`
+	Granted perm.Set `json:"granted" binding:"optional" swaggertype:"integer" minimum:"0"`
 	// Mixed is true in mode "channels" when the selected channels allow
 	// different sets (set by hand): saving the choice applies one set to all.
-	Mixed bool `json:"mixed"`
+	Mixed bool `json:"mixed" binding:"optional"`
 	// SelectedChannelIDs are the channels the caller can view where the bot's
 	// own role has an overwrite: its channels in mode "channels", the private
 	// channels it may also see in mode "all".
-	SelectedChannelIDs []uuid.UUID `json:"selected_channel_ids" format:"uuid"`
+	SelectedChannelIDs []uuid.UUID `json:"selected_channel_ids" binding:"optional" format:"uuid"`
 }
 
 // ChannelAccess is what a bot may do in one channel it can view.
