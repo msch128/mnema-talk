@@ -127,7 +127,7 @@ function openNotificationMenu(e: MouseEvent) {
   <header
     ref="headerEl"
     :class="[
-      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
+      '@container px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
       panel ? 'h-10' : 'h-12'
     ]"
   >
@@ -150,7 +150,7 @@ function openNotificationMenu(e: MouseEvent) {
           v-full-text
           data-testid="channel-topic"
           :aria-expanded="topicOpen ? 'true' : 'false'"
-          class="min-w-0 max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
+          class="min-w-[3em] md:@max-[32rem]:hidden max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
           @click="topicOpen = !topicOpen"
         >{{ chatStore.activeChannel?.topic }}</button>
       </div>

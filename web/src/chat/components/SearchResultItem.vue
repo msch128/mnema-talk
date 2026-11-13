@@ -56,12 +56,12 @@ function formatDate(iso: string) {
 
     <div class="flex-1 min-w-0">
       <div class="mb-0.5 flex items-center gap-2">
-        <span v-full-text class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+        <span v-full-text class="min-w-[3em] truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
         <span v-if="channelName" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
           <MessageCircle v-if="conversation" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
           <Volume2 v-else-if="voice" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
           <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-          <span v-full-text class="truncate">{{ channelName }}</span>
+          <span v-full-text class="min-w-[3em] truncate">{{ channelName }}</span>
         </span>
         <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
           <CornerDownRight class="w-3 h-3" />

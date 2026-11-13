@@ -46,13 +46,14 @@ function menuItems(): ContextMenuItem[] {
     @dragover.prevent.stop
     @drop.stop="emit('drop', $event)"
   >
-    <div class="flex items-center gap-2 min-w-0 flex-1">
+    <!-- A container: the topic steps aside where the row is too narrow for it beside the name. -->
+    <div class="@container flex items-center gap-2 min-w-0 flex-1">
       <GripVertical class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-muted shrink-0" />
       <Hash v-if="channel.type === 'text'" class="w-4 h-4 text-mnema-tertiary shrink-0" />
       <Volume2 v-else-if="channel.type === 'voice'" class="w-4 h-4 text-mnema-accent shrink-0" />
       <MessagesSquare v-else class="w-4 h-4 text-mnema-accent shrink-0" />
-      <span v-full-text class="text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
-      <span v-full-text v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
+      <span v-full-text class="min-w-[3em] text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
+      <span v-full-text v-if="channel.topic" class="min-w-[3em] max-md:hidden @max-[28rem]:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
     </div>
 
     <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: channel.name })" />

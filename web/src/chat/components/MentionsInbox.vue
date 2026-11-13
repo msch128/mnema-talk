@@ -77,11 +77,11 @@ const when = (iso: string) => dateTime(iso, locale.value)
         <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
         <span class="min-w-0 flex-1">
           <span class="mb-0.5 flex items-center gap-2">
-            <span v-full-text class="min-w-8 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+            <span v-full-text class="min-w-[3em] truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
             <span v-if="channelNames.get(msg.channel_id)" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
               <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
               <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-              <span v-full-text class="truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
+              <span v-full-text class="min-w-[3em] truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
             </span>
             <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
             <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
