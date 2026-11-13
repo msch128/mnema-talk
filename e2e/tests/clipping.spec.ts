@@ -117,7 +117,8 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   expect((await apiFetch(mp, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   await mp.goto('/')
   const welcome = mp.getByRole('dialog')
-  if (await welcome.isVisible({ timeout: 10_000 }).catch(() => false)) await audit(mp, info, 'welcome flow', report)
+  // isVisible answers at once (it takes no timeout): wait for the dialog instead.
+  if (await welcome.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)) await audit(mp, info, 'welcome flow', report)
   else report.push({ scene: 'welcome flow', findings: [], unreached: 'the welcome flow did not open' })
   await member.close()
 }

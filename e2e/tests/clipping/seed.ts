@@ -179,7 +179,7 @@ async function seedEmbed(admin: Page, channelId: string) {
   if (sent.status() !== 204) throw new Error(`webhook answered ${sent.status()}`)
 }
 
-async function seedElsewhere(admin: Page, member: Page, other: string, adminId: string, suffix: string) {
+async function seedElsewhere(admin: Page, member: Page, other: string, adminId: string, suffix: string, run: RunMembers) {
   const longName = await channel(admin, `a-channel-with-the-longest-name-the-server-allows-${suffix}`.slice(0, 64), 'text')
   // The auto-delete chip beside the longest name in the header.
   await ok(admin, 'PUT', `/api/admin/channels/${longName.id}/auto-delete`, { days: 90 })
@@ -195,8 +195,11 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   const dmId = responseString(dm, 'id')
   await post(member, dmId, `Hello in a direct message, ${'with a long line '.repeat(6)}`)
   await post(admin, dmId, LONG_WORD)
-  const group = await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] })
-  const groupDmId = responseString(group, 'id')
+  // A pair has one conversation, but every POST makes a new group, and a
+  // member may start only ten a day: a reseed reuses this run's group.
+  let groupDmId = run.groupDmId
+  if (groupDmId) await ok(admin, 'PUT', `/api/dms/${groupDmId}/hidden`, { hidden: false })
+  else groupDmId = responseString(await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] }), 'id')
   await post(member, groupDmId, 'Hello group')
   return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
@@ -209,10 +212,16 @@ function runKey(baseURL: string, adminId: string): string {
   return `${baseURL.replace(/[^a-zA-Z0-9]+/g, '-')}-${adminId}`
 }
 
-/** The names and password of this run's two members, kept for the whole run so a reseed signs them in. */
-function runMembers(key: string, outputDir: string): { name: string; password: string } {
-  const path = join(outputDir, `clip-members-${key}.json`)
-  if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as { name: string; password: string }
+/** This run's two members and their group conversation, kept for the whole run so a reseed reuses them. */
+interface RunMembers { name: string; password: string; groupDmId?: string }
+
+function runMembersPath(key: string, outputDir: string): string {
+  return join(outputDir, `clip-members-${key}.json`)
+}
+
+function runMembers(key: string, outputDir: string): RunMembers {
+  const path = runMembersPath(key, outputDir)
+  if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as RunMembers
   const name = Date.now().toString(36)
   const members = { name, password: `pw-${name}-${randomBytes(8).toString('hex')}` }
   writeFileSync(path, JSON.stringify(members))
@@ -236,7 +245,8 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
     return JSON.parse(readFileSync(cache, 'utf8')) as World
   }
   const suffix = Date.now().toString(36)
-  const { name, password } = runMembers(key, outputDir)
+  const run = runMembers(key, outputDir)
+  const { name, password } = run
   const member = await registerMember(browser, admin, `clip_member_${name}`, password)
   const other = await registerMember(browser, admin, `clip_blocked_${name}`, password)
   const { chat, imageMessageText } = await seedChat(admin, member.page, `clip_member_${name}`, suffix)
@@ -250,7 +260,8 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
   const last = await post(admin, chat.id, lastMessageText)
   await ok(admin, 'PUT', `/api/me/saved/${last}`)
   await ok(admin, 'POST', '/api/me/reminders', { message_id: last, remind_at: new Date(Date.now() + 86_400_000).toISOString() })
-  const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix)
+  const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix, run)
+  writeFileSync(runMembersPath(key, outputDir), JSON.stringify({ ...run, groupDmId: elsewhere.groupDmId }))
   const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${name}`, password }, blockedId: other.id, imageMessageText, lastMessageText }
   for (const ctx of [member.ctx, other.ctx, admin.context()]) await ctx.close()
   writeFileSync(cache, JSON.stringify(world))
