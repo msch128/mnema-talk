@@ -156,13 +156,13 @@ onMounted(refresh)
               class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
               loading="lazy"
             />
-            <div v-else class="text-sm text-mnema-tertiary p-2 text-center break-all font-mono">
+            <div v-else v-full-text class="line-clamp-3 text-sm text-mnema-tertiary p-2 text-center break-all font-mono">
               {{ item.is_deleted ? $t('admin.deletedMarker') : item.original_filename }}
             </div>
           </div>
           <div class="relative z-10 p-2 bg-linear-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between mt-auto">
             <div class="min-w-0 flex-1 text-xs text-white">
-              <p class="truncate font-medium">{{ item.original_filename }}</p>
+              <p v-full-text class="truncate font-medium">{{ item.original_filename }}</p>
               <p class="text-mnema-muted">{{ formatBytes(item.size_bytes) }} • {{ item.uploader_name }}</p>
             </div>
             <template v-if="!item.is_deleted">
