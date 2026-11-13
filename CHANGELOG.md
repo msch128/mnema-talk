@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.12](https://github.com/msch128/mnema-talk/compare/v3.0.11...v3.0.12) (2026-11-13)
+
+
+### Bug Fixes
+
+* a data export stays downloadable for an hour after its download and is sent with its length ([#798](https://github.com/msch128/mnema-talk/issues/798)) ([815cb71](https://github.com/msch128/mnema-talk/commit/815cb71a36bbf777dfe74ae7efebcae0626e7377))
+
 ## [3.0.11](https://github.com/msch128/mnema-talk/compare/v3.0.10...v3.0.11) (2026-11-13)
 
 
