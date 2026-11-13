@@ -83,13 +83,16 @@ async function headerButton(s: SceneContext, testid: string) {
 
 async function messageMenu(s: SceneContext, text: string, corner: 'centre' | 'bottom-right' = 'centre') {
   const row = s.page.locator('[data-msg-id]', { hasText: text }).last()
-  await row.scrollIntoViewIfNeeded()
-  const box = await row.boundingBox()
-  if (!box) throw new Error('message not on screen')
-  const x = corner === 'centre' ? box.x + box.width / 2 : box.x + box.width - 4
-  const y = corner === 'centre' ? box.y + box.height / 2 : box.y + box.height - 4
-  await s.page.mouse.click(x, y, { button: 'right' })
-  await expect(s.page.getByRole('menu')).toBeVisible()
+  // Rows move while banners (notifications, tips) arrive, so the click is aimed at the row as it is then, and retried.
+  await expect(async () => {
+    await s.page.keyboard.press('Escape')
+    await row.scrollIntoViewIfNeeded()
+    const box = await row.boundingBox()
+    if (!box) throw new Error('message not on screen')
+    const position = corner === 'centre' ? { x: box.width / 2, y: box.height / 2 } : { x: box.width - 4, y: box.height - 4 }
+    await row.click({ button: 'right', position })
+    await expect(s.page.getByRole('menu')).toBeVisible({ timeout: 2_000 })
+  }).toPass({ timeout: 15_000 })
 }
 
 const chatScenes: Scene[] = [
