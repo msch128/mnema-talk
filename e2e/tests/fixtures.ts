@@ -1,6 +1,7 @@
 import { test as base, expect } from '@playwright/test'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { explainNavigationFailures } from './navigation-diagnostics'
+import { trackPeerConnections } from './helpers'
 
 // Every spec signs in as the Owner from one address, and the API allows 600
 // requests a minute per account. Instead of failing (or sleeping) after the
@@ -236,6 +237,8 @@ function counted(browser: Browser): Browser {
     const addressed = grantable(browser, { serviceWorkers: serviceWorkersFor(), ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
     const context = await (separate ? contextOwnProcess(browser, addressed) : newContext(addressed))
     countApiRequests(context)
+    // Before any init script of the spec, which may turn the noise filter back on (see helpers.ts).
+    await context.addInitScript(trackPeerConnections)
     await watchCsp(context)
     await hideWelcomeFlow(context)
     await hideFirstRun(context)

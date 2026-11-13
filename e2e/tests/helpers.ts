@@ -85,16 +85,22 @@ export function responseUserId(response: ApiResponse): string {
 }
 
 /**
- * Init script of every call spec. It also turns the AI noise filter off: the
- * default (DeepFilterNet3) loads an 8 MB model and runs it in WebAssembly for
- * each member, and on the two cores of a hosted macOS runner two members
- * starve each other, so joining a call took 20 s instead of 3 and the specs'
- * 20 s waits for the connection or for decoded audio ran out. The specs are
- * about the call, not the filter; late-join.spec.ts turns it back on where it
- * checks the filter itself (its init script runs after this one).
+ * Init script of every browser context (fixtures.ts adds it when the context
+ * is created, so no spec can forget it): it records the page's peer
+ * connections in window.__pcs and window.__pcTimings, and it turns the AI
+ * noise filter off. The default (DeepFilterNet3) loads an 8 MB model and runs
+ * it in WebAssembly for each member, and on the two cores of a hosted macOS
+ * runner two members starve each other, so joining a call took 20 s instead of
+ * 3 and the specs' 20 s waits for the connection, for decoded audio or for the
+ * first camera or screen frames ran out. The specs are about the call, not the
+ * filter; a spec that checks the filter (late-join, perf-idle, audio-stall)
+ * turns it back on with an init script of its own, which runs after this one.
+ * A spec must not wrap RTCPeerConnection to record it again: every connection
+ * would be in window.__pcs twice.
  */
 export function trackPeerConnections(): void {
-  localStorage.setItem('mnema_noise', 'off')
+  // A frame without storage (about:blank, a sandboxed frame) throws here.
+  try { localStorage.setItem('mnema_noise', 'off') } catch { /* no storage in this frame */ }
   const Native = window.RTCPeerConnection
   window.__pcs = []
   window.__pcTimings = []

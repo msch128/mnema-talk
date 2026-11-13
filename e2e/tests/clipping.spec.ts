@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import type { Browser, BrowserContext, Page, TestInfo } from '@playwright/test'
 import { test, expect, showWelcomeFlow } from './fixtures'
-import { apiFetch, trackPeerConnections } from './helpers'
+import { apiFetch } from './helpers'
 import { auditClipping, type ClipFinding } from './clipping/auditor'
 import { EXCEPTIONS, isExcepted, unexplained } from './clipping/exceptions'
 import { translate } from './clipping/i18n'
@@ -135,7 +135,6 @@ async function signedIn(browser: Browser, combo: Combo): Promise<{ ctx: BrowserC
     locale: combo.locale === 'en' ? 'en-US' : 'de-DE',
     permissions: ['microphone', 'camera'],
   })
-  await ctx.addInitScript(trackPeerConnections)
   await ctx.addInitScript(fakeDisplayMedia)
   const page = await ctx.newPage()
   await browserFont(page)

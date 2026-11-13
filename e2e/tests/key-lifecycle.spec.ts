@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, leaveAndClose } from './helpers'
+import { apiFetch, responseString, responseUserId, suiteMember, leaveTalks, audioDecodedIn, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -45,7 +45,6 @@ async function setup(browser: Browser, committerTiming: Timing, otherTiming: Tim
   const contexts = await Promise.all([0, 1].map(() => browser.newContext({ permissions: ['microphone', 'camera'] })))
   opened.push(...contexts)
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
-  for (const ctx of contexts) await ctx.addInitScript(trackPeerConnections)
   const admin = await adminCtx.newPage()
   const member = await memberCtx.newPage()
   await signIn(admin, ADMIN_USER, ADMIN_PASSWORD)

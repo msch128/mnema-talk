@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, responseString, responseUserId, leaveTalks, leaveAndClose } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -60,7 +60,6 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
   opened.push(sharerCtx)
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(viewerCtx)
-  await sharerCtx.addInitScript(trackPeerConnections)
   await sharerCtx.addInitScript(fakeDisplayMedia)
   const sharer = await sharerCtx.newPage()
   const viewer = await viewerCtx.newPage()
