@@ -11,7 +11,7 @@ vi.mock('../../shared/lib/platform', async importOriginal => {
 
 import { useDesktopBusy } from './useDesktopBusy'
 import { useVoiceStore } from '../../stores/voice'
-import { channelDraftKey, clearAllDrafts, setDraft } from '../../chat/lib/drafts'
+import { channelDraftKey, clearAllDrafts, notePendingDraft, setDraft } from '../../chat/lib/drafts'
 import { clearAllTrays, trays } from '../../chat/composables/attachmentTrayState'
 import type { TrayItem } from '../../chat/lib/attachmentTray'
 
@@ -51,23 +51,28 @@ describe('useDesktopBusy', () => {
     expect(report).toHaveBeenLastCalledWith({ draft: false, upload: false, talk: false })
   })
 
-  it('reports unsent text of any channel and clears it when the draft is gone', async () => {
+  it('reports text typed and not written yet, and a stored draft as safe', async () => {
     start()
-    setDraft('u1', channelDraftKey('c9'), { text: 'half a thought', reply: null })
+    const composer = Symbol('composer')
+    notePendingDraft(composer, true)
     await nextTick()
     expect(report).toHaveBeenLastCalledWith({ draft: true, upload: false, talk: false })
-    setDraft('u1', channelDraftKey('c9'), null)
+    setDraft('u1', channelDraftKey('c9'), { text: 'half a thought', reply: null })
+    notePendingDraft(composer, false)
     await nextTick()
     expect(report).toHaveBeenLastCalledWith({ draft: false, upload: false, talk: false })
   })
 
-  it('reports a running upload until it is done', async () => {
+  it('reports a file in a tray until it is sent, uploaded or not', async () => {
     start()
     trays.set('c1', [file('uploading')])
     await nextTick()
     expect(report).toHaveBeenLastCalledWith({ draft: false, upload: true, talk: false })
     const [item] = trays.get('c1') as TrayItem[]
     if (item) item.status = 'ready'
+    await nextTick()
+    expect(report).toHaveBeenLastCalledWith({ draft: false, upload: true, talk: false })
+    trays.set('c1', [])
     await nextTick()
     expect(report).toHaveBeenLastCalledWith({ draft: false, upload: false, talk: false })
   })
@@ -81,12 +86,11 @@ describe('useDesktopBusy', () => {
 
   it('reports again only when a flag changes', async () => {
     start()
-    setDraft('u1', channelDraftKey('c1'), { text: 'a', reply: null })
+    trays.set('c1', [file('ready')])
     await nextTick()
     const calls = report.mock.calls.length
-    setDraft('u1', channelDraftKey('c1'), { text: 'a longer draft', reply: null })
-    setDraft('u1', channelDraftKey('c2'), { text: 'another', reply: null })
-    trays.set('c1', [file('ready')])
+    setDraft('u1', channelDraftKey('c1'), { text: 'a stored draft', reply: null })
+    trays.set('c1', [file('ready'), file('uploading')])
     await nextTick()
     expect(report).toHaveBeenCalledTimes(calls)
   })

@@ -13,10 +13,14 @@ export const itemsOf = (slot: string): TrayItem[] => {
   return trays.get(slot) as TrayItem[]
 }
 
-/** Reactive: true while any tray has a file waiting for or in its upload. Reads without creating a tray. */
-export function anyUploadPending(): boolean {
+/**
+ * Reactive: true while any tray holds a file, whatever its state: one waiting
+ * or uploading, and one uploaded but not sent yet, are all lost with the page
+ * (trays live in memory only). Reads without creating a tray.
+ */
+export function anyAttachmentHeld(): boolean {
   for (const items of trays.values()) {
-    if (items.some(item => item.status === 'queued' || item.status === 'uploading')) return true
+    if (items.length > 0) return true
   }
   return false
 }

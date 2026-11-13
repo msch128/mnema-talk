@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, getDraft, hasAnyDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
+import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, draftsAtRisk, getDraft, hasDraft, notePendingDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -8,12 +8,27 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('drafts', () => {
-  it('knows whether any channel, thread or conversation holds unsent text', () => {
-    expect(hasAnyDraft()).toBe(false)
+  it('puts no draft at risk once it is stored: it comes back after a reload', () => {
+    expect(draftsAtRisk()).toBe(false)
     setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })
-    expect(hasAnyDraft()).toBe(true)
-    setDraft('u1', threadDraftKey('t1'), null)
-    expect(hasAnyDraft()).toBe(false)
+    expect(draftsAtRisk()).toBe(false)
+  })
+
+  it('puts a draft at risk while text is typed and not written yet', () => {
+    const composer = Symbol('composer')
+    notePendingDraft(composer, true)
+    expect(draftsAtRisk()).toBe(true)
+    notePendingDraft(composer, false)
+    expect(draftsAtRisk()).toBe(false)
+  })
+
+  it('puts a draft at risk when storage refused it, until a write succeeds', () => {
+    const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('full') })
+    setDraft('u1', channelDraftKey('c1'), { text: 'nowhere to go', reply: null })
+    expect(draftsAtRisk()).toBe(true)
+    setItem.mockRestore()
+    setDraft('u1', channelDraftKey('c1'), { text: 'stored now', reply: null })
+    expect(draftsAtRisk()).toBe(false)
   })
 
   it('keeps text and reply target per channel and thread', () => {

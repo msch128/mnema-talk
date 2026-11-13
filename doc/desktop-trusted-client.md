@@ -576,9 +576,11 @@ host:
   client closes the page of a server that stayed hidden for a while to save
   memory (110 to 260 MB per page), and asks first whether the page is busy. A
   host that announces `busy` in the instance window's `capabilities` gets
-  `desktop_report_busy` (`draft`: some composer holds unsent text, `upload`: a
-  file is waiting for or in its upload, `talk`: the member is connected to a
-  Talk; all booleans) right after the page started and on every change.
+  `desktop_report_busy` (all booleans, each true only while closing the page
+  would lose something: `draft`, text typed and not written yet, or a draft
+  the browser's storage refused, while stored drafts come back after a reload;
+  `upload`, a file in a composer's tray, waiting, uploading, or uploaded and
+  not sent; `talk`, the member is connected to a Talk) right after the page started and on every change.
   `Platform.reportBusy` / `supportsBusyReport` do the feature detection, so a
   client without the capability gets nothing. No `web_client_api` bump. Allowed
   only in the instance window.
