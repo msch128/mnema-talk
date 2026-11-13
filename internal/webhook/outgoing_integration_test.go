@@ -95,7 +95,7 @@ func TestOutgoingManagementDatabaseFailures(t *testing.T) {
 // Losing the list of webhooks after a change is logged, not fatal.
 func TestReloadFailureAfterChangeIsNotFatal(t *testing.T) {
 	f := newFixture(t)
-	h := f.faulty(&pgfault.Tracer{Query: "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"})
+	h := f.faulty(&pgfault.Tracer{Query: "SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w"})
 	w := f.json(h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{"name":"n","url":"https://hooks.example/y","events":["MESSAGE_CREATE"]}`)
 	wantStatus(t, w, 201, "create")
 }
@@ -127,8 +127,8 @@ func TestReloadErrors(t *testing.T) {
 	f := newFixture(t)
 	f.outgoing("https://hooks.example/x")
 	for _, tr := range []*pgfault.Tracer{
-		{Query: "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"},
-		{Query: "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled", AfterPrepare: true},
+		{Query: "SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w"},
+		{Query: "SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w", AfterPrepare: true},
 	} {
 		d := NewDispatcher((&dbFaulty{f, tr.Query}).poolWith(tr), nil, "t")
 		if err := d.Reload(context.Background()); err == nil {

@@ -17,7 +17,10 @@ function fieldLabel(field: string): string {
 const WORDS: Readonly<Record<string, string>> = {
   'too repetitive': 'repetitive', 'needs letters and digits, or 16 or more characters': 'lettersDigits',
   'contains a common word or sequence': 'commonWord', avatar: 'avatar', banner: 'banner',
-  scheduled: 'scheduled', active: 'active', completed: 'completed', cancelled: 'cancelled'
+  scheduled: 'scheduled', active: 'active', completed: 'completed', cancelled: 'cancelled',
+  // The channel permissions a bot's install can lack (perm.Catalog names).
+  'view channels': 'permViewChannels', 'send messages': 'permSendMessages', 'attach files': 'permAttachFiles',
+  'add reactions': 'permAddReactions', 'manage messages': 'permManageMessages', 'mention everyone': 'permMentionEveryone'
 }
 const SHORTER = /^shorter than (\d+) characters$/
 

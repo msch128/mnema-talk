@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strings"
@@ -13,12 +14,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 	"github.com/msch128/mnema-talk/internal/testutil/racetest"
 )
@@ -444,6 +447,25 @@ var crashOps = []crashOp{
 		alice := a.register(admin, "alice")
 		role := createRole(a.t, admin, "helpers", 0)
 		return func() response { return setRoles(admin, alice.user.ID, role) }
+	}},
+	{"install a bot from a manifest", func(a *app) func() response {
+		admin := a.seedAdmin()
+		ch := a.createChannel(admin, "general", "text")
+		body := installBody(testManifest("Mnemo"), []string{"view_channel", "send_messages"}, []string{"GUILDS", "GUILD_MESSAGES"}, ch)
+		return func() response { return admin.post("/api/admin/bots/install", body) }
+	}},
+	{"post a bot message with components", func(a *app) func() response {
+		admin := a.seedAdmin()
+		ch := a.createChannel(admin, "general", "text")
+		b := createBot(a.t, admin, "helper")
+		writer := createRole(a.t, admin, "Writer bot", perm.SendMessages)
+		wantStatus(a.t, "bot role", admin.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{"role_ids": []uuid.UUID{writer}}), http.StatusOK)
+		wantStatus(a.t, "scope", putOverwrites(admin, "channels", ch, overwrite("role", writer, perm.ViewChannel, 0)), http.StatusNoContent)
+		tok := issueToken(a.t, admin, b.ID, map[string]any{"name": "crash"})
+		c := &botClient{t: a.t, a: a, token: tok.Secret, user: b.UserID}
+		return func() response {
+			return c.post(botPath(ch, "/messages"), map[string]any{"content": "Deploy?", "components": deployRows()})
+		}
 	}},
 }
 

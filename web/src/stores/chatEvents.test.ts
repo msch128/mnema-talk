@@ -192,6 +192,7 @@ describe('other live updates', () => {
     chat.handleWSEvent({
       type: 'interaction_response',
       payload: {
+        id: fixtureId(4),
         channel_id: fixtureId(2),
         bot_id: fixtureId(3),
         bot_name: 'Helper',

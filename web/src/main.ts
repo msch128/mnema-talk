@@ -13,6 +13,7 @@ import { gamingSurface } from './talk/lib/desktopGaming'
 import { platform } from './shared/lib/platform'
 import { captureInstallPrompt, registerServiceWorker } from './shared/lib/pwa'
 import { installRangeFill } from './shared/lib/rangeFill'
+import { captureBotAddLink } from './shared/lib/botAddLink'
 import { unlockAudioOnFirstGesture } from './talk/lib/soundEffects'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
@@ -22,6 +23,8 @@ import { fullText } from './directives/fullText'
 
 // Before login the browser decides; the account's language takes over after login.
 setLocale(browserLocale())
+// A bot's add link carries its manifest in the fragment, which nothing after this keeps.
+captureBotAddLink()
 
 const root = gamingSurface()
   ? (await import('./talk/components/DesktopGamingOverlay.vue')).default

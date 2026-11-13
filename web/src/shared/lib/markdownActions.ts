@@ -29,7 +29,11 @@ function openInNewTab(href: string): void {
 /** Asks first, then opens in a new tab exactly like an ordinary link would. */
 export async function openConfirmedLink(anchor: HTMLAnchorElement): Promise<void> {
   const href = anchor.getAttribute('href') ?? ''
-  const host = anchor.dataset.host || href
+  await openConfirmedUrl(href, anchor.dataset.host || href)
+}
+
+/** The same question for an address that has no anchor (a bot's link button). */
+export async function openConfirmedUrl(href: string, host: string): Promise<void> {
   const ok = await confirm({
     title: t('chat.linkConfirmTitle'),
     body: t('chat.linkConfirmBody', { host }),

@@ -10,6 +10,8 @@ import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { NOTICE_EVENT_CHECKS } from './noticeEvents'
 import type { DirectMessageMember, DirectMessageRef, DmCallEnd, DmCallRing } from './dmEvents'
 import { DM_EVENT_CHECKS } from './dmEvents'
+import type { InteractionDeferred, InteractionModal, InteractionResponse } from './botEvents'
+import { BOT_EVENT_CHECKS } from './botEvents'
 import type { ReadStateUpdate } from './readStateEvents'
 import { isReadStateUpdate } from './readStateEvents'
 import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
@@ -31,6 +33,7 @@ export interface MuteState { channel_id: string; user_id: string; muted: boolean
 export interface VoiceRooms { started: Record<string, string>; now: string }
 export type VoiceSnapshot = Record<string, Record<string, VoiceUser>>
 export type { ReadStateUpdate }
+export type { InteractionDeferred, InteractionModal, InteractionResponse }
 export type VoiceStateUpdate =
   | { action: 'join'; channel_id: string; user: VoiceUser; started_at: string }
   | { action: 'leave'; channel_id: string; user_id: string }
@@ -45,16 +48,6 @@ export interface BotActivity {
 function isBotActivity(value: unknown): value is BotActivity {
   return isRecord(value) && isInteger(value['type']) && value['type'] >= 0 && value['type'] <= 5
     && isString(value['name'], 128) && value['name'] !== ''
-}
-
-export interface InteractionResponse {
-  channel_id: string
-  bot_id: string
-  bot_name: string
-  bot_avatar_url?: string
-  content: string
-  embeds: { title?: string; description?: string }[] | null
-  created_at: string
 }
 
 export interface ServerEventPayloads {
@@ -105,6 +98,8 @@ export interface ServerEventPayloads {
   /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
   pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string; pinned_at?: string; pinned_by?: ChatUserRef }
   interaction_response: InteractionResponse
+  interaction_modal: InteractionModal
+  interaction_deferred: InteractionDeferred
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
   member_timeout: { id: string; timeout_until: string | null }
@@ -254,21 +249,6 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
 ])
 
-function isOptionalAvatarUrl(payload: Record<string, unknown>): boolean {
-  return !hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)
-}
-
-function isOptionalNoteEmbeds(embeds: unknown): boolean {
-  return embeds === null || isArrayOf(embeds, isNoteEmbed)
-}
-
-function isInteractionResponse(payload: Record<string, unknown>): boolean {
-  if (!isIdentifier(payload['channel_id']) || !isIdentifier(payload['bot_id'])) return false
-  if (!isString(payload['bot_name'], 64) || !isString(payload['content'], 8_000)) return false
-  if (!isOptionalAvatarUrl(payload) || !isOptionalNoteEmbeds(payload['embeds'])) return false
-  return isTimestamp(payload['created_at'])
-}
-
 // Events whose payload is a JSON object, by event type.
 const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['pong', payload => typeof payload['t'] === 'number' && Number.isFinite(payload['t'])],
@@ -289,7 +269,6 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
     && isArrayOf(payload['reactions'], isChatReactionSummary)],
   ['poll_update', payload => isIdentifier(payload['message_id']) && isIdentifier(payload['channel_id']) && isChatPoll(payload['poll'])],
-  ['interaction_response', isInteractionResponse],
   ['user_update', payload => hasOwn(payload, 'disabled')
     ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
     : isAuthUser(payload)],
@@ -327,6 +306,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ...STAGE_EVENT_CHECKS,
   ...DM_EVENT_CHECKS,
+  ...BOT_EVENT_CHECKS,
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
   ...NOTICE_EVENT_CHECKS
@@ -348,16 +328,12 @@ export function isServerEvent(value: unknown): value is ServerEvent {
   return checkFor(OBJECT_CHECKS, value['type'])?.(payload) ?? false
 }
 
-function isNoteEmbed(value: unknown): boolean {
-  return isRecord(value) && (!hasOwn(value, 'title') || isString(value['title'], 1_000)) && (!hasOwn(value, 'description') || isString(value['description'], 8_000))
-}
-
 const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_not_accepted', 'talk_rate_limited', 'talk_unavailable', 'connection_lost', 'media_unavailable', 'joined_elsewhere', 'voice_taken_over'])
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'interaction_modal', 'interaction_deferred', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated', 'reports_open'
 ])

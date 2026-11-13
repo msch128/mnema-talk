@@ -101,6 +101,10 @@ var Routes = []Route{
 	{Method: "DELETE", Pattern: "/outgoing-webhooks/{id}", Action: "outgoing_webhook.delete", TargetType: "outgoing_webhook", IDParam: "id", Snapshot: ResOutgoing},
 
 	{Method: "POST", Pattern: "/bots", Action: "bot.create", TargetType: "bot"},
+	// Checking a manifest changes nothing; an install writes its own entry
+	// (bot.installed) in the transaction that does the work.
+	{Method: "POST", Pattern: "/bots/manifests/check", Skip: true},
+	{Method: "POST", Pattern: "/bots/install", Skip: true},
 	{Method: "PATCH", Pattern: "/bots/{id}", Action: "bot.update", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "DELETE", Pattern: "/bots/{id}", Action: "bot.delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "POST", Pattern: "/bots/{id}/avatar", Action: "bot.avatar", TargetType: "bot", IDParam: "id", Snapshot: ResBot, NoBody: true},

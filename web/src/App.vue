@@ -24,6 +24,7 @@ import { rulesOpen } from './app/lib/communityRules'
 import SettingsDialog from './settings/components/SettingsDialog.vue'
 import CommunityRulesDialog from './app/components/CommunityRulesDialog.vue'
 import AdminDashboard from './admin/components/AdminDashboard.vue'
+import BotModalDialog from './chat/components/BotModalDialog.vue'
 import ConnectionStatsModal from './talk/components/ConnectionStatsModal.vue'
 import { openSettings } from './shared/lib/settingsDialog'
 import { notifyDialogOpen } from './shared/lib/notifyDialog'
@@ -322,6 +323,8 @@ onMounted(async () => {
 
       <!-- Admin console dialog -->
       <AdminDashboard v-if="showAdminModal && permissions.canOpenAdmin" :initial-tab="adminTab" @close="closeAdmin" />
+      <!-- A form a bot opened (a slash command or a click answered with a modal) -->
+      <BotModalDialog v-if="chatStore.botModal" :key="chatStore.botModal.id" :modal="chatStore.botModal" @close="chatStore.botModal = null" />
 
       <!-- Connection statistics dialog -->
       <ConnectionStatsModal 

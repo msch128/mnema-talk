@@ -12,10 +12,14 @@ const CHANNEL = `a11y-${Date.now().toString(36)}`
 // Every axe rule tagged WCAG 2.0/2.1/2.2 A or AA, with nothing excluded.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
-async function expectNoViolations(page: Page, where: string) {
+// within narrows the check to one dialog: what lies under two scrims (a dialog over the
+// admin console over the chat) is not meant to be read, and its dimmed colours are not the app's.
+async function expectNoViolations(page: Page, where: string, within?: string) {
   await page.waitForTimeout(400) // entry animations finished: axe reads the settled colours
-  const result = await new AxeBuilder({ page }).withTags(TAGS).analyze()
-  const found = result.violations.map(v => `${v.id}: ${v.nodes.slice(0, 3).map(n => n.target.join(" ") + " " + n.html.slice(0, 140)).join(' | ')}`)
+  const builder = new AxeBuilder({ page }).withTags(TAGS)
+  const result = await (within ? builder.include(within) : builder).analyze()
+  // The failure summary says what axe measured (for contrast: both colours and the ratio).
+  const found = result.violations.map(v => `${v.id}: ${v.nodes.slice(0, 3).map(n => `${n.target.join(' ')} ${n.html.slice(0, 140)} ${(n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 220)}`).join(' | ')}`)
   expect(found, `accessibility violations on ${where}`).toEqual([])
 }
 
@@ -62,4 +66,32 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
     await expect(page.getByTestId('admin-tabs')).toBeVisible()
     await expectNoViolations(page, `admin ${tab}`)
   }
+})
+
+test('adding a bot from its manifest meets WCAG AA: the confirm screen and the token', async ({ page }) => {
+  await signIn(page)
+  const channel = await apiFetch(page, 'POST', '/api/admin/channels', { name: `${CHANNEL}-bots`, type: 'text' })
+  expect(channel.status).toBe(201)
+  const name = `A11y bot ${Date.now().toString(36)}`.slice(0, 24)
+  const manifest = {
+    manifest_version: 1, name, description: 'Answers questions.', homepage: 'https://example.org/bot',
+    intents: ['GUILDS'], permissions: ['view_channel', 'send_messages', 'mention_everyone'],
+    commands: [{ name: 'poll', description: 'A poll of its own', options: [] }]
+  }
+  await page.goto(`/admin/bots/add#manifest=${Buffer.from(JSON.stringify(manifest), 'utf8').toString('base64url')}`)
+  const confirm = page.getByTestId('manifest-confirm')
+  await expect(confirm).toBeVisible()
+  await expectNoViolations(page, 'the manifest confirm screen')
+  await confirm.locator(`[data-channel="${responseString(channel, 'id')}"]`).check()
+  await confirm.getByTestId('manifest-install').click()
+  await expect(page.getByTestId('bot-secret')).toBeVisible()
+  await expectNoViolations(page, 'the token dialog', '[role="dialog"]:has([data-testid="bot-secret"])')
+  await page.getByTestId('bot-secret-done').click()
+  // The new bot in the member list (its BOT tag), with nothing in front of it.
+  await page.goto(`/c/${responseString(channel, 'id')}`)
+  await expect(page.getByTestId('bot-badge').first()).toBeVisible()
+  await expectNoViolations(page, 'the chat with a bot in the member list')
+  const bots = await apiFetch(page, 'GET', '/api/admin/bots')
+  const botId = (bots.json as { id: string; name: string }[]).find(b => b.name === name)?.id
+  if (botId) expect((await apiFetch(page, 'DELETE', `/api/admin/bots/${botId}`)).status).toBe(204)
 })

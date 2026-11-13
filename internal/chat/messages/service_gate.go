@@ -109,15 +109,16 @@ func (cmd PostCommand) clean(actor Actor) (string, []core.Embed, error) {
 	case cmd.ContentChecked:
 		return cmd.Content, nil, nil
 	case actor.Bot:
-		return ValidateBotMessage(cmd.Content, cmd.Embeds)
+		return ValidateBotMessage(cmd.Content, cmd.Embeds, cmd.HasComponents)
 	}
 	content, err := core.ValidateContent(cmd.Content, len(cmd.AttachmentIDs) > 0)
 	return content, nil, err
 }
 
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
-// a response to a command): the same rules, one message needs one of them.
-func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []core.Embed, error) {
+// a response to a command): the same rules, one message needs one of them or
+// components (hasComponents: the caller validated them).
+func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed, hasComponents bool) (string, []core.Embed, error) {
 	content, err := core.ValidateContent(rawContent, true)
 	if err != nil {
 		return "", nil, err
@@ -126,7 +127,7 @@ func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []core.
 	if err != nil {
 		return "", nil, httpx.ErrInvalidInput(err.Error())
 	}
-	if content == "" && len(embeds) == 0 {
+	if content == "" && len(embeds) == 0 && !hasComponents {
 		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
 	}
 	return content, embeds, nil
