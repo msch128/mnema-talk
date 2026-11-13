@@ -5,7 +5,7 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
 import { needsSheet, placeNear, pointBox, submenuOffsets, visibleArea, type AnchorBox } from '../lib/floatingPosition'
-import { rowTarget, typeAhead } from '../lib/menuKeys'
+import { menuOpener, rowTarget, typeAhead } from '../lib/menuKeys'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
 // { type: 'separator' }, { type: 'label', label }, { type: 'slider', ... },
@@ -169,7 +169,7 @@ watch(() => props.modelValue, (open) => {
   if (open) {
     settling = true
     requestAnimationFrame(() => requestAnimationFrame(() => { settling = false }))
-    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    opener = menuOpener(props.anchor, props.x, props.y)
     sheet.value = false
     const box = baseBox()
     posX.value = box.left

@@ -757,12 +757,15 @@ describe('ChatArea when the messages fail to load', () => {
     const chat = setup()
     chat.messages = []
     chat.windowLoadFailed = true
-    const fetchMessages = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(true)
+    const fetchMessages = vi.spyOn(chat, 'fetchMessages').mockImplementation(async () => { chat.windowLoadFailed = false; return true })
     await nextTick()
     const failed = w.get('[data-testid="chat-load-failed"]')
     expect(failed.text()).toContain(t('chat.windowLoadFailed'))
     expect(w.text()).not.toContain(t('chat.emptyBody'))
     await failed.get('[data-testid="state-retry"]').trigger('click')
     expect(fetchMessages).toHaveBeenCalledWith('ch1')
+    // The button is gone after a load that worked: focus moves to the chat, not to the page body.
+    await flushPromises()
+    expect(document.activeElement?.id).toBe('main-content')
   })
 })

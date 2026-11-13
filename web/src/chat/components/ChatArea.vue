@@ -37,6 +37,7 @@ import { typingLine } from '../../shared/lib/chatLogic'
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
 import StatePanel from '../../shared/components/StatePanel.vue'
+import { useLoadRetry } from '../composables/useLoadRetry'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
 // header with a close button, Discord's welcome texts, no member toggle.
@@ -63,6 +64,7 @@ const { canSend, canAttach, canReact, placeholder } = useChannelWrite(dmChat, ()
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
+const retryLoad = useLoadRetry(() => messageContainer.value?.closest<HTMLElement>('main, section') ?? null)
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
@@ -248,7 +250,7 @@ const groupedIds = computed(() => {
       </div>
 
       <!-- The channel's messages failed to load: never "no messages yet" -->
-      <StatePanel v-else-if="!chatStore.messages?.length && chatStore.windowLoadFailed" state="error" retryable data-testid="chat-load-failed" class="h-full justify-center" @retry="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)">{{ $t('chat.windowLoadFailed') }}</StatePanel>
+      <StatePanel v-else-if="!chatStore.messages?.length && chatStore.windowLoadFailed" state="error" retryable data-testid="chat-load-failed" class="h-full justify-center" @retry="retryLoad">{{ $t('chat.windowLoadFailed') }}</StatePanel>
 
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
