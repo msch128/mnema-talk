@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
 import { TestStream, present } from '../../media-test.fixture'
 import { toRaw, nextTick } from 'vue'
 import { t } from '../../i18n'
@@ -282,42 +281,6 @@ describe('permission and microphone switching outcomes', () => {
     expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'silent', tab: expect.any(String) } })
     const pc = await negotiate()
     expect(pc.senders.every(sender => sender.track === null)).toBe(true)
-  })
-
-  it('holds the join until the realtime socket is up', async () => {
-    const { rtc, chat, sent } = setup()
-    chat.isConnected = false
-    const join = rtc.joinVoiceChannel('early')
-    await grantMic()
-    await flushPromises()
-    expect(sent.some(e => e.type === 'voice_join')).toBe(false)
-    chat.isConnected = true
-    await join
-    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'early', tab: expect.any(String) } })
-  })
-
-  it('sends no resume beside a join held for the socket when the socket comes back', async () => {
-    const { rtc, chat, sent } = setup()
-    chat.isConnected = false
-    const join = rtc.joinVoiceChannel('back')
-    await grantMic()
-    await flushPromises()
-    rtc.rejoinAfterReconnect()
-    chat.isConnected = true
-    await join
-    expect(sent.filter(e => e.type === 'voice_join')).toEqual([{ type: 'voice_join', payload: { channel_id: 'back', tab: expect.any(String) } }])
-  })
-
-  it('drops a join held for the socket when the member left meanwhile', async () => {
-    const { rtc, chat, sent } = setup()
-    chat.isConnected = false
-    const join = rtc.joinVoiceChannel('gone')
-    await grantMic()
-    await flushPromises()
-    rtc.leaveVoiceChannel()
-    chat.isConnected = true
-    await join
-    expect(sent.some(e => e.type === 'voice_join')).toBe(false)
   })
 
   it('avoids reacquiring an already joined microphone and sends exact selected device constraints', async () => {

@@ -155,14 +155,18 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   // A join sent before the realtime socket is up would be dropped and the call
   // would wait for an answer forever (a Talk picked right after the page
   // loaded): it waits for the socket instead.
-  // The flag stays up until the join is sent: the reconnect that brings the
-  // socket up must not send a resume beside it (rejoinAfterReconnect).
+  // The flag keeps the reconnect that brings the socket up from sending a
+  // resume beside this join (rejoinAfterReconnect, run in the same flush as the
+  // wake-up). It drops right after the wait: nothing async runs from there to
+  // the send, and a throw on the way must not leave it up.
   if (!chat.isConnected) {
     st.joinAwaitsSocket = true
     await socketUp(cx)
+    st.joinAwaitsSocket = false
   }
   if (gen !== st.joinGeneration) {
-    st.joinAwaitsSocket = false
+    // A capture that was not routed through the pipeline is stopped by nobody else.
+    stopStreams(sendStream)
     return
   }
 
@@ -170,7 +174,6 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
   chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId() } : { channel_id: channelId, tab: tabId() })
-  st.joinAwaitsSocket = false
   openMediaRoom()
   attachSubscriptions(cx)
 
