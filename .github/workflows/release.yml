@@ -607,13 +607,13 @@ jobs:
           exit 1
 
       # The repository page on Docker Hub: short and full description from
-      # deploy/dockerhub/ at the release tag (the full one is a Docker Hub
+      # deploy/dockerhub/ of this run's commit on main, so a backfill of an
+      # old version also gets the current text (the full one is a Docker Hub
       # specific overview; the repository README is too long for it).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.cfg.outputs.enabled == 'true'
         with:
           persist-credentials: false
-          ref: v${{ env.VERSION }}
           sparse-checkout: deploy/dockerhub
 
       - name: Read the short description
