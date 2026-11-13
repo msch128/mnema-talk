@@ -210,7 +210,7 @@ branch) was waived when it landed there and is not reported again.
    release or the release PR is merged, the workflow reads the most recent
    completed scheduled run on `main` of each deep nightly sweep (`GATED` in
    `scripts/nightly-gate.py`: `sim-sweep.yml`, `visibility-sweep.yml`,
-   `store-trace.yml`, `plain-sweep.yml`) and stops with an error when one did
+   `store-trace.yml`, `plain-sweep.yml`, `clip-sweep.yml`) and stops with an error when one did
    not succeed (failure, timeout, cancelled, ...), is older than 48 hours (a
    nightly that stopped running), is disabled, is a re-run whose first
    attempt did not succeed (or cannot be read), or when a run number is

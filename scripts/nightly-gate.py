@@ -57,7 +57,7 @@ import sys
 MAX_AGE = timedelta(hours=48)
 
 # The deep nightly sweeps: a red, stale or missing night blocks a release.
-GATED = ('sim-sweep.yml', 'visibility-sweep.yml', 'store-trace.yml', 'plain-sweep.yml')
+GATED = ('sim-sweep.yml', 'visibility-sweep.yml', 'store-trace.yml', 'plain-sweep.yml', 'clip-sweep.yml')
 
 # Every other scheduled workflow, with the reason it does not gate a release
 # (scripts/tests/test_nightly_gate.py fails on a scheduled workflow in neither).

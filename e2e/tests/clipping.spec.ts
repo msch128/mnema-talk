@@ -19,8 +19,9 @@ import { fakeDisplayMedia, routeSocket } from './clipping/talk'
 // cases go on clipping/exceptions.ts with a reason.
 //
 // The app ships one theme (style.css @theme, color-scheme dark), so there is no
-// theme axis. CLIP_SWEEP=full runs the whole matrix (its own CI job, sharded
-// like the e2e jobs); without it the smoke subset runs with the other specs.
+// theme axis. CLIP_SWEEP=full runs the whole matrix (its own workflow,
+// clip-sweep.yml, sharded like the e2e jobs, nightly and on pull requests that
+// touch web/ or e2e/); without it the smoke subset runs with the other specs.
 
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

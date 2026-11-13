@@ -36,7 +36,7 @@ name: Release
 # Before a release is cut or merged, the most recent completed scheduled run
 # on main of each deep nightly sweep (the list is GATED in
 # scripts/nightly-gate.py: sim-sweep, visibility-sweep, store-trace,
-# plain-sweep) must have succeeded within the last 48 hours, in its first
+# plain-sweep, clip-sweep) must have succeeded within the last 48 hours, in its first
 # attempt, with no run deleted after it. The one way past a red, re-run, stale
 # or missing night is a manual run of this workflow on main with
 # `nightly_override` set to the reason (an urgent security fix only,
