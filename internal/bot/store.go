@@ -249,21 +249,8 @@ func usernameBase(name string) string {
 // is "bot-" and 12 random hex digits. Bots that exist keep the name they have.
 func newUsername(ctx context.Context, tx pgx.Tx, name string) (string, error) {
 	if base := usernameBase(name); base != "" {
-		for i := 1; i <= maxUsernameTries; i++ {
-			candidate := base
-			if i > 1 {
-				candidate = fmt.Sprintf("%s_%d", base, i)
-			}
-			if auth.ValidateUsername(candidate) != nil {
-				break
-			}
-			var taken bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = $1)`, candidate).Scan(&taken); err != nil {
-				return "", err
-			}
-			if !taken {
-				return candidate, nil
-			}
+		if u, err := freeUsername(ctx, tx, base); err != nil || u != "" {
+			return u, err
 		}
 	}
 	suffix := make([]byte, 6)
@@ -271,6 +258,28 @@ func newUsername(ctx context.Context, tx pgx.Tx, name string) (string, error) {
 		return "", err
 	}
 	return "bot-" + hex.EncodeToString(suffix), nil
+}
+
+// freeUsername is base, or base numbered from 2, whichever no account holds
+// yet. It is "" when the policy refuses the name or every number is taken.
+func freeUsername(ctx context.Context, tx pgx.Tx, base string) (string, error) {
+	for i := 1; i <= maxUsernameTries; i++ {
+		candidate := base
+		if i > 1 {
+			candidate = fmt.Sprintf("%s_%d", base, i)
+		}
+		if auth.ValidateUsername(candidate) != nil {
+			return "", nil
+		}
+		var taken bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = $1)`, candidate).Scan(&taken); err != nil {
+			return "", err
+		}
+		if !taken {
+			return candidate, nil
+		}
+	}
+	return "", nil
 }
 
 // setProfile stores the description and homepage of a bot added from a
