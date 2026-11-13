@@ -197,10 +197,13 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   await post(admin, dmId, LONG_WORD)
   // A pair has one conversation, but every POST makes a new group, and a
   // member may start only ten a day: a reseed reuses this run's group.
+  // It keeps its first message: a member may not send more than two unanswered.
   let groupDmId = run.groupDmId
   if (groupDmId) await ok(admin, 'PUT', `/api/dms/${groupDmId}/hidden`, { hidden: false })
-  else groupDmId = responseString(await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] }), 'id')
-  await post(member, groupDmId, 'Hello group')
+  else {
+    groupDmId = responseString(await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] }), 'id')
+    await post(member, groupDmId, 'Hello group')
+  }
   return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
