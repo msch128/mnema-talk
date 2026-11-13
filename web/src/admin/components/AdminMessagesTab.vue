@@ -3,6 +3,7 @@
 // one) and the community's auto-delete default (doc/timed-messages.md). Each
 // panel is a draft of its own with one Save (doc/settings-ux.md).
 import { onMounted, ref } from 'vue'
+import { Timer } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
 import { decodeChatMessageSettingsView, type ChatMessageSettingsView } from '../../types/rest'
 import { useToastStore } from '../../stores/toast'
@@ -26,7 +27,11 @@ onMounted(load)
 <template>
   <section class="space-y-4" data-testid="admin-messages">
     <header class="space-y-1">
-      <h2 class="text-lg font-semibold text-mnema-text">{{ $t('admin.messages.title') }}</h2>
+      <!-- A section of the console: the dialog's own title is its h2. -->
+      <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider flex items-center gap-2">
+        <Timer class="w-4 h-4 text-mnema-accent" aria-hidden="true" />
+        <span>{{ $t('admin.messages.title') }}</span>
+      </h3>
       <p class="text-sm text-mnema-tertiary">{{ $t('admin.messages.intro') }}</p>
     </header>
     <template v-if="settings">
