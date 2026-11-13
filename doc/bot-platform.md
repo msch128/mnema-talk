@@ -73,7 +73,17 @@ once.
   because the overwrites belong to the new bot's own role, which nobody else
   holds and which cannot be given to anyone, so they change nothing for any
   member, and the bot invariant caps them at what the installer may do in
-  each channel. The install is in the audit log (`bot.installed`).
+  each channel. They do override a deny on the shared Bot role (or another
+  role the bot holds) in a ticked channel, because a member's role allows
+  apply after its role denies; only a deny set on the bot itself beats them.
+  That was already possible by giving the bot a role with channel
+  overwrites; bots.md says it, and the confirm screen says it next to the
+  channel list. The install is in the audit log (`bot.installed`).
+- **Defaults on the confirm screen**: Mention everyone, Manage messages and
+  anything else that pings or moderates start unticked; the manifest's name,
+  description and homepage are shown quoted, as the bot's own words, never
+  like text of the app; a command that has a built-in's name is marked as
+  the bot's, listed next to the built-in.
 - **The result** is an ordinary bot: everything can be changed in the Bots
   tab afterwards. The token is shown once, as with every token.
 

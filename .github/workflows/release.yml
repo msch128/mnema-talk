@@ -698,7 +698,12 @@ jobs:
             --env HOME=/tmp --mount "type=bind,src=$work,dst=/work" --workdir /work/sdk)
           docker run "${sandbox[@]}" "$image" npm ci --ignore-scripts --no-audit --no-fund
           docker run "${sandbox[@]}" --network none "$image" npm version --no-git-tag-version --allow-same-version "$VERSION"
+          # A git install builds through `prepare`; the tarball ships dist/, so
+          # it carries no install script that npm would ask a consumer about.
+          docker run "${sandbox[@]}" --network none "$image" npm pkg delete scripts.prepare
           docker run "${sandbox[@]}" --network none "$image" npm pack
+          tar -xzOf "$work/sdk/mnema-talk-sdk-$VERSION.tgz" package/package.json > "$RUNNER_TEMP/packed-package.json"
+          if grep -q '"prepare"' "$RUNNER_TEMP/packed-package.json"; then echo "::error::the packed SDK still has a prepare script"; exit 1; fi
           file="mnema-talk-sdk-$VERSION.tgz"
           test -s "$work/sdk/$file"
           mkdir -p sdk-out

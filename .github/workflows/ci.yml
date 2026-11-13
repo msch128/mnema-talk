@@ -457,10 +457,16 @@ jobs:
   # -- Bot SDKs: both SDKs' own tests, the npm package, and their contract
   # tests against a real server (TestSDKContract in internal/server starts it
   # from the integration helpers and runs both suites against it).
+  # Node 24 is the oldest the TypeScript SDK supports, 26 what the web build uses.
   sdk:
+    name: sdk (node ${{ matrix.node }})
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
     services:
       postgres:
         image: postgres:18-alpine
@@ -492,7 +498,7 @@ jobs:
       - if: ${{ needs.changes.outputs.code == 'true' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: sdk/typescript/package-lock.json
 
@@ -570,6 +576,18 @@ jobs:
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+      # The nested modules are not part of ./... above: the bot SDK ships to
+      # users, the load-test viewer runs on server hosts.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: govulncheck (bot SDK)
+        working-directory: sdk/go
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: govulncheck (load-test viewer)
+        working-directory: loadtest/viewer
         run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
   # -- Frontend: lint, test, build, audit ------------------------------------
