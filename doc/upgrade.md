@@ -18,7 +18,8 @@ Lifetimes are on by default (Server settings > Messages switches them off);
 the auto-delete default is off. Channels keep their period; a channel whose
 auto-delete was turned off in its settings stays off, every other channel
 without a period follows the default once one is set, which the confirmation
-of the default says. The column `channels.auto_delete_days` is replaced by
+of the default says. A channel whose entry the audit retention has
+already removed cannot be told from one never set: it follows the default too. The column `channels.auto_delete_days` is replaced by
 `auto_delete_hours`; the API still answers `auto_delete_days` (whole days
 between 1 and 90 while auto-delete is on). See the 0105 row below.
 

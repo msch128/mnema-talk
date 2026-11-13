@@ -237,6 +237,11 @@ func stillSet(ctx context.Context, tx pgx.Tx, c autoDeleteChannel) (bool, error)
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR SHARE`, c.id); err != nil {
 		return false, fmt.Errorf("lock channel: %w", err)
 	}
+	// The settings row too: a change of the default waits for the batch.
+	// No cycle: no transaction updates instance_settings and then a channel
+	// or a message, and the batch takes this row after the channel's and
+	// before any message's. A change of another setting waits for the short
+	// batch as well (at most 200 rows).
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM instance_settings FOR SHARE`); err != nil {
 		return false, fmt.Errorf("lock settings: %w", err)
 	}

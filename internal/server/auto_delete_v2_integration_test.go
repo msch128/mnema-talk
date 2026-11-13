@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
@@ -238,5 +240,53 @@ func TestTheOlderDaysFieldStaysWithinWhatOlderClientsAccept(t *testing.T) {
 	var follows bool
 	if err := f.a.db.QueryRow(t.Context(), `SELECT follows FROM (SELECT `+core.AutoDeleteSQL("c")+` FROM channels c WHERE c.id = $1) s(hours, scope, follows)`, dm.ID).Scan(&follows); err != nil || follows {
 		t.Fatalf("a conversation follows the default: %v %v", follows, err)
+	}
+}
+
+// A conversation's call Talk is listed with the channels, and never follows
+// the community default: its payload says off (review round 2, finding 6).
+func TestACallTalkNeverFollowsTheCommunityDefault(t *testing.T) {
+	w := newCallChatWorld(t)
+	wantStatus(t, "default", w.owner.put("/api/admin/message-settings/auto-delete", map[string]any{"hours": 24}), http.StatusOK)
+	var list struct {
+		Uncategorized []core.Channel
+		Categories    []core.Category
+	}
+	w.alice.get("/api/channels").decode(t, &list)
+	found := false
+	for _, c := range append(list.Uncategorized, flatten(list.Categories)...) {
+		if c.ID != w.call {
+			continue
+		}
+		found = true
+		if c.AutoDeleteFollowsDefault || c.AutoDeleteHours != 0 || c.AutoDeleteDays != 0 {
+			t.Fatalf("the call Talk: follows %v, hours %d, days %d", c.AutoDeleteFollowsDefault, c.AutoDeleteHours, c.AutoDeleteDays)
+		}
+	}
+	if !found {
+		t.Fatal("the call Talk is not in the member's channel list: the test checks nothing")
+	}
+}
+
+// Changing the setting while a run is under way stops it at its next batch:
+// the batch reads the setting again after its share lock (stillSet). The run
+// lists the channel with a period, the change commits before the batch, and
+// nothing is deleted (review round 2, finding 6).
+func TestAChangeOfTheSettingDuringARunStopsIt(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	old := f.a.send(f.alice, f.channel, "old")
+	f.age(t, old, 10)
+	wantStatus(t, "7 days", f.set(f.owner, f.channel, 7), http.StatusOK)
+	hook := &beforeStatement{match: "SELECT 1 FROM channels WHERE id = $1 FOR SHARE", fn: func() {
+		if _, err := f.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_hours = 0 WHERE id = $1`, f.channel); err != nil {
+			t.Error(err)
+		}
+	}}
+	d := &channels.AutoDeleter{DB: hookedPool(t, f.a.db, hook), Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	if err := d.Sweep(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if !f.exists(old) {
+		t.Fatal("the run deleted a message after the setting was turned off")
 	}
 }
