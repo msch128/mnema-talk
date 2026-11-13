@@ -86,8 +86,4 @@ export class EndSchedule<T> {
     for (const e of this.ends.values()) if (min === null || e.at < min) min = e.at
     return min
   }
-
-  clear(): void {
-    this.ends.clear()
-  }
 }

@@ -64,4 +64,16 @@ describe('messages with a lifetime in the open lists', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(chat.messages.map(m => m.id)).toEqual([fixtureId(21)])
   })
+
+  it('wait while the server\'s time is not known yet, and end once it is', async () => {
+    const chat = useChatStore()
+    // No server timestamp anywhere: the client cannot tell whether the end has passed on the server.
+    const ended = messageFixture({ id: fixtureId(40), channel_id: fixtureId(1), created_at: '', expires_at: '2026-11-13T09:59:00Z' })
+    chat.messages = [ended]
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(chat.messages.map(m => m.id)).toEqual([ended.id])
+    noteServerTime(Date.now())
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(chat.messages).toEqual([])
+  })
 })

@@ -18,8 +18,8 @@ const MAX_TIMER_MS = 2 ** 31 - 1
 // Without any server time seen yet, look again after this long.
 const NO_CLOCK_RETRY_MS = 1000
 
-/** Watches the loaded messages of cx and removes each at its end. Returns a stop function. */
-export function installExpiry(cx: Cx): () => void {
+/** Watches the loaded messages of cx and removes each at its end, for as long as the chat store lives. */
+export function installExpiry(cx: Cx) {
   const { cs } = cx
   const schedule = new EndSchedule<Ending>()
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -55,14 +55,9 @@ export function installExpiry(cx: Cx): () => void {
     if (changed) arm()
   }
 
-  const stop = watch(
+  watch(
     [() => cs.messages.value, () => cs.threadReplies.value, () => cs.threadReplies.value.length, () => cs.activeThread.value],
     ([messages, replies, , root]) => track([...messages, ...replies, root as Message | null]),
     { immediate: true, deep: false }
   )
-  return () => {
-    stop()
-    if (timer) clearTimeout(timer)
-    schedule.clear()
-  }
 }
