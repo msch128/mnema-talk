@@ -45,4 +45,9 @@ func TestPublicURLIsTrimmedAndNilSafe(t *testing.T) {
 	if got := New(nil, " https://chat.example.org/ ").PublicURL(); got != "https://chat.example.org" {
 		t.Fatalf("got %q", got)
 	}
+	for _, local := range []string{"http://localhost:8080", "http://127.0.0.1:8080", ""} {
+		if got := New(nil, local).PublicURL(); got != "" {
+			t.Errorf("PublicURL for %q = %q, want none: a loopback address is nobody's way in", local, got)
+		}
+	}
 }

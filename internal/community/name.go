@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -41,9 +42,14 @@ func New(q db.Querier, publicURL string) *Names {
 }
 
 // PublicURL is the address this server is reached at (PUBLIC_URL, without a
-// trailing slash). A nil *Names has none.
+// trailing slash). A nil *Names has none, and neither has a server still on
+// the loopback default: that address is nobody's way in, so a client keeps the
+// address it was opened with.
 func (n *Names) PublicURL() string {
 	if n == nil {
+		return ""
+	}
+	if u, err := url.Parse(n.public); err != nil || config.IsLoopbackAddr(u.Hostname()) {
 		return ""
 	}
 	return n.public
