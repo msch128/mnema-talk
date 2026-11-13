@@ -40,12 +40,28 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 	if err != nil {
 		return fmt.Errorf("load channel: %w", err)
 	}
+	if err := gateLifetime(ctx, tx, kind, nm); err != nil {
+		return err
+	}
 	if kind == core.ChannelKindDM {
-		if err := gateLifetime(ctx, tx, kind, nm); err != nil {
-			return err
-		}
 		return gateDM(ctx, tx, nm, rules)
 	}
+	return gateCommunityPost(ctx, tx, nm, rules, channelGate{kind: kind, slowMode: seconds, talkOf: talkOf})
+}
+
+// channelGate is what gatePost read of a community channel.
+type channelGate struct {
+	kind     string
+	slowMode int
+	// talkOf is the conversation of a call Talk, nil for a community channel.
+	talkOf *uuid.UUID
+}
+
+// gateCommunityPost is gatePost for a channel or a Talk that is not a
+// conversation: the call Talk's pair rule, the thread and forum rules and
+// slow mode.
+func gateCommunityPost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules, c channelGate) error {
+	kind, seconds, talkOf := c.kind, c.slowMode, c.talkOf
 	if talkOf != nil && nm.WebhookID == nil {
 		if err := checkPairWritable(ctx, tx, nm.ChannelID, nm.UserID); err != nil {
 			return err
@@ -57,9 +73,6 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 		}
 	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
 		return core.ErrPostTitleRequired
-	}
-	if err := gateLifetime(ctx, tx, kind, nm); err != nil {
-		return err
 	}
 	if nm.WebhookID == nil && !rules.SlowModeExempt {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
