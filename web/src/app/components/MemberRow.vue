@@ -46,6 +46,13 @@ const timedOutText = computed(() => {
   if (!until || Date.parse(until) <= now.value || !permissions.can('timeout_members')) return ''
   return t('admin.userTimedOut', { time: new Date(until).toLocaleString(locale.value) })
 })
+
+// The name keeps at least 3em (in its own size) beside the marks after it, each
+// 14px with a 4px gap; below that the totals wrap under the row.
+const nameMinWidth = computed(() => {
+  const marks = (timedOutText.value ? 1 : 0) + (props.member.role === 'admin' ? 1 : 0)
+  return `calc(3em + ${marks * 1.125}rem)`
+})
 </script>
 
 <template>
@@ -55,7 +62,7 @@ const timedOutText = computed(() => {
     aria-haspopup="menu"
     :data-member="member.username"
     :data-status="status"
-    class="group flex h-[42px] min-w-0 cursor-pointer items-center gap-3 rounded-md px-2 transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
+    class="group flex min-h-[42px] min-w-0 cursor-pointer flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md px-2 py-0.5 transition-colors hover:bg-mnema-hover focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent"
     @click="chatStore.openUserProfile(member)"
     @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
     @keydown.space.self.prevent="chatStore.openUserProfile(member)"
@@ -72,12 +79,12 @@ const timedOutText = computed(() => {
       :is-speaking="voiceStore.isSpeaking(member.id)"
     />
 
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="flex flex-1 flex-col text-nav" :style="{ minWidth: nameMinWidth }">
       <div class="flex min-w-0 items-center gap-1">
         <span
           v-full-text
           :class="[
-            'truncate text-nav transition-colors group-hover:text-mnema-accent',
+            'min-w-[3em] truncate text-nav transition-colors group-hover:text-mnema-accent',
             offline ? 'text-mnema-muted' : 'font-medium text-mnema-text',
             member.role === 'admin' && !offline ? 'font-semibold' : ''
           ]"
@@ -95,7 +102,8 @@ const timedOutText = computed(() => {
       <span v-else-if="subline" v-full-text class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>
     </div>
 
-    <!-- Bots do not sit in Talks or chat like members: no totals for them. -->
-    <ActivityStats v-if="!member.is_bot" :user="member" />
+    <!-- Bots do not sit in Talks or chat like members: no totals for them. Where
+         the name would get less than its minimum beside them, they wrap below. -->
+    <ActivityStats v-if="!member.is_bot" class="ml-auto" :user="member" />
   </div>
 </template>
