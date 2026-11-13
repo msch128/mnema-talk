@@ -169,3 +169,74 @@ func TestTheCommunityDefaultReachesChannelsWithoutTheirOwnSetting(t *testing.T) 
 		t.Fatal("a channel that follows the default again kept its old messages")
 	}
 }
+
+// What the dry run counts is what the run then removes, for both scopes: a
+// pinned message, a thread kept by a young reply and a file removed before
+// are left out of both.
+func TestTheDryRunCountsWhatTheRunRemoves(t *testing.T) {
+	for _, scope := range []string{"all", "attachments"} {
+		t.Run(scope, func(t *testing.T) {
+			f := newAutoDeleteFixture(t)
+			upload := func(content string) uuid.UUID {
+				res := f.alice.upload(f.base()+"/upload", "file", "a.png", "image/png", pngBytes, map[string]string{"content": content})
+				wantStatus(t, "upload", res, http.StatusCreated)
+				var m struct{ ID uuid.UUID }
+				res.decode(t, &m)
+				return m.ID
+			}
+			plain := f.a.send(f.alice, f.channel, "old text")
+			withFile, removedFile, pinned := upload("old file"), upload("file removed before"), upload("pinned")
+			root := f.a.send(f.alice, f.channel, "old root")
+			wantStatus(t, "young reply", f.bob.post(f.base()+"/messages", map[string]any{"content": "new", "parent_id": root}), http.StatusCreated)
+			wantStatus(t, "pin", f.owner.do(http.MethodPut, f.base()+"/messages/"+pinned.String()+"/pin", nil, nil), http.StatusOK)
+			for _, id := range []uuid.UUID{plain, withFile, removedFile, pinned, root} {
+				f.ageHours(t, id, 5)
+			}
+			if _, err := f.a.db.Exec(t.Context(), `UPDATE media SET is_deleted = TRUE WHERE message_id = $1`, removedFile); err != nil {
+				t.Fatal(err)
+			}
+			body := map[string]any{"hours": 2, "scope": scope}
+			var counts struct{ Messages, Attachments int }
+			f.owner.post("/api/admin/channels/"+f.channel.String()+"/auto-delete/preview", body).decode(t, &counts)
+			messagesBefore := f.a.countRows(`SELECT COUNT(*) FROM messages WHERE channel_id = $1`, f.channel)
+			filesBefore := f.a.countRows(`SELECT COUNT(*) FROM media WHERE channel_id = $1 AND NOT is_deleted`, f.channel)
+			wantStatus(t, "set", f.setHours(f.owner, f.channel, body), http.StatusOK)
+			f.sweep(t)
+			gotMessages := messagesBefore - f.a.countRows(`SELECT COUNT(*) FROM messages WHERE channel_id = $1`, f.channel)
+			gotFiles := filesBefore - f.a.countRows(`SELECT COUNT(*) FROM media WHERE channel_id = $1 AND NOT is_deleted`, f.channel)
+			if counts.Messages != gotMessages || counts.Attachments != gotFiles {
+				t.Fatalf("dry run %+v, the run removed %d messages and %d files", counts, gotMessages, gotFiles)
+			}
+			want := map[string][2]int{"all": {3, 1}, "attachments": {0, 1}}[scope]
+			if gotMessages != want[0] || gotFiles != want[1] {
+				t.Fatalf("removed %d messages and %d files, want %v", gotMessages, gotFiles, want)
+			}
+			var audit struct{ Messages, Attachments int }
+			row := f.a.db.QueryRow(t.Context(), `SELECT (details->>'messages')::int, (details->>'attachments')::int FROM audit_log WHERE action = 'channel.auto_delete_run'`)
+			if err := row.Scan(&audit.Messages, &audit.Attachments); err != nil || audit.Messages != gotMessages || audit.Attachments != gotFiles {
+				t.Fatalf("the run's audit entry %+v (%v) does not match", audit, err)
+			}
+		})
+	}
+}
+
+// Older clients accept auto_delete_days up to 90: a longer period answers 90.
+// A conversation never follows the community default.
+func TestTheOlderDaysFieldStaysWithinWhatOlderClientsAccept(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	var ch core.Channel
+	f.setHours(f.owner, f.channel, map[string]any{"hours": 8760}).decode(t, &ch)
+	if ch.AutoDeleteDays != 90 || ch.AutoDeleteHours != 8760 {
+		t.Fatalf("a year: days %d, hours %d", ch.AutoDeleteDays, ch.AutoDeleteHours)
+	}
+	f.setHours(f.owner, f.channel, map[string]any{"hours": 48, "scope": "attachments"}).decode(t, &ch)
+	if ch.AutoDeleteDays != 0 {
+		t.Fatalf("files only answers %d days, want 0: no message is deleted", ch.AutoDeleteDays)
+	}
+	wantStatus(t, "an empty body", f.setHours(f.owner, f.channel, map[string]any{}), http.StatusBadRequest)
+	dm := f.alice.mustDM(t, f.bob)
+	var follows bool
+	if err := f.a.db.QueryRow(t.Context(), `SELECT follows FROM (SELECT `+core.AutoDeleteSQL("c")+` FROM channels c WHERE c.id = $1) s(hours, scope, follows)`, dm.ID).Scan(&follows); err != nil || follows {
+		t.Fatalf("a conversation follows the default: %v %v", follows, err)
+	}
+}

@@ -217,5 +217,6 @@ export const ROWS: readonly SentenceRow[] = [
   ['lifetime_seconds must be 60 to 2592000', 'lifetimeRange'],
   ['message_lifetime_max_seconds must be 60 to 2592000', 'lifetimeMaxRange'],
   ['messages with a lifetime are turned off in this community', 'lifetimesOff'],
-  ['scope must be all or attachments', 'autoDeleteScope']
+  ['scope must be all or attachments', 'autoDeleteScope'],
+  ['invalid lifetime_seconds', 'lifetimeInvalid']
 ]

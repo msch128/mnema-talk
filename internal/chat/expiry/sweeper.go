@@ -128,20 +128,32 @@ func (s *Sweeper) pass(ctx context.Context) time.Duration {
 // Sweep deletes every message whose lifetime ended, in batches, and returns
 // the next end (zero when no message has a lifetime).
 func (s *Sweeper) Sweep(ctx context.Context) (time.Time, error) {
+	if err := s.RemoveEnded(ctx); err != nil {
+		return time.Time{}, err
+	}
+	return s.NextEnd(ctx)
+}
+
+// RemoveEnded deletes every message whose lifetime ended, in batches.
+func (s *Sweeper) RemoveEnded(ctx context.Context) error {
 	for {
 		ids, err := s.ended(ctx)
 		if err != nil {
-			return time.Time{}, err
+			return err
 		}
 		for _, id := range ids {
 			if err := s.remove(ctx, id); err != nil {
-				return time.Time{}, err
+				return err
 			}
 		}
 		if len(ids) < batch {
-			break
+			return nil
 		}
 	}
+}
+
+// NextEnd is the earliest end of a message still stored, zero for none.
+func (s *Sweeper) NextEnd(ctx context.Context) (time.Time, error) {
 	var next *time.Time
 	if err := s.DB.QueryRow(ctx, `SELECT min(expires_at) FROM messages WHERE expires_at IS NOT NULL`).Scan(&next); err != nil {
 		return time.Time{}, err

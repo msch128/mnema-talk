@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/msch128/mnema-talk/internal/chat/expiry"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -119,7 +120,8 @@ func newCrashApp(t *testing.T) *app {
 		return context.WithValue(ctx, requestMark{}, true)
 	}
 	cfg := crashConfig(t, "http://"+a.srv.Listener.Addr().String())
-	a.router, err = NewRouter(Deps{Config: cfg, DB: faulty, Store: a.store, Events: a.events})
+	// The expiry sweeper runs only where an operation calls it.
+	a.router, err = NewRouter(Deps{Config: cfg, DB: faulty, Store: a.store, Events: a.events, HoldExpiry: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,6 +293,20 @@ var crashOps = []crashOp{
 		admin := a.seedAdmin()
 		return func() response {
 			return admin.post("/api/admin/channels", map[string]any{"name": "lounge", "type": "text"})
+		}
+	}},
+	{"end a message's lifetime", func(a *app) func() response {
+		admin := a.seedAdmin()
+		ch := a.createChannel(admin, "general", "text")
+		m := sendTimed(a.t, admin, ch, map[string]any{"content": "short", "lifetime_seconds": 60})
+		wantStatus(a.t, "reply", admin.post("/api/channels/"+ch.String()+"/messages", map[string]any{"content": "in its thread", "parent_id": m.ID}), 201)
+		a.endLifetime(m.ID)
+		sweeper := expiry.New(expiry.Config{DB: faultyPool(a.t, a.db), Events: a.events, Objects: a.store})
+		return func() response {
+			if err := sweeper.RemoveEnded(context.WithValue(context.Background(), requestMark{}, true)); err != nil {
+				return response{status: 500, body: []byte(err.Error())}
+			}
+			return response{status: 200}
 		}
 	}},
 	{"delete a message", func(a *app) func() response {
