@@ -229,6 +229,7 @@ export function setup() {
   const chat = useChatStore()
   const sent: ClientSentEvent[] = []
   chat.sendWSEvent = (type, payload) => { sent.push({ type, payload }) }
+  chat.isConnected = true
   return { chat, voice: useVoiceStore(), rtc: useWebRTC(), sent }
 }
 
