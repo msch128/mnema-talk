@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash, randomBytes } from 'node:crypto'
 import { deflateSync } from 'node:zlib'
@@ -25,6 +25,7 @@ export interface World {
   dmId: string
   groupDmId: string
   member: { id: string; username: string; password: string }
+  blockedId: string
   imageMessageText: string
   lastMessageText: string
 }
@@ -192,11 +193,15 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
+function cachePath(baseURL: string, outputDir: string): string {
+  const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
+  return join(outputDir, `clip-world-${key}.json`)
+}
+
 /** Seeds the world once per server and returns it; later workers read the cached ids. */
 export async function seedWorld(browser: Browser, baseURL: string, outputDir: string): Promise<World> {
-  const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
   mkdirSync(outputDir, { recursive: true })
-  const cache = join(outputDir, `clip-world-${key}.json`)
+  const cache = cachePath(baseURL, outputDir)
   if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8')) as World
   const suffix = Date.now().toString(36)
   const admin = await (await browser.newContext()).newPage()
@@ -217,8 +222,30 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
   await ok(admin, 'PUT', `/api/me/saved/${last}`)
   await ok(admin, 'POST', '/api/me/reminders', { message_id: last, remind_at: new Date(Date.now() + 86_400_000).toISOString() })
   const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix)
-  const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${suffix}`, password }, imageMessageText, lastMessageText }
+  const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${suffix}`, password }, blockedId: other.id, imageMessageText, lastMessageText }
   for (const ctx of [member.ctx, other.ctx, admin.context()]) await ctx.close()
   writeFileSync(cache, JSON.stringify(world))
   return world
+}
+
+/**
+ * Takes the world away again: the other specs share this server and count
+ * channels, unread messages, mentions and events. The next worker seeds anew.
+ */
+export async function removeWorld(browser: Browser, baseURL: string, outputDir: string): Promise<void> {
+  const cache = cachePath(baseURL, outputDir)
+  if (!existsSync(cache)) return
+  const world = JSON.parse(readFileSync(cache, 'utf8')) as World
+  rmSync(cache)
+  const ctx = await browser.newContext()
+  const admin = await ctx.newPage()
+  await signInApi(admin)
+  const statuses: number[] = []
+  for (const id of [world.chat.id, world.longName.id, world.talk.id, world.forum.id]) statuses.push((await apiFetch(admin, 'DELETE', `/api/admin/channels/${id}`)).status)
+  for (const id of [world.dmId, world.groupDmId]) statuses.push((await apiFetch(admin, 'PUT', `/api/dms/${id}/hidden`, { hidden: true })).status)
+  statuses.push((await apiFetch(admin, 'DELETE', `/api/wiki/pages/${world.wikiSlug}`)).status)
+  statuses.push((await apiFetch(admin, 'POST', `/api/events/${world.eventId}/cancel`, {})).status)
+  statuses.push((await apiFetch(admin, 'DELETE', `/api/me/blocks/${world.blockedId}`)).status)
+  console.log(`[clip] removed the seeded world: ${statuses.join(' ')}`)
+  await ctx.close()
 }

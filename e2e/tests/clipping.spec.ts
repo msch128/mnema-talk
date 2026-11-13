@@ -7,7 +7,7 @@ import { EXCEPTIONS, isExcepted, unexplained } from './clipping/exceptions'
 import { translate } from './clipping/i18n'
 import { type Combo, comboLabel, cssViewport, fullMatrix, smokeMatrix } from './clipping/matrix'
 import { allScenes, type Scene, type SceneContext } from './clipping/scenes'
-import { ADMIN_PASSWORD, seedWorld, signInApi, type World } from './clipping/seed'
+import { ADMIN_PASSWORD, removeWorld, seedWorld, signInApi, type World } from './clipping/seed'
 import { fakeDisplayMedia, routeSocket } from './clipping/talk'
 
 // The visual clipping audit. Every scene (clipping/scenes.ts) at every size,
@@ -127,6 +127,10 @@ async function signedIn(browser: Browser, combo: Combo): Promise<{ ctx: BrowserC
   expect((await apiFetch(page, 'PUT', '/api/users/me/locale', { locale: combo.locale })).status).toBe(200)
   return { ctx, page }
 }
+
+test.afterAll(async ({ browser, baseURL }, info) => {
+  await removeWorld(browser, baseURL ?? '', info.project.outputDir)
+})
 
 test('every clipping exception gives its reason', () => {
   expect(unexplained(), 'exceptions without a reason').toEqual([])
