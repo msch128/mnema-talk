@@ -53,7 +53,7 @@ client.on('interactionCreate', async (i) => {
     await i.update({ content: `Deploy v2.4 to ${env}?`, components: deployRows(env) })
   } else if (i.isButton() && i.customId.startsWith('deploy:')) {
     const env = i.customId.slice('deploy:'.length)
-    await i.update({ content: `${i.user.display_name} deployed v2.4 to ${env}.`, components: [] })
+    await i.update({ content: `${i.user?.display_name ?? "Someone"} deployed v2.4 to ${env}.`, components: [] })
   } else if (i.isButton() && i.customId === 'cancel') {
     await i.update({ content: 'Deploy cancelled.', components: [] })
   } else if (i.isButton() && i.customId === 'feedback') {

@@ -32,7 +32,8 @@ export class Interaction {
   readonly channelId: string
   readonly applicationId: string
   /** The member who ran the command, clicked or submitted. */
-  readonly user: InteractionUser
+  /** The member who caused the interaction; absent only when a server sends none. */
+  readonly user: InteractionUser | undefined
   /** The message a component is on (also for a modal opened from a component). */
   readonly message: InteractionMessage | undefined
   /** The command's name (type 2), else ''. */

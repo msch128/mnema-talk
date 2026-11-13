@@ -107,7 +107,7 @@ describe('contract with a running server', { skip }, () => {
     assert.equal(i.channelId, env.channel)
     assert.equal(i.options.get('text'), run)
     assert.equal(i.commandId, commandId)
-    assert.ok(i.user.id)
+    assert.ok(i.user?.id)
     const reply = next(client, 'messageCreate', (m) => m.content === `echo: ${run}`)
     await i.reply({ content: `echo: ${run}` })
     const [m] = await reply

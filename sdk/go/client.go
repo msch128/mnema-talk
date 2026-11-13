@@ -160,24 +160,39 @@ type dispatcher struct {
 	c   *Client
 	ctx context.Context
 	sem chan struct{}
-	wg  sync.WaitGroup
+	// queued bounds the events that wait for a slot. When it is full the read
+	// loop waits too: the server then holds the events back (its buffer and
+	// resume cover a slow bot) instead of the bot's memory filling up.
+	queued chan struct{}
+	wg     sync.WaitGroup
 }
 
 func (c *Client) newDispatcher(ctx context.Context) *dispatcher {
-	return &dispatcher{c: c, ctx: ctx, sem: make(chan struct{}, c.opts.HandlerConcurrency)}
+	n := c.opts.HandlerConcurrency
+	return &dispatcher{c: c, ctx: ctx, sem: make(chan struct{}, n), queued: make(chan struct{}, n*dispatchQueueFactor)}
 }
 
-// dispatch starts the handlers of one event in a goroutine and returns at
-// once, so the read loop (and with it the heartbeat ACKs) never waits for a
-// handler. The goroutine waits for a slot of the concurrency bound first.
+// dispatchQueueFactor times HandlerConcurrency events may wait for a slot.
+const dispatchQueueFactor = 16
+
+// dispatch starts the handlers of one event in a goroutine and returns, so
+// the read loop (and with it the heartbeat ACKs) does not wait for a handler
+// while fewer than the queue's bound wait for a slot. Beyond that it blocks
+// until one is free, so goroutines never grow without bound.
 func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 	run := d.c.handlerFunc(name, raw)
 	if run == nil {
 		return
 	}
+	select {
+	case d.queued <- struct{}{}:
+	case <-d.ctx.Done():
+		return
+	}
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
+		defer func() { <-d.queued }()
 		select {
 		case d.sem <- struct{}{}:
 		case <-d.ctx.Done():

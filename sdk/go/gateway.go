@@ -37,6 +37,9 @@ type session struct {
 	seq       int64
 }
 
+// MaxGatewayFrame is the largest frame the client reads from the gateway.
+const MaxGatewayFrame = 4 << 20
+
 func (c *Client) getSession() session {
 	c.sessionMu.Lock()
 	defer c.sessionMu.Unlock()
@@ -140,6 +143,10 @@ func (c *Client) connectOnce(ctx context.Context, d *dispatcher) outcome {
 		c.updateSession(func(s *session) { s.resumeURL = "" })
 		return outcome{err: err}
 	}
+	// No frame of the gateway comes near this (a message is at most 4000
+	// characters plus embeds and components); a larger one ends the
+	// connection instead of the bot's memory.
+	ws.SetReadLimit(MaxGatewayFrame)
 	cn := newConn(c, ws)
 	out := cn.run(ctx, d)
 	if newSessionAfter(out.code) {

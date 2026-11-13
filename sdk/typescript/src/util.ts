@@ -8,7 +8,10 @@ export function trimSlash(url: string): string {
   return url.replace(/\/+$/, '')
 }
 
-/** A promise that resolves after ms; the timer is cleared when signal aborts. */
+// setTimeout fires at once for anything above 2^31-1 ms.
+const MAX_TIMER_MS = 2 ** 31 - 1
+
+/** A promise that resolves after ms (at most 2^31-1); the timer is cleared when signal aborts. */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason)
@@ -19,7 +22,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     const timer = setTimeout(() => {
       signal?.removeEventListener('abort', onAbort)
       resolve()
-    }, ms)
+    }, Math.min(Math.max(0, ms), MAX_TIMER_MS))
     signal?.addEventListener('abort', onAbort, { once: true })
   })
 }

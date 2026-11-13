@@ -29,6 +29,10 @@ export interface Manifest {
   commands?: CommandInput[]
 }
 
+const MANIFEST_PERMISSIONS: readonly string[] = ['view_channel', 'send_messages', 'attach_files', 'add_reactions', 'manage_messages', 'mention_everyone']
+const MANIFEST_INTENTS: readonly string[] = ['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS']
+const MAX_AVATAR_BYTES = 256 * 1024
+
 function validateManifest(m: Manifest): void {
   if (m?.manifest_version !== 1) fail('manifest_version must be 1')
   checkLength('manifest name', m.name, 1, 24)
@@ -37,10 +41,16 @@ function validateManifest(m: Manifest): void {
     checkLength('manifest homepage', m.homepage, 1, 512)
     if (!m.homepage.startsWith('https://')) fail('manifest homepage must be an https URL')
   }
-  if (m.avatar !== undefined && !/^data:image\/(png|jpeg|webp);base64,/.test(m.avatar)) {
-    fail('manifest avatar must be a data: URL of a PNG, JPEG or WebP image')
-  }
+  if (m.avatar !== undefined) validateAvatar(m.avatar)
+  for (const i of m.intents ?? []) if (!MANIFEST_INTENTS.includes(i)) fail(`manifest intent unknown: ${i}`)
+  for (const p of m.permissions ?? []) if (!MANIFEST_PERMISSIONS.includes(p)) fail(`a manifest cannot ask for this permission: ${p}`)
   if (m.commands !== undefined) validateCommands(m.commands)
+}
+
+function validateAvatar(avatar: string): void {
+  const m = /^data:image\/(png|jpeg|webp);base64,(.*)$/.exec(avatar)
+  if (!m) fail('manifest avatar must be a data: URL of a PNG, JPEG or WebP image')
+  if (Buffer.byteLength(m![2]!, 'base64') > MAX_AVATAR_BYTES) fail('manifest avatar must be at most 256 KB')
 }
 
 /** The manifest as base64url of its JSON (UTF-8), the fragment of the add link. */

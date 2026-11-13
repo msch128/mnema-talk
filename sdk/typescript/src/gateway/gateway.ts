@@ -203,18 +203,34 @@ export class Gateway extends Emitter<GatewayEvents> {
     return since < (this.o.resumeWindowMs ?? 110_000)
   }
 
+  // Nothing the server sends may throw out of the socket's listener: Node
+  // rethrows listener errors and the bot's process would end. A frame that is
+  // not an object with a numeric op is dropped; a HELLO or READY without a
+  // usable payload drops the connection, which then resumes or identifies.
   private onFrame(text: string): void {
-    let f: GatewayFrame
+    let f: unknown
     try {
-      f = JSON.parse(text) as GatewayFrame
+      f = JSON.parse(text)
     } catch {
       this.debug('undecodable frame from the gateway')
       return
     }
+    if (!isRecord(f) || typeof f.op !== 'number') {
+      this.debug('frame without an op from the gateway')
+      return
+    }
+    try {
+      this.handleFrame(f as unknown as GatewayFrame)
+    } catch (err) {
+      this.report(toError(err))
+    }
+  }
+
+  private handleFrame(f: GatewayFrame): void {
     if (typeof f.s === 'number') this.seq = f.s
     switch (f.op) {
       case GatewayOp.Hello:
-        return this.onHello(f.d as { heartbeat_interval: number })
+        return this.onHello(f.d)
       case GatewayOp.HeartbeatAck:
         return this.heartbeat.ack()
       case GatewayOp.Heartbeat:
@@ -224,15 +240,20 @@ export class Gateway extends Emitter<GatewayEvents> {
       case GatewayOp.Reconnect:
         return this.dropConnection(ZOMBIE_CLOSE_CODE, 'server asked to reconnect')
       case GatewayOp.Dispatch:
-        return this.onDispatch(f.t ?? '', f.d, f.s ?? 0)
+        return this.onDispatch(typeof f.t === 'string' ? f.t : '', f.d, typeof f.s === 'number' ? f.s : 0)
     }
   }
 
-  private onHello(d: { heartbeat_interval: number }): void {
+  private onHello(d: unknown): void {
     const ws = this.ws
     if (!ws) return
+    const interval = heartbeatInterval(d)
+    if (interval === undefined) {
+      this.dropConnection(ZOMBIE_CLOSE_CODE, 'HELLO without a heartbeat interval')
+      return
+    }
     this.outbox.attach((text) => ws.send(text))
-    this.heartbeat.start(d.heartbeat_interval)
+    this.heartbeat.start(interval)
     if (this.canResume()) this.sendResume()
     else this.sendIdentify()
   }
@@ -271,7 +292,13 @@ export class Gateway extends Emitter<GatewayEvents> {
   }
 
   private onDispatch(name: string, data: unknown, seq: number): void {
-    if (name === 'READY') this.onReady(data as Ready)
+    if (name === 'READY') {
+      if (!isRecord(data) || typeof data.session_id !== 'string') {
+        this.dropConnection(ZOMBIE_CLOSE_CODE, 'READY without a session')
+        return
+      }
+      this.onReady(data as unknown as Ready)
+    }
     else if (name === 'RESUMED') this.onResumed()
     this.emit('dispatch', name, data, seq)
   }
@@ -363,4 +390,20 @@ export class Gateway extends Emitter<GatewayEvents> {
       if (!this.stopped) void this.open()
     }, delay)
   }
+}
+
+// Bounds of the heartbeat interval the SDK accepts from HELLO: a server that
+// says 0 must not make it beat in a tight loop, one that says a day must not
+// leave a dead connection undetected.
+const MIN_HEARTBEAT_MS = 1_000
+const MAX_HEARTBEAT_MS = 300_000
+
+/** The HELLO interval clamped to sane bounds, or undefined when there is none. */
+export function heartbeatInterval(d: unknown): number | undefined {
+  if (!isRecord(d) || typeof d.heartbeat_interval !== 'number' || !Number.isFinite(d.heartbeat_interval)) return undefined
+  return Math.min(MAX_HEARTBEAT_MS, Math.max(MIN_HEARTBEAT_MS, d.heartbeat_interval))
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
 }

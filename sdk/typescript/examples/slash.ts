@@ -43,7 +43,7 @@ client.on('interactionCreate', async (i) => {
     }
     const label = i.options.get('label')
     const result = 1 + Math.floor(Math.random() * sides)
-    await i.editReply(`${i.user.display_name} rolled **${result}** (d${sides}${label ? `, ${label}` : ''})`)
+    await i.editReply(`${i.user?.display_name ?? "Someone"} rolled **${result}** (d${sides}${label ? `, ${label}` : ''})`)
   }
 })
 

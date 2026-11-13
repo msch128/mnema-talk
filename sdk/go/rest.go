@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -120,7 +122,13 @@ func (r *REST) do(ctx context.Context, req request) (bool, error) {
 		}
 		if status == http.StatusTooManyRequests {
 			rl := parseRateLimit(header, body)
-			r.limits.pause(key, rl.Global, rl.RetryAfter)
+			// A wait beyond the cap is not taken or stored: the request fails
+			// with the 429 and the bot decides, instead of every route
+			// stalling behind one answer.
+			if rl.RetryAfter > MaxRetryAfter {
+				return false, rl
+			}
+			r.limits.pause(key, rl.Global, rl.RetryAfter+retryJitter())
 			if attempt < r.maxRetries {
 				r.logger.DebugContext(ctx, "mnema: rate limited, waiting", "bucket", key, "retry_after", rl.RetryAfter, "global", rl.Global)
 				continue
@@ -192,6 +200,24 @@ func parseError(status int, body []byte) *RESTError {
 	return &RESTError{Status: status, Code: e.Code, Message: e.Message}
 }
 
+// MaxRetryAfter is the longest 429 wait the client takes on its own.
+const MaxRetryAfter = 60 * time.Second
+
+// retryJitter spreads retries a little, so bots on one host do not return at once.
+func retryJitter() time.Duration { return time.Duration(rand.Int64N(int64(250 * time.Millisecond))) }
+
+// seconds turns a retry_after in seconds into a duration; anything that is not
+// a positive finite number, or that does not fit, gives 0.
+func seconds(s float64) time.Duration {
+	if math.IsNaN(s) || s <= 0 {
+		return 0
+	}
+	if s > float64(math.MaxInt64/int64(time.Second)) {
+		return time.Duration(math.MaxInt64)
+	}
+	return time.Duration(s * float64(time.Second))
+}
+
 func parseRateLimit(h http.Header, body []byte) *RESTError {
 	var rl struct {
 		Message    string  `json:"message"`
@@ -199,10 +225,10 @@ func parseRateLimit(h http.Header, body []byte) *RESTError {
 		Global     bool    `json:"global"`
 	}
 	_ = json.Unmarshal(body, &rl)
-	wait := time.Duration(rl.RetryAfter * float64(time.Second))
+	wait := seconds(rl.RetryAfter)
 	if wait <= 0 {
 		if s, err := strconv.ParseFloat(h.Get("Retry-After"), 64); err == nil {
-			wait = time.Duration(s * float64(time.Second))
+			wait = seconds(s)
 		}
 	}
 	if wait <= 0 {

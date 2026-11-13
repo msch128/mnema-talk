@@ -89,11 +89,13 @@ export class RestClient {
   uploadFile(channelId: string, data: UploadFileData): Promise<Message> {
     const form = new FormData()
     const blob = data.file instanceof Blob ? data.file : new Blob([data.file as Uint8Array<ArrayBuffer>], data.contentType ? { type: data.contentType } : {})
-    form.append('file', blob, data.name)
+    // The text fields go first: the server reads them before it streams the
+    // file to storage, so a bad target is refused before the upload.
     if (data.content !== undefined) form.append('content', data.content)
     if (data.allowed_mentions !== undefined) form.append('allowed_mentions', JSON.stringify(data.allowed_mentions))
     if (data.parent_id !== undefined) form.append('parent_id', data.parent_id)
     if (data.reply_to_id !== undefined) form.append('reply_to_id', data.reply_to_id)
+    form.append('file', blob, data.name)
     return this.core.request('POST', `/channels/${seg(channelId)}/upload`, { form })
   }
 

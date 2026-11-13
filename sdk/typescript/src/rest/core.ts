@@ -91,9 +91,8 @@ export class RestCore {
       await this.acquire(bucket, opts.signal)
       const res = await this.send(method, path, opts)
       if (res.status === 429) {
-        const willRetry = attempt < this.maxRetries
-        const wait = await this.noteRateLimit(res, bucket, { method, path, key, attempt, willRetry })
-        if (willRetry) continue
+        const wait = await this.noteRateLimit(res, bucket, { method, path, key, attempt, maxRetries: this.maxRetries })
+        if (wait.willRetry) continue
         throw new RestError({ status: 429, method, path, body: wait.body, retryAfter: wait.retryAfter, global: wait.global })
       }
       if (method === 'GET' && RETRYABLE_GET.has(res.status) && attempt < this.maxRetries) {
@@ -162,16 +161,21 @@ export class RestCore {
   private async noteRateLimit(
     res: Response,
     bucket: Bucket,
-    ctx: { method: string; path: string; key: string; attempt: number; willRetry: boolean },
-  ): Promise<{ retryAfter: number; global: boolean; body: unknown }> {
+    ctx: { method: string; path: string; key: string; attempt: number; maxRetries: number },
+  ): Promise<{ retryAfter: number; global: boolean; body: unknown; willRetry: boolean }> {
     const body = await readBody(res)
     const b = (body ?? {}) as { retry_after?: unknown; global?: unknown }
-    const header = Number(res.headers.get('retry-after'))
-    const retryAfter = typeof b.retry_after === 'number' ? b.retry_after : Number.isFinite(header) && header > 0 ? header : 1
+    const retryAfter = retryAfterSeconds(b.retry_after, res.headers.get('retry-after'))
     const global = b.global === true || res.headers.get('x-ratelimit-global') === 'true'
-    const until = Date.now() + Math.ceil(retryAfter * 1000)
-    if (global) this.globalPausedUntil = Math.max(this.globalPausedUntil, until)
-    else bucket.pausedUntil = Math.max(bucket.pausedUntil, until)
+    // A wait beyond the cap is not taken: the request fails with the 429 and
+    // the bot decides, instead of every route stalling behind one answer.
+    const withinCap = retryAfter <= MAX_RETRY_AFTER_S
+    const willRetry = ctx.attempt < ctx.maxRetries && withinCap
+    if (withinCap) {
+      const until = Date.now() + Math.ceil(retryAfter * 1000) + Math.floor(Math.random() * RETRY_JITTER_MS)
+      if (global) this.globalPausedUntil = Math.max(this.globalPausedUntil, until)
+      else bucket.pausedUntil = Math.max(bucket.pausedUntil, until)
+    }
     const info: RateLimitInfo = {
       method: ctx.method,
       path: ctx.path,
@@ -180,11 +184,11 @@ export class RestCore {
       global,
       scope: res.headers.get('x-ratelimit-scope') ?? undefined,
       attempt: ctx.attempt + 1,
-      willRetry: ctx.willRetry,
+      willRetry,
     }
     this.logger?.warn?.(`rate limited on ${ctx.method} ${ctx.path}: retry after ${retryAfter}s${global ? ' (global)' : ''}`)
     this.onRateLimit?.(info)
-    return { retryAfter, global, body }
+    return { retryAfter, global, body, willRetry }
   }
 
   private async parse(res: Response, method: string, path: string): Promise<unknown> {
@@ -205,4 +209,16 @@ async function readBody(res: Response): Promise<unknown> {
     }
   }
   return text
+}
+
+/** The longest 429 wait the client takes on its own, in seconds. */
+export const MAX_RETRY_AFTER_S = 60
+// Spreads retries a little so that bots on one host do not return at once.
+const RETRY_JITTER_MS = 250
+
+/** The wait a 429 asks for: the body's retry_after, else Retry-After, else 1 s. */
+function retryAfterSeconds(body: unknown, header: string | null): number {
+  if (typeof body === 'number' && Number.isFinite(body) && body >= 0) return body
+  const h = Number(header)
+  return Number.isFinite(h) && h > 0 ? h : 1
 }
