@@ -366,3 +366,41 @@ test('phone: the drawer row opens a Talk chat without joining', async ({ page })
   await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)
   await expectNoSidewaysScroll(page)
 })
+
+// A cut channel name on a touch screen: holding the row still shows the whole
+// name; moving the finger then drags the row, and the name steps aside.
+test('phone: holding a cut channel name shows it whole, moving drags the row', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Synthetic touch input is sent through the Chrome DevTools Protocol, which only Chromium offers')
+  await signIn(page)
+  const name = `a channel whose name is far too long for the drawer ${suffix}`
+  expect((await apiFetch(page, 'POST', '/api/admin/channels', { name, type: 'text' })).status).toBe(201)
+  await page.reload()
+  await openDrawer(page)
+  const row = page.locator('[data-channel-type="text"]', { hasText: name })
+  await row.scrollIntoViewIfNeeded()
+  await expect(row.locator('[data-full-text]')).toHaveAttribute('title', name)
+
+  const cdp = await page.context().newCDPSession(page)
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+  const box = await bounds(row.locator('[data-full-text]'))
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const tip = page.getByRole('tooltip')
+  const ghost = page.getByTestId('drag-ghost')
+
+  await touch('touchStart', at.x, at.y)
+  await expect(tip).toBeVisible()
+  await expect(tip).toHaveText(name)
+  // Picked up (the account may reorder), but held still nothing is dragged yet.
+  await expect(page.locator('html')).toHaveClass(/mnema-dragging/)
+  await expect(ghost).toHaveCount(0)
+  await expect(tip).toBeVisible()
+
+  for (let i = 1; i <= 5; i++) await touch('touchMove', at.x, at.y + i * 6)
+  await expect(ghost).toBeVisible()
+  await expect(tip).toBeHidden()
+  // Escape puts the row back where it was.
+  await page.keyboard.press('Escape')
+  await touch('touchEnd')
+  await expect(ghost).toHaveCount(0)
+})

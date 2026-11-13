@@ -65,6 +65,15 @@ describe('AdminMediaTab', () => {
     expect(tiles(w)[2]!.find('button')!.exists()).toBe(false)
   })
 
+  it('names a file without a preview once, in its caption, so a long name cannot run over the caption', async () => {
+    serve()
+    const w = mount(AdminMediaTab)
+    await flushPromises()
+    const svg = tiles(w)[1]!
+    expect(svg.text().split('x.svg')).toHaveLength(2)
+    expect(svg.find('svg').exists()).toBe(true)
+  })
+
   it('keeps the other half when one request fails', async () => {
     serve({ fail: { '/api/admin/media/stats': 'stats down' } })
     const w = mount(AdminMediaTab)

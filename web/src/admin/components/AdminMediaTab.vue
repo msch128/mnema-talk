@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: storage summary, manual prune and the media list.
 import { ref, onMounted } from 'vue'
-import { RefreshCw, Trash2, Image, HardDrive } from '@lucide/vue'
+import { RefreshCw, Trash2, Image, HardDrive, FileText } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
 import type { MediaDashboardItem } from '../../types/domain'
 import { decodeMediaStats, decodeMediaPruneResult, isMediaDashboardItem } from '../../types/rest'
@@ -156,13 +156,13 @@ onMounted(refresh)
               class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
               loading="lazy"
             />
-            <div v-else class="text-sm text-mnema-tertiary p-2 text-center break-all font-mono">
-              {{ item.is_deleted ? $t('admin.deletedMarker') : item.original_filename }}
-            </div>
+            <!-- Not a picture: an icon, since the caption below already names the file (a long name overlapped it). -->
+            <div v-else-if="item.is_deleted" class="p-2 text-center text-sm text-mnema-tertiary font-mono">{{ $t('admin.deletedMarker') }}</div>
+            <FileText v-else class="h-8 w-8 text-mnema-tertiary" aria-hidden="true" />
           </div>
           <div class="relative z-10 p-2 bg-linear-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between mt-auto">
             <div class="min-w-0 flex-1 text-xs text-white">
-              <p class="truncate font-medium">{{ item.original_filename }}</p>
+              <p v-full-text class="truncate font-medium">{{ item.original_filename }}</p>
               <p class="text-mnema-muted">{{ formatBytes(item.size_bytes) }} • {{ item.uploader_name }}</p>
             </div>
             <template v-if="!item.is_deleted">

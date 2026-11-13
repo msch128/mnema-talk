@@ -33,7 +33,8 @@ export interface SortableDragOptions<Item, Target> {
   hitTest?: (x: number, y: number) => Element | null
   mouseThreshold?: number; longPressMs?: number; touchSlop?: number; edge?: number; maxScrollSpeed?: number; clickGuardMs?: number
 }
-interface DragState<Item, Target> { phase: 'idle' | 'pending' | 'dragging'; item: Item | null; target: Target | null; pointerType: string; x: number; y: number }
+// moved: the item has left the spot it was picked up at (a touch pick-up starts in place).
+interface DragState<Item, Target> { phase: 'idle' | 'pending' | 'dragging'; item: Item | null; target: Target | null; pointerType: string; moved: boolean; x: number; y: number }
 
 export const DRAG_DEFAULTS = Object.freeze({
   mouseThreshold: 4, // px of movement before a mouse/pen drag starts
@@ -54,7 +55,6 @@ interface Session {
   startY: number
   pickX: number
   pickY: number
-  moved: boolean
   timer: ReturnType<typeof setTimeout> | undefined
   frame: FrameHandle | null
 }
@@ -92,8 +92,7 @@ function pointerDown<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent, it
   s.source = e.currentTarget instanceof Element ? e.currentTarget : null
   s.startX = state.x = e.clientX
   s.startY = state.y = e.clientY
-  s.moved = false
-  Object.assign(state, { phase: 'pending', item, target: null, pointerType: type })
+  Object.assign(state, { phase: 'pending', item, target: null, pointerType: type, moved: false })
   c.listeners.listen()
   if (type === 'touch') s.timer = setTimeout(() => begin(c), opts.longPressMs)
 }
@@ -107,7 +106,7 @@ function begin<Item, Target>(c: DragCtx<Item, Target>) {
   s.pickX = state.x
   s.pickY = state.y
   if (isTouch(c)) navigator.vibrate?.(10)
-  else s.moved = true
+  else state.moved = true
   // Keeps pointerup coming when the mouse is released outside the window.
   try {
     if (s.pointerId !== null) s.source?.setPointerCapture?.(s.pointerId)
@@ -151,7 +150,7 @@ function onPointerMove<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) 
     return
   }
   if (state.phase !== 'dragging') return
-  if (!s.moved && Math.hypot(e.clientX - s.pickX, e.clientY - s.pickY) > c.opts.touchSlop) s.moved = true
+  if (!state.moved && Math.hypot(e.clientX - s.pickX, e.clientY - s.pickY) > c.opts.touchSlop) state.moved = true
   if (e.cancelable) e.preventDefault()
   update(c)
 }
@@ -167,7 +166,7 @@ function onPointerUp<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) {
   const { item, target } = state
   if (item === null) return
   c.clickGuard.arm()
-  if (isTouch(c) && !c.s.moved) {
+  if (isTouch(c) && !state.moved) {
     reset(c)
     opts.onEnd?.(item, false)
     opts.onLongPress?.(item, e)
@@ -244,9 +243,8 @@ function reset<Item, Target>(c: DragCtx<Item, Target>) {
   }
   s.pointerId = null
   s.source = null
-  s.moved = false
   if (typeof document !== 'undefined') document.documentElement.classList.remove('mnema-dragging')
-  Object.assign(c.state, { phase: 'idle', item: null, target: null, pointerType: '' })
+  Object.assign(c.state, { phase: 'idle', item: null, target: null, pointerType: '', moved: false })
 }
 
 /**
@@ -267,6 +265,7 @@ export function useSortableDrag<Item, Target>(options: SortableDragOptions<Item,
     item: null,
     target: null,
     pointerType: '',
+    moved: false,
     x: 0,
     y: 0
   })
@@ -274,7 +273,7 @@ export function useSortableDrag<Item, Target>(options: SortableDragOptions<Item,
   const c: DragCtx<Item, Target> = {
     opts,
     state,
-    s: { pointerId: null, source: null, startX: 0, startY: 0, pickX: 0, pickY: 0, moved: false, timer: undefined, frame: null },
+    s: { pointerId: null, source: null, startX: 0, startY: 0, pickX: 0, pickY: 0, timer: undefined, frame: null },
     clickGuard: createClickGuard(opts.clickGuardMs),
     listeners: createWindowListeners({
       move: e => onPointerMove(c, e),

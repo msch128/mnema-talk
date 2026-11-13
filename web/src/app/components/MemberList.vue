@@ -7,6 +7,8 @@ import MemberRow from './MemberRow.vue'
 import ContextMenu from '../../shared/components/ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../../chat/composables/useNavMenus'
 import { useMemberGroups } from '../composables/useMemberGroups'
+// Opened over the chat (no room beside a thread): it needs its own close button, as on phones.
+import { membersOverlay } from '../../shared/lib/sideColumns'
 
 const chatStore = useChatStore()
 const { admins, roleGroups, onlineNonAdmins, offlineNonAdmins, voiceChannelName } = useMemberGroups()
@@ -31,7 +33,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
       <button
         type="button"
         data-testid="members-close"
-        class="hidden max-md:flex h-11 w-11 -mr-3 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text"
+        :class="[membersOverlay ? 'flex h-8 w-8 -mr-2' : 'hidden', 'max-md:flex max-md:h-11 max-md:w-11 max-md:-mr-3 shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-surface hover:text-mnema-text']"
         :aria-label="$t('common.close')"
         @click="chatStore.showMemberList = false"
       >

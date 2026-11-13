@@ -74,7 +74,7 @@ function onScrimUp(e: PointerEvent) {
       <header v-if="title" class="flex items-center justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-6 py-5">
         <div class="min-w-0">
           <div class="flex min-w-0 items-center gap-2">
-            <h2 :id="titleId" :class="['text-lg font-semibold text-mnema-text', wrapTitle ? 'min-w-0 text-pretty wrap-break-word' : 'truncate']">{{ title }}</h2>
+            <h2 v-full-text :id="titleId" :class="['text-lg font-semibold text-mnema-text', wrapTitle ? 'min-w-0 text-pretty wrap-break-word' : 'truncate']">{{ title }}</h2>
             <slot name="badge" />
           </div>
           <p v-if="subtitle" class="mt-0.5 text-pretty text-[13px] leading-snug text-mnema-tertiary">{{ subtitle }}</p>

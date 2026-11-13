@@ -6,7 +6,7 @@ import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Maximize2, Minimize2, MonitorOff, PictureInPicture2, Video, Volume2, VolumeX, X } from '@lucide/vue'
 import { useVoiceStore } from '../../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
-import { fitAspect } from '../lib/talkLayout'
+import { fitAspect, STAGE_COMPACT_BAR_WIDTH } from '../lib/talkLayout'
 import { useScreenFit } from '../composables/useScreenFit'
 import { useCameraFit } from '../composables/useCameraFit'
 import ScreenViewers from './ScreenViewers.vue'
@@ -65,6 +65,8 @@ const boxStyle = computed(() => props.fullscreen || !box.value.width ? {} : { wi
 const narrow = computed(() => !props.fullscreen && box.value.width > 0 && box.value.width < 560)
 // Tiny stage: no volume slider and no Picture-in-Picture button (its right-click menu has it).
 const tiny = computed(() => narrow.value && box.value.width < 440)
+// The control bar over the stage goes icons-only when the area asks for it or the box is too narrow for the full bar.
+const barCompact = computed(() => props.compactBar || (!props.fullscreen && box.value.width > 0 && box.value.width < STAGE_COMPACT_BAR_WIDTH))
 const fade = computed(() => [
   'transition-opacity duration-200 motion-reduce:transition-none',
   props.controlsShown ? 'opacity-100' : 'opacity-0'
@@ -182,8 +184,9 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
             <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
             {{ $t('talk.live') }}
           </span>
-          <ScreenViewers v-if="!cameraOnStage && stage.userId" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 shrink-0" />
-          <span v-if="!tiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
+          <!-- On a tiny stage (a phone) the right-hand buttons leave room for the LIVE badge only. -->
+          <ScreenViewers v-if="!cameraOnStage && stage.userId && !tiny" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 shrink-0" />
+          <span v-full-text v-if="!tiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
           <span v-if="videoResolution && !narrow" class="text-white/60 text-xs font-mono shrink-0">{{ videoResolution }}</span>
         </div>
 
@@ -313,7 +316,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
         <TalkControlBar
           class="pointer-events-auto"
           :visible="controlsShown"
-          :compact="compactBar"
+          :compact="barCompact"
           :fullscreen="fullscreen"
           @update:pinned="emit('bar-pinned', $event)"
         />

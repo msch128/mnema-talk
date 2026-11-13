@@ -58,6 +58,7 @@ import { useAppRouting } from './app/composables/useAppRouting'
 import { useAppBadge } from './app/composables/useAppBadge'
 import { useDesktopBusy } from './app/composables/useDesktopBusy'
 import { useCompactLayout } from './shared/composables/useCompactLayout'
+import { useSideColumns } from './app/composables/useSideColumns'
 import { usePushBridge } from './app/composables/usePushBridge'
 import { usePttHint } from './talk/composables/usePttHint'
 import { useTitleBadge } from './app/composables/useTitleBadge'
@@ -87,9 +88,11 @@ const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterRec
 // Column widths. Order = shrink priority on narrow windows
 // (thread first, then member list, then the left sidebar).
 const panels = useResizable([
-  { name: 'left', side: 'left', defaultWidth: 240, min: 200, max: 360 },
-  { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => chatStore.showMemberList },
-  { name: 'thread', side: 'right', defaultWidth: 400, min: 320, max: 640, visible: () => !!chatStore.activeThread }
+  // In rem (240, 200 and 360 px at the usual 16px): a larger font gets a wider channel list.
+  { name: 'left', side: 'left', defaultWidth: 15, min: 12.5, max: 22.5, unit: 'rem' },
+  // A list or thread opened over the chat (useSideColumns) takes no column.
+  { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => side.membersColumn.value },
+  { name: 'thread', side: 'right', defaultWidth: 400, min: 320, max: 640, visible: () => !!chatStore.activeThread && !side.threadOver.value }
 ], { centerMin: 400 })
 // Height of the Talk's chat under the stage; the stage (and its 48px header)
 // keeps the rest, at least STAGE_MIN_HEIGHT.
@@ -99,8 +102,15 @@ const showLegalModal = ref(false)
 const inConversation = computed(() => chatStore.isDm(chatStore.activeChannel?.id))
 // Phones: the channel list is a drawer, the thread and member list fill the screen.
 const { isCompact, navOpen, closeNav } = useCompactLayout()
+// The thread and the member list on a narrow window: columns, stepped aside, or over the chat.
+const side = useSideColumns({ leftWidth: () => panels.left.width, compact: () => isCompact.value })
 if (isCompact.value) chatStore.showMemberList = false
-watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
+// A window that shrinks into the phone layout (the desktop client at its minimum) would turn an open
+// member list into a full-screen panel over the chat and the button that opens the channels.
+watch(isCompact, compact => { if (compact) chatStore.showMemberList = false })
+// Compared as one string: an array is a new value on every run, and the getter reruns whenever the
+// active channel's object is refreshed (a Talk's voice updates), which closed the phone's drawer by itself.
+watch(() => `${chatStore.activeChannel?.id}|${voiceStore.currentChannelId}|${voiceStore.activeView}`, closeNav)
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
 watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.dialogOpen) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
@@ -215,7 +225,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="h-full flex overflow-hidden bg-mnema-canvas text-mnema-text">
+  <div class="h-full flex overflow-clip bg-mnema-canvas text-mnema-text">
     <RecoveryPage v-if="recovery" :link="recovery" @done="leaveRecovery" />
 
     <!-- Session check still running: minimal loading state, no data fetching -->
@@ -296,21 +306,21 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
-        :style="isCompact ? undefined : { width: `${panels.thread.width}px` }"
+        :class="['relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.threadOver.value ? 'fixed! inset-y-0 right-0 z-30 bg-mnema-canvas' : '']"
+        :style="isCompact ? undefined : side.threadOver.value ? { left: `${panels.left.width}px` } : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
-        <ResizeHandle v-if="!isCompact" :panel="panels.thread" :label="$t('resize.thread')" />
+        <ResizeHandle v-if="!isCompact && !side.threadOver.value" :panel="panels.thread" :label="$t('resize.thread')" />
       </div>
 
       <!-- Right column: member list -->
       <div
-        v-if="chatStore.showMemberList && !inConversation"
-        class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
-        :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
+        v-if="(side.membersColumn.value || side.membersOver.value) && !inConversation"
+        :class="['relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.membersOver.value ? 'fixed! inset-y-0 right-0 z-40 bg-mnema-canvas shadow-popover' : '']"
+        :style="isCompact ? undefined : { width: `${side.membersOver.value ? panels.members.defaultWidth : panels.members.width}px` }"
       >
         <MemberList />
-        <ResizeHandle v-if="!isCompact" :panel="panels.members" :label="$t('resize.members')" />
+        <ResizeHandle v-if="!isCompact && !side.membersOver.value" :panel="panels.members" :label="$t('resize.members')" />
       </div>
 
       <!-- Admin console dialog -->

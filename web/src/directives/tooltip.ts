@@ -1,4 +1,5 @@
 import type { DirectiveBinding, ObjectDirective } from 'vue'
+import { holdToShow } from './tooltipTouch'
 
 export type TooltipValue = string | { text: string; shortcut?: string } | null | undefined
 interface TooltipData { text: string; shortcut: string }
@@ -13,6 +14,7 @@ export interface TooltipElement extends HTMLElement {
   __tipLabelSet?: boolean
   __tipId?: number
   __tipHandlers?: TooltipHandlers
+  __tipTouchOff?: () => void
 }
 
 // v-tooltip="'Antworten'" or v-tooltip="{ text: 'Stummschalten', shortcut: 'M' }"
@@ -20,7 +22,8 @@ export interface TooltipElement extends HTMLElement {
 // keyboard focus, hides on leave/blur/Escape/press. By default the directive
 // also sets aria-label to the same text (icon buttons); use the .visual
 // modifier for tooltips on visible text (e.g. truncated names) to leave the
-// accessible name alone.
+// accessible name alone. A .visual tooltip also shows on a long press, since
+// touch has no hover and it often carries the full text of a cut name.
 
 const HOVER_DELAY = 400
 const GAP = 6
@@ -65,7 +68,11 @@ function position(target: HTMLElement) {
   tip.style.top = `${Math.round(top)}px`
 }
 
-export function showTip(target: TooltipElement, immediate = false) {
+/**
+ * Shows the target's tooltip. `touch`: asked for by a long press; on a touch
+ * screen only those show (style.css), since a tap is not a hover.
+ */
+export function showTip(target: TooltipElement, immediate = false, touch = false) {
   const data = target.__tip
   if (!data) return
   clearTimeout(showTimer)
@@ -82,6 +89,7 @@ export function showTip(target: TooltipElement, immediate = false) {
       kbd.textContent = data.shortcut
       tip.appendChild(kbd)
     }
+    tip.toggleAttribute('data-touch', touch)
     tip.hidden = false
     currentTarget = target
     target.setAttribute('aria-describedby', tip.id)
@@ -136,12 +144,14 @@ export const tooltip: ObjectDirective<TooltipElement, TooltipValue> = {
     el.addEventListener('focus', h.focus)
     el.addEventListener('blur', h.leave)
     el.addEventListener('keydown', h.key)
+    if (binding.modifiers?.visual) el.__tipTouchOff = holdToShow(el, () => showTip(el, true, true), () => hideTip(el))
   },
   updated(el, binding) {
     setup(el, binding)
   },
   beforeUnmount(el) {
     hideTip(el)
+    el.__tipTouchOff?.()
     const h = el.__tipHandlers
     if (!h) return
     el.removeEventListener('pointerenter', h.enter)

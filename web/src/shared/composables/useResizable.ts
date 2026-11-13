@@ -1,10 +1,12 @@
 import type { Ref } from 'vue'
+import { useRootFontSize, remToPx } from './useRootFontSize'
 import { reactive, ref, computed, onScopeDispose } from 'vue'
 
 export type PanelSide = 'left' | 'right' | 'top' | 'bottom'
 export type PanelAxis = 'x' | 'y'
 export interface PanelConfig { defaultWidth: number; min: number; max: number }
-export interface PanelDefinition<Name extends string = string> extends PanelConfig { name: Name; side: PanelSide; visible?: () => boolean }
+// unit 'rem': defaultWidth, min and max are rem and follow the root font size; a width the member set stays px, clamped to them.
+export interface PanelDefinition<Name extends string = string> extends PanelConfig { name: Name; side: PanelSide; visible?: () => boolean; unit?: 'px' | 'rem' }
 interface FittedPanel { width: number; min: number; visible: boolean }
 export interface ResizePanel { name: string; side: PanelSide; axis: PanelAxis; min: number; defaultWidth: number; width: number; maxNow: number; dragging: boolean; startDrag(event: PointerEvent): void; onKeydown(event: KeyboardEvent): void; reset(): void }
 
@@ -267,6 +269,7 @@ function beginPanelDrag({ event: e, handle, def, axis, startWidth, max, dragging
 
 function createPanelState<Name extends string>(
   def: PanelDefinition<Name>,
+  sized: () => PanelConfig,
   index: number,
   axis: PanelAxis,
   helpers: {
@@ -282,9 +285,9 @@ function createPanelState<Name extends string>(
     name: String(def.name),
     side: def.side,
     axis,
-    min: def.min,
-    defaultWidth: def.defaultWidth,
-    width: computed(() => helpers.effective.value[index] ?? def.defaultWidth),
+    min: computed(() => sized().min),
+    defaultWidth: computed(() => sized().defaultWidth),
+    width: computed(() => helpers.effective.value[index] ?? sized().defaultWidth),
     maxNow: computed(() => helpers.maxFor(index)),
     dragging: computed(() => helpers.dragging.value === def.name),
     startDrag: (e: PointerEvent) => helpers.startDrag(index, e),
@@ -308,21 +311,29 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
   const dragging = ref<string | null>(null)
   let finishDrag: (() => void) | null = null
   onScopeDispose(() => finishDrag?.())
-  const preferred = reactive(Object.fromEntries(defs.map(d => [d.name, loadWidth(d.name, d, storage, dimension)])))
+  const rootPx = useRootFontSize()
+  // The definitions in px at the current root font size.
+  const sized = computed(() => defs.map(d => d.unit === 'rem'
+    ? { ...d, defaultWidth: remToPx(d.defaultWidth, rootPx.value), min: remToPx(d.min, rootPx.value), max: remToPx(d.max, rootPx.value) }
+    : d))
+  const px = (index: number) => sized.value[index] ?? defs[index]
+  // A rem panel without a stored width keeps no px of its own, so its default follows the font size.
+  const stored = (d: PanelDefinition) => { try { return storage?.getItem(storageKey(d.name, dimension)) != null } catch (err) { void err; return false } }
+  const preferred = reactive<Record<string, number | undefined>>(Object.fromEntries(defs.map((d, i) => [d.name, d.unit === 'rem' && !stored(d) ? undefined : loadWidth(d.name, px(i) ?? d, storage, dimension)])))
 
   const visibility = () => defs.map(d => (d.visible ? !!d.visible() : true))
 
   const effective = computed(() => {
     const vis = visibility()
     return fitPanels(
-      defs.map((d, i) => ({ width: preferred[d.name] ?? d.defaultWidth, min: d.min, visible: vis[i] ?? false })),
+      sized.value.map((d, i) => ({ width: clamp(preferred[d.name] ?? d.defaultWidth, d.min, d.max), min: d.min, visible: vis[i] ?? false })),
       viewport.value,
       centerMin
     )
   })
 
   function maxFor(index: number) {
-    const def = defs[index]
+    const def = px(index)
     return def ? availableMax(index, effective.value, def, { viewportWidth: viewport.value, centerMin }) : 0
   }
 
@@ -333,7 +344,7 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
 
   function startDrag(index: number, e: PointerEvent) {
     if (e.button !== 0) return
-    const def = defs[index]
+    const def = px(index)
     const handle = e.currentTarget
     if (!def || !(handle instanceof Element)) return
     finishDrag?.()
@@ -352,7 +363,7 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
   }
 
   function onKeydown(index: number, e: KeyboardEvent) {
-    const def = defs[index]
+    const def = px(index)
     if (!def) return
     const max = maxFor(index)
     const next = keyboardWidth(e, def, effective.value[index] ?? def.defaultWidth, max)
@@ -362,10 +373,13 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
   }
 
   function reset(index: number) {
-    const def = defs[index]
-    if (def) setWidth(def, def.defaultWidth, true)
+    const def = px(index)
+    if (!def) return
+    if (def.unit !== 'rem') return setWidth(def, def.defaultWidth, true)
+    preferred[def.name] = undefined
+    try { storage?.removeItem(storageKey(def.name, dimension)) } catch (err) { void err }
   }
 
   const helpers = { effective, dragging, maxFor, startDrag, onKeydown, reset }
-  return Object.fromEntries(defs.map((def, index) => [def.name, createPanelState(def, index, axis, helpers)])) as Record<Name, ResizePanel>
+  return Object.fromEntries(defs.map((def, index) => [def.name, createPanelState(def, () => px(index) ?? def, index, axis, helpers)])) as Record<Name, ResizePanel>
 }

@@ -5,6 +5,7 @@ import { useVoiceStore } from '../../stores/voice'
 import { useChatStore } from '../../stores/chat'
 import { categoryFixture, channelFixture } from '../../test-fixtures.fixture'
 import VoiceStatusPanel from './VoiceStatusPanel.vue'
+import { t } from '../../i18n'
 const rtc = vi.hoisted(() => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
 let wrapper: ReturnType<typeof mount<typeof VoiceStatusPanel>> | undefined
@@ -32,5 +33,21 @@ describe('VoiceStatusPanel', () => {
     await audio.trigger('click'); expect(audio.attributes('aria-pressed')).toBe('false')
     expect(wrapper.get('[data-testid="voice-panel-leave"]').classes()).toContain('max-md:h-11')
     await wrapper.get('[data-testid="voice-panel-leave"]').trigger('click'); expect(rtc.leaveVoiceChannel).toHaveBeenCalledOnce()
+  })
+  it('names the Talk in its tooltip only while the name is cut, and the ping in its accessible name', async () => {
+    const voice = useVoiceStore(); voice.setChannel('v'); voice.ping = 12
+    useChatStore().categories = [categoryFixture({ channels: [channelFixture({ id: 'v', name: 'A Talk with a long name', type: 'voice' })] })]
+    wrapper = mount(VoiceStatusPanel, { attachTo: document.body })
+    const open = wrapper.get('[data-testid="voice-panel-open"]')
+    const tip = () => (open.element as HTMLElement & { __tip?: { text: string } }).__tip?.text
+    await open.trigger('pointerenter')
+    expect(tip()).toBe(t('voice.panel.open'))
+    const name = wrapper.get('[data-testid="voice-panel-channel"]').element
+    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 300 })
+    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 40 })
+    await open.trigger('pointerenter')
+    expect(tip()).toBe(t('voice.panel.openNamed', { channel: 'A Talk with a long name' }))
+    expect(wrapper.get('[data-testid="voice-panel-ping"]').attributes('aria-label')).toBeUndefined()
+    expect(wrapper.get('[data-testid="voice-panel-ping"]').text()).toContain('12 ms')
   })
 })

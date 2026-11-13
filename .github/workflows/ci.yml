@@ -1040,6 +1040,91 @@ jobs:
           echo "result: $RESULT"
           [ "$RESULT" = success ]
 
+  # -- Visual clipping sweep: e2e/tests/clipping.spec.ts over the whole matrix
+  # (every scene at seven window sizes, English and German, 125 % zoom). The
+  # e2e shards above run its smoke subset; this runs all of it, one size and
+  # language per test, dealt out like the e2e shards (--shard=i/4), each shard
+  # on a stack of its own. A finding's screenshots and clip-findings.json are
+  # in the e2e-clip-results artifact. Not a required check.
+  clip-sweep:
+    name: clip-sweep (${{ matrix.shard }}/4)
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
+      # The sweep runs Chromium only, so only its system libraries.
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh chromium
+
+      - name: Run the full clipping sweep
+        env:
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: chromium
+          CLIP_SWEEP: full
+          E2E_ONLY: --project=chromium tests/clipping.spec.ts --shard=${{ matrix.shard }}/4
+        run: e2e/run.sh
+
+      - name: Upload the findings and their screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-clip-results-${{ matrix.shard }}
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   # -- Other engines: every spec that does not need a sealed call on WebKit (iOS,
   # Safari, installed PWAs) and a smoke subset on Firefox. Not a required check
   # until both have run stable (see doc/product-status.md).
@@ -1065,8 +1150,10 @@ jobs:
           # refuses to join one. Every spec that joins a call is left out here and
           # runs on macOS WebKit locally (evidence in doc/product-status.md); this
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
+          # Each name is a pattern on the spec's path, so layout.spec.ts would also
+          # pick voice-panel-layout.spec.ts: that one is written with its folder.
           - browser: webkit
-            only: "--project=webkit a11y.spec.ts account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-install-layout.spec.ts bot-members.spec.ts bot-platform.spec.ts bots.spec.ts browser-sealing.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
+            only: "--project=webkit a11y.spec.ts account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-install-layout.spec.ts bot-members.spec.ts bot-platform.spec.ts bots.spec.ts browser-sealing.spec.ts clipping-auditor.spec.ts drafts.spec.ts tests/layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts narrow-columns.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           # The runner has no audio output device, and Firefox then never starts an
           # AudioContext. The specs that need audio played out follow with an audio
           # device: late-join.spec.ts (AI noise filter) and audio-stall.spec.ts, whose
