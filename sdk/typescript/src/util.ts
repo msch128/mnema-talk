@@ -3,9 +3,16 @@ export function compact<T extends object>(o: T): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T
 }
 
-/** The URL without trailing slashes. */
+/**
+ * The URL without trailing slashes. A loop, not a regular expression: a
+ * pattern anchored at the end with a repeated slash backtracks over every run
+ * of slashes that is not at the end, quadratic on input such as many slashes
+ * followed by another character.
+ */
 export function trimSlash(url: string): string {
-  return url.replace(/\/+$/, '')
+  let end = url.length
+  while (end > 0 && url.charCodeAt(end - 1) === 0x2f) end--
+  return url.slice(0, end)
 }
 
 // setTimeout fires at once for anything above 2^31-1 ms.
