@@ -297,11 +297,17 @@
   color: #8E9C94;
 }
 
-/* Voice status panel: below ~215px the details link and screen-share button
-   move out of the way (they are also in the account menu). */
+/* Voice status panel. Measured in rem, so a larger root font size counts:
+   in a narrow panel the screen-share buttons step aside (sharing is also in
+   the Talk), and where even the Talk's name would be a sliver (under about
+   2.5em beside "Connected") the name and its dot are left out; the panel's
+   accessible name and the Talk view still name it. */
 .vpanel-wrap { container-type: inline-size; }
-@container (max-width: 215px) {
+@container (max-width: 11rem) {
   .vp-narrow-hide { display: none; }
+}
+@container (max-width: 8.5rem) {
+  .vp-name { display: none; }
 }
 
 /* A message that mentions the reader (@name, @all, @here or a reply to them):

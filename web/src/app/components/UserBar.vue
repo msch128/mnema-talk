@@ -2,7 +2,7 @@
 import { barIconButton } from '../../talk/components/talkButtons'
 import type { User } from '../../types/domain'
 import { ref, computed } from 'vue'
-import { Mic, MicOff, Headphones, HeadphoneOff, MoreHorizontal } from '@lucide/vue'
+import { MoreHorizontal } from '@lucide/vue'
 import { useAuthStore } from '../../stores/auth'
 import { useVoiceStore } from '../../stores/voice'
 import { useChatStore } from '../../stores/chat'
@@ -11,16 +11,13 @@ import UserAvatar from '../../shared/components/UserAvatar.vue'
 import VoiceStatusPanel from '../../talk/components/VoiceStatusPanel.vue'
 import AccountMenu from '../../settings/components/AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
-import TriggerMenu from '../../shared/components/TriggerMenu.vue'
-import { useVoiceMenus } from '../../talk/composables/useVoiceMenus'
+import { isTextCut } from '../../directives/fullText'
 
 const emit = defineEmits<{ 'open-legal': [] }>()
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
-// Right click or long press on a call button: its device and quick-setting menu.
-const { mic, output } = useVoiceMenus()
 
 const menuOpen = ref(false)
 const menuButton = ref<HTMLButtonElement | null>(null)
@@ -35,8 +32,17 @@ const myStatus = computed(() => {
   const live = chatStore.presenceOf(me.value.id ?? null)
   return live === 'offline' ? me.value.presence || 'online' : live
 })
-// Second line: the status text, else the presence. Both lines truncate; the tooltip has them in full.
+// Second line: the status text, else the presence.
 const subline = computed(() => connectionLost.value ? t('connection.reconnectingShort') : me.value.status_text || t(`presence.${myStatus.value}`))
+// Name and status get the bar's width (the call's buttons are in the voice panel) and
+// truncate only when long; then the tooltip carries both in full, otherwise the plain hint.
+const nameEl = ref<HTMLElement | null>(null)
+const sublineEl = ref<HTMLElement | null>(null)
+const textCut = ref(false)
+const measureText = () => { textCut.value = isTextCut(nameEl.value) || isTextCut(sublineEl.value) }
+const profileTip = computed(() => textCut.value
+  ? t('user.openProfileFull', { name: me.value.display_name || me.value.username || '', status: subline.value })
+  : t('user.openProfile'))
 
 function togglePresence() {
   menuOpen.value = false
@@ -64,7 +70,7 @@ function ibTone(active: boolean) {
     <!-- Only while connected: connection status, share, leave -->
     <VoiceStatusPanel v-if="voiceStore.isConnected" />
 
-    <div class="flex h-[56px] items-center gap-1 border-t border-mnema-hairline pl-2 pr-1.5">
+    <div class="flex min-h-[56px] items-center gap-1 border-t border-mnema-hairline pl-2 pr-1.5">
       <!-- Avatar: choose the presence -->
       <button
         ref="presenceButton"
@@ -91,42 +97,16 @@ function ibTone(active: boolean) {
       <button
         type="button"
         data-testid="own-profile-button"
-        v-tooltip.visual="$t('user.openProfile', { name: me.display_name || me.username || '', status: subline })"
+        v-tooltip.visual="profileTip"
         class="flex min-w-0 flex-1 flex-col rounded-md px-1.5 py-1 text-left leading-[18px] transition-colors hover:bg-mnema-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        @pointerenter="measureText"
+        @focus="measureText"
         @click="openOwnProfile"
       >
-        <span class="truncate text-sm font-semibold text-mnema-text">{{ me.display_name || me.username }}</span>
-        <span data-testid="own-subline" class="truncate text-xs text-mnema-tertiary">{{ subline }}</span>
+        <span ref="nameEl" class="truncate text-sm font-semibold text-mnema-text">{{ me.display_name || me.username }}</span>
+        <span ref="sublineEl" data-testid="own-subline" class="truncate text-xs text-mnema-tertiary">{{ subline }}</span>
       </button>
 
-      <template v-if="voiceStore.isConnected">
-        <button
-          type="button"
-          data-testid="toggle-mute"
-          v-tooltip="voiceStore.isMuted ? $t('voice.unmute') : $t('voice.mute')"
-          :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
-          :class="[ib, ibTone(voiceStore.isMuted)]"
-          v-bind="mic.on"
-          @click="voiceStore.toggleMute"
-        >
-          <MicOff v-if="voiceStore.isMuted" class="h-[18px] w-[18px]" />
-          <Mic v-else class="h-[18px] w-[18px]" />
-        </button>
-        <button
-          type="button"
-          data-testid="toggle-deafen"
-          v-tooltip="voiceStore.isDeafened ? $t('voice.undeafen') : $t('voice.deafen')"
-          :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
-          :class="[ib, ibTone(voiceStore.isDeafened)]"
-          v-bind="output.on"
-          @click="voiceStore.toggleDeafen"
-        >
-          <HeadphoneOff v-if="voiceStore.isDeafened" class="h-[18px] w-[18px]" />
-          <Headphones v-else class="h-[18px] w-[18px]" />
-        </button>
-        <TriggerMenu :trigger="mic" :aria-label="$t('audio.inputDevice')" :min-width="260" />
-        <TriggerMenu :trigger="output" :aria-label="$t('audio.outputDevice')" :min-width="260" />
-      </template>
 
       <button
         ref="menuButton"

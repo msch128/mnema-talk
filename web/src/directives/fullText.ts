@@ -11,14 +11,15 @@ interface FullTextElement extends HTMLElement {
   __fullTextShow?: () => void
 }
 
-function cut(el: HTMLElement): boolean {
-  return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1
+/** Whether the element's text is cut by its box right now (ellipsis or clamp). */
+export function isTextCut(el: HTMLElement | null | undefined): boolean {
+  return !!el && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
 }
 
 /** Sets or clears the title for the element's current size and text. */
 export function refreshFullText(el: HTMLElement): void {
   const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim()
-  if (text && cut(el)) el.setAttribute('title', text)
+  if (text && isTextCut(el)) el.setAttribute('title', text)
   else el.removeAttribute('title')
 }
 

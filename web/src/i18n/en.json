@@ -61,7 +61,8 @@
   },
   "user": {
     "avatar": "Profile picture",
-    "openProfile": "Open your profile ({name} · {status})",
+    "openProfile": "Open your profile",
+    "openProfileFull": "Open your profile ({name} · {status})",
     "deleted": "Deleted member"
   },
   "viewer": {
@@ -1283,7 +1284,8 @@
       "label": "Voice connection",
       "status": "Connected",
       "connected": "Connected · {channel}",
-      "open": "Open the Talk “{channel}”",
+      "open": "Open the Talk",
+      "openNamed": "Open the Talk “{channel}”",
       "details": "Connection details"
     },
     "cameraFailed": "Camera unavailable. Check the permission in your browser.",

@@ -61,7 +61,8 @@
   },
   "user": {
     "avatar": "Profilbild",
-    "openProfile": "Eigenes Profil öffnen ({name} · {status})",
+    "openProfile": "Eigenes Profil öffnen",
+    "openProfileFull": "Eigenes Profil öffnen ({name} · {status})",
     "deleted": "Gelöschtes Mitglied"
   },
   "viewer": {
@@ -1283,7 +1284,8 @@
       "label": "Sprachverbindung",
       "status": "Verbunden",
       "connected": "Verbunden · {channel}",
-      "open": "Talk „{channel}“ öffnen",
+      "open": "Talk öffnen",
+      "openNamed": "Talk „{channel}“ öffnen",
       "details": "Verbindungsdetails"
     },
     "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser.",
