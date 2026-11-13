@@ -136,7 +136,7 @@ notes, and so their buttons, live for 15 minutes in memory only.
 
 Two official SDKs:
 
-- **TypeScript**, its own repository `github.com/mnema-xyz/bot-sdk` (npm
+- **TypeScript**, its own repository `github.com/mnema-xyz/bot-sdk-js` (npm
   package `@mnema-xyz/bot-sdk`, until 3.1.1 `sdk/typescript` here as
   `mnema-talk-sdk`): Node 24+, ESM,
   no runtime dependencies (Node's own `fetch` and `WebSocket`), typed events,

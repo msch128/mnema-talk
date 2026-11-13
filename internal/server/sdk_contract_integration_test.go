@@ -14,7 +14,7 @@ import (
 )
 
 // TestSDKContract runs the contract tests of the official bot SDKs
-// (sdk/typescript, a checkout of github.com/mnema-xyz/bot-sdk, and sdk/go)
+// (sdk/typescript, a checkout of github.com/mnema-xyz/bot-sdk-js, and sdk/go)
 // against this server: a real router on a real database, a bot with a token
 // and a channel, and a signed-in member who runs its commands and clicks its
 // buttons. It needs Node 24 or newer and runs only

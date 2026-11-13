@@ -214,7 +214,7 @@ configuration.
   "manifest_version": 1,
   "name": "Mnemo",
   "description": "Answers questions and keeps notes.",
-  "homepage": "https://github.com/mnema-xyz/mnema-talk-mnemo-bot",
+  "homepage": "https://github.com/mnema-xyz/talk-mnemo-bot",
   "avatar": "data:image/png;base64,iVBORw0KGgo...",
   "intents": ["GUILDS", "GUILD_MESSAGES"],
   "permissions": ["view_channel", "send_messages", "add_reactions"],
@@ -789,7 +789,7 @@ answered otherwise (`4`, `5`, `6`). Follow-ups are refused after a modal
 ## SDKs
 
 There are two official SDKs, both tested against the server in CI on every
-change: [TypeScript](https://github.com/mnema-xyz/bot-sdk) (npm package
+change: [TypeScript](https://github.com/mnema-xyz/bot-sdk-js) (npm package
 [`@mnema-xyz/bot-sdk`](https://www.npmjs.com/package/@mnema-xyz/bot-sdk),
 `npm install @mnema-xyz/bot-sdk`; MIT licensed, Node 24 or newer, no runtime dependencies)
 and [Go](../sdk/go/README.md) (module `github.com/msch128/mnema-talk/sdk/go`,

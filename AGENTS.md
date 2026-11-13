@@ -104,7 +104,7 @@ mnema-talk/
 ├── doc/                     # Architecture, operations, upgrade, glossary, roles, webhooks, desktop docs; doc/images has the README screenshots
 ├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
-├── sdk/                     # Official Go bot SDK go/ (own module) with examples and contract tests; the TypeScript SDK is github.com/mnema-xyz/bot-sdk (npm @mnema-xyz/bot-sdk), checked out into typescript/ by CI for the contract tests (doc/bots.md, SDKs)
+├── sdk/                     # Official Go bot SDK go/ (own module) with examples and contract tests; the TypeScript SDK is github.com/mnema-xyz/bot-sdk-js (npm @mnema-xyz/bot-sdk), checked out into typescript/ by CI for the contract tests (doc/bots.md, SDKs)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), chat and voice capacity test for the server host (`make load-test-host`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind CSS 4 SPA (shared UI classes in web/src/styles); web.go embeds web/dist
 │   └── src/                 # One folder per feature (chat, talk, dm, forum, events, wiki, admin, settings), each with components/, composables/ and lib/;

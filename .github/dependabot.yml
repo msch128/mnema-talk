@@ -37,7 +37,7 @@ updates:
         patterns: ["*"]
 
   # The Go bot SDK (its own module). The TypeScript SDK lives in
-  # github.com/mnema-xyz/bot-sdk, with its own Dependabot.
+  # github.com/mnema-xyz/bot-sdk-js, with its own Dependabot.
   - package-ecosystem: gomod
     directory: /sdk/go
     schedule:
