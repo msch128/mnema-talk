@@ -58,6 +58,8 @@ describe('data export', () => {
     await flushPromises()
     const link = w.get('[data-testid="export-download"]')
     expect(link.attributes('href')).toBe('/api/users/me/export/download')
+    // The name a desktop client's save dialog proposes before the server sends its own.
+    expect(link.attributes('download')).toBe('mnema-talk-export.zip')
 
     // After the download the file is gone; the next one waits for the day to pass.
     apiMock.mockResolvedValue({ state: 'downloaded', size_bytes: 1234, next_request_at: '2099-01-01T00:00:00Z' })

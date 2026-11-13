@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
         <p class="settings-help">{{ $t('security.privacy.exportIntro') }}</p>
       </div>
       <p v-if="status?.state === 'pending'" role="status" class="flex items-center gap-2 text-sm text-mnema-text" data-testid="export-pending"><Loader2 class="h-4 w-4 animate-spin" />{{ $t('security.privacy.exportPending') }}</p>
-      <a v-else-if="status?.state === 'ready'" href="/api/users/me/export/download" download class="btn btn-primary self-start" data-testid="export-download" @click="afterDownload"><Download class="h-3.5 w-3.5" />{{ $t('security.privacy.exportReady', { when: when(status.expires_at) }) }}</a>
+      <a v-else-if="status?.state === 'ready'" href="/api/users/me/export/download" download="mnema-talk-export.zip" class="btn btn-primary self-start" data-testid="export-download" @click="afterDownload"><Download class="h-3.5 w-3.5" />{{ $t('security.privacy.exportReady', { when: when(status.expires_at) }) }}</a>
       <p v-else-if="status?.state === 'failed'" role="alert" class="text-sm text-mnema-danger" data-testid="export-failed">{{ $t('security.privacy.exportFailed') }}</p>
       <p v-else-if="status && status.state !== 'none'" class="text-sm text-mnema-tertiary" data-testid="export-done">{{ $t(status.state === 'downloaded' ? 'security.privacy.exportDownloaded' : 'security.privacy.exportExpired') }}</p>
 
