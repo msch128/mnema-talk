@@ -134,9 +134,11 @@ notes, and so their buttons, live for 15 minutes in memory only.
 
 ### 4. SDKs
 
-Two official SDKs live in this repository, versioned with the server:
+Two official SDKs:
 
-- **TypeScript**, `sdk/typescript` (package `mnema-talk-sdk`): Node 24+, ESM,
+- **TypeScript**, its own repository `github.com/mnema-xyz/bot-sdk-js` (npm
+  package `@mnema-xyz/bot-sdk`, until 3.1.1 `sdk/typescript` here as
+  `mnema-talk-sdk`): Node 24+, ESM,
   no runtime dependencies (Node's own `fetch` and `WebSocket`), typed events,
   a REST client with rate-limit handling, a gateway client with heartbeats,
   resume and backoff, command registration, interaction helpers (`reply`,
@@ -151,18 +153,16 @@ modal bot), a README and contract tests that run against a real server
 started by the repository's integration test helpers in CI, so an SDK
 cannot drift from the server.
 
-Installing: nothing is on npm or behind a module proxy tag yet.
+Installing:
 
-- The TypeScript SDK is attached to every release as a tarball with its
-  SHA-256 next to it
-  (`npm install https://github.com/msch128/mnema-talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`).
-  The `sdk-package` job of `release.yml` builds it from the tagged commit in
-  a sealed container, like the web bundle, and stamps the release's version
-  into the package as it packs. The version is not kept in the repository's
-  `package.json` through release-please, because the release commit may
-  touch only `version.txt`, `CHANGELOG.md` and the manifest, and that guard
-  of the release stays as it is. npm cannot install a package from a
-  subdirectory of a git repository; pnpm and yarn can (see the SDK's README).
+- The TypeScript SDK is on npm: `npm install @mnema-xyz/bot-sdk`. Its
+  repository publishes each version from a `vX.Y.Z` tag with npm provenance
+  and has its own semver versions (3.1.1, the first, is the code of Mnema
+  Talk 3.1.1). Releases of Mnema Talk up to 3.1.1 carry the older tarball
+  `mnema-talk-sdk-X.Y.Z.tgz`; later ones do not. Its contract tests run in
+  both repositories: the SDK's CI against this server's `main`, and this CI
+  (`sdk` job) against a pinned commit of the SDK, checked out into
+  `sdk/typescript`, so a server change that breaks the SDK fails here.
 - The Go module is fetched from the repository at a commit or a branch
   (`go get github.com/msch128/mnema-talk/sdk/go@<commit>`, or `@main`, which
   resolves to a pseudo-version). Version tags of the form `sdk/go/vX.Y.Z`

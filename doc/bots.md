@@ -214,7 +214,7 @@ configuration.
   "manifest_version": 1,
   "name": "Mnemo",
   "description": "Answers questions and keeps notes.",
-  "homepage": "https://github.com/msch128/mnema-talk-mnemo-bot",
+  "homepage": "https://github.com/mnema-xyz/talk-mnemo-bot",
   "avatar": "data:image/png;base64,iVBORw0KGgo...",
   "intents": ["GUILDS", "GUILD_MESSAGES"],
   "permissions": ["view_channel", "send_messages", "add_reactions"],
@@ -788,10 +788,12 @@ answered otherwise (`4`, `5`, `6`). Follow-ups are refused after a modal
 
 ## SDKs
 
-Two official SDKs live in this repository and are tested against the server
-in CI on every change: [TypeScript](../sdk/typescript/README.md) (Node 24 or
-newer, no runtime dependencies) and [Go](../sdk/go/README.md) (module
-`github.com/msch128/mnema-talk/sdk/go`). Both cover the REST API with rate
+There are two official SDKs, both tested against the server in CI on every
+change: [TypeScript](https://github.com/mnema-xyz/bot-sdk-js) (npm package
+[`@mnema-xyz/bot-sdk`](https://www.npmjs.com/package/@mnema-xyz/bot-sdk),
+`npm install @mnema-xyz/bot-sdk`; MIT licensed, Node 24 or newer, no runtime dependencies)
+and [Go](../sdk/go/README.md) (module `github.com/msch128/mnema-talk/sdk/go`,
+in this repository). Both cover the REST API with rate
 limits, the gateway with heartbeats, resume and reconnects, slash command
 registration, interactions (`reply`, `deferReply`, `editReply`, `followUp`,
 `update`, `deferUpdate`, `showModal`), components and modals, and the add
@@ -804,7 +806,7 @@ tasks, [gateway events](gateway-events.md) shows every event's payload and
 [allowed mentions](allowed-mentions.md) whom a message may notify.
 
 ```ts
-import { Client, Intents, actionRow, button, ButtonStyle } from 'mnema-talk-sdk'
+import { Client, Intents, actionRow, button, ButtonStyle } from '@mnema-xyz/bot-sdk'
 
 const bot = new Client({ baseUrl: 'https://talk.example.org', token: process.env.MNEMA_TOKEN!, intents: Intents.GuildMessages })
 bot.on('messageCreate', async (m) => {
