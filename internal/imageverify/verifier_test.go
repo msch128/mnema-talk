@@ -252,6 +252,7 @@ func TestDefaultPolicyTrustsTheOfficialRepositoriesAndNothingElse(t *testing.T) 
 	allowed := []string{
 		"ghcr.io/mnema-xyz/mnema-talk", "ghcr.io/msch128/mnema-talk",
 		"msch128/mnema-talk", "docker.io/msch128/mnema-talk", "index.docker.io/msch128/mnema-talk",
+		"mnemaxyz/mnema-talk", "docker.io/mnemaxyz/mnema-talk",
 	}
 	for _, in := range allowed {
 		image, ok := imageverify.NormalizeRepository(in)
@@ -262,6 +263,7 @@ func TestDefaultPolicyTrustsTheOfficialRepositoriesAndNothingElse(t *testing.T) 
 	for _, in := range []string{
 		"ghcr.io/other/mnema-talk", "other/mnema-talk", "docker.io/msch128/other", "msch128/mnema-talk-fork",
 		"ghcr.io/mnemaxyz/mnema-talk", "ghcr.io/mnema-xyz/mnema-talk-fork", "docker.io/mnema-xyz/mnema-talk",
+		"ghcr.io/mnema-xyz/talk", "docker.io/mnemaxyz/talk", "docker.io/mnemaxyz/mnema-talk-fork",
 		"quay.io/msch128/mnema-talk", "evil.example/msch128/mnema-talk", "ghcr.io/msch128/mnema-talk/sub",
 	} {
 		image, ok := imageverify.NormalizeRepository(in)

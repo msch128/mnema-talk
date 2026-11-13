@@ -38,8 +38,9 @@ import (
 // ".../release.yml@refs/heads/main" (the workflow_run trigger runs on main).
 //
 // The repository moves from the GitHub account msch128 to the organization
-// mnema-xyz. Releases built before the move are signed as msch128 and record
-// the msch128 source; releases after it as mnema-xyz. Both are trusted, each
+// mnema-xyz, where it is called "talk" (the image keeps its name
+// mnema-talk). Releases built before the move are signed as msch128/mnema-talk
+// and record that source; releases after it as mnema-xyz/talk. Both are trusted, each
 // as one Origin: a signature of one owner never vouches for provenance of
 // the other (see Origin).
 const (
@@ -49,12 +50,15 @@ const (
 	// MNEMA_IMAGE names DefaultRepository.
 	LegacyRepository = "ghcr.io/msch128/mnema-talk"
 	// DefaultMirror is the Docker Hub copy of the same images, mirrored by
-	// digest: same signature identity, same provenance.
+	// digest: same signature identity, same provenance. OrgMirror is the
+	// copy under the organization's Docker Hub account (Docker Hub names
+	// cannot contain a hyphen, hence mnemaxyz).
 	DefaultMirror = "docker.io/msch128/mnema-talk"
+	OrgMirror     = "docker.io/mnemaxyz/mnema-talk"
 	DefaultIssuer = "https://token.actions.githubusercontent.com"
-	DefaultSource = "https://github.com/mnema-xyz/mnema-talk"
+	DefaultSource = "https://github.com/mnema-xyz/talk"
 	// DefaultIdentity is the release workflow of DefaultSource.
-	DefaultIdentity = `^https://github\.com/mnema-xyz/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	DefaultIdentity = `^https://github\.com/mnema-xyz/talk/\.github/workflows/release\.yml@refs/heads/main$`
 	// LegacySource and LegacyIdentity are the same before the move.
 	LegacySource   = "https://github.com/msch128/mnema-talk"
 	LegacyIdentity = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
@@ -106,7 +110,7 @@ func DefaultOrigins() []Origin {
 func DefaultPolicy() Policy {
 	return Policy{
 		Repository: DefaultRepository,
-		Mirrors:    []string{LegacyRepository, DefaultMirror},
+		Mirrors:    []string{LegacyRepository, DefaultMirror, OrgMirror},
 		Issuer:     DefaultIssuer,
 		Origins:    DefaultOrigins(),
 	}
