@@ -141,14 +141,24 @@ modal bot), a README and contract tests that run against a real server
 started by the repository's integration test helpers in CI, so an SDK
 cannot drift from the server.
 
-Installing: nothing is on npm or behind a module proxy tag yet. The
-TypeScript SDK is attached to every release as a tarball
-(`npm install https://github.com/msch128/mnema-talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`);
-npm cannot install a package from a subdirectory of a git repository, so a
-git URL works with pnpm and yarn only (both documented in the SDK's README).
-The Go module is fetched from the repository at a commit or branch
-(`go get github.com/msch128/mnema-talk/sdk/go@main` resolves to a
-pseudo-version); version tags of the form `sdk/go/vX.Y.Z` are the later step.
+Installing: nothing is on npm or behind a module proxy tag yet.
+
+- The TypeScript SDK is attached to every release as a tarball with its
+  SHA-256 next to it
+  (`npm install https://github.com/msch128/mnema-talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`).
+  The `sdk-package` job of `release.yml` builds it from the tagged commit in
+  a sealed container, like the web bundle, and stamps the release's version
+  into the package as it packs. The version is not kept in the repository's
+  `package.json` through release-please, because the release commit may
+  touch only `version.txt`, `CHANGELOG.md` and the manifest, and that guard
+  of the release stays as it is. npm cannot install a package from a
+  subdirectory of a git repository; pnpm and yarn can (see the SDK's README).
+- The Go module is fetched from the repository at a commit or a branch
+  (`go get github.com/msch128/mnema-talk/sdk/go@<commit>`, or `@main`, which
+  resolves to a pseudo-version). Version tags of the form `sdk/go/vX.Y.Z`
+  are left for later: pushing a second tag from the release workflow is a
+  new kind of write under the tag ruleset that cannot be rehearsed outside a
+  real release.
 
 ### 5. Compatibility
 

@@ -454,9 +454,79 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # The required check: unchanged name, one verdict for the three jobs above.
+  # -- Bot SDKs: both SDKs' own tests, the npm package, and their contract
+  # tests against a real server (TestSDKContract in internal/server starts it
+  # from the integration helpers and runs both suites against it).
+  sdk:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: TypeScript SDK
+        working-directory: sdk/typescript
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+          npm pack --dry-run
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go SDK
+        working-directory: sdk/go
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then echo "gofmt: $unformatted"; exit 1; fi
+          go vet ./...
+          go vet -tags=contract ./...
+          go test -race ./...
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Contract tests against a real server
+        env:
+          SDK_CONTRACT: '1'
+        run: go test -tags=integration -count=1 -run '^TestSDKContract$' ./internal/server
+
+  # The required check: unchanged name, one verdict for the jobs above.
   backend:
-    needs: [backend-checks, backend-integration, backend-coverage]
+    needs: [backend-checks, backend-integration, backend-coverage, sdk]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
