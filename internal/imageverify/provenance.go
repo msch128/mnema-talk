@@ -55,9 +55,9 @@ type statement struct {
 
 // verifyProvenance requires, for every platform image of the (signed) index,
 // an attestation manifest whose SLSA v1 provenance names that image as its
-// subject, was produced by a GitHub Actions run of the policy's repository and
+// subject, was produced by a GitHub Actions run of the origin's repository and
 // was built from it. It returns the checked platforms.
-func (v *Verifier) verifyProvenance(pinned name.Digest, opts []remote.Option) ([]string, string, error) {
+func (v *Verifier) verifyProvenance(pinned name.Digest, o Origin, opts []remote.Option) ([]string, string, error) {
 	idx, err := remote.Index(pinned, opts...)
 	if err != nil {
 		return nil, "", fmt.Errorf("read image index: %w", err)
@@ -82,12 +82,12 @@ func (v *Verifier) verifyProvenance(pinned name.Digest, opts []remote.Option) ([
 	if len(images) > maxPlatforms {
 		return nil, "", untrusted("the index lists %d platform images", len(images))
 	}
-	return v.checkPlatforms(pinned, images, attest, opts)
+	return v.checkPlatforms(pinned, images, attest, o, opts)
 }
 
 // checkPlatforms checks the provenance of each platform image and requires
 // them all to record the same release version.
-func (v *Verifier) checkPlatforms(pinned name.Digest, images []v1.Descriptor, attest map[string]v1.Descriptor, opts []remote.Option) ([]string, string, error) {
+func (v *Verifier) checkPlatforms(pinned name.Digest, images []v1.Descriptor, attest map[string]v1.Descriptor, o Origin, opts []remote.Option) ([]string, string, error) {
 	platforms := make([]string, 0, len(images))
 	version := ""
 	for _, img := range images {
@@ -95,7 +95,7 @@ func (v *Verifier) checkPlatforms(pinned name.Digest, images []v1.Descriptor, at
 		if !ok {
 			return nil, "", untrusted("platform image %s has no provenance attestation", img.Digest)
 		}
-		got, err := v.checkAttestation(pinned.Repository.Digest(a.Digest.String()), img.Digest, opts)
+		got, err := v.checkAttestation(pinned.Repository.Digest(a.Digest.String()), img.Digest, o, opts)
 		if err != nil {
 			return nil, "", err
 		}
@@ -108,7 +108,7 @@ func (v *Verifier) checkPlatforms(pinned name.Digest, images []v1.Descriptor, at
 	return platforms, version, nil
 }
 
-func (v *Verifier) checkAttestation(ref name.Digest, image v1.Hash, opts []remote.Option) (string, error) {
+func (v *Verifier) checkAttestation(ref name.Digest, image v1.Hash, o Origin, opts []remote.Option) (string, error) {
 	att, err := remote.Image(ref, opts...)
 	if err != nil {
 		return "", fmt.Errorf("fetch attestation %s: %w", ref.DigestStr(), err)
@@ -137,14 +137,14 @@ func (v *Verifier) checkAttestation(ref name.Digest, image v1.Hash, opts []remot
 		if len(raw) > maxProvenanceBytes {
 			return "", untrusted("provenance of %s is too large", image)
 		}
-		return v.checkStatement(raw, image)
+		return checkStatement(raw, image, o)
 	}
 	return "", untrusted("platform image %s has no SLSA provenance", image)
 }
 
 // checkStatement validates one provenance statement and returns the release
 // version the build recorded (the version label BuildKit was given).
-func (v *Verifier) checkStatement(raw []byte, image v1.Hash) (string, error) {
+func checkStatement(raw []byte, image v1.Hash, o Origin) (string, error) {
 	var s statement
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return "", untrusted("provenance of %s is malformed", image)
@@ -159,10 +159,10 @@ func (v *Verifier) checkStatement(raw []byte, image v1.Hash) (string, error) {
 	if !named {
 		return "", untrusted("provenance does not describe image %s", image)
 	}
-	if builder := s.Predicate.RunDetails.Builder.ID; !strings.HasPrefix(builder, v.policy.Source+"/actions/runs/") {
-		return "", untrusted("image %s was built by %q, not a GitHub Actions run of %s", image, builder, v.policy.Source)
+	if builder := s.Predicate.RunDetails.Builder.ID; !strings.HasPrefix(builder, o.Source+"/actions/runs/") {
+		return "", untrusted("image %s was built by %q, not a GitHub Actions run of %s", image, builder, o.Source)
 	}
-	if err := v.checkSource(&s, image); err != nil {
+	if err := checkSource(&s, image, o.Source); err != nil {
 		return "", err
 	}
 	version := s.Predicate.BuildDefinition.ExternalParameters.Request.Args[versionArg]
@@ -172,10 +172,10 @@ func (v *Verifier) checkStatement(raw []byte, image v1.Hash) (string, error) {
 	return version, nil
 }
 
-// checkSource compares the repository BuildKit recorded with the policy's.
+// checkSource compares the repository BuildKit recorded with the origin's.
 // BuildKit writes it twice (request args and buildkit metadata); every
 // recorded value must match and at least one must exist.
-func (v *Verifier) checkSource(s *statement, image v1.Hash) error {
+func checkSource(s *statement, image v1.Hash, source string) error {
 	got := []string{
 		s.Predicate.BuildDefinition.ExternalParameters.Request.Args["vcs:source"],
 		s.Predicate.RunDetails.Metadata.Buildkit.VCS["source"],
@@ -186,8 +186,8 @@ func (v *Verifier) checkSource(s *statement, image v1.Hash) error {
 			continue
 		}
 		seen = true
-		if src != v.policy.Source {
-			return untrusted("image %s was built from %q, not %s", image, src, v.policy.Source)
+		if src != source {
+			return untrusted("image %s was built from %q, not %s", image, src, source)
 		}
 	}
 	if !seen {

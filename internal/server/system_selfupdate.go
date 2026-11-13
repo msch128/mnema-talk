@@ -27,7 +27,11 @@ type SelfUpdateStatus struct {
 	// Image is MNEMA_IMAGE, the image reference the app container runs.
 	Image string `json:"image"`
 	// Reach says whether re-pulling Image can reach the latest release.
-	Reach       string `json:"reach" enums:"yes,no,unknown"`
+	Reach string `json:"reach" enums:"yes,no,unknown"`
+	// MovedTo is set when Image is on a repository that gets no more releases:
+	// the repository they are published in now (GHCR does not redirect). The
+	// admin changes MNEMA_IMAGE; until then "update now" is not offered.
+	MovedTo     string `json:"moved_to"`
 	ReachReason string `json:"reach_reason" enums:"follows,unset,local_build,digest_pinned,version_pinned,track_mismatch,custom_tag"`
 	// Available: configured, an update exists, the image can reach it and no
 	// update ran in the last five minutes.
@@ -65,14 +69,14 @@ type selfUpdate struct {
 func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 	st := SelfUpdateStatus{Configured: h.self.updater != nil, Image: h.cfg.AppImage}
 	reach, reason := update.ImageReach(h.cfg.AppImage, upd.LatestVersion)
-	st.Reach, st.ReachReason = string(reach), reason
+	st.Reach, st.ReachReason, st.MovedTo = string(reach), reason, update.MovedTo(h.cfg.AppImage)
 	h.selfMu.Lock()
 	if next := h.self.lastCall.Add(selfUpdateCooldown); !h.self.lastCall.IsZero() && h.self.now().Before(next) {
 		st.NextAllowedAt = &next
 	}
 	busy := h.self.inFlight || st.NextAllowedAt != nil
 	h.selfMu.Unlock()
-	st.Available = st.Configured && upd.UpdateAvailable && reach != update.ReachNo && !busy
+	st.Available = st.Configured && upd.UpdateAvailable && reach != update.ReachNo && st.MovedTo == "" && !busy
 	return st
 }
 
@@ -90,7 +94,7 @@ func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, the current password is wrong, or cross-origin request rejected."
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, or an update is already running."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, the image repository moved (moved_to), or an update is already running."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: an update was requested less than 5 minutes ago, or too many wrong passwords."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -198,6 +202,9 @@ func (h *systemHandler) checkSelfUpdateTarget(req SelfUpdateRequest) (UpdateStat
 			msg = fmt.Sprintf("the configured image tag cannot reach this release (%s); update manually", reason)
 		}
 		return upd, httpx.ErrConflict(msg)
+	}
+	if to := update.MovedTo(h.cfg.AppImage); to != "" {
+		return upd, httpx.ErrConflict("the image repository moved to " + to + ": set MNEMA_IMAGE in .env and run docker compose pull && docker compose up -d")
 	}
 	return upd, nil
 }

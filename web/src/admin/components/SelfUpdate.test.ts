@@ -31,7 +31,7 @@ function withUpdate(self: Partial<import('../../types/domain').SelfUpdateStatus>
     ...st.update, current_version: '0.3.0', latest_version: '0.4.0', update_available: true,
     release_url: 'https://github.com/msch128/mnema-talk/releases/tag/v0.4.0'
   }
-  st.self_update = { configured: true, image: 'ghcr.io/msch128/mnema-talk:0.4', reach: 'yes', reach_reason: 'follows', available: true, next_allowed_at: null, ...self }
+  st.self_update = { configured: true, image: 'ghcr.io/msch128/mnema-talk:0.4', reach: 'yes', moved_to: '', reach_reason: 'follows', available: true, next_allowed_at: null, ...self }
   return st
 }
 
@@ -106,7 +106,7 @@ describe('self-update in the System tab', () => {
   it('offers no button when not configured, pinned or cooling down', async () => {
     for (const [self, testid] of [
       [{ configured: false, available: false }, 'self-update-not-configured'],
-      [{ available: false, reach: 'no', reach_reason: 'version_pinned', image: 'ghcr.io/msch128/mnema-talk:0.3.0' }, 'self-update-unreachable'],
+      [{ available: false, reach: 'no', moved_to: '', reach_reason: 'version_pinned', image: 'ghcr.io/msch128/mnema-talk:0.3.0' }, 'self-update-unreachable'],
       [{ available: false, next_allowed_at: '2026-10-05T12:05:00Z' }, 'self-update-cooldown']
     ] as const) {
       apiMock.mockResolvedValueOnce(withUpdate(self))
@@ -117,6 +117,24 @@ describe('self-update in the System tab', () => {
       w.unmount()
       // Current wrapper was unmounted.
     }
+  })
+  it('says where the images moved when MNEMA_IMAGE is on the old path, and offers no button', async () => {
+    apiMock.mockResolvedValueOnce(withUpdate({ available: false, moved_to: 'ghcr.io/mnema-xyz/mnema-talk' }))
+    w = mount(AdminSystemTab)
+    await flushPromises()
+    const note = w.find('[data-testid="image-moved"]')
+    expect(note.exists()).toBe(true)
+    expect(note.text()).toContain('ghcr.io/msch128/mnema-talk:0.4')
+    expect(note.text()).toContain('ghcr.io/mnema-xyz/mnema-talk')
+    expect(note.text()).toContain('docker compose pull')
+    expect(w.find('[data-testid="self-update-open"]').exists()).toBe(false)
+  })
+
+  it('shows no move note for an image on the current path', async () => {
+    apiMock.mockResolvedValueOnce(withUpdate({ image: 'ghcr.io/mnema-xyz/mnema-talk:0.4' }))
+    w = mount(AdminSystemTab)
+    await flushPromises()
+    expect(w.find('[data-testid="image-moved"]').exists()).toBe(false)
   })
 })
 

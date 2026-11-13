@@ -30,7 +30,7 @@ const LocalURL = "http://localhost:8080"
 const defaultAppPort = "8080"
 
 // ImageRepository is the published image.
-const ImageRepository = "ghcr.io/msch128/mnema-talk"
+const ImageRepository = "ghcr.io/mnema-xyz/mnema-talk"
 
 // SMTP is the optional outgoing mail setup.
 type SMTP struct {

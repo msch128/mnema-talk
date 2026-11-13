@@ -354,7 +354,7 @@ writes the configuration, including every secret:
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
 docker compose up -d --wait
 ```
 
