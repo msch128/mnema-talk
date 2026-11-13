@@ -23,7 +23,7 @@ import MarkdownContent from '../../shared/components/MarkdownContent.vue'
 import UnsavedChangesBar from '../../shared/components/UnsavedChangesBar.vue'
 
 // Until a name is set, the address stands in for it (also in the sidebar header).
-const host = new URL(useServerFeaturesStore().shareOrigin).hostname
+const host = computed(() => new URL(useServerFeaturesStore().shareOrigin).hostname)
 const MAX_NAME = 60
 const MAX_WELCOME = 4000
 const MAX_RULES = 10000
