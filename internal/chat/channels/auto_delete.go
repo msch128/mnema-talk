@@ -161,6 +161,9 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	var removed []expiredMessage
 	var keys []string
 	err := pgx.BeginFunc(ctx, a.DB, func(tx pgx.Tx) error {
+		if set, err := stillSet(ctx, tx, c); err != nil || !set {
+			return err
+		}
 		var err error
 		removed, err = selectExpired(ctx, tx, c, cutoff)
 		if err != nil || len(removed) == 0 {
@@ -207,10 +210,9 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 		SELECT m.id, m.parent_id FROM messages m
 		WHERE m.channel_id = $1 AND m.created_at < $2 AND NOT m.is_pinned
 		  AND NOT EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND (r.created_at >= $2 OR r.is_pinned))
-		  AND `+stillSetSQL("m")+`
 		ORDER BY m.created_at
-		LIMIT $5
-		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, c.hours, c.scope, autoDeleteBatch)
+		LIMIT $3
+		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, autoDeleteBatch)
 	if err != nil {
 		return nil, fmt.Errorf("select expired messages: %w", err)
 	}
@@ -227,11 +229,28 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 	return dropKeptThreads(ctx, tx, out, cutoff)
 }
 
-// stillSetSQL holds while the channel of the messages row called alias is
-// still set to the run's period ($3) and scope ($4).
-func stillSetSQL(alias string) string {
-	return `EXISTS (SELECT 1 FROM (SELECT ` + core.AutoDeleteSQL("c") + ` FROM channels c WHERE c.id = ` + alias + `.channel_id) s(hours, scope, follows)
-		WHERE s.hours = $3 AND s.scope = $4)`
+// stillSet holds the channel's row and the community settings with a share
+// lock for the batch (a change of the setting waits for it), then reads in a
+// statement of its own whether the channel is still set to the run's period
+// and scope: turning auto-delete off or changing it stops a run at once.
+func stillSet(ctx context.Context, tx pgx.Tx, c autoDeleteChannel) (bool, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR SHARE`, c.id); err != nil {
+		return false, fmt.Errorf("lock channel: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM instance_settings FOR SHARE`); err != nil {
+		return false, fmt.Errorf("lock settings: %w", err)
+	}
+	var hours int
+	var scope string
+	var follows bool
+	err := tx.QueryRow(ctx, `SELECT `+core.AutoDeleteSQL("c")+` FROM channels c WHERE c.id = $1`, c.id).Scan(&hours, &scope, &follows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read auto-delete: %w", err)
+	}
+	return hours == c.hours && scope == c.scope, nil
 }
 
 // dropKeptThreads leaves out the locked roots that now have a reply younger
@@ -264,8 +283,9 @@ func deleteExpired(ctx context.Context, tx pgx.Tx, removed []expiredMessage, key
 	for i, g := range removed {
 		ids[i] = g.id
 	}
+	// A file removed before (is_deleted) has no object left and is not counted.
 	if err := messages.CollectKeys(ctx, tx, keys, `
-		SELECT s3_key FROM media WHERE message_id IN
+		SELECT s3_key FROM media WHERE NOT is_deleted AND message_id IN
 			(SELECT id FROM messages WHERE id = ANY($1) OR parent_id = ANY($1))`, ids); err != nil {
 		return err
 	}

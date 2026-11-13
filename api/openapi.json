@@ -1966,10 +1966,7 @@
               30,
               90
             ],
-            "type": [
-              "integer",
-              "null"
-            ]
+            "type": "integer"
           },
           "hours": {
             "description": "Hours is the period in hours, 1 to 8760 (365 days); 0 turns it off for\nthis channel, also when the community has a default.",
@@ -2043,6 +2040,12 @@
               "$ref": "#/components/schemas/chat.Embed"
             },
             "type": "array"
+          },
+          "lifetime_seconds": {
+            "description": "LifetimeSeconds makes the server delete the message that long after\nit is stored, as for a member (60 to 2592000, at most the community's\nceiling; doc/timed-messages.md). Needs the messages.lifetime feature.",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": "integer"
           },
           "message_reference": {
             "$ref": "#/components/schemas/chat.BotMessageReference",
@@ -2217,8 +2220,8 @@
       "chat.Channel": {
         "properties": {
           "auto_delete_days": {
-            "description": "AutoDeleteDays is the effective auto-delete period in days: exact for\nwhole days, otherwise rounded down and at least 1 while it is on; 0 when\nit is off or deletes only files (auto_delete_scope \"attachments\").\nNever set on direct messages. Kept for older clients: auto_delete_hours\nis the precise value (doc/timed-messages.md).",
-            "maximum": 365,
+            "description": "AutoDeleteDays is the effective auto-delete period in days for older\nclients: whole days rounded down and held within 1 to 90 while it is on\n(the range they accept), 0 when it is off or deletes only files\n(auto_delete_scope \"attachments\"). Never set on direct messages.\nauto_delete_hours is the precise value (doc/timed-messages.md).",
+            "maximum": 90,
             "minimum": 0,
             "type": "integer"
           },
@@ -2528,6 +2531,12 @@
             "description": "Content is required unless attachment_ids is set.",
             "maxLength": 4000,
             "type": "string"
+          },
+          "lifetime_seconds": {
+            "description": "LifetimeSeconds makes the server delete the message that long after\nit is stored: 60 to 2592000 and at most the community's ceiling\n(GET /api/message-settings). Fixed at sending. Needs the\nmessages.lifetime feature (doc/timed-messages.md).",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": "integer"
           },
           "nonce": {
             "description": "Nonce is an optional random id the client makes per send. Sending the\nsame nonce again (a retry after a lost connection) returns the first\nmessage with 200 instead of posting a second one.",
@@ -3325,6 +3334,9 @@
       },
       "chat.MediaAttachment": {
         "properties": {
+          "height": {
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -3344,6 +3356,10 @@
           "url": {
             "description": "URL is /api/media/{id}.",
             "type": "string"
+          },
+          "width": {
+            "description": "Width and Height are a picture's size, measured at upload and kept\nwhen the file is removed, so its placeholder takes the same room.\nAbsent for other files and for pictures uploaded before 3.1.",
+            "type": "integer"
           }
         },
         "required": [
@@ -3521,6 +3537,11 @@
               "$ref": "#/components/schemas/chat.Embed"
             },
             "type": "array"
+          },
+          "expires_at": {
+            "description": "ExpiresAt is when the server deletes the message: the end of the\nlifetime its sender chose (doc/timed-messages.md). Absent on a message\nwithout one. Clients hide the message at that moment on their own clock.",
+            "format": "date-time",
+            "type": "string"
           },
           "forward": {
             "$ref": "#/components/schemas/chat.ForwardRef",
@@ -6462,6 +6483,12 @@
             "minLength": 1,
             "type": "string"
           },
+          "lifetime_seconds": {
+            "description": "LifetimeSeconds is the lifetime the message gets when the server posts\nit (it starts then): 60 to 2592000, at most the community's ceiling.\nFixed when scheduling. Needs the messages.lifetime feature.",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": "integer"
+          },
           "parent_id": {
             "format": "uuid",
             "type": [
@@ -6623,6 +6650,10 @@
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "lifetime_seconds": {
+            "description": "LifetimeSeconds is the lifetime the message gets when it is posted;\nabsent for none.",
+            "type": "integer"
           },
           "parent_id": {
             "format": "uuid",
@@ -25254,6 +25285,12 @@
                     "format": "binary",
                     "type": "string"
                   },
+                  "lifetime_seconds": {
+                    "description": "The message's lifetime: the server deletes it that long after storing it (60 to 2592000, at most the community's ceiling). Needs the messages.lifetime feature.",
+                    "maximum": 2592000,
+                    "minimum": 60,
+                    "type": "integer"
+                  },
                   "parent_id": {
                     "description": "Thread root message ID (reply in a thread).",
                     "format": "uuid",
@@ -27260,7 +27297,7 @@
         ]
       },
       "post": {
-        "description": "Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.",
+        "description": "Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty. With lifetime_seconds the server deletes the message (as its author's delete would) that long after storing it; the message carries expires_at. A lifetime is refused (400) when lifetimes are off, beyond the community's ceiling, and for the root of a forum post.",
         "operationId": "createMessage",
         "parameters": [
           {
@@ -28037,7 +28074,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the message has a lifetime (it cannot be pinned)."
           },
           "401": {
             "content": {
@@ -29386,7 +29423,7 @@
     },
     "/api/channels/{channelID}/scheduled": {
       "post": {
-        "description": "Stores a message that the server sends at send_at as the caller, through the normal send path: permissions, slow mode, timeouts, blocks and the direct message rules are checked again at send time, and a refusal turns it into a failed draft (scheduled_message_update with state failed). Needs Send messages in the channel now. Works in channels and conversations. Text only. send_at lies at least 10 seconds and at most a year ahead. At most 50 per member (409 beyond).",
+        "description": "Stores a message that the server sends at send_at as the caller, through the normal send path: permissions, slow mode, timeouts, blocks and the direct message rules are checked again at send time, and a refusal turns it into a failed draft (scheduled_message_update with state failed). Needs Send messages in the channel now. Works in channels and conversations. Text only. send_at lies at least 10 seconds and at most a year ahead. lifetime_seconds gives the message a lifetime that starts when the server posts it; it is checked now and again at send time. At most 50 per member (409 beyond).",
         "operationId": "createScheduledMessage",
         "parameters": [
           {
@@ -30086,6 +30123,12 @@
                     "description": "At most MAX_UPLOAD_MB (config); type is sniffed and checked against an allowlist.",
                     "format": "binary",
                     "type": "string"
+                  },
+                  "lifetime_seconds": {
+                    "description": "The message's lifetime: the server deletes it that long after storing it (60 to 2592000, at most the community's ceiling; not for a forum post). Needs the messages.lifetime feature.",
+                    "maximum": 2592000,
+                    "minimum": 60,
+                    "type": "integer"
                   },
                   "parent_id": {
                     "description": "Thread root message ID (reply in a thread).",
@@ -35661,7 +35704,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the original has a lifetime (it cannot be forwarded: the forward would outlive it)."
           },
           "401": {
             "content": {

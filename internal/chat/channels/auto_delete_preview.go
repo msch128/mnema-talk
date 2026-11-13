@@ -10,8 +10,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-// AutoDeletePreview is what a setting would remove at its next run: the
-// answer of the dry-run routes, so the settings can ask before content goes.
+// AutoDeletePreview is what a setting would remove of what exists now, over
+// its next runs (one run removes at most 5,000 messages or files per channel;
+// a backlog takes several): the answer of the dry-run routes, so the settings
+// can ask before content goes. Files removed before are not counted.
 type AutoDeletePreview struct {
 	// Messages is how many messages would be deleted, thread replies that go
 	// with their root included; 0 for the scope "attachments".
@@ -45,7 +47,7 @@ func PreviewAutoDelete(ctx context.Context, q db.Querier, chans []uuid.UUID, hou
 			), every AS (
 				SELECT id FROM gone UNION SELECT r.id FROM messages r JOIN gone g ON r.parent_id = g.id
 			)
-			SELECT (SELECT COUNT(*) FROM every), (SELECT COUNT(*) FROM media WHERE message_id IN (SELECT id FROM every))`,
+			SELECT (SELECT COUNT(*) FROM every), (SELECT COUNT(*) FROM media WHERE NOT is_deleted AND message_id IN (SELECT id FROM every))`,
 			chans, cutoff).Scan(&out.Messages, &out.Attachments)
 	}
 	if err != nil {

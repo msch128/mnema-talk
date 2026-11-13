@@ -25,13 +25,15 @@ func (a *AutoDeleter) purgeFilesBatch(ctx context.Context, c autoDeleteChannel, 
 	var keys []string
 	var touched []uuid.UUID
 	err := pgx.BeginFunc(ctx, a.DB, func(tx pgx.Tx) error {
+		if set, err := stillSet(ctx, tx, c); err != nil || !set {
+			return err
+		}
 		rows, err := tx.Query(ctx, `
 			SELECT md.id FROM media md JOIN messages m ON m.id = md.message_id
 			WHERE m.channel_id = $1 AND m.created_at < $2 AND NOT m.is_pinned AND NOT md.is_deleted
-			  AND `+stillSetSQL("m")+`
 			ORDER BY m.created_at
-			LIMIT $5
-			FOR UPDATE OF md SKIP LOCKED FOR SHARE OF m SKIP LOCKED`, c.id, cutoff, c.hours, c.scope, autoDeleteBatch)
+			LIMIT $3
+			FOR UPDATE OF md SKIP LOCKED FOR SHARE OF m SKIP LOCKED`, c.id, cutoff, autoDeleteBatch)
 		if err != nil {
 			return fmt.Errorf("select expired files: %w", err)
 		}
