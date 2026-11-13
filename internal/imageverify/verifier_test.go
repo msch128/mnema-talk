@@ -170,6 +170,11 @@ func TestPolicyValidation(t *testing.T) {
 		// The second (legacy) origin is checked as strictly as the first.
 		"unanchored legacy pattern": func(p *imageverify.Policy) { p.Origins[1].IdentityRegexp = "release.yml" },
 		"plain http legacy source":  func(p *imageverify.Policy) { p.Origins[1].Source = "http://example.com" },
+		"source without a path":     func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com" },
+		"bare https source":         func(p *imageverify.Policy) { p.Origins[0].Source = "https://" },
+		"source with a slash":       func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com/mnema-xyz/mnema-talk/" },
+		"source with a query":       func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com/mnema-xyz/mnema-talk?x" },
+		"bad newest release":        func(p *imageverify.Policy) { p.Origins[1].MaxVersion = "soon" },
 	} {
 		p := imageverify.DefaultPolicy() // fresh slices for each case
 		change(&p)

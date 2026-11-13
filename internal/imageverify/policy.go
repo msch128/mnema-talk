@@ -23,12 +23,14 @@ package imageverify
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"regexp/syntax"
 	"slices"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/msch128/mnema-talk/internal/update"
 )
 
 // Defaults pin the identity of this repository's release workflow. They are
@@ -69,6 +71,11 @@ type Origin struct {
 	// Source is the repository URL BuildKit records as the build source
 	// (vcs:source); the builder id must live under it as well.
 	Source string
+	// MaxVersion, when set, is the newest release this origin may vouch for
+	// (a release version such as "3.1.5"). The old owner gets one once its
+	// last release is known, so a compromised or re-registered msch128
+	// account cannot sign a newer release under the old name.
+	MaxVersion string
 }
 
 // Policy says which images are trusted.
@@ -126,9 +133,24 @@ func (p Policy) Validate() error {
 		if err := validateIdentity(o.IdentityRegexp); err != nil {
 			return err
 		}
-		if !strings.HasPrefix(o.Source, "https://") {
-			return errors.New("the source must be an https URL")
+		if err := validateSource(o.Source); err != nil {
+			return err
 		}
+		if _, ok := update.ParseSemver(o.MaxVersion); o.MaxVersion != "" && !ok {
+			return fmt.Errorf("the newest release of origin %s must be a release version, not %q", o.Source, o.MaxVersion)
+		}
+	}
+	return nil
+}
+
+// validateSource requires an https repository URL with a host and a path and
+// without a trailing slash, query or fragment: it is compared exactly and is
+// the prefix of the builder id.
+func validateSource(source string) error {
+	u, err := url.Parse(source)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || strings.Trim(u.Path, "/") == "" ||
+		strings.HasSuffix(source, "/") || u.RawQuery != "" || u.Fragment != "" || strings.Contains(source, "?") || strings.Contains(source, "#") {
+		return fmt.Errorf("the source must be an https repository URL like https://github.com/owner/repo, not %q", source)
 	}
 	return nil
 }

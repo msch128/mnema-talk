@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/verify"
@@ -144,6 +145,9 @@ func (v *Verifier) Verify(ctx context.Context, image string) (*Result, error) {
 	for _, o := range v.policy.Origins {
 		platforms, version, err := v.verifyOrigin(pinned, desc.Digest, trust, o, opts)
 		if err == nil {
+			err = withinMaxVersion(o, version)
+		}
+		if err == nil {
 			return &Result{Repository: repo.Name(), Digest: desc.Digest.String(), Platforms: platforms, Version: version}, nil
 		}
 		if !errors.Is(err, ErrUntrusted) {
@@ -160,6 +164,19 @@ func (v *Verifier) verifyOrigin(pinned name.Digest, digest v1.Hash, trust root.T
 		return nil, "", err
 	}
 	return v.verifyProvenance(pinned, o, opts)
+}
+
+// withinMaxVersion refuses a release newer than the origin's MaxVersion.
+func withinMaxVersion(o Origin, version string) error {
+	if o.MaxVersion == "" {
+		return nil
+	}
+	maxV, _ := update.ParseSemver(o.MaxVersion) // checked by Validate
+	got, ok := update.ParseSemver(strings.TrimPrefix(version, "v"))
+	if !ok || got.Compare(maxV) > 0 {
+		return untrusted("release %q is newer than the last release %s of %s", version, o.MaxVersion, o.Source)
+	}
+	return nil
 }
 
 // joinRefusals is one untrusted error for all origins, on one line. With a

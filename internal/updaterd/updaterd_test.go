@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
@@ -176,5 +177,18 @@ func TestConfigTrustsBothOriginsByDefaultAndOneWhenOverridden(t *testing.T) {
 	want := []imageverify.Origin{{IdentityRegexp: forkID, Source: "https://github.com/fork/mnema-talk"}}
 	if !reflect.DeepEqual(cfg.Policy.Origins, want) {
 		t.Fatalf("an override must be the only origin: %+v", cfg.Policy.Origins)
+	}
+}
+
+func TestConfigRefusesHalfAnOriginOverride(t *testing.T) {
+	for _, key := range []string{"UPDATER_CERT_IDENTITY_REGEXP", "UPDATER_SOURCE_URL"} {
+		value := `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+		if key == "UPDATER_SOURCE_URL" {
+			value = "https://github.com/msch128/mnema-talk"
+		}
+		env := map[string]string{"UPDATER_TOKEN": token, key: value}
+		if _, err := ParseConfig(func(k string) string { return env[k] }); err == nil || !strings.Contains(err.Error(), "together") {
+			t.Errorf("only %s set: err = %v, want a refusal", key, err)
+		}
 	}
 }
