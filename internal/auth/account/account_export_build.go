@@ -95,7 +95,8 @@ with Markdown and tokens such as custom emoji (<:name:id>) unchanged.
 
 Other members' personal data is not part of this archive, nor are the events
 and series you created: they stay in the community.
-This file was available for download once, for 24 hours.
+This file could be downloaded for 24 hours; it was removed one hour after the
+first complete download, or at the end of those 24 hours.
 `
 
 var errArchivePanicked = errors.New("writing the archive panicked")

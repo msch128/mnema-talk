@@ -22,6 +22,7 @@ import (
 type exportStatus struct {
 	State         string     `json:"state"`
 	ExpiresAt     *time.Time `json:"expires_at"`
+	DownloadedAt  *time.Time `json:"downloaded_at"`
 	NextRequestAt *time.Time `json:"next_request_at"`
 }
 
@@ -190,15 +191,32 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 		}
 	}
 
-	// Once: the file is taken, deleted, and a second download finds nothing.
-	if again := alice.get("/api/users/me/export/download"); again.status != http.StatusNotFound {
-		t.Fatalf("second download: %d", again.status)
+	// A copy lost after the server sent it can be taken again for an hour.
+	if again := alice.get("/api/users/me/export/download"); again.status != http.StatusOK {
+		t.Fatalf("second download within the hour: %d", again.status)
 	}
-	if a.store.Len() != before {
-		t.Fatalf("the archive must be removed after the download: %d vs %d", a.store.Len(), before)
+	if st := a.exportStatus(alice); st.State != "ready" || st.DownloadedAt == nil {
+		t.Fatalf("status in the hour after the download: %+v", st)
+	}
+	// After the hour the file is gone: no download, and the sweep removes it.
+	if _, err := a.db.Exec(ctx, `UPDATE data_exports SET downloaded_at = NOW() - INTERVAL '61 minutes' WHERE user_id = $1`, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	if again := alice.get("/api/users/me/export/download"); again.status != http.StatusNotFound {
+		t.Fatalf("download after the hour: %d", again.status)
 	}
 	if st := a.exportStatus(alice); st.State != "downloaded" {
-		t.Fatalf("status after download: %+v", st)
+		t.Fatalf("status after the hour: %+v", st)
+	}
+	sweep, stop := context.WithCancel(ctx)
+	defer stop()
+	go account.New(a.router.accounts).RunExportSweep(sweep, 20*time.Millisecond)
+	deadline := time.Now().Add(3 * time.Second)
+	for a.store.Len() != before && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if a.store.Len() != before {
+		t.Fatalf("the archive must be removed after the hour: %d vs %d", a.store.Len(), before)
 	}
 }
 
