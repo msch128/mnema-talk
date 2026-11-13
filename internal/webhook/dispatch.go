@@ -152,12 +152,18 @@ func (d *Dispatcher) SetBackoff(steps []time.Duration) {
 }
 
 // Reload refreshes the cached list of webhooks. It runs after every change
-// made through the API, and every minute.
+// made through the API, and every minute. A webhook of a direct message
+// conversation or of a conversation's call Talk is left out, however it got
+// there (the API refuses to create one): what is said in private never
+// leaves through a webhook.
 func (d *Dispatcher) Reload(ctx context.Context) error {
 	if d.DB == nil { // router built without a database (tests)
 		return nil
 	}
-	rows, err := d.DB.Query(ctx, `SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled`)
+	rows, err := d.DB.Query(ctx, `
+		SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w
+		JOIN channels c ON c.id = w.channel_id
+		WHERE w.enabled AND `+publicChannel)
 	if err != nil {
 		return err
 	}
