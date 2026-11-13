@@ -13,17 +13,7 @@ export interface ClipException {
   reason: string
 }
 
-export const EXCEPTIONS: ClipException[] = [
-  {
-    scene: 'message menu near the bottom right',
-    rule: 'outside-viewport',
-    selector: 'div:nth-of-type(2) > button:nth-of-type(10)',
-    reason: 'Only at the desktop minimum window zoomed to 125 % (458x384 CSS px): the own message menu has 13 items and is taller than the window, '
-      + 'so its last item ends a few pixels past the edge. Making the menu scroll would clip its submenus (they open beside it), '
-      + 'so this needs a decision on the menu itself (fewer items in the root menu, or submenus that open in place). '
-      + 'Screenshot: e2e test-results, scene "message menu near the bottom right", combo desktop-minimum 572x480 de zoom125.',
-  },
-]
+export const EXCEPTIONS: ClipException[] = []
 
 export function isExcepted(scene: string, finding: ClipFinding, list: ClipException[] = EXCEPTIONS): boolean {
   return list.some(e => (e.scene === '*' || e.scene === scene) && e.rule === finding.rule && e.selector === finding.selector)

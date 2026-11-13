@@ -4,7 +4,7 @@ import type { ContextMenuItem, MenuAnchor, MenuItemId, MenuSubmenu } from './men
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
-import { placeNear, pointBox, type AnchorBox } from '../lib/floatingPosition'
+import { needsSheet, placeNear, pointBox, submenuOffsets, type AnchorBox } from '../lib/floatingPosition'
 import { rowTarget, typeAhead } from '../lib/menuKeys'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
@@ -18,6 +18,8 @@ import { rowTarget, typeAhead } from '../lib/menuKeys'
 // disabledReason on a disabled item shows as its tooltip. keepOpen on an item leaves the menu open after choosing it.
 // Position either with x/y (viewport px) or with `anchor` (an element or a
 // { left, top, right, bottom } rect), which is what keyboard openers use.
+// A menu taller than the window opens as a sheet along the bottom edge that
+// scrolls, and its submenus open in place under their row.
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   x: { type: Number, default: 0 },
@@ -35,6 +37,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean]; close: []; sel
 const menuEl = ref<HTMLElement | null>(null)
 const posX = ref(props.x)
 const posY = ref(props.y)
+const sheet = ref(false)
 let opener: HTMLElement | null = null
 
 // The open submenu: its item id, its onClose, where it shows.
@@ -60,6 +63,8 @@ function baseBox(): AnchorBox {
 function adjustPosition() {
   if (!menuEl.value) return
   const rect = menuEl.value.getBoundingClientRect()
+  sheet.value = needsSheet(rect.height, window.innerHeight)
+  if (sheet.value) return
   const box = baseBox()
   // A gap between the menu and what it belongs to; a point has no edge to keep clear of.
   const { x, y } = placeNear(box, rect, { width: window.innerWidth, height: window.innerHeight }, { gap: box.bottom > box.top ? 4 : 0 })
@@ -101,16 +106,13 @@ function placeSubmenu() {
   subShiftX.value = 0
   nextTick(() => {
     const panel = subPanel()
-    if (!panel) return
-    const pad = 8
+    // In a sheet the submenu opens in place; it only needs to be scrolled into view.
+    if (!panel || sheet.value) { panel?.scrollIntoView({ block: 'nearest' }); return }
     const r = panel.getBoundingClientRect()
-    if (r.right > window.innerWidth - pad) {
-      // To the left of its row when that fits; on a narrow screen neither side does, and it overlaps its parent.
-      const row = panel.parentElement?.getBoundingClientRect()
-      if (row && row.left - 6 - r.width >= pad) subFlip.value = true
-      else subShiftX.value = -Math.min(r.left - pad, r.right - (window.innerWidth - pad))
-    }
-    if (r.bottom > window.innerHeight - pad) subShift.value = -Math.min(r.top - pad, r.bottom - (window.innerHeight - pad))
+    const place = submenuOffsets(r, panel.parentElement?.getBoundingClientRect() ?? null, { width: window.innerWidth, height: window.innerHeight })
+    subFlip.value = place.flip
+    subShift.value = place.shift
+    subShiftX.value = place.shiftX
   })
 }
 
@@ -164,6 +166,7 @@ watch(() => props.modelValue, (open) => {
     settling = true
     requestAnimationFrame(() => requestAnimationFrame(() => { settling = false }))
     opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    sheet.value = false
     const box = baseBox()
     posX.value = box.left
     posY.value = box.bottom
@@ -179,6 +182,7 @@ watch(() => props.modelValue, (open) => {
 
 watch([() => props.x, () => props.y, () => props.anchor], () => {
   if (props.modelValue) {
+    sheet.value = false
     const box = baseBox()
     posX.value = box.left
     posY.value = box.bottom
@@ -318,12 +322,9 @@ const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border 
       data-menu-panel
       :aria-label="ariaLabel || undefined"
       tabindex="-1"
-      :style="{
-        left: `${posX}px`,
-        top: `${posY}px`,
-        minWidth: `${minWidth}px`
-      }"
-      :class="['fixed z-50 focus:outline-hidden select-none pop-in', panelClass]"
+      :data-menu-sheet="sheet ? '' : undefined"
+      :style="sheet ? undefined : { left: `${posX}px`, top: `${posY}px`, minWidth: `${minWidth}px` }"
+      :class="['fixed z-50 focus:outline-hidden select-none pop-in', panelClass, sheet ? 'inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-b-none pb-[max(0.5rem,env(safe-area-inset-bottom))]' : '']"
       @keydown="handleKeydown"
     >
       <slot name="header"></slot>
@@ -368,8 +369,8 @@ const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border 
             data-submenu-panel
             :data-submenu="item.id"
             :aria-label="item.label"
-            :style="{ top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px`, transform: subShiftX ? `translateX(${subShiftX}px)` : undefined }"
-            :class="['absolute z-50', subFlip ? 'right-full mr-1.5' : 'left-full ml-1.5', panelClass]"
+            :style="sheet ? undefined : { top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px`, transform: subShiftX ? `translateX(${subShiftX}px)` : undefined }"
+            :class="sheet ? 'ml-4 border-l border-mnema-border pl-2' : ['absolute z-50', subFlip ? 'right-full mr-1.5' : 'left-full ml-1.5', panelClass]"
             @mouseenter="cancelHoverClose"
           >
             <ContextMenuRow

@@ -124,8 +124,7 @@ const chatScenes: Scene[] = [
     reach: async (s) => {
       await openChat(s)
       await messageMenu(s, s.world.lastMessageText)
-      // The item can sit past a tiny window's edge (see exceptions.ts); the dialog is what this scene is about.
-      await s.page.getByRole('menuitem', { name: startsWith(s.t('chat.delete')) }).dispatchEvent('click')
+      await s.page.getByRole('menuitem', { name: startsWith(s.t('chat.delete')) }).click()
       await expect(s.page.getByRole('alertdialog')).toBeVisible()
     },
   },

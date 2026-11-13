@@ -55,3 +55,27 @@ export function pointBox(x: number, y: number): AnchorBox {
 export function boxOf(rect: { left: number; top: number; right: number; bottom: number }): AnchorBox {
   return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
 }
+
+const PAD = 8
+
+/**
+ * Where a submenu goes beside its row: flipped to the left when the right
+ * side has no room and the left has; otherwise shifted back into the window
+ * (on a narrow screen it then overlaps its parent). `shift` moves it up.
+ */
+export function submenuOffsets(panel: AnchorBox & { width: number }, row: AnchorBox | null, viewport: { width: number; height: number }): { flip: boolean; shift: number; shiftX: number } {
+  let flip = false
+  let shiftX = 0
+  let shift = 0
+  if (panel.right > viewport.width - PAD) {
+    if (row && row.left - 6 - panel.width >= PAD) flip = true
+    else shiftX = -Math.min(panel.left - PAD, panel.right - (viewport.width - PAD))
+  }
+  if (panel.bottom > viewport.height - PAD) shift = -Math.min(panel.top - PAD, panel.bottom - (viewport.height - PAD))
+  return { flip, shift, shiftX }
+}
+
+/** A menu taller than the window (a short window, a large zoom) opens as a sheet from the bottom edge instead. */
+export function needsSheet(menuHeight: number, viewportHeight: number): boolean {
+  return menuHeight > viewportHeight - 2 * PAD
+}
