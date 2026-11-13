@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -68,6 +69,7 @@ func TestMountedMediaRoutesServeUploadAndAdminLifecycle(t *testing.T) {
 		t.Fatalf("upload=%d %s", w.Code, w.Body.String())
 	}
 	var msg struct {
+		ID          uuid.UUID `json:"id"`
 		Attachments []struct {
 			ID  uuid.UUID `json:"id"`
 			URL string    `json:"url"`
@@ -117,7 +119,12 @@ func TestMountedMediaRoutesServeUploadAndAdminLifecycle(t *testing.T) {
 		t.Fatalf("avatar=%d %s", w.Code, w.Body.String())
 	}
 	recorded := f.h.Events.(*events.Recorder).Snapshot()
-	if len(recorded) != 2 || recorded[0].Type != "message_create" || recorded[1].Type != "user_update" {
+	// The admin delete announces the message whose file it removed.
+	if len(recorded) != 3 || recorded[0].Type != "message_create" || recorded[1].Type != "message_update" || recorded[2].Type != "user_update" {
 		t.Fatalf("events=%+v", recorded)
+	}
+	upd, ok := recorded[1].Payload.(*core.MessageUpdate)
+	if !ok || upd.ID != msg.ID || recorded[1].ChannelID != f.channel || len(upd.Attachments) != 1 || !upd.Attachments[0].IsDeleted {
+		t.Fatalf("message_update=%+v channel=%s", recorded[1].Payload, recorded[1].ChannelID)
 	}
 }

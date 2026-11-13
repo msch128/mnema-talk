@@ -335,7 +335,7 @@ and loses a channel's events the moment its access ends.
 |---|---|---|
 | `GUILDS` | 1 | `CHANNELS_UPDATE` `{}`: the channel layout or the bot's access changed, fetch `GET /channels` again |
 | `GUILD_MEMBERS` | 2 | `GUILD_MEMBER_ADD` (`id`, `username`, `display_name`, `avatar_url`), for new members who share a channel with the bot |
-| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
+| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message: an edit, or a file of it removed by the Owner or by auto-delete, which then has `is_deleted`), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
 | `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
 
 The bot's own messages are dispatched to it as well. Message content is always
