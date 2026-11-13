@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.13](https://github.com/msch128/mnema-talk/compare/v3.0.12...v3.0.13) (2026-11-13)
+
+
+### Documentation
+
+* the README names the server's own outgoing calls, not only the release check ([#800](https://github.com/msch128/mnema-talk/issues/800)) ([eb03a1e](https://github.com/msch128/mnema-talk/commit/eb03a1e5277b0900eceefd0f4e2769259335afed))
+
 ## [3.0.12](https://github.com/msch128/mnema-talk/compare/v3.0.11...v3.0.12) (2026-11-13)
 
 
