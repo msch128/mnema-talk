@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -41,6 +43,7 @@ var errOwnerDelete = httpx.ErrForbidden("the Owner account cannot be deleted: ow
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the second step is locked."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: the server is busy (the erasure kept meeting other writes of the account and was rolled back); nothing was deleted, try again shortly."
 // @Router /api/users/me/delete [post]
 func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	u := auth.UserFrom(r.Context())
@@ -54,20 +57,7 @@ func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	if ok, err := h.ConfirmIdentity(w, r, u, req.CurrentPassword, req.Code); !ok {
 		return err
 	}
-	var gone *erased
-	// Erasing touches every row the member ever wrote.
-	ctx := db.WithStatementTimeout(r.Context(), db.BulkStatementTimeout)
-	err := pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) (err error) {
-		if gone, err = h.eraseOwnAccount(ctx, tx, u.ID); err != nil {
-			return err
-		}
-		// In the erasure's transaction: an erased account always has its entry.
-		id := u.ID
-		return h.Audit.RecordTx(ctx, tx, audit.Entry{
-			ActorID: &id, ActorName: "", Action: "auth.account_delete",
-			TargetType: "user", TargetID: id.String(), TargetName: "",
-		})
-	})
+	gone, err := h.eraseInTransaction(r.Context(), u.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A parallel request erased the account while this one waited for it.
 		h.Sessions.End(w)
@@ -87,6 +77,50 @@ func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// eraseAttempts bounds how often the erasure runs when PostgreSQL rolls it
+// back to break a deadlock.
+const eraseAttempts = 3
+
+// eraseInTransaction erases the account and records it, in one transaction.
+// The erasure locks the users row first and the member's messages,
+// memberships and Talks later. A write that locked one of those rows first
+// (the member's edit from a second device, their leave of a group, a pin) and
+// waits for a row the erasure holds closes a cycle, and PostgreSQL may roll
+// the erasure back (H-L10-06). It then runs again from the start: it is one
+// transaction, and nothing outside it happens before the commit (files,
+// events and sign-outs follow in the caller). After the last attempt the
+// member is asked to try again (503).
+func (h *API) eraseInTransaction(rctx context.Context, id uuid.UUID) (*erased, error) {
+	// Erasing touches every row the member ever wrote.
+	ctx := db.WithStatementTimeout(rctx, db.BulkStatementTimeout)
+	for attempt := 1; ; attempt++ {
+		var gone *erased
+		err := pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) (err error) {
+			if gone, err = h.eraseOwnAccount(ctx, tx, id); err != nil {
+				return err
+			}
+			// In the erasure's transaction: an erased account always has its entry.
+			return h.Audit.RecordTx(ctx, tx, audit.Entry{
+				ActorID: &id, ActorName: "", Action: "auth.account_delete",
+				TargetType: "user", TargetID: id.String(), TargetName: "",
+			})
+		})
+		if !db.IsDeadlock(err) {
+			return gone, err
+		}
+		if attempt == eraseAttempts {
+			slog.Warn("account erasure rolled back by deadlocks; the member is asked to try again", "attempts", attempt, "err", err)
+			return nil, auth.ErrServerBusy
+		}
+		// A short jittered pause lets the other transaction finish first.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Duration(20+rand.IntN(80)) * time.Millisecond):
+		}
+	}
 }
 
 // removeObjects deletes the account's files from the object store. The rows

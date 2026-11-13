@@ -39260,6 +39260,16 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the server is busy (the erasure kept meeting other writes of the account and was rolled back); nothing was deleted, try again shortly."
           }
         },
         "security": [
