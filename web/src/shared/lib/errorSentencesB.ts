@@ -210,5 +210,12 @@ export const ROWS: readonly SentenceRow[] = [
   ['session not found', 'srvSessionNotFound'],
   ['session_inactivity_days must be between 1 and 365', 'srvSessionInactivityDaysMustBe'],
   ['sign-ups are paused for now: try again later', 'signupsPaused'],
-  ['since must be an RFC 3339 time', 'srvSinceMustBeAnRfc']
+  ['since must be an RFC 3339 time', 'srvSinceMustBeAnRfc'],
+  ['give hours, days or use_default', 'autoDeleteNoPeriod'],
+  ['hours must be 0 (off) to 8760', 'autoDeleteHoursRange'],
+  ['lifetime_seconds is longer than this community allows (%s s)', 'lifetimeTooLong', ['seconds']],
+  ['lifetime_seconds must be 60 to 2592000', 'lifetimeRange'],
+  ['message_lifetime_max_seconds must be 60 to 2592000', 'lifetimeMaxRange'],
+  ['messages with a lifetime are turned off in this community', 'lifetimesOff'],
+  ['scope must be all or attachments', 'autoDeleteScope']
 ]
