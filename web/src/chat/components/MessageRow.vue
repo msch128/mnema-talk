@@ -174,14 +174,16 @@ defineExpose({ el: row })
       {{ formatTime(msg.created_at) }}
     </span>
 
-    <!-- User Avatar (first message of a group only) -->
-    <UserAvatar
-      v-else
-      :user="msg"
-      size="md"
-      :class="['absolute left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
-      @click="emit('open-profile')"
-    />
+    <!-- User Avatar (first message of a group only), in the gutter. The avatar's
+         own root is position: relative, so a wrapper places it. -->
+    <div v-else :class="['absolute left-4 max-md:left-2', msg.reply_to ? 'top-6' : 'top-1']">
+      <UserAvatar
+        :user="msg"
+        size="md"
+        class="cursor-pointer hover:opacity-85 transition"
+        @click="emit('open-profile')"
+      />
+    </div>
 
     <!-- Content Body -->
     <div class="min-w-0">
