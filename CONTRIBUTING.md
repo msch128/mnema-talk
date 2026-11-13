@@ -72,4 +72,5 @@ Run `make check` before you push: it is what CI runs.
 
 Contributions are accepted under the AGPL-3.0, and their authors agree that
 Marius Schröder may also distribute them under a commercial license (see
-[README](README.md#license)).
+[README](README.md#license)). The exception is the Go SDK in `sdk/go`:
+contributions there are accepted under the MIT License ([sdk/go/LICENSE](sdk/go/LICENSE)).
