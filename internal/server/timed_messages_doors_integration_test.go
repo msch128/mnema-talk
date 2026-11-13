@@ -163,3 +163,26 @@ func TestAPicturesSizeIsKeptOnItsAttachment(t *testing.T) {
 		t.Errorf("a text file got a size: %s", text.body)
 	}
 }
+
+// A moderator's bulk delete of a member's latest messages leaves out an ended
+// message the sweeper has not removed yet: it neither counts towards the
+// number nor copies its text into the audit log (review round 2, finding 2).
+func TestABulkDeleteLeavesAnEndedMessageToTheSweeper(t *testing.T) {
+	w := newTimedWorld(t)
+	ended := sendTimed(t, w.alice, w.ch, map[string]any{"content": "ended-secret-words", "lifetime_seconds": 60})
+	kept := sendTimed(t, w.alice, w.ch, map[string]any{"content": "a plain message"})
+	w.a.endLifetime(ended.ID)
+	res := w.owner.post(w.path("/messages/bulk-delete"), map[string]any{"user_id": w.alice.user.ID, "count": 5})
+	wantStatus(t, "bulk delete", res, http.StatusOK)
+	var out struct{ Deleted int }
+	res.decode(t, &out)
+	if out.Deleted != 1 {
+		t.Errorf("deleted %d, want the one live message", out.Deleted)
+	}
+	if n := w.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE details::text LIKE '%ended-secret-words%'`); n != 0 {
+		t.Errorf("the ended message's text reached the audit log %d times", n)
+	}
+	if n := w.a.countRows(`SELECT COUNT(*) FROM messages WHERE id = $1`, kept.ID); n != 0 {
+		t.Error("the live message was not deleted")
+	}
+}
