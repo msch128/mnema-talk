@@ -56,12 +56,12 @@ function formatDate(iso: string) {
 
     <div class="flex-1 min-w-0">
       <div class="mb-0.5 flex items-center gap-2">
-        <span class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+        <span v-full-text class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
         <span v-if="channelName" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
           <MessageCircle v-if="conversation" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
           <Volume2 v-else-if="voice" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
           <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-          <span class="truncate">{{ channelName }}</span>
+          <span v-full-text class="truncate">{{ channelName }}</span>
         </span>
         <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
           <CornerDownRight class="w-3 h-3" />
@@ -79,14 +79,14 @@ function formatDate(iso: string) {
       <p v-if="root" data-search-root class="mb-1 flex min-w-0 items-baseline gap-1 border-l-2 border-mnema-border pl-2 text-xs text-mnema-tertiary">
         <BlockedFold :msg="root" small passive>
           <span class="shrink-0 font-medium">{{ shownName(root) }}:</span>
-          <span class="truncate">
+          <span v-full-text class="truncate">
             <template v-for="(part, i) in rootParts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
           </span>
         </BlockedFold>
       </p>
 
       <BlockedFold :msg="msg" passive>
-        <p class="text-sm text-mnema-muted line-clamp-2 wrap-break-word">
+        <p v-full-text class="text-sm text-mnema-muted line-clamp-2 wrap-break-word">
           <template v-for="(part, i) in parts" :key="i"><mark v-if="part.match" class="bg-transparent font-semibold text-mnema-accent">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>
         </p>
 

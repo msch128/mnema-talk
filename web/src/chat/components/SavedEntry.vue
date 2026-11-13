@@ -82,17 +82,17 @@ const when = (iso: string) => dateTime(iso, locale.value)
           <UserAvatar :user="{ username: entry.message.username, display_name: entry.message.display_name, avatar_url: entry.message.avatar_url }" size="sm" class="mt-0.5" />
           <span class="min-w-0 flex-1">
             <span class="mb-0.5 flex items-center gap-2">
-              <span class="min-w-8 truncate text-sm font-medium text-mnema-text">{{ shownName(entry.message) }}</span>
+              <span v-full-text class="min-w-8 truncate text-sm font-medium text-mnema-text">{{ shownName(entry.message) }}</span>
               <span v-if="context" data-testid="saved-context" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
                 <MessageCircle v-if="context.dm" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" aria-hidden="true" />
                 <Volume2 v-else-if="context.voice" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" aria-hidden="true" />
                 <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" aria-hidden="true" />
-                <span class="truncate">{{ context.name }}</span>
+                <span v-full-text class="truncate">{{ context.name }}</span>
               </span>
               <span class="ml-auto shrink-0 text-xs text-mnema-tertiary" :title="$t('saved.savedAt', { time: when(entry.saved_at) })">{{ when(entry.message.created_at) }}</span>
               <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" aria-hidden="true" />
             </span>
-            <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ previewText(entry.message.content) || $t('chat.attachment') }}</span>
+            <span v-full-text class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ previewText(entry.message.content) || $t('chat.attachment') }}</span>
           </span>
         </button>
       </BlockedFold>

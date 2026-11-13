@@ -51,8 +51,8 @@ function menuItems(): ContextMenuItem[] {
       <Hash v-if="channel.type === 'text'" class="w-4 h-4 text-mnema-tertiary shrink-0" />
       <Volume2 v-else-if="channel.type === 'voice'" class="w-4 h-4 text-mnema-accent shrink-0" />
       <MessagesSquare v-else class="w-4 h-4 text-mnema-accent shrink-0" />
-      <span class="text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
-      <span v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
+      <span v-full-text class="text-sm font-medium text-mnema-text truncate">{{ channel.name }}</span>
+      <span v-full-text v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
     </div>
 
     <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: channel.name })" />

@@ -232,7 +232,7 @@ async function handleSendReply() {
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
-          <p v-if="!chatStore.activeThread?.title" data-testid="thread-hint" class="truncate text-xs leading-4 text-mnema-tertiary">{{ $t('thread.hint') }}</p>
+          <p v-full-text v-if="!chatStore.activeThread?.title" data-testid="thread-hint" class="truncate text-xs leading-4 text-mnema-tertiary">{{ $t('thread.hint') }}</p>
         </div>
       </div>
 

@@ -298,7 +298,7 @@ async function confirmCancel(scope: Scope) {
           >
             <div class="flex items-center gap-2 min-w-0">
               <UserAvatar :user="eventAvatar(item.user)" size="sm" />
-              <span class="truncate font-medium text-mnema-text">
+              <span v-full-text class="truncate font-medium text-mnema-text">
                 {{ item.user.display_name || item.user.username }}
               </span>
             </div>

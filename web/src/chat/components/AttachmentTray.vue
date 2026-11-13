@@ -36,7 +36,7 @@ const summary = computed(() => {
   >
     <div class="flex items-center justify-between gap-2 px-3 pt-2 text-xs text-mnema-tertiary">
       <span>{{ $t('chat.attachCount', { count: items.length, max: MAX_ATTACHMENTS }) }}</span>
-      <span role="status" aria-live="polite" class="truncate">{{ summary }}</span>
+      <span v-full-text role="status" aria-live="polite" class="truncate">{{ summary }}</span>
     </div>
     <ul class="flex gap-2 overflow-x-auto px-3 pb-2 pt-1.5" role="list">
       <li
@@ -86,7 +86,7 @@ const summary = computed(() => {
             v-if="item.status === 'error'"
             class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-mnema-canvas/90 p-1.5 text-center"
           >
-            <p class="line-clamp-3 text-[11px] leading-tight text-mnema-danger" data-testid="attachment-error">{{ item.error }}</p>
+            <p v-full-text class="line-clamp-3 text-[11px] leading-tight text-mnema-danger" data-testid="attachment-error">{{ item.error }}</p>
             <button
               type="button"
               class="focus-ring flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-mnema-text hover:bg-mnema-hover"
