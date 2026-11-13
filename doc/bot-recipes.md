@@ -148,7 +148,7 @@ return err
 ```
 
 A message needs content, embeds or components. Pictures in an embed are shown as
-links, not loaded ([webhooks](webhooks.md#how-the-message-looks) has the subset).
+links, not loaded ([webhooks](webhooks.md#discord-compatibility) has the subset).
 
 ## Answer in a thread
 
@@ -345,7 +345,7 @@ c.OnInteraction(func(ctx context.Context, i *mnema.Interaction) {
 
 `update` with `components: []` removes the menu. The custom id is yours to name
 and to read back; keep state you need in it (for example `deploy:prod`), because
-the server keeps nothing for a component.
+the server keeps no state of yours for a component.
 
 ## Ask for input with a modal
 
