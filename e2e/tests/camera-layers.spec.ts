@@ -61,8 +61,8 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(viewerCtx)
   await sharerCtx.addInitScript(fakeDisplayMedia)
-  // EXPERIMENT: the viewer back on the default noise filter, as before the fixture applied trackPeerConnections to it.
-  await viewerCtx.addInitScript(() => localStorage.setItem('mnema_noise', 'ai'))
+  // EXPERIMENT: the viewer on the browser's noise filter (no DFN3, Opus DTX on).
+  await viewerCtx.addInitScript(() => localStorage.setItem('mnema_noise', 'browser'))
   const sharer = await sharerCtx.newPage()
   const viewer = await viewerCtx.newPage()
 
