@@ -59,11 +59,12 @@ once.
   *Every way a bot can gain permissions*), so an install link can never be
   a way to talk someone into handing out power.
 - **Where it may work** is the installer's choice, not the manifest's: the
-  confirm step lists the channels the installer can see, none ticked. The
-  requested permissions become allow overwrites of the bot's **own** managed
-  role in exactly the ticked channels; the bot gets no server-wide
-  permission. Because bots do not inherit `@everyone`, a server-wide grant
-  would reach private channels; a per-channel grant cannot.
+  confirm step lists the channels the installer can see, none ticked, and an
+  **Access** choice. With **Selected channels** (the default) the requested
+  permissions become allow overwrites of the bot's **own** managed role in
+  exactly the ticked channels; the bot gets no server-wide permission. With
+  **All channels** they are held server-wide by the own role (see "Give a bot
+  access to every channel" below).
 - **Who may grant what** does not change. The install runs in one
   transaction under the permission lock, through the bot invariant: nobody
   but the Owner can give a bot anything elevated, or anything the installer
@@ -86,6 +87,39 @@ once.
   the bot's, listed next to the built-in.
 - **The result** is an ordinary bot: everything can be changed in the Bots
   tab afterwards. The token is shown once, as with every token.
+
+### Give a bot access to every channel
+
+Admins asked for the simple choice other platforms have: a bot that sees and
+answers everywhere, without a detour through the role editor. The add dialog
+and the bot's settings have one **Access** choice, **Selected channels** or
+**All channels**.
+
+- **How it works.** *All channels* writes the kept permissions onto the bot's
+  own managed role as ordinary server-wide permissions, instead of one
+  overwrite per channel, so channels created later are covered too. Switching
+  back removes them and writes overwrites for the chosen channels.
+  `PUT /api/admin/bots/{id}/access` does the same for an existing bot;
+  `POST /api/admin/bots/install` takes `access` and stays compatible (absent
+  means `channels`).
+- **Private channels.** The decision: they stay private. Bots do not inherit
+  `@everyone`, so a plain server-wide grant would reach every private channel
+  (that is why the first version offered per-channel grants only). A bot given
+  access to all channels follows one more rule: `@everyone`'s *View channels*
+  overwrite on a channel or category also applies to it, so a channel that
+  members cannot see by default is hidden from it too, until the admin lists
+  the channel explicitly, which gives the bot's own role an allow overwrite
+  there. The marker is a column, `bots.access_all` (migration 0107), not
+  something derived from the role's bits, so no existing bot changes: a bot
+  whose own role was given server-wide permissions in the role editor keeps
+  seeing private channels. Only the *View channels* bit of `@everyone` applies,
+  because the other `@everyone` overwrites describe what members get, which
+  the bot never had.
+- **Who may grant what.** Unchanged. Only the manifest's channel permissions
+  can be chosen, so the choice can never carry Administrator or an admin-area
+  bit, and the existing bot invariant decides the rest: a non-Owner cannot give
+  a bot a permission they lack in any channel it reaches, and cannot change a
+  bot that reaches a channel they cannot view.
 
 ### 2. Message components and modals
 

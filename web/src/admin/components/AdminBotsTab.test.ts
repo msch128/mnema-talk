@@ -33,7 +33,7 @@ beforeEach(() => {
     if (path === '/api/roles') return [role]
     if (path === '/api/admin/bots' && !options?.method) return bots
     if (path === '/api/admin/bots' && options?.method === 'POST') return bot(3, { name: (options.json as { name: string }).name })
-    if (path.endsWith('/access')) return { permissions: 0, elevated: false, channels: [] }
+    if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, selected_channel_ids: [], channels: [] }
     if (/\/(tokens|commands)$/.test(path)) return []
     return undefined
   })

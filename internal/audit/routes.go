@@ -109,6 +109,7 @@ var Routes = []Route{
 	{Method: "DELETE", Pattern: "/bots/{id}", Action: "bot.delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "POST", Pattern: "/bots/{id}/avatar", Action: "bot.avatar", TargetType: "bot", IDParam: "id", Snapshot: ResBot, NoBody: true},
 	{Method: "PUT", Pattern: "/bots/{id}/roles", Action: "bot.roles", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "PUT", Pattern: "/bots/{id}/access", Action: "bot.access", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "POST", Pattern: "/bots/{id}/tokens", Action: "bot.token_create", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "POST", Pattern: "/bots/{id}/tokens/{tokenID}/regenerate", Action: "bot.token_regenerate", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 	{Method: "DELETE", Pattern: "/bots/{id}/tokens/{tokenID}", Action: "bot.token_revoke", TargetType: "bot", IDParam: "id", Snapshot: ResBot},

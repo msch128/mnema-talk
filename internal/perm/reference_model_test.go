@@ -113,6 +113,8 @@ func (m refModel) overwrite(sc Scope, ok bool, u uuid.UUID, p Set) Set {
 	}
 	if o, has := sc.Roles[m.st.EveryoneID]; has && !m.bot(u) {
 		p = p&^o.Deny | o.Allow
+	} else if has && m.st.BotsAll[u] {
+		p = p&^(o.Deny&ViewChannel) | o.Allow&ViewChannel
 	}
 	var allow, deny Set
 	for _, r := range m.st.UserRoles[u] {

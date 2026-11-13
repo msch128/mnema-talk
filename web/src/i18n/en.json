@@ -3445,6 +3445,7 @@
         "delete": "Bot deleted",
         "avatar": "Bot avatar changed",
         "roles": "Bot roles changed",
+        "access": "Bot access changed",
         "token_create": "Bot token created",
         "token_regenerate": "Bot token regenerated",
         "token_revoke": "Bot token revoked",
@@ -4052,6 +4053,25 @@
       "none": "No permissions",
       "noChannels": "No channel overrides apply.",
       "elevated": "This bot holds Administrator or admin-area permission. It can change the server far beyond messaging."
+    },
+    "choice": {
+      "sectionTitle": "Channel access",
+      "title": "Access",
+      "settingsHint": "Choose where this bot may work. This never gives it Administrator or admin-area permissions.",
+      "channels": {
+        "name": "Selected channels",
+        "desc": "The bot works only in the channels you tick below."
+      },
+      "all": {
+        "name": "All channels",
+        "desc": "The permissions apply in every channel members can see, including channels created later."
+      },
+      "privateNote": "Private channels stay private: the bot does not see a channel that members cannot see, unless you tick it under “Private channels too”.",
+      "privateTitle": "Private channels too",
+      "privateHint": "Tick a private channel to let the bot work there as well.",
+      "permissionsTitle": "Permissions",
+      "save": "Save access",
+      "saved": "Access saved."
     },
     "tokens": {
       "title": "Tokens",

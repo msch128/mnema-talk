@@ -30,7 +30,7 @@ beforeEach(() => {
   // the child panels load their own data; keep them quiet
   apiMock.mockImplementation(async (path, options) => {
     if (path === base && options?.method === 'PATCH') return bot({ ...(options.json as object) })
-    if (path.endsWith('/access')) return { permissions: 0, elevated: false, channels: [] }
+    if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, selected_channel_ids: [], channels: [] }
     if (path.endsWith('/tokens') || path.endsWith('/commands') || path === '/api/roles') return []
     return undefined
   })
@@ -181,7 +181,7 @@ describe('BotDetailPanel', () => {
     apiMock.mockImplementation(async (path, options) => {
       if (path === `${base}/roles`) return bot({ role_ids: [fixtureId(21)] })
       if (path === base && options?.method === 'PATCH') return bot()
-      if (path.endsWith('/access')) return { permissions: 0, elevated: false, channels: [] }
+      if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, selected_channel_ids: [], channels: [] }
       return []
     })
     const w = await mountPanel()

@@ -104,7 +104,8 @@ for members, bots, the REST API and the gateway.
 
 `GET /api/admin/bots/{id}/access` (the *Access* view of the Bots tab) shows
 the effective result: the server-wide permissions and, per viewable channel,
-what the bot may do.
+what the bot may do, with the bot's *access choice* (`mode`: `channels` or
+`all`; see [Give a bot access to every channel](#give-a-bot-access-to-every-channel)).
 
 Voice is out of scope in v1: bots cannot join Talks (their roles' Connect,
 Speak and Video bits do nothing for them).
@@ -127,7 +128,8 @@ common paths.
 | Editing a role a bot holds | the usual role rules, and adding Administrator or admin-area bits is Owner-only |
 | Reordering roles | moves positions only, grants no permission |
 | Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one elevated channel permission) is Owner-only |
-| Adding a bot from a manifest (`POST /bots/install`) | *Manage bots* (checked again under the permission lock); channel permissions only, never elevated; allow overwrites of the new bot's own role in the channels the installer ticked and can view, each within what the installer holds there (the refusal names the permission and the channel) |
+| Adding a bot from a manifest (`POST /bots/install`) | *Manage bots* (checked again under the permission lock); channel permissions only, never elevated; allow overwrites of the new bot's own role in the channels the installer ticked and can view, each within what the installer holds there (the refusal names the permission and the channel); with access `all` instead the permissions on the own role server-wide, within what the installer holds in every channel the bot reaches |
+| Choosing a bot's access (`PUT /bots/{id}/access`) | *Manage bots* and the authority over the bot; only the manifest's channel permissions, never elevated; bounded by the bot invariant like every change |
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
 
@@ -262,10 +264,11 @@ built-in, not instead of it), and the channels the installer can see (none
 ticked). Nothing is created until **Add bot**:
 
 - The requested permissions become **allow overwrites of the bot's own
-  role** in the ticked channels (and nothing server-wide: bots do not inherit
-  `@everyone`, so a server-wide grant would include private channels). A
-  bot added without a ticked channel can see nothing yet, like a bot created
-  by hand.
+  role** in the ticked channels (and nothing server-wide, the default
+  **Selected channels**). A bot added without a ticked channel can see
+  nothing yet, like a bot created by hand. With **All channels** they become
+  server-wide permissions of the bot's own role instead (see
+  [Give a bot access to every channel](#give-a-bot-access-to-every-channel)).
 - The allowed intents are the ticked ones; the commands are registered as
   if the bot had sent them.
 - A token named after the manifest is issued and shown once.
@@ -294,8 +297,8 @@ manifest; it is validated and answered normalised: cleaned text, `intents` as
 `{"name", "bit"}` in bit order, `permissions` as `{"key", "name", "bit"}` in
 the order of the permission list, no duplicates, without the avatar; no side
 effects) and `POST /api/admin/bots/install`
-(`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...]}`,
-the lists being what the installer kept ticked, at most 500 channels; answers
+(`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...], "access": "channels"}`,
+`access` is `channels` (the default when absent) or `all`; the lists being what the installer kept ticked, at most 500 channels; answers
 `201` with `{"bot": {...}, "token": {...}}`, the token as when issuing one,
 its `secret` shown once). A refusal creates nothing: `400` for an invalid
 manifest or a kept permission or intent that is not in it (the message names
@@ -305,6 +308,60 @@ kept permission the installer does not hold in a listed channel (the message
 names both), `409` at the bot limit or for a temporary Talk (it follows its
 lobby). The manifest's description and homepage are part of the bot
 (`description`, `homepage`, absent for a bot created by hand).
+
+### Give a bot access to every channel
+
+Ticking channel after channel is right for a bot that should work in two
+places. For a bot that should see and answer everywhere, the **Access**
+choice does it in one step, when adding the bot and later in the bot's
+settings (**Admin area > Bots**):
+
+- **Selected channels** (the default): the permissions are allow overwrites of
+  the bot's own role in exactly the ticked channels, as above.
+- **All channels**: the permissions the manifest asks for and the admin ticks
+  (for example View channels, Send messages, Add reactions) are held
+  **server-wide by the bot's own role**, so the bot works in every channel
+  members can see, including channels created later.
+
+**Private channels stay private.** A channel where `@everyone` is denied *View
+channels* (on the channel or its category) is a private one. A bot with
+access to all channels follows that one rule, which other bots do not: the
+bot does not see such a channel, whatever the server-wide grant says, until
+the channel is listed explicitly (the bot's own role then gets an allow
+overwrite there, exactly as with *Selected channels*). In the add dialog and
+the bot's settings the channels are listed under "private channels too". The
+rest of `@everyone`'s overwrites still do not apply to bots: only its *View
+channels* bit does, and only for a bot with this choice.
+
+Nothing about who may grant what changes. *All channels* only ever grants
+channel permissions a manifest may ask for (view, send, attach, react, manage
+messages, mention everyone), never Administrator or anything of the admin
+area; the choice goes through the same transaction, permission lock and bot
+invariant as every other change. A member who holds *Manage bots* but not,
+say, *Manage messages* gets a `403` naming it when they try to give it to a
+bot, and cannot give *Send messages* to a bot everywhere if they are
+denied it in any channel. For the same reason they cannot change a bot that
+reaches a channel they cannot view.
+
+**Switching back** to *Selected channels* removes the server-wide grants and
+writes overwrites for the channels chosen at that moment; the overwrites that
+were there before are replaced (a deny written by an admin stays). Switching
+to *All channels* replaces the bot's server-wide channel permissions with the
+chosen ones. Other permissions of the own role (and any role the bot holds)
+are not touched.
+
+`PUT /api/admin/bots/{id}/access` takes
+`{"access": "all" | "channels", "permissions": ["view_channel", ...], "channel_ids": [...]}`:
+`permissions` are the manifest's keys and replace what the choice granted
+before; `channel_ids` are the channels of the bot's own overwrites (with
+`all`: the private channels it may also see), at most 500, each one the caller
+can view. It answers `200` with the access view (`mode`, `granted`,
+`selected_channel_ids` next to what `GET` already showed), `400` for an
+unknown access or a key that is not a manifest permission, `404` for a channel
+the caller cannot view, `403` for the bot invariant, and is logged as
+`bot.access`. The choice is stored as `bots.access_all`; a bot whose own role
+was given server-wide permissions by hand in the role editor is still
+`channels` and still reaches private channels, as before.
 
 ## REST API
 
@@ -971,7 +1028,8 @@ mutation is reported to the audit log.
 | `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete; renaming renames the bot's own role, deleting deletes it |
 | `POST /bots/{id}/avatar` | avatar (multipart, field `avatar`) |
 | `PUT /bots/{id}/roles` | the bot's roles (the Bot role and its own role stay, whatever the list says; another bot's own role is refused) |
-| `GET /bots/{id}/access` | effective permissions |
+| `GET /bots/{id}/access` | effective permissions and the access choice |
+| `PUT /bots/{id}/access` | the access choice: selected channels or all channels (see [Give a bot access to every channel](#give-a-bot-access-to-every-channel)) |
 | `GET`, `POST /bots/{id}/tokens` | list, issue |
 | `POST /bots/{id}/tokens/{tokenID}/regenerate`, `DELETE ...` | rotate, revoke |
 

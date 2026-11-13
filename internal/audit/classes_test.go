@@ -30,7 +30,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"category.overwrites_set": VisPrivileged,
 		"channel.overwrites_set":  VisChannel, "channel.create": VisChannel, "channel.update": VisChannel, "channel.delete": VisChannel, "channel.duplicate": VisChannel, "channel.auto_delete_set": VisChannel,
 		"category.create": VisPrivileged, "category.update": VisPrivileged, "category.delete": VisPrivileged, "layout.apply": VisPrivileged,
-		"bot.create": VisPrivileged, "bot.update": VisPrivileged, "bot.delete": VisPrivileged, "bot.avatar": VisPrivileged, "bot.roles": VisPrivileged,
+		"bot.create": VisPrivileged, "bot.update": VisPrivileged, "bot.delete": VisPrivileged, "bot.avatar": VisPrivileged, "bot.roles": VisPrivileged, "bot.access": VisPrivileged,
 		"bot.token_create": VisPrivileged, "bot.token_regenerate": VisPrivileged, "bot.token_revoke": VisPrivileged,
 		"bot.command_update": VisPrivileged, "bot.command_delete": VisPrivileged, "bot.installed": VisPrivileged,
 		"webhook.create": VisPrivileged, "webhook.update": VisPrivileged, "webhook.regenerate": VisPrivileged,

@@ -8,7 +8,8 @@ import { ExternalLink, TriangleAlert } from '@lucide/vue'
 import type { BotCheckedManifest } from '../../types/rest'
 import { botInitial } from '../lib/bots'
 import { INTENT_KEYS, OFF_AT_FIRST, safeHomepage, sharesBuiltinName } from '../lib/manifest'
-import BotManifestChannels from './BotManifestChannels.vue'
+import BotAccessChoice from './BotAccessChoice.vue'
+import type { AccessMode } from './BotAccessChoice.vue'
 import BotBadge from '../../shared/components/BotBadge.vue'
 
 const props = defineProps({
@@ -21,6 +22,7 @@ const props = defineProps({
 const intents = defineModel<string[]>('intents', { required: true })
 const permissions = defineModel<string[]>('permissions', { required: true })
 const channels = defineModel<string[]>('channels', { required: true })
+const access = defineModel<AccessMode>('access', { required: true })
 const emit = defineEmits<{ back: []; submit: [] }>()
 const homepage = () => safeHomepage(props.manifest.homepage)
 
@@ -100,9 +102,7 @@ function toggle(list: string[], value: string, on: boolean): string[] {
 
     <section class="stack-2" :aria-label="$t('bots.manifest.channelsTitle')">
       <h5 class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.manifest.channelsTitle') }}</h5>
-      <p class="text-sm text-mnema-tertiary">{{ $t('bots.manifest.channelsHint') }}</p>
-      <p class="text-sm text-mnema-tertiary" data-testid="manifest-bot-role-note">{{ $t('bots.manifest.overridesBotRole') }}</p>
-      <BotManifestChannels v-model="channels" />
+      <BotAccessChoice v-model:mode="access" v-model:channels="channels" role-note />
     </section>
 
     <p v-if="error" role="alert" class="flex items-start gap-2 rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" data-testid="manifest-install-error">

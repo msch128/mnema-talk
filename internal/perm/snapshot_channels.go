@@ -8,8 +8,15 @@ func (sc *scope) apply(p Set, s *Snapshot, user uuid.UUID) Set {
 	if sc == nil {
 		return p
 	}
-	if ow, ok := sc.roles[s.everyoneID]; ok && !s.bots[user] {
-		p = p&^ow.deny | ow.allow
+	if ow, ok := sc.roles[s.everyoneID]; ok {
+		switch {
+		case !s.bots[user]:
+			p = p&^ow.deny | ow.allow
+		case s.botsAll[user]:
+			// A bot with access to every channel sees what members see by
+			// default, nothing more: only the View channels bit of @everyone.
+			p = p&^(ow.deny&ViewChannel) | ow.allow&ViewChannel
+		}
 	}
 	var allow, deny Set
 	for _, id := range s.userRoles[user] {

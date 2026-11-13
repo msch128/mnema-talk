@@ -3445,6 +3445,7 @@
         "delete": "Bot gelöscht",
         "avatar": "Bot-Avatar geändert",
         "roles": "Bot-Rollen geändert",
+        "access": "Bot-Zugriff geändert",
         "token_create": "Bot-Token erstellt",
         "token_regenerate": "Bot-Token neu erzeugt",
         "token_revoke": "Bot-Token widerrufen",
@@ -4052,6 +4053,25 @@
       "none": "Keine Rechte",
       "noChannels": "Keine Kanal-Überschreibungen aktiv.",
       "elevated": "Dieser Bot hat Administrator- oder Admin-Bereich-Rechte. Er kann den Server weit über das Schreiben von Nachrichten hinaus verändern."
+    },
+    "choice": {
+      "sectionTitle": "Kanalzugriff",
+      "title": "Zugriff",
+      "settingsHint": "Lege fest, wo dieser Bot arbeiten darf. Administrator- oder Admin-Rechte bekommt er dadurch nie.",
+      "channels": {
+        "name": "Ausgewählte Kanäle",
+        "desc": "Der Bot arbeitet nur in den Kanälen, die du unten anhakst."
+      },
+      "all": {
+        "name": "Alle Kanäle",
+        "desc": "Die Berechtigungen gelten in jedem Kanal, den Mitglieder sehen, auch in später erstellten."
+      },
+      "privateNote": "Private Kanäle bleiben privat: Der Bot sieht keinen Kanal, den Mitglieder nicht sehen, außer du hakst ihn unter „Auch private Kanäle“ an.",
+      "privateTitle": "Auch private Kanäle",
+      "privateHint": "Hake einen privaten Kanal an, damit der Bot auch dort arbeiten darf.",
+      "permissionsTitle": "Berechtigungen",
+      "save": "Zugriff speichern",
+      "saved": "Zugriff gespeichert."
     },
     "tokens": {
       "title": "Tokens",

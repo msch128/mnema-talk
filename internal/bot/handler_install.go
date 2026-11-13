@@ -14,6 +14,13 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
+// The values of an access choice (doc/bots.md, "Give a bot access to every
+// channel").
+const (
+	AccessChannels = "channels"
+	AccessAll      = "all"
+)
+
 // maxInstallChannels bounds the channels of one install.
 const maxInstallChannels = 500
 
@@ -25,8 +32,14 @@ type InstallRequest struct {
 	Permissions []string `json:"permissions"`
 	// Intents are names from the manifest's intents; none means none.
 	Intents []string `json:"intents"`
+	// Access is "channels" (the default: the kept permissions only in the
+	// listed channels) or "all" (the kept permissions in every channel, held
+	// server-wide by the bot's own role; a channel plain members cannot see
+	// stays hidden unless it is listed).
+	Access string `json:"access,omitempty" binding:"optional" enums:"channels,all"`
 	// ChannelIDs are the channels the bot may work in (none: it sees nothing
-	// yet). Each must be a channel the installer can view.
+	// yet); with access "all" the private channels it may also see. Each must
+	// be a channel the installer can view.
 	ChannelIDs []uuid.UUID `json:"channel_ids" format:"uuid" maxItems:"500"`
 }
 
@@ -42,6 +55,7 @@ type installPlan struct {
 	manifest CheckedManifest
 	perms    perm.Set
 	intents  int64
+	all      bool
 	channels []uuid.UUID
 }
 
@@ -99,11 +113,23 @@ func planInstall(req InstallRequest) (installPlan, error) {
 		}
 		p.intents |= m.Intents[i].Bit
 	}
-	p.channels = slices.Compact(slices.SortedFunc(slices.Values(req.ChannelIDs), uuidCompare))
+	switch req.Access {
+	case "", AccessChannels:
+	case AccessAll:
+		p.all = true
+	default:
+		return installPlan{}, httpx.ErrInvalidInput(`access must be "channels" or "all"`)
+	}
+	p.channels = uniqueChannels(req.ChannelIDs)
 	if len(p.channels) > maxInstallChannels {
 		return installPlan{}, httpx.ErrInvalidInput(fmt.Sprintf("at most %d channels", maxInstallChannels))
 	}
 	return p, nil
+}
+
+// uniqueChannels sorts and deduplicates.
+func uniqueChannels(ids []uuid.UUID) []uuid.UUID {
+	return slices.Compact(slices.SortedFunc(slices.Values(ids), uuidCompare))
 }
 
 func uuidCompare(a, b uuid.UUID) int { return slices.Compare(a[:], b[:]) }
@@ -111,7 +137,7 @@ func uuidCompare(a, b uuid.UUID) int { return slices.Compare(a[:], b[:]) }
 // install handles POST /api/admin/bots/install.
 //
 // @Summary Add a bot from a manifest
-// @Description Owner or Manage bots. In one transaction under the permission lock: creates the bot with the manifest's name, description and homepage and the kept intents, allows the kept permissions to the bot's own role in each listed channel (nothing server-wide), registers the manifest's commands and issues a token named after the bot, whose secret is in the answer and shown only once. The kept permissions and intents must be the manifest's; in each channel the installer must hold every kept permission (the Owner holds all). Anything refused creates nothing. Logged as bot.installed.
+// @Description Owner or Manage bots. In one transaction under the permission lock: creates the bot with the manifest's name, description and homepage and the kept intents, allows the kept permissions to the bot's own role in each listed channel (nothing server-wide), or, with access "all", gives them to the bot's own role server-wide, so the bot works in every channel plain members can see (a channel they cannot see stays hidden from it unless it is listed), registers the manifest's commands and issues a token named after the bot, whose secret is in the answer and shown only once. The kept permissions and intents must be the manifest's; in each channel the installer must hold every kept permission (the Owner holds all), and with access "all" the installer must hold them in every channel the bot reaches. Anything refused creates nothing. Logged as bot.installed.
 // @ID installBot
 // @Tags Bots
 // @Accept json
@@ -191,6 +217,9 @@ type installRun struct {
 // the install, instead of its generic message.
 func (run *installRun) explain(err error) error {
 	if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusForbidden && run.written && run.lacking != "" {
+		if run.lackingIn == "" {
+			return httpx.ErrForbidden(fmt.Sprintf("you do not have %s everywhere, so the bot cannot get it in every channel", run.lacking))
+		}
 		return httpx.ErrForbidden(fmt.Sprintf("you do not have %s in #%s, so the bot cannot get it there", run.lacking, run.lackingIn))
 	}
 	return wrapCreate(err)
@@ -216,11 +245,10 @@ func (h *Handler) installIn(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 	if err != nil {
 		return err
 	}
-	if plan.perms != 0 {
-		for _, ch := range plan.channels {
-			if err := perm.AllowBotRoleInChannel(ctx, tx, role, ch, plan.perms); err != nil {
-				return err
-			}
+	if plan.perms != 0 || plan.all {
+		access := perm.BotAccess{Role: role, All: plan.all, Allow: plan.perms, Channels: plan.channels}
+		if err := perm.ApplyBotAccess(ctx, tx, access); err != nil {
+			return err
 		}
 	}
 	names, err := collectUniqueCommandNames(m.Commands)
@@ -248,6 +276,11 @@ func (h *Handler) installIn(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 // channel), and notes the first kept permission the installer lacks in one,
 // for explain. It refuses nothing for that: the bot invariant does.
 func checkInstallChannels(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, actor perm.Subject, plan installPlan, run *installRun) error {
+	if plan.all {
+		if name := snap.Global(actor).MissingName(plan.perms); name != "" {
+			run.lacking = name
+		}
+	}
 	for _, ch := range plan.channels {
 		if !snap.KnowsChannel(ch) || snap.IsPrivate(ch) || !snap.Channel(actor, ch).Has(perm.ViewChannel) {
 			return perm.ErrChannelHidden
@@ -283,7 +316,14 @@ func installEntry(id uuid.UUID, plan installPlan) audit.Entry {
 		Action: "bot.installed", TargetType: "bot", TargetID: id.String(), TargetName: m.Name,
 		Details: map[string]any{
 			"homepage": m.Homepage, "permissions": perms, "intents": intents,
-			"channel_ids": plan.channels, "commands": commands,
+			"channel_ids": plan.channels, "commands": commands, "access": accessName(plan.all),
 		},
 	}
+}
+
+func accessName(all bool) string {
+	if all {
+		return AccessAll
+	}
+	return AccessChannels
 }
