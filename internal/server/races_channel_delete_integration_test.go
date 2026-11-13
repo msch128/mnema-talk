@@ -75,3 +75,40 @@ func TestDeletingAWebhooksChannelWhileItsMessageIsDeletedDoesNotDeadlock(t *test
 			return ""
 		}).FailOnViolation(t)
 }
+
+// Deleting an incoming webhook sets webhook_id NULL on every message of it
+// (ON DELETE SET NULL), which locks them, and then deletes its bot account. A
+// delete of one of its messages takes the author's row first, so the webhook
+// delete must take the bot account's row before it touches the messages: the
+// other order is a lock cycle (review round 3 of the timed messages).
+func TestDeletingAWebhookWhileItsMessageIsDeletedDoesNotDeadlock(t *testing.T) {
+	a := newTimedApp(t)
+	w := &channelDeleteWorld{a: a, owner: a.seedAdmin()}
+	var ch, msg, hook uuid.UUID
+	racetest.Sweep(t, racetest.Rounds(3, 20), 2,
+		func(round int) {
+			ch, msg = w.webhookChannel(t, round)
+			if err := a.db.QueryRow(context.Background(), `SELECT id FROM webhooks WHERE channel_id = $1`, ch).Scan(&hook); err != nil {
+				t.Fatal(err)
+			}
+		},
+		func(round, i int) error {
+			if i == 1 {
+				// Once the webhook's delete is under way: it holds the oldest message already.
+				time.Sleep(time.Duration(5+round%4*5) * time.Millisecond)
+				return statusErr(w.owner.delete("/api/channels/"+ch.String()+"/messages/"+msg.String()), http.StatusNoContent, http.StatusNotFound)
+			}
+			return statusErr(w.owner.delete("/api/admin/webhooks/"+hook.String()), http.StatusNoContent, http.StatusOK)
+		},
+		func(round int, r racetest.Round) string {
+			for i, err := range r.Errs {
+				if err != nil {
+					return fmt.Sprintf("round %d caller %d: %v", round, i, err)
+				}
+			}
+			if n := a.count(`SELECT COUNT(*) FROM webhooks WHERE id = $1`, hook); n != 0 {
+				return fmt.Sprintf("round %d: the webhook is still there", round)
+			}
+			return ""
+		}).FailOnViolation(t)
+}
