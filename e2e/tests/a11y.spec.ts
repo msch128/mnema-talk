@@ -51,10 +51,12 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
   const hello = page.locator('[data-msg-id]', { hasText: 'Hello' }).first()
   await hello.hover()
   await hello.getByTestId('msg-open-thread').click()
-  const threadTimer = page.getByRole('complementary').getByTestId('lifetime-button')
+  const threadTimer = page.locator('aside').filter({ has: page.getByTestId('thread-close') }).getByTestId('lifetime-button')
   await threadTimer.click()
-  await page.getByRole('menuitem', { name: '1 Std.' }).click()
-  await expect(page.getByRole('complementary').getByTestId('lifetime-chip')).toHaveText('1 Std.')
+  await page.getByRole('menuitem', { name: '1 Std', exact: true }).click()
+  // The narrow thread panel keeps the timer an icon: the choice is in its name and the help line.
+  await expect(threadTimer).toHaveAttribute('aria-label', /1 Std/)
+  await expect(page.locator('aside').filter({ has: page.getByTestId('thread-close') }).getByTestId('lifetime-help')).toBeVisible()
   await expectNoViolations(page, 'the thread composer timer')
   await page.getByTestId('thread-close').click()
 
