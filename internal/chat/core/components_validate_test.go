@@ -181,7 +181,7 @@ func TestAnAnswerMustFitItsInput(t *testing.T) {
 	if got, err := CheckInputAnswer(optional, "line one\nline two"); err != nil || got != "line one\nline two" {
 		t.Fatalf("a paragraph keeps its lines: %q %v", got, err)
 	}
-	if _, err := CheckInputAnswer(optional, strings.Repeat("ä", MaxInputLen+1)); err == nil {
+	if _, err := CheckInputAnswer(optional, strings.Repeat("é", MaxInputLen+1)); err == nil {
 		t.Fatal("an answer over 4000 characters accepted")
 	}
 }
