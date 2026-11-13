@@ -97,10 +97,8 @@ func (h *Handler) noticeSnapshot(ctx context.Context, ev *CommunityEvent) *perm.
 }
 
 func (h *Handler) pushNotice(ctx context.Context, p signupPusher, ev *CommunityEvent, userID uuid.UUID, kind, role string) {
-	h.notices.Add(1)
 	bg := context.WithoutCancel(ctx)
-	safego.Go("event_signup_notice", safego.Abandon, func() {
-		defer h.notices.Done()
+	safego.GoWaited(&h.notices, "event_signup_notice", safego.Abandon, func() {
 		bg, cancel := context.WithTimeout(bg, noticePushTimeout)
 		defer cancel()
 		if err := p.SendEventSignupNotice(bg, userID, ev.ID, ev.Title, kind, role, ev.StartTime, ev.ChannelID); err != nil {
