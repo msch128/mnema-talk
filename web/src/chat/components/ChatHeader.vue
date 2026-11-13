@@ -161,13 +161,13 @@ function openNotificationMenu(e: MouseEvent) {
         class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
-      <!-- On a phone the chip is its icon only: the note under the header says it in full. -->
+      <!-- In a narrow header (a phone, or beside the member list) the chip is its icon only: the note under the header says it in full. -->
       <span
         v-if="autoDelete"
         data-testid="auto-delete-chip"
         class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="effectLine(autoDelete)"
-      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="max-md:sr-only">{{ periodLabel(autoDelete.hours) }}</span></span>
+      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="@max-[40rem]:sr-only">{{ periodLabel(autoDelete.hours) }}</span></span>
     </div>
 
     <!-- Right: Badges & member list toggle -->
