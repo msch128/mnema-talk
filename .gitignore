@@ -102,3 +102,7 @@ __pycache__/
 
 # A symlinked web/node_modules (worktrees) is not matched by the directory pattern above.
 /web/node_modules
+
+# The TypeScript bot SDK is its own repository (github.com/mnema-xyz/bot-sdk);
+# CI checks it out here for the contract tests.
+/sdk/typescript/

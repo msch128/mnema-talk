@@ -36,8 +36,8 @@ updates:
       loadtest-go-modules:
         patterns: ["*"]
 
-  # The bot SDKs (sdk/go is its own module; sdk/typescript has dev
-  # dependencies only).
+  # The Go bot SDK (its own module). The TypeScript SDK lives in
+  # github.com/mnema-xyz/bot-sdk, with its own Dependabot.
   - package-ecosystem: gomod
     directory: /sdk/go
     schedule:
@@ -50,20 +50,6 @@ updates:
       prefix: "build(deps)"
     groups:
       sdk-go-modules:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /sdk/typescript
-    schedule:
-      interval: weekly
-      day: monday
-    cooldown:
-      default-days: 5
-    open-pull-requests-limit: 2
-    commit-message:
-      prefix: "build(deps-dev)"
-    groups:
-      sdk-npm-dev:
         patterns: ["*"]
 
   - package-ecosystem: npm
