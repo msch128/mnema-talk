@@ -9,6 +9,7 @@ export type ClipRule =
   | 'outside-clip' // partly outside an ancestor that clips
   | 'covered' // an interactive element whose centre another element covers
   | 'text-cut' // the glyphs of a line reach past the box that clips them
+  | 'sliver' // a truncated text shows less than 2.5em, whatever its labels say
 
 export interface ClipFinding {
   rule: ClipRule
@@ -76,10 +77,12 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     return (el.textContent ?? '').replace(/\s+/g, ' ').trim()
   }
 
-  /** Not shown, or deliberately out of reach: inert, aria-hidden, screen-reader only, invisible. */
+  /**
+   * Not shown, or deliberately out of reach: inert, screen-reader only, invisible.
+   * aria-hidden is no reason: it hides from screen readers, and the text under it is still drawn.
+   */
   function ignored(el: Element): boolean {
-    // aria-hidden on an icon only hides it from screen readers; on a container it marks a closed panel.
-    if (el.closest('[inert], [aria-hidden="true"]:not(svg), .sr-only, .mnema-tooltip')) return true
+    if (el.closest('[inert], .sr-only, .mnema-tooltip')) return true
     const s = styleOf(el)
     // No box of its own (display: contents) or not painted; its children are checked one by one.
     if (s.visibility !== 'visible' || s.display === 'contents' || s.display === 'none') return true
@@ -101,12 +104,13 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     return hidden
   }
 
-  /** The whole text is available some other way: a title, an aria-label or a v-tooltip that contains it. */
+  /**
+   * The whole text is available some other way: a title, an aria-label or a v-tooltip that contains it.
+   * v-full-text (web/src/directives/fullText.ts) counts through the title it keeps while the text is cut.
+   */
   function hasFullText(el: Element): boolean {
     const full = textOf(el).toLowerCase()
     if (!full) return true
-    // v-full-text (web/src/directives/fullText.ts) puts the whole text in a title while it is cut.
-    if (el.hasAttribute('data-full-text')) return true
     let node: Element | null = el
     for (let depth = 0; node && depth < 5; depth++, node = node.parentElement) {
       const tip = (node as Element & { __tip?: { text?: string } | null }).__tip?.text
@@ -145,7 +149,7 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
         }
         if (!(child instanceof Element)) continue
         const s = styleOf(child)
-        if (s.display === 'none' || s.position === 'fixed' || Number(s.opacity) === 0 || child.matches('[inert], .sr-only, .mnema-tooltip, [aria-hidden="true"]:not(svg)')) continue
+        if (s.display === 'none' || s.position === 'fixed' || Number(s.opacity) === 0 || child.matches('[inert], .sr-only, .mnema-tooltip')) continue
         const r = child.getBoundingClientRect()
         if (s.visibility === 'visible' && r.width >= 1 && r.height >= 1) worst = Math.max(worst, past(r))
         if ((axis === 'x' ? s.overflowX : s.overflowY) === 'visible') visit(child)
@@ -171,7 +175,10 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
       }
       if (scrollSize - clientSize <= tol) continue
       if (deliberateTruncation(el, s, axis)) {
-        if (!hasFullText(el)) findings.push({ rule: 'truncated-without-full-text', selector: selectorOf(el), text: textOf(el).slice(0, 80), measured: { axis, scrollSize, clientSize }, rect: rectOf(el) })
+        // An ellipsis needs some text in front of it: under 2.5em a name is a sliver, labels or not.
+        const em = parseFloat(s.fontSize) || 16
+        if (axis === 'x' && clientSize < 2.5 * em && textOf(el)) findings.push({ rule: 'sliver', selector: selectorOf(el), text: textOf(el).slice(0, 80), measured: { shown: clientSize, needed: round(2.5 * em) }, rect: rectOf(el) })
+        else if (!hasFullText(el)) findings.push({ rule: 'truncated-without-full-text', selector: selectorOf(el), text: textOf(el).slice(0, 80), measured: { axis, scrollSize, clientSize }, rect: rectOf(el) })
         continue
       }
       const visible = visibleOverflow(el, axis)
@@ -235,6 +242,12 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     return true
   }
 
+  /** The element sits in a list that scrolls, so scrolling brings it out from under a sticky bar. */
+  function scrollsFree(el: Element): boolean {
+    const box = clipAncestors(el).find(a => scrolls(a.y))?.el
+    return !!box && box.scrollHeight > box.clientHeight + tol
+  }
+
   /**
    * The hit belongs to a layer above the page that does not hold the element:
    * a menu, popover, dialog, toast, drawer or full-screen panel. Those cover
@@ -243,7 +256,9 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
   function overlay(hit: Element, el: Element): boolean {
     for (let node: Element | null = hit; node && !node.contains(el); node = node.parentElement) {
       const s = styleOf(node)
-      if (s.position === 'fixed' || s.position === 'sticky') return true
+      if (s.position === 'fixed') return true
+      // A sticky bar is part of the page: what lies under it is covered unless its list can scroll it out.
+      if (s.position === 'sticky') return scrollsFree(el)
       if (node.matches('[role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"], [role="tooltip"], [data-toast]')) return true
       if (s.position === 'absolute' && Number(s.zIndex) >= 10) return true
     }
