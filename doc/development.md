@@ -264,9 +264,9 @@ branch) was waived when it landed there and is not reported again.
    `docker.io/mnemaxyz/mnema-talk` with `DOCKERHUB_MNEMAXYZ_USERNAME` and
    `DOCKERHUB_MNEMAXYZ_TOKEN` (Docker Hub allows no hyphen in a name). Each
    leg copies `:X.Y.Z`, `:X.Y`, `:X` and `:latest`, checks the digests, signs
-   the copy the same way and sets the repository's short and full
-   description from `deploy/dockerhub/` (the tokens need the Read, Write,
-   Delete scope for that). A leg without its secrets is skipped with a notice
+   the copy the same way; the mnemaxyz leg also sets that repository's short
+   and full description from `deploy/dockerhub/` (its token has the Read,
+   Write, Delete scope this needs). A leg without its secrets is skipped with a notice
    and the release is not affected. To mirror an
    existing release, run the Release workflow by hand on `main` (`workflow_dispatch`)
    with `mirror_version` set to the version, for example `2.0.0`. Only the mirror job runs: it
