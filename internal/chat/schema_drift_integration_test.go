@@ -61,7 +61,9 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		}
 	})
 	t.Run("attachments query", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id FROM public.media`})
+		// is_deleted stays: the message query reads it for the reply preview,
+		// so the attachment loader is what meets the missing columns.
+		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id,is_deleted FROM public.media`})
 		msgs := []core.Message{{ID: f.m}}
 		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
 		_, _, err := search.Search(ctx, p, search.SearchQuery{Text: "hello", Limit: 10})
