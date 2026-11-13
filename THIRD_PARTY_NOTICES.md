@@ -1,8 +1,8 @@
 # Third-party notices
 
 Mnema Talk is licensed under the GNU AGPL-3.0 (see `LICENSE`); the Go SDK
-under `sdk/go` is MIT (see `sdk/go/LICENSE`). It is built from, and ships, the open-source software listed here. The license texts are
-in each project's repository and, for Go modules and npm packages, in the
+under `sdk/go` is MIT (see `sdk/go/LICENSE`). It is built from, and ships,
+the open-source software listed here. The license texts are in each project's repository and, for Go modules and npm packages, in the
 module or package itself. The legal dialog in the app shows a summary of this
 list (`web/src/shared/lib/thirdParty.ts`).
 
