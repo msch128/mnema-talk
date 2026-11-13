@@ -114,12 +114,18 @@ async function post(page: Page, channelId: string, content: string, extra: Recor
   return responseString(await ok(page, 'POST', `/api/channels/${channelId}/messages`, { content, ...extra }), 'id')
 }
 
-/** A member of its own, registered through an invite from a context with its own client address. */
+/**
+ * A member of its own, from a context with its own client address: signed in
+ * when an earlier seed of this run registered it already (the server allows
+ * few registrations an hour), otherwise registered through an invite.
+ */
 async function registerMember(browser: Browser, admin: Page, username: string, password: string) {
-  const invite = await ok(admin, 'POST', '/api/admin/invites', { max_uses: 1 })
   const ctx = await browser.newContext()
   const page = await ctx.newPage()
   await page.goto('/')
+  const login = await apiFetch(page, 'POST', '/api/auth/login', { username, password })
+  if (login.status === 200) return { ctx, page, id: responseUserId(await apiFetch(page, 'GET', '/api/auth/me')) }
+  const invite = await ok(admin, 'POST', '/api/admin/invites', { max_uses: 1 })
   const res = await ok(page, 'POST', '/api/auth/register', { username, password, invite_code: responseString(invite, 'code') })
   // Registration answers with { user }, /api/auth/me with the user itself.
   return { ctx, page, id: responseUserId({ ...res, json: (res.json as { user?: unknown }).user }) }
@@ -193,6 +199,17 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
+/** The names and password of this run's two members, kept for the whole run so a reseed signs them in. */
+function runMembers(baseURL: string, outputDir: string): { name: string; password: string } {
+  const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
+  const path = join(outputDir, `clip-members-${key}.json`)
+  if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as { name: string; password: string }
+  const name = Date.now().toString(36)
+  const members = { name, password: `pw-${name}-${randomBytes(8).toString('hex')}` }
+  writeFileSync(path, JSON.stringify(members))
+  return members
+}
+
 function cachePath(baseURL: string, outputDir: string): string {
   const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
   return join(outputDir, `clip-world-${key}.json`)
@@ -207,10 +224,10 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
   const admin = await (await browser.newContext()).newPage()
   await signInApi(admin)
   const adminId = responseUserId(await apiFetch(admin, 'GET', '/api/auth/me'))
-  const password = `pw-${suffix}-${randomBytes(8).toString('hex')}`
-  const member = await registerMember(browser, admin, `clip_member_${suffix}`, password)
-  const other = await registerMember(browser, admin, `clip_blocked_${suffix}`, password)
-  const { chat, imageMessageText } = await seedChat(admin, member.page, `clip_member_${suffix}`, suffix)
+  const { name, password } = runMembers(baseURL, outputDir)
+  const member = await registerMember(browser, admin, `clip_member_${name}`, password)
+  const other = await registerMember(browser, admin, `clip_blocked_${name}`, password)
+  const { chat, imageMessageText } = await seedChat(admin, member.page, `clip_member_${name}`, suffix)
   await seedEmbed(admin, chat.id)
   // A forwarded message, and a message of a member the Owner has blocked (the fold).
   const source = await post(member.page, chat.id, 'A message worth forwarding to the same channel')
@@ -222,7 +239,7 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
   await ok(admin, 'PUT', `/api/me/saved/${last}`)
   await ok(admin, 'POST', '/api/me/reminders', { message_id: last, remind_at: new Date(Date.now() + 86_400_000).toISOString() })
   const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix)
-  const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${suffix}`, password }, blockedId: other.id, imageMessageText, lastMessageText }
+  const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${name}`, password }, blockedId: other.id, imageMessageText, lastMessageText }
   for (const ctx of [member.ctx, other.ctx, admin.context()]) await ctx.close()
   writeFileSync(cache, JSON.stringify(world))
   return world
