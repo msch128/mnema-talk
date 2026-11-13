@@ -56,6 +56,7 @@ import { useWebRTC } from './talk/composables/useWebRTC'
 import { useAppRouting } from './app/composables/useAppRouting'
 import { useAppBadge } from './app/composables/useAppBadge'
 import { useCompactLayout } from './shared/composables/useCompactLayout'
+import { useColumnRoom } from './shared/composables/useColumnRoom'
 import { usePushBridge } from './app/composables/usePushBridge'
 import { usePttHint } from './talk/composables/usePttHint'
 import { useTitleBadge } from './app/composables/useTitleBadge'
@@ -82,11 +83,14 @@ onBeforeUnmount(() => {
 })
 const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
+// The member list steps aside for an open thread when the window has no room for both (useColumnRoom).
+const roomForAllColumns = useColumnRoom()
+const membersFit = computed(() => roomForAllColumns.value || !chatStore.activeThread)
 // Column widths. Order = shrink priority on narrow windows
 // (thread first, then member list, then the left sidebar).
 const panels = useResizable([
   { name: 'left', side: 'left', defaultWidth: 240, min: 200, max: 360 },
-  { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => chatStore.showMemberList },
+  { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => chatStore.showMemberList && membersFit.value },
   { name: 'thread', side: 'right', defaultWidth: 400, min: 320, max: 640, visible: () => !!chatStore.activeThread }
 ], { centerMin: 400 })
 // Height of the Talk's chat under the stage; the stage (and its 48px header)
@@ -302,7 +306,7 @@ onMounted(async () => {
 
       <!-- Right column: member list -->
       <div
-        v-if="chatStore.showMemberList && !inConversation"
+        v-if="chatStore.showMemberList && membersFit && !inConversation"
         class="relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas"
         :style="isCompact ? undefined : { width: `${panels.members.width}px` }"
       >
