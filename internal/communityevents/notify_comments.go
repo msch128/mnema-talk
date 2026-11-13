@@ -40,10 +40,8 @@ func excerptOf(content string) string {
 // notifyCommentAsync runs notifyComment off the request, so a comment under a
 // popular event does not hold up the member who wrote it.
 func (h *Handler) notifyCommentAsync(ctx context.Context, ev *CommunityEvent, c EventComment) {
-	h.notices.Add(1)
 	bg := context.WithoutCancel(ctx)
-	safego.Go("event_comment_notice", safego.Abandon, func() {
-		defer h.notices.Done()
+	safego.GoWaited(&h.notices, "event_comment_notice", safego.Abandon, func() {
 		bg, cancel := context.WithTimeout(bg, 2*noticePushTimeout)
 		defer cancel()
 		h.notifyComment(bg, ev, c)

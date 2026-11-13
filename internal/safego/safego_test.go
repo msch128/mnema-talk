@@ -105,6 +105,30 @@ func TestGoRunsOnAnotherGoroutineAndRecovers(t *testing.T) {
 	}
 }
 
+// TestGoWaitedReleasesTheGroupOnlyAfterThePanicIsHandled holds onPanic open
+// and checks that the wait group is still held then: a waiter that wakes
+// finds the panic counted and its clean-up done.
+func TestGoWaitedReleasesTheGroupOnlyAfterThePanicIsHandled(t *testing.T) {
+	captureLog(t)
+	before := metrics.GoroutinePanics.With("test_go_waited").Load()
+	var wg sync.WaitGroup
+	inOnPanic, release := make(chan struct{}), make(chan struct{})
+	GoWaited(&wg, "test_go_waited", func() { close(inOnPanic); <-release }, func() { panic("boom") })
+	<-inOnPanic
+	waited := make(chan struct{})
+	go func() { wg.Wait(); close(waited) }()
+	select {
+	case <-waited:
+		t.Fatal("the wait group was released while onPanic still ran")
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(release)
+	<-waited
+	if got := metrics.GoroutinePanics.With("test_go_waited").Load() - before; got != 1 {
+		t.Errorf("panics counted: %d, want 1", got)
+	}
+}
+
 func TestAfterFuncRecoversAndCanBeStopped(t *testing.T) {
 	captureLog(t)
 	done := make(chan struct{})

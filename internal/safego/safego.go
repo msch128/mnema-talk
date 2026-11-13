@@ -68,6 +68,20 @@ func GoConn(conn Conn, name string, onPanic func(), fn func()) {
 	go RunConn(conn, name, onPanic, fn)
 }
 
+// GoWaited is Go for work that wg tracks: it adds one to wg before the
+// goroutine starts and marks it done only after Run returned, so whoever
+// waits on wg finds a panic of fn already counted, logged and handled. A
+// `defer wg.Done()` inside fn runs before Run's recover and lets the waiter
+// go first. With Crash the panic continues and wg is never released.
+func GoWaited(wg *sync.WaitGroup, name string, onPanic func(), fn func()) {
+	mustHandle(name, onPanic)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		Run(name, onPanic, fn)
+	}()
+}
+
 // AfterFunc is time.AfterFunc with fn under Run.
 func AfterFunc(name string, d time.Duration, onPanic func(), fn func()) *time.Timer {
 	return AfterFuncConn("", name, d, onPanic, fn)
