@@ -108,6 +108,8 @@ const chatScenes: Scene[] = [
       await s.page.getByRole('menuitem', { name: startsWith(s.t('chat.replyInChannel')) }).click()
       await s.page.locator('input[type="file"]').first().setInputFiles(STAGED.map(name => ({ name, mimeType: 'image/png', buffer: IMAGE })))
       await expect(s.page.getByTestId('attachment-tray')).toBeVisible()
+      // The previews load after the tray appears and change its height: audit the settled layout.
+      await s.page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>('[data-testid="attachment-tray"] img')].every(img => img.complete))
     },
     // Staged uploads count against the member's limit of unsent files, and the reply is a draft.
     leave: async (s) => {
