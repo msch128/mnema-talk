@@ -1,0 +1,23 @@
+{
+  "manifest_version": 1,
+  "name": "Dice",
+  "description": "Answers /ping and rolls dice with /roll (examples/slash.ts of the TypeScript SDK).",
+  "homepage": "https://github.com/msch128/mnema-talk/tree/main/sdk/typescript",
+  "intents": [],
+  "permissions": ["view_channel", "send_messages"],
+  "commands": [
+    {
+      "name": "ping",
+      "description": "Replies with pong",
+      "options": [{ "name": "private", "description": "Only you see the answer", "type": 5, "required": false }]
+    },
+    {
+      "name": "roll",
+      "description": "Rolls a die",
+      "options": [
+        { "name": "sides", "description": "How many sides", "type": 4, "required": true },
+        { "name": "label", "description": "What the roll is for", "type": 3, "required": false, "choices": ["attack", "defence", "luck"] }
+      ]
+    }
+  ]
+}
