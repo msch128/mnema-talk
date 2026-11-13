@@ -81,7 +81,7 @@ func messageEvents() []Entry {
 		{Event: saved.SavedUpdated{}},
 		{Event: bot.InteractionResponse{}},
 		{Event: bot.InteractionModal{}},
-		{Event: bot.InteractionDeferred{}},
+		{Event: wire.InteractionDeferred{}},
 	}
 }
 

@@ -89,6 +89,16 @@ func TestADeferralTellsTheMemberTheBotIsOnIt(t *testing.T) {
 	if !ok || json.Unmarshal(p, &got) != nil || got.InteractionID != clicked.InteractionID {
 		t.Fatalf("interaction_deferred after a click: %s", p)
 	}
+	// Another member watching the same channel is not told.
+	ownerWS := mustDial(t, cf.owner)
+	in = cf.command(t)
+	wantStatus(t, "defer for max", cf.callback(in, 5, nil), http.StatusNoContent)
+	if _, ok := cf.maxWS.expect("interaction_deferred", soon); !ok {
+		t.Fatal("max was not told")
+	}
+	if p, ok := ownerWS.expect("interaction_deferred", quiet); ok {
+		t.Fatalf("another member got max's deferral: %s", p)
+	}
 	// A direct answer is no deferral.
 	in = cf.command(t)
 	wantStatus(t, "reply", cf.callback(in, 4, map[string]any{"content": "done"}), http.StatusNoContent)

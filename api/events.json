@@ -496,7 +496,7 @@
     ],
     "interaction_deferred": [
       {
-        "go": "bot.InteractionDeferred",
+        "go": "wire.InteractionDeferred",
         "type": {
           "kind": "object",
           "fields": [
