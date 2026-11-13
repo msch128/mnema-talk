@@ -141,7 +141,7 @@ defineExpose({ guard: form.guard, dirty: form.dirty })
 <template>
   <div class="min-w-0 space-y-4" :aria-label="$t('roles.selected')" role="group" @keydown="form.onKeydown">
     <div class="flex items-center justify-between gap-3">
-      <h4 class="min-w-0 truncate text-base font-semibold text-mnema-text" data-testid="role-editor-title">{{ displayName }}</h4>
+      <h4 v-full-text class="min-w-0 truncate text-base font-semibold text-mnema-text" data-testid="role-editor-title">{{ displayName }}</h4>
       <button type="button" class="btn btn-secondary btn-sm shrink-0" data-testid="role-view-as" @click="viewingAs = true"><Eye class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('roles.viewAs.open', { name: displayName }) }}</button>
     </div>
     <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>

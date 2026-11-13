@@ -228,7 +228,7 @@ async function handleSendReply() {
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
             <span class="font-semibold text-base text-mnema-text shrink-0">{{ $t('thread.title') }}</span>
-            <span class="text-sm text-mnema-tertiary truncate">
+            <span v-full-text class="text-sm text-mnema-tertiary truncate">
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
