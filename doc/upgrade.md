@@ -1509,7 +1509,7 @@ operator is below. Update with the procedure above; take the backup first.
   volume (`postgres18-data`); the PostgreSQL 17 volume (`postgres-data`)
   stays untouched for rollback. Take the complete database/media/config backup
   in step 1 with 0.4.x still running. Fetch every script listed in step 3,
-  including `backup-common.sh` and `upgrade-postgres.sh`. Instead of the
+  including `backup-common.sh`, `backup-online.sh` and `upgrade-postgres.sh`. Instead of the
   ordinary startup in step 5, run:
 
   ```sh

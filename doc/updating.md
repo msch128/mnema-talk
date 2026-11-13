@@ -24,7 +24,7 @@ Admin > System, or the newest on the
 ```sh
 base=https://raw.githubusercontent.com/msch128/mnema-talk/vX.Y.Z
 mkdir -p scripts && cd scripts
-for f in backup.sh backup-common.sh restore.sh upgrade-postgres.sh health-check.sh; do curl -fsSLO "$base/scripts/$f"; done
+for f in backup.sh backup-common.sh backup-online.sh restore.sh upgrade-postgres.sh health-check.sh; do curl -fsSLO "$base/scripts/$f"; done
 chmod +x *.sh && cd ..
 ```
 
@@ -79,6 +79,51 @@ holds the Docker socket: read the [threat model](../SECURITY.md#self-update-side
 first. How the check works: [Verifying a release image](operations.md#verifying-a-release-image).
 Synology: [platform notes](platform-notes.md#synology).
 
+### Unattended updates (cron)
+
+The "Update now" button never runs by itself. For a server that should follow
+patch releases on its own, pin the minor line (`MNEMA_IMAGE=...:X.Y`, a `fix:`
+release only bumps the patch) and let cron do what you would do by hand: back
+up, pull, recreate the app, check health. Save this as
+`/usr/local/sbin/mnema-auto-update`, `chmod 700` it, and adjust the two paths:
+
+```sh
+#!/usr/bin/env bash
+set -uo pipefail
+exec 9>/run/mnema-auto-update.lock; flock -n 9 || exit 0   # never two runs at once
+cd /opt/mnema-talk || exit 1                               # your deployment folder
+img=$(sed -n 's/^MNEMA_IMAGE=//p' .env)
+old=$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null || true)
+docker pull -q "$img" >/dev/null || exit 0
+new=$(docker image inspect -f '{{.Id}}' "$img")
+[ "$new" != "$old" ] || exit 0                              # nothing new
+if BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
+  docker compose up -d --no-deps app
+  for _ in $(seq 1 36); do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk)" = healthy ] && exit 0
+    sleep 5
+  done
+  echo "new version not healthy, going back" >&2           # roll back to the previous image
+  [ -n "$old" ] && docker tag "$old" "$img" && docker compose up -d --no-deps app
+  exit 1
+fi
+docker tag "$old" "$img"                                    # backup failed: do not update
+```
+
+Run it hourly from `/etc/cron.d/mnema-auto-update`
+(`10 * * * * root /usr/local/sbin/mnema-auto-update >> /var/log/mnema-auto-update.log 2>&1`)
+and keep it clear of the nightly backup slot. Things to know:
+
+- Members are disconnected for 30 to 60 seconds during an update, so pick the
+  hours that suit your community (change the cron hour field).
+- This path pulls by tag and does not verify the signature the way the
+  "Update now" button does ([Verifying a release image](operations.md#verifying-a-release-image)).
+  Use a pinned digest and the button if that matters more than automation.
+- A new minor line (a `feat:` release) is never picked up; it can change the
+  compose file, so move to it by hand as described above. A rollback by image
+  cannot undo a database migration; restore the backup the script took
+  ([If it goes wrong](#if-it-goes-wrong)).
+
 ### Command line within a line
 
 For `:X.Y` and `:latest`:
@@ -114,7 +159,7 @@ cp docker-compose.yml docker-compose.yml.bak
 base=https://raw.githubusercontent.com/msch128/mnema-talk/v$NEW
 curl -fsSLo docker-compose.yml        "$base/docker-compose.yml"
 curl -fsSLo .env.example.new          "$base/.env.example"
-for f in backup.sh backup-common.sh restore.sh upgrade-postgres.sh health-check.sh; do
+for f in backup.sh backup-common.sh backup-online.sh restore.sh upgrade-postgres.sh health-check.sh; do
   curl -fsSLo "scripts/$f" "$base/scripts/$f"
 done
 chmod +x scripts/*.sh
