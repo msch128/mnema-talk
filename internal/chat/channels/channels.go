@@ -119,11 +119,12 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
 			categoryID, name, chType, topic, sortOrder).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
 			return err
 		}
+		ch.FillAutoDeleteDays()
 		if asStage {
 			if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
 				return err

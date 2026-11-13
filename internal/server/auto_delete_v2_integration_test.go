@@ -290,3 +290,23 @@ func TestAChangeOfTheSettingDuringARunStopsIt(t *testing.T) {
 		t.Fatal("the run deleted a message after the setting was turned off")
 	}
 }
+
+// A channel that was just created or duplicated answers with the period it
+// follows, like every later read: the web client refuses a channel without a
+// valid scope.
+func TestANewChannelAnswersTheDefaultItFollows(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	wantStatus(t, "default", f.owner.put("/api/admin/message-settings/auto-delete", map[string]any{"hours": 48, "scope": "attachments"}), http.StatusOK)
+	check := func(what string, res response, status int) uuid.UUID {
+		t.Helper()
+		wantStatus(t, what, res, status)
+		var ch core.Channel
+		res.decode(t, &ch)
+		if ch.AutoDeleteHours != 48 || ch.AutoDeleteScope != core.AutoDeleteScopeAttachments || !ch.AutoDeleteFollowsDefault || ch.AutoDeleteDays != 0 {
+			t.Fatalf("%s: %+v", what, ch)
+		}
+		return ch.ID
+	}
+	id := check("create", f.owner.post("/api/admin/channels", map[string]any{"name": "fresh", "type": "text"}), http.StatusCreated)
+	check("duplicate", f.owner.post("/api/admin/channels/"+id.String()+"/duplicate", nil), http.StatusCreated)
+}
