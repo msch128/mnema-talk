@@ -100,7 +100,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
         <NavDrawerButton />
         <MessagesSquare class="w-5 h-5 text-mnema-accent shrink-0" />
         <div class="min-w-0">
-          <h1 class="text-base font-semibold text-mnema-text truncate">
+          <h1 v-full-text class="text-base font-semibold text-mnema-text truncate">
             {{ channelName }}
           </h1>
           <p v-if="channelTopic" class="text-xs text-mnema-tertiary truncate">

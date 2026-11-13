@@ -50,7 +50,7 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
         <Volume2 class="w-4 h-4" />
       </div>
       <div class="flex items-center gap-2 min-w-0">
-        <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
+        <h2 v-full-text class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
           {{ channelName || $t('voice.channelFallback') }}
         </h2>
         <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />

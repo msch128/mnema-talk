@@ -117,7 +117,7 @@ function roles() {
 
     <!-- Display name -->
     <td class="py-3 px-4 md:max-xl:hidden max-md:block max-md:px-0 max-md:py-1">
-      <span data-testid="user-displayname" class="text-mnema-text font-medium truncate block max-w-[160px]">{{ user.display_name || user.username }}</span>
+      <span v-full-text data-testid="user-displayname" class="text-mnema-text font-medium truncate block max-w-[160px]">{{ user.display_name || user.username }}</span>
     </td>
 
     <!-- Role -->
