@@ -89,12 +89,14 @@ func MessageCursorExists(ctx context.Context, q db.Querier, before *uuid.UUID) e
 	if before == nil {
 		return nil
 	}
-	return CursorExists(ctx, q, `SELECT 1 FROM messages WHERE id = $1`, *before)
+	return CursorExists(ctx, q, `SELECT 1 FROM messages m WHERE id = $1 AND `+LiveSQL("m"), *before)
 }
 
 func LoadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*MessageRef, error) {
 	var ref MessageRef
-	err := p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id FROM messages WHERE id = $1`, messageID).
+	// A message whose lifetime ended is gone for every route that names it,
+	// even before the sweeper removed it.
+	err := p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id FROM messages m WHERE id = $1 AND `+LiveSQL("m"), messageID).
 		Scan(&ref.ChannelID, &ref.AuthorID, &ref.ParentID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrMessageNotFound

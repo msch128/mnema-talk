@@ -41,6 +41,9 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 		return fmt.Errorf("load channel: %w", err)
 	}
 	if kind == core.ChannelKindDM {
+		if err := gateLifetime(ctx, tx, kind, nm); err != nil {
+			return err
+		}
 		return gateDM(ctx, tx, nm, rules)
 	}
 	if talkOf != nil && nm.WebhookID == nil {
@@ -55,6 +58,9 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
 		return core.ErrPostTitleRequired
 	}
+	if err := gateLifetime(ctx, tx, kind, nm); err != nil {
+		return err
+	}
 	if nm.WebhookID == nil && !rules.SlowModeExempt {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
 	}
@@ -63,7 +69,7 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 
 func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID, rules sendRules) error {
 	var isLocked bool
-	err := tx.QueryRow(ctx, `SELECT is_locked FROM messages WHERE id = $1`, parentID).Scan(&isLocked)
+	err := tx.QueryRow(ctx, `SELECT is_locked FROM messages WHERE id = $1 AND (expires_at IS NULL OR expires_at > now())`, parentID).Scan(&isLocked)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrInvalidInput("parent message not found")
 	}

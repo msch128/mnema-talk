@@ -42,7 +42,7 @@ type AutoDeleteSetting struct {
 type AutoDeleteRequest struct {
 	// Days is the older form: 1, 7, 30 or 90; 0 turns auto-delete off. Hours
 	// wins when both are given.
-	Days *int `json:"days" enums:"0,1,7,30,90" binding:"optional" extensions:"x-nullable"`
+	Days *int `json:"days,omitempty" enums:"0,1,7,30,90" binding:"optional"`
 	// Hours is the period in hours, 1 to 8760 (365 days); 0 turns it off for
 	// this channel, also when the community has a default.
 	Hours *int `json:"hours" minimum:"0" maximum:"8760" binding:"optional" extensions:"x-nullable"`

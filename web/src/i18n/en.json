@@ -3376,6 +3376,8 @@
         "sessions_revoke_others": "Signed out all other sessions"
       },
       "settings": {
+        "message_lifetimes_set": "Message lifetimes changed",
+        "auto_delete_default_set": "Auto-delete default changed",
         "upload_limit": "Upload limit changed",
         "onboarding": "Welcome and rules changed",
         "raid": "Raid protection changed",

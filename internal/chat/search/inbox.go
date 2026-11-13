@@ -69,7 +69,7 @@ func InboxSQL() string {
 	cursor := "($4::uuid IS NULL OR (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $4))"
 	// A member the caller blocked leaves no entry, whatever they mention.
 	unblocked := core.AuthorHiddenFrom("$1", "m.user_id")
-	tail := " AND NOT m.in_dm AND m.user_id <> $1 AND " + unblocked + " AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
+	tail := " AND NOT m.in_dm AND m.user_id <> $1 AND " + core.LiveSQL("m") + " AND " + unblocked + " AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
 	return `WITH hits AS (
 		(SELECT m.id, m.created_at FROM message_mentions mm JOIN messages m ON m.id = mm.message_id
 		  WHERE mm.user_id = $1` + tail + `

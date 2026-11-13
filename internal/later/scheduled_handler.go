@@ -20,6 +20,10 @@ type CreateScheduledRequest struct {
 	SendAt    time.Time  `json:"send_at" format:"date-time"`
 	ParentID  *uuid.UUID `json:"parent_id" binding:"optional" format:"uuid" extensions:"x-nullable"`
 	ReplyToID *uuid.UUID `json:"reply_to_id" binding:"optional" format:"uuid" extensions:"x-nullable"`
+	// LifetimeSeconds is the lifetime the message gets when the server posts
+	// it (it starts then): 60 to 2592000, at most the community's ceiling.
+	// Fixed when scheduling. Needs the messages.lifetime feature.
+	LifetimeSeconds *int `json:"lifetime_seconds,omitempty" minimum:"60" maximum:"2592000" binding:"optional"`
 }
 
 // UpdateScheduledRequest is the body of PATCH /api/me/scheduled/{scheduledID};
@@ -61,7 +65,7 @@ func (s *Service) listScheduled(w http.ResponseWriter, r *http.Request) error {
 // createScheduled handles POST /api/channels/{channelID}/scheduled.
 //
 // @Summary Schedule a message
-// @Description Stores a message that the server sends at send_at as the caller, through the normal send path: permissions, slow mode, timeouts, blocks and the direct message rules are checked again at send time, and a refusal turns it into a failed draft (scheduled_message_update with state failed). Needs Send messages in the channel now. Works in channels and conversations. Text only. send_at lies at least 10 seconds and at most a year ahead. At most 50 per member (409 beyond).
+// @Description Stores a message that the server sends at send_at as the caller, through the normal send path: permissions, slow mode, timeouts, blocks and the direct message rules are checked again at send time, and a refusal turns it into a failed draft (scheduled_message_update with state failed). Needs Send messages in the channel now. Works in channels and conversations. Text only. send_at lies at least 10 seconds and at most a year ahead. lifetime_seconds gives the message a lifetime that starts when the server posts it; it is checked now and again at send time. At most 50 per member (409 beyond).
 // @ID createScheduledMessage
 // @Tags Messages
 // @Accept json
@@ -107,8 +111,13 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if err := messages.ValidateTarget(ctx, s.DB, s.Perms, auth.UserFrom(ctx).Subject(), ch, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
+	lifetime, err := checkScheduledLifetime(ctx, s.DB, req.LifetimeSeconds)
+	if err != nil {
+		return err
+	}
 	out, err := s.AddScheduled(ctx, NewScheduled{
 		User: auth.UserFrom(ctx).ID, Channel: ch, ParentID: req.ParentID, ReplyToID: req.ReplyToID, Content: content, SendAt: req.SendAt,
+		LifetimeSeconds: lifetime,
 	})
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -26,7 +27,7 @@ const maxFieldBytes = 64 << 10
 // uploadFields are an upload form's text fields.
 // title and tag_ids (a comma-separated list) make the message a forum post.
 // allowed_mentions (JSON) belongs to the bot API's upload; a member's upload ignores it.
-var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true, "title": true, "tag_ids": true, "allowed_mentions": true}
+var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true, "title": true, "tag_ids": true, "allowed_mentions": true, "lifetime_seconds": true}
 
 // uploadTarget is a validated caption and thread/reply target.
 type uploadTarget struct {
@@ -37,6 +38,8 @@ type uploadTarget struct {
 	allowedMentions string
 	// post is set when the upload starts a forum post.
 	post *forum.PreparedPost
+	// lifetime is the message's lifetime in seconds, 0 for none.
+	lifetime int
 }
 
 // storedUpload is a file already written to object storage.
@@ -46,6 +49,8 @@ type storedUpload struct {
 	filename string
 	mime     string
 	size     int64
+	// width and height are a picture's size; nil for anything else.
+	width, height *int
 }
 
 // errFileTooLarge stops a streamed file at the size limit.
@@ -148,6 +153,9 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 		return nil, err
 	}
 	t := &uploadTarget{content: content, allowedMentions: fields["allowed_mentions"]}
+	if t.lifetime, err = uploadLifetime(fields["lifetime_seconds"]); err != nil {
+		return nil, err
+	}
 	for name, dst := range map[string]**uuid.UUID{"parent_id": &t.parentID, "reply_to_id": &t.replyToID} {
 		raw := fields[name]
 		if raw == "" {
@@ -170,6 +178,19 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 		}
 	}
 	return t, nil
+}
+
+// uploadLifetime reads the optional lifetime_seconds field; the bounds are
+// checked before the file is stored, the community's settings by the door.
+func uploadLifetime(raw string) (int, error) {
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, httpx.ErrInvalidInput("invalid lifetime_seconds")
+	}
+	return n, core.CheckLifetimeBounds(n)
 }
 
 // prepareUploadPost checks the title and tags of an upload that starts a forum
@@ -234,7 +255,8 @@ func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedU
 	if err := h.Store.Upload(ctx, key, stored, mimeType, -1); err != nil {
 		return nil, h.uploadError(ctx, err, body)
 	}
-	return &storedUpload{id: id, key: key, filename: filename, mime: mimeType, size: stored.n}, nil
+	width, height := pictureSize(mimeType, stored.head)
+	return &storedUpload{id: id, key: key, filename: filename, mime: mimeType, size: stored.n, width: width, height: height}, nil
 }
 
 func (h *Handler) readUploadHeader(ctx context.Context, part *multipart.Part) ([]byte, error) {

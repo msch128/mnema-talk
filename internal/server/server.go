@@ -68,6 +68,9 @@ type Deps struct {
 	// WebIndex replaces the built app shell that gets link preview tags
 	// (tests, where the web app is not built); nil uses the embedded one.
 	WebIndex []byte
+	// HoldExpiry leaves the sweeper of messages with a lifetime stopped
+	// (tests that read an ended message the sweeper has not removed yet).
+	HoldExpiry bool
 
 	// Setup holds what the server learned about its surroundings at startup
 	// (announced voice address, clock skew) for the setup checks; nil = none.

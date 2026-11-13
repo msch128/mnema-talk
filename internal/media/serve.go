@@ -45,7 +45,9 @@ func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, err
 	err := h.DB.QueryRow(r.Context(), `
 		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id, staged, uploader_id,
 			EXISTS (SELECT 1 FROM wiki_images w WHERE w.media_id = media.id)
-		FROM media WHERE id = $1`, id).
+		FROM media WHERE id = $1
+		  -- the file of a message whose lifetime ended is gone with it, before the sweep
+		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = media.message_id AND x.expires_at <= now())`, id).
 		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &deleted, &m.channelID, &staged, &uploader, &wikiPicture)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("media not found")

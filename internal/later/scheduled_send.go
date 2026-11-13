@@ -38,18 +38,19 @@ type dueScheduled struct {
 	content   string
 	updatedAt time.Time
 	attempts  int
+	lifetime  *int
 }
 
 func (s *Service) loadDue(ctx context.Context) ([]dueScheduled, error) {
 	rows, err := s.DB.Query(ctx, `
-		SELECT id, user_id, channel_id, parent_id, reply_to_id, content, updated_at, attempts FROM scheduled_messages
+		SELECT id, user_id, channel_id, parent_id, reply_to_id, content, updated_at, attempts, lifetime_seconds FROM scheduled_messages
 		WHERE state = 'pending' AND send_at <= clock_timestamp() AND (retry_at IS NULL OR retry_at <= clock_timestamp()) ORDER BY send_at, id LIMIT $1`, batch)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dueScheduled, error) {
 		var d dueScheduled
-		return d, row.Scan(&d.id, &d.user, &d.channel, &d.parent, &d.replyTo, &d.content, &d.updatedAt, &d.attempts)
+		return d, row.Scan(&d.id, &d.user, &d.channel, &d.parent, &d.replyTo, &d.content, &d.updatedAt, &d.attempts, &d.lifetime)
 	})
 }
 
@@ -134,6 +135,8 @@ func (s *Service) post(ctx context.Context, d dueScheduled) error {
 	}
 	_, err = s.Posts.Post(ctx, messages.MemberActor(user), messages.PostCommand{
 		ChannelID: d.channel, Content: d.content, ParentID: d.parent, ReplyToID: d.replyTo,
+		// The lifetime starts now, when the message is posted.
+		LifetimeSeconds: messages.LifetimeOf(d.lifetime),
 		// The text was checked when it was scheduled; it is sent as stored.
 		ContentChecked: true,
 		// The author is not reading the channel now: what others wrote since

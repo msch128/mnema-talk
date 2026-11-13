@@ -79,13 +79,16 @@ type forwardRow struct {
 	channel   uuid.UUID
 	forwarded bool
 	of        *uuid.UUID
+	// timed: the message has a lifetime.
+	timed bool
 }
 
 // loadForwardRow reads the channel and forward state of a message; a message
-// that does not exist is errMessageNotFound.
+// that does not exist, or whose lifetime ended, is errMessageNotFound.
 func loadForwardRow(ctx context.Context, q rowQuerier, msgID uuid.UUID) (forwardRow, error) {
 	var row forwardRow
-	err := q.QueryRow(ctx, `SELECT channel_id, forwarded, forward_of FROM messages WHERE id = $1`, msgID).Scan(&row.channel, &row.forwarded, &row.of)
+	err := q.QueryRow(ctx, `SELECT channel_id, forwarded, forward_of, expires_at IS NOT NULL FROM messages m WHERE id = $1 AND `+core.LiveSQL("m"), msgID).
+		Scan(&row.channel, &row.forwarded, &row.of, &row.timed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return forwardRow{}, core.ErrMessageNotFound
 	}
@@ -103,6 +106,8 @@ func resolveForwardRoot(ctx context.Context, q rowQuerier, msgID uuid.UUID) (roo
 	switch {
 	case err != nil:
 		return forwardRoot{}, false, err
+	case row.timed:
+		return forwardRoot{}, false, errTimedForward
 	case !row.forwarded:
 		return forwardRoot{id: msgID, channel: row.channel}, true, nil
 	case row.of == nil:
@@ -141,7 +146,7 @@ func refusedAsForward(err error) error {
 // @Param messageID path string true "Message ID." Format(uuid)
 // @Param request body messages.ForwardRequest true "Request body."
 // @Success 201 {object} core.Message "The new message."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the original has a lifetime (it cannot be forwarded: the forward would outlive it)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the same text for every refusal (no access to the original, no right to send in the target, a conversation that does not take the message), or cross-origin request rejected."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the target's slow mode."
@@ -268,7 +273,7 @@ func loadQuote(ctx context.Context, q rowQuerier, id uuid.UUID) (ForwardQuote, e
 		SELECT m.channel_id, CASE WHEN m.in_dm THEN '' ELSE c.name END, u.id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 		       m.content, m.created_at, m.is_edited, (SELECT COUNT(*) FROM media md WHERE md.message_id = m.id)
 		FROM messages m JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id
-		WHERE m.id = $1`, id).Scan(&channel, &name, &author.ID, &author.Username, &author.DisplayName, &avatar,
+		WHERE m.id = $1 AND `+core.LiveSQL("m"), id).Scan(&channel, &name, &author.ID, &author.Username, &author.DisplayName, &avatar,
 		&out.Content, &created, &out.IsEdited, &out.AttachmentCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ForwardQuote{Deleted: true}, nil

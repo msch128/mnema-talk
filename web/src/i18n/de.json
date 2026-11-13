@@ -3376,6 +3376,8 @@
         "sessions_revoke_others": "Alle anderen Sitzungen abgemeldet"
       },
       "settings": {
+        "message_lifetimes_set": "Lebensdauer von Nachrichten geändert",
+        "auto_delete_default_set": "Vorgabe für automatisches Löschen geändert",
         "upload_limit": "Upload-Limit geändert",
         "onboarding": "Willkommen und Regeln geändert",
         "raid": "Raid-Schutz geändert",

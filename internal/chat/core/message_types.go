@@ -27,6 +27,11 @@ type MediaAttachment struct {
 	// URL is /api/media/{id}.
 	URL       string `json:"url"`
 	IsDeleted bool   `json:"is_deleted"`
+	// Width and Height are a picture's size, measured at upload and kept
+	// when the file is removed, so its placeholder takes the same room.
+	// Absent for other files and for pictures uploaded before 3.1.
+	Width  *int `json:"width,omitempty" binding:"optional"`
+	Height *int `json:"height,omitempty" binding:"optional"`
 }
 
 type ReactionSummary struct {
@@ -101,6 +106,10 @@ type Message struct {
 	IsResolved bool `json:"is_resolved,omitempty" binding:"optional"`
 	// Tags are the forum tags attached to a forum post (up to 5 tags).
 	Tags []ForumTag `json:"tags,omitempty" binding:"optional"`
+	// ExpiresAt is when the server deletes the message: the end of the
+	// lifetime its sender chose (doc/timed-messages.md). Absent on a message
+	// without one. Clients hide the message at that moment on their own clock.
+	ExpiresAt *time.Time `json:"expires_at,omitempty" binding:"optional" format:"date-time"`
 	// LastActivityAt is the timestamp of the latest reply in the thread, or the post's creation time.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty" binding:"optional" format:"date-time"`
 }

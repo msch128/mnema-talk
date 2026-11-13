@@ -35,7 +35,7 @@ func (threadCommand) Available(*perm.Snapshot, perm.Subject, uuid.UUID) bool { r
 func (c threadCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
 	var root uuid.UUID
 	err := c.svc.DB.QueryRow(ctx, `
-		SELECT id FROM messages WHERE channel_id = $1 AND user_id = $2 AND parent_id IS NULL
+		SELECT id FROM messages m WHERE channel_id = $1 AND user_id = $2 AND parent_id IS NULL AND (m.expires_at IS NULL OR m.expires_at > now())
 		ORDER BY created_at DESC, id DESC LIMIT 1`, call.Channel, call.User.ID).Scan(&root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return slash.Result{}, httpx.ErrInvalidInput("you have no message in this channel to start a thread on")

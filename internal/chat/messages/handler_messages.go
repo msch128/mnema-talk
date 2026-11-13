@@ -75,7 +75,7 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // ServeCreateMessage handles POST /api/channels/{channelID}/messages.
 //
 // @Summary Post a message
-// @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.
+// @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty. With lifetime_seconds the server deletes the message (as its author's delete would) that long after storing it; the message carries expires_at. A lifetime is refused (400) when lifetimes are off, beyond the community's ceiling, and for the root of a forum post.
 // @ID createMessage
 // @Tags Messages
 // @Accept json
@@ -105,7 +105,7 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	posted, err := a.Posts.Post(r.Context(), MemberActor(auth.UserFrom(r.Context())), PostCommand{
 		ChannelID: chID, Content: req.Content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
-		AttachmentIDs: req.AttachmentIDs, Nonce: req.Nonce,
+		AttachmentIDs: req.AttachmentIDs, Nonce: req.Nonce, LifetimeSeconds: req.lifetime(),
 	})
 	if err != nil {
 		return err
@@ -279,7 +279,15 @@ type CreateMessageRequest struct {
 	// same nonce again (a retry after a lost connection) returns the first
 	// message with 200 instead of posting a second one.
 	Nonce *uuid.UUID `json:"nonce,omitempty" format:"uuid" binding:"optional"`
+	// LifetimeSeconds makes the server delete the message that long after
+	// it is stored: 60 to 2592000 and at most the community's ceiling
+	// (GET /api/message-settings). Fixed at sending. Needs the
+	// messages.lifetime feature (doc/timed-messages.md).
+	LifetimeSeconds *int `json:"lifetime_seconds,omitempty" minimum:"60" maximum:"2592000" binding:"optional"`
 }
+
+// lifetime is the chosen lifetime, 0 for none.
+func (req CreateMessageRequest) lifetime() int { return LifetimeOf(req.LifetimeSeconds) }
 
 // EditMessageRequest is the body of PUT /api/channels/{channelID}/messages/{messageID}.
 type EditMessageRequest struct {

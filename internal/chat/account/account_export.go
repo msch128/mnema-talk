@@ -21,7 +21,7 @@ func exportEdits(ctx context.Context, q db.Querier, user uuid.UUID, max int) (an
 	}
 	vs, err := userdata.Collect(ctx, q, pgx.RowToStructByName[version], `SELECT e.message_id, e.content, e.edited_at, e.replaced_at
 		FROM message_edits e JOIN messages m ON m.id = e.message_id
-		WHERE e.editor_id = $1 AND m.user_id = $1 ORDER BY e.id DESC LIMIT $2`, user, max+1)
+		WHERE e.editor_id = $1 AND m.user_id = $1 AND (m.expires_at IS NULL OR m.expires_at > now()) ORDER BY e.id DESC LIMIT $2`, user, max+1)
 	if err != nil {
 		return nil, err
 	}

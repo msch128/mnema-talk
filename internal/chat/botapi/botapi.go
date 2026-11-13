@@ -145,6 +145,10 @@ type BotCreateMessageRequest struct {
 	MessageReference *BotMessageReference `json:"message_reference"`
 	// ParentID posts into the thread of a root message of the channel.
 	ParentID *uuid.UUID `json:"parent_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	// LifetimeSeconds makes the server delete the message that long after
+	// it is stored, as for a member (60 to 2592000, at most the community's
+	// ceiling; doc/timed-messages.md). Needs the messages.lifetime feature.
+	LifetimeSeconds *int `json:"lifetime_seconds,omitempty" minimum:"60" maximum:"2592000" binding:"optional"`
 }
 
 type rawBotMessage struct {
@@ -153,6 +157,7 @@ type rawBotMessage struct {
 	AllowedMentions  *BotAllowedMentions  `json:"allowed_mentions"`
 	MessageReference *BotMessageReference `json:"message_reference"`
 	ParentID         *uuid.UUID           `json:"parent_id"`
+	LifetimeSeconds  *int                 `json:"lifetime_seconds"`
 }
 
 // ChannelPermsOf is what user may do in a channel, with the snapshot it was
@@ -243,7 +248,7 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	cmd := messages.PostCommand{
 		ChannelID: chID, Content: req.Content, Embeds: req.Embeds, ParentID: req.ParentID,
-		AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions),
+		AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions), LifetimeSeconds: messages.LifetimeOf(req.LifetimeSeconds),
 	}
 	if req.MessageReference != nil {
 		cmd.ReplyToID = &req.MessageReference.MessageID
