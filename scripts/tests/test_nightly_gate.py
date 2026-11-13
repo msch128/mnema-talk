@@ -92,6 +92,18 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn('store-trace.yml has no completed scheduled run yet; it was added 16 h ago', out)
 
+    def test_a_new_sweep_with_pull_request_runs_only_passes_while_young(self):
+        # clip-sweep.yml also runs on pull requests: those runs are no night.
+        young = workflow(created='2026-11-13T20:00:00Z')
+        prs = [run(2, '2026-11-14T01:00:00Z', 'failure', event='pull_request', branch='fix'),
+               run(1, '2026-11-13T21:00:00Z', event='pull_request', branch='fix')]
+        status, out, _, _ = gate(all_green(clip_sweep=(young, prs)))
+        self.assertEqual(status, 0)
+        self.assertIn('clip-sweep.yml has no completed scheduled run yet; it was added 16 h ago', out)
+        status, out, _, _ = gate(all_green(clip_sweep=(workflow(), prs)))
+        self.assertEqual(status, 1)
+        self.assertIn('clip-sweep.yml has no completed scheduled run on main although it was added', out)
+
     def test_no_run_at_all_blocks_once_the_first_nights_should_have_run(self):
         status, out, _, _ = gate(all_green(store_trace=(workflow(), [])))
         self.assertEqual(status, 1)
