@@ -102,6 +102,7 @@ func TestEveryChannelScopedRouteHidesAPrivateChannelFromOutsiders(t *testing.T) 
 		{"delete channel", "DELETE", ab, nil},
 		{"duplicate channel", "POST", ab + "/duplicate", map[string]any{}},
 		{"auto-delete", "PUT", ab + "/auto-delete", map[string]any{"days": 7}},
+		{"auto-delete preview", "POST", ab + "/auto-delete/preview", map[string]any{"hours": 24}},
 		{"overwrites", "GET", ab + "/overwrites", nil},
 		{"set overwrites", "PUT", ab + "/overwrites", map[string]any{"overwrites": []any{}}},
 	}

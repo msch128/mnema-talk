@@ -1910,10 +1910,55 @@
         ],
         "type": "object"
       },
+      "chat.AutoDeleteDefaultRequest": {
+        "properties": {
+          "hours": {
+            "description": "Hours is the community default, 0 (off) to 8760.",
+            "maximum": 8760,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "scope": {
+            "description": "Scope is what it removes: \"all\" (the default) or \"attachments\".",
+            "enum": [
+              "all",
+              "attachments"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "hours"
+        ],
+        "type": "object"
+      },
+      "chat.AutoDeletePreview": {
+        "properties": {
+          "attachments": {
+            "description": "Attachments is how many files would be removed.",
+            "type": "integer"
+          },
+          "messages": {
+            "description": "Messages is how many messages would be deleted, thread replies that go\nwith their root included; 0 for the scope \"attachments\".",
+            "type": "integer"
+          },
+          "next_run_at": {
+            "description": "NextRunAt is when the sweeper runs next.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachments",
+          "messages",
+          "next_run_at"
+        ],
+        "type": "object"
+      },
       "chat.AutoDeleteRequest": {
         "properties": {
           "days": {
-            "description": "Days is how long messages stay: 1, 7, 30 or 90; 0 turns auto-delete off.",
+            "description": "Days is the older form: 1, 7, 30 or 90; 0 turns auto-delete off. Hours\nwins when both are given.",
             "enum": [
               0,
               1,
@@ -1921,12 +1966,33 @@
               30,
               90
             ],
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "hours": {
+            "description": "Hours is the period in hours, 1 to 8760 (365 days); 0 turns it off for\nthis channel, also when the community has a default.",
+            "maximum": 8760,
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "scope": {
+            "description": "Scope is what goes: \"all\" (the default) the messages with their files,\n\"attachments\" only the files.",
+            "enum": [
+              "all",
+              "attachments"
+            ],
+            "type": "string"
+          },
+          "use_default": {
+            "description": "UseDefault makes the channel follow the community default; days and\nhours are then ignored.",
+            "type": "boolean"
           }
         },
-        "required": [
-          "days"
-        ],
         "type": "object"
       },
       "chat.BotAllowedMentions": {
@@ -2151,10 +2217,28 @@
       "chat.Channel": {
         "properties": {
           "auto_delete_days": {
-            "description": "AutoDeleteDays removes messages older than this many days (1, 7, 30 or\n90; pinned messages stay); 0 = off. Never set on direct messages.",
-            "maximum": 90,
+            "description": "AutoDeleteDays is the effective auto-delete period in days: exact for\nwhole days, otherwise rounded down and at least 1 while it is on; 0 when\nit is off or deletes only files (auto_delete_scope \"attachments\").\nNever set on direct messages. Kept for older clients: auto_delete_hours\nis the precise value (doc/timed-messages.md).",
+            "maximum": 365,
             "minimum": 0,
             "type": "integer"
+          },
+          "auto_delete_follows_default": {
+            "description": "AutoDeleteFollowsDefault says the channel has no setting of its own and\nfollows the community default (which may be off).",
+            "type": "boolean"
+          },
+          "auto_delete_hours": {
+            "description": "AutoDeleteHours is the effective period after which messages (or, with\nthe scope \"attachments\", their files) are removed; 0 = off. Pinned\nmessages stay.",
+            "maximum": 8760,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "auto_delete_scope": {
+            "description": "AutoDeleteScope is what the period removes: \"all\" the messages with\ntheir files, \"attachments\" only the files.",
+            "enum": [
+              "all",
+              "attachments"
+            ],
+            "type": "string"
           },
           "category_id": {
             "format": "uuid",
@@ -3161,6 +3245,46 @@
         },
         "type": "object"
       },
+      "chat.LifetimeSettings": {
+        "properties": {
+          "message_lifetime_max_seconds": {
+            "description": "MaxSeconds is the longest lifetime anybody may choose.",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": "integer"
+          },
+          "message_lifetimes_enabled": {
+            "description": "Enabled lets members send messages with a lifetime.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message_lifetime_max_seconds",
+          "message_lifetimes_enabled"
+        ],
+        "type": "object"
+      },
+      "chat.LifetimeSettingsRequest": {
+        "properties": {
+          "message_lifetime_max_seconds": {
+            "description": "MaxSeconds is the new ceiling, 60 to 2592000; absent keeps it.",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "message_lifetimes_enabled": {
+            "description": "Enabled switches lifetimes on or off; absent keeps it.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "chat.MarkAllReadRequest": {
         "properties": {
           "category_id": {
@@ -3578,6 +3702,47 @@
         },
         "required": [
           "edits"
+        ],
+        "type": "object"
+      },
+      "chat.MessageSettingsView": {
+        "properties": {
+          "auto_delete_default_hours": {
+            "description": "AutoDeleteDefaultHours is the period channels without a setting of\ntheir own follow; 0 = off.",
+            "maximum": 8760,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "auto_delete_default_scope": {
+            "description": "AutoDeleteDefaultScope is what that default removes.",
+            "enum": [
+              "all",
+              "attachments"
+            ],
+            "type": "string"
+          },
+          "auto_delete_next_run_at": {
+            "description": "AutoDeleteNextRunAt is when the auto-delete sweeper runs next.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "message_lifetime_max_seconds": {
+            "description": "LifetimeMaxSeconds is the longest lifetime anybody may choose.",
+            "maximum": 2592000,
+            "minimum": 60,
+            "type": "integer"
+          },
+          "message_lifetimes_enabled": {
+            "description": "LifetimesEnabled lets members send messages with a lifetime.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "auto_delete_default_hours",
+          "auto_delete_default_scope",
+          "auto_delete_next_run_at",
+          "message_lifetime_max_seconds",
+          "message_lifetimes_enabled"
         ],
         "type": "object"
       },
@@ -13595,7 +13760,7 @@
     },
     "/api/admin/channels/{id}/auto-delete": {
       "put": {
-        "description": "Opt-in per channel: a background sweeper removes messages older than 1, 7, 30 or 90 days, attachments included, and broadcasts message_delete for each. Pinned messages and thread roots that still have a newer or pinned reply stay. 0 turns it off. Direct messages never take part (404). Requires the Manage channels permission. Changing the setting is written to the audit log (channel.auto_delete_set), and every sweep that removed messages as channel.auto_delete_run with the counts. Needs the channels.auto_delete feature.",
+        "description": "A background sweeper removes what is older than the period: with scope \"all\" the messages with their attachments (broadcasting message_delete for each), with \"attachments\" only the files (the messages stay and show the files as removed; message_update for each). Pinned messages and their files stay, and so do thread roots that still have a newer or pinned reply. hours (0 to 8760) wins over the older days (0, 1, 7, 30, 90); 0 turns it off for this channel even when the community has a default; use_default makes the channel follow the community default. Conversations and their call Talks never take part (404). Requires the Manage channels permission. Changing the setting is written to the audit log (channel.auto_delete_set), and every sweep that removed something as channel.auto_delete_run with the counts. Needs the channels.auto_delete feature; hours, scope and use_default need channels.auto_delete.v2.",
         "operationId": "setChannelAutoDelete",
         "parameters": [
           {
@@ -13639,7 +13804,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or days other than 0, 1, 7, 30, 90."
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs, days other than 0, 1, 7, 30, 90, hours outside 0 to 8760, an unknown scope, or none of hours, days and use_default."
           },
           "401": {
             "content": {
@@ -13706,6 +13871,124 @@
           }
         ],
         "summary": "Set a channel's auto-delete",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/channels/{id}/auto-delete/preview": {
+      "post": {
+        "description": "A dry run of PUT /api/admin/channels/{id}/auto-delete with the same body: how many messages and files the setting would remove at its next run, and when that is. Changes nothing. Requires the Manage channels permission in the channel; the counts are of a channel the caller can already read. Needs the channels.auto_delete.v2 feature.",
+        "operationId": "previewChannelAutoDelete",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.AutoDeleteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.AutoDeletePreview"
+                }
+              }
+            },
+            "description": "What would be removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): as for setting it."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Preview a channel's auto-delete",
         "tags": [
           "Admin"
         ]
@@ -16903,6 +17186,369 @@
           }
         ],
         "summary": "Delete a media object",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/message-settings": {
+      "get": {
+        "description": "Owner and Administrators: the lifetime switch and ceiling, the community's auto-delete default and when auto-delete runs next. Needs the messages.lifetime feature.",
+        "operationId": "getMessageSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MessageSettingsView"
+                }
+              }
+            },
+            "description": "The settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not the Owner or an Administrator."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Message settings",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/message-settings/auto-delete": {
+      "put": {
+        "description": "Owner and Administrators; audited as settings.auto_delete_default_set. Every community channel without an auto-delete setting of its own follows it; conversations and their call Talks never do. hours 0 turns the default off (the initial state). Broadcasts channels_changed. Needs the channels.auto_delete.v2 feature.",
+        "operationId": "setAutoDeleteDefault",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.AutoDeleteDefaultRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MessageSettingsView"
+                }
+              }
+            },
+            "description": "The settings now."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, hours outside 0 to 8760 or an unknown scope."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not the Owner or an Administrator, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the auto-delete default",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/message-settings/auto-delete/preview": {
+      "post": {
+        "description": "Owner and Administrators: a dry run of PUT /api/admin/message-settings/auto-delete with the same body, counted over every channel that follows the default. Changes nothing. Needs the channels.auto_delete.v2 feature.",
+        "operationId": "previewAutoDeleteDefault",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.AutoDeleteDefaultRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.AutoDeletePreview"
+                }
+              }
+            },
+            "description": "What would be removed."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): as for setting it."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not the Owner or an Administrator, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Preview the auto-delete default",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/message-settings/lifetimes": {
+      "put": {
+        "description": "Owner and Administrators; audited as settings.message_lifetimes_set. Switching lifetimes off refuses new messages with a lifetime; those that have one still end on time. The ceiling holds for everyone, the Owner included. Broadcasts channels_changed. Needs the messages.lifetime feature.",
+        "operationId": "setLifetimeSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.LifetimeSettingsRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MessageSettingsView"
+                }
+              }
+            },
+            "description": "The settings now."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or a ceiling outside 60 to 2592000."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not the Owner or an Administrator, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the lifetime settings",
         "tags": [
           "Admin"
         ]
@@ -34707,6 +35353,71 @@
           }
         ],
         "summary": "Mentions inbox",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/message-settings": {
+      "get": {
+        "description": "Whether members may send messages with a lifetime and the longest one they may choose (doc/timed-messages.md). Changes come with channels_changed. Needs the messages.lifetime feature.",
+        "operationId": "getLifetimeSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.LifetimeSettings"
+                }
+              }
+            },
+            "description": "The settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Lifetime settings",
         "tags": [
           "Messages"
         ]
