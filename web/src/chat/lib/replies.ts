@@ -41,11 +41,18 @@ export function patchReplyPreviews(lists: Array<Array<Pick<Message, 'reply_to' |
   return touched
 }
 
-/** The original was edited: refresh the cached snippet, built like the server's (mdplain.Snippet). */
+/**
+ * The original was edited, or a file of it removed: refresh the cached snippet,
+ * built like the server's (mdplain.Snippet), and say "File removed" once every
+ * file is gone, as the server does.
+ */
 export function markPreviewEdited(lists: Array<Array<Pick<Message, 'reply_to' | 'reply_to_id'>>>, original: Pick<Message, 'id'> & Partial<Pick<Message, 'content' | 'attachments'>>): number {
+  const files = original.attachments
   return patchReplyPreviews(lists, original.id, preview => {
     if (typeof original.content === 'string') preview.content = markdownSnippet(original.content)
-    if (Array.isArray(original.attachments)) preview.has_attachments = original.attachments.length > 0
+    if (!Array.isArray(files)) return
+    preview.has_attachments = files.length > 0
+    preview.attachments_removed = files.length > 0 && files.every(file => file.is_deleted)
   })
 }
 
