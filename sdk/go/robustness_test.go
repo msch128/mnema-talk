@@ -222,3 +222,14 @@ func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing
 	default:
 	}
 }
+
+func TestAConnectionEndedByAnInteractionFloodIsNotHealthy(t *testing.T) {
+	cn := newConn(nil, nil)
+	cn.healthy.Store(true)
+	if out := cn.outcome(errUnshedOverflow); out.healthy {
+		t.Fatal("a flooded connection counts as healthy, so the backoff would start over")
+	}
+	if out := cn.outcome(errors.New("read: connection reset")); !out.healthy {
+		t.Fatal("an ordinary drop of a healthy connection must stay healthy")
+	}
+}

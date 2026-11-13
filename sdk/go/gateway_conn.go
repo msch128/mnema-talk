@@ -102,7 +102,9 @@ func (cn *conn) run(ctx context.Context, d *dispatcher) outcome {
 }
 
 func (cn *conn) outcome(err error) outcome {
-	out := outcome{err: err, healthy: cn.healthy.Load()}
+	// A connection the client closed because its server flooded it is no
+	// healthy one: the backoff grows instead of starting over.
+	out := outcome{err: err, healthy: cn.healthy.Load() && !errors.Is(err, errUnshedOverflow)}
 	var ce *websocket.CloseError
 	switch {
 	case cn.abortCode.Load() != 0:
