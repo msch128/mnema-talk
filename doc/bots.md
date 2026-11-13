@@ -791,7 +791,7 @@ answered otherwise (`4`, `5`, `6`). Follow-ups are refused after a modal
 There are two official SDKs, both tested against the server in CI on every
 change: [TypeScript](https://github.com/mnema-xyz/bot-sdk) (npm package
 [`@mnema-xyz/bot-sdk`](https://www.npmjs.com/package/@mnema-xyz/bot-sdk),
-`npm install @mnema-xyz/bot-sdk`; Node 24 or newer, no runtime dependencies)
+`npm install @mnema-xyz/bot-sdk`; MIT licensed, Node 24 or newer, no runtime dependencies)
 and [Go](../sdk/go/README.md) (module `github.com/msch128/mnema-talk/sdk/go`,
 in this repository). Both cover the REST API with rate
 limits, the gateway with heartbeats, resume and reconnects, slash command

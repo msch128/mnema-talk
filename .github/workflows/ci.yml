@@ -497,7 +497,7 @@ jobs:
         with:
           persist-credentials: false
           repository: mnema-xyz/bot-sdk
-          ref: be52164f19d35315a8372c9eb32bb5c3e875e209 # BOT_SDK_REF, v3.1.1
+          ref: 82402892f4529d83d0f1c6f065f9b749408bbb9c # BOT_SDK_REF, v3.1.3
           path: sdk/typescript
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
