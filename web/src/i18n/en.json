@@ -1097,6 +1097,7 @@
     "messageNotFound": "Message not found",
     "replyTargetGone": "The message you were replying to is gone. Your message was sent without the reply.",
     "messageLoadFailed": "Couldn’t load the message. Try again.",
+    "windowLoadFailed": "Couldn’t load the messages.",
     "editFailed": "Couldn’t save your change. Try again.",
     "deleteFailed": "Couldn’t delete the message. Try again.",
     "sendFailed": "Couldn’t send the message. Try again.",

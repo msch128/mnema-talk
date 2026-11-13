@@ -48,6 +48,7 @@ function exposedState(cs: ChatState) {
     isLoadingBefore: cs.isLoadingBefore,
     isLoadingAfter: cs.isLoadingAfter,
     isLoadingWindow: cs.isLoadingWindow,
+    windowLoadFailed: cs.windowLoadFailed,
     missedLiveCount: cs.missedLiveCount,
     liveAppendSeq: cs.liveAppendSeq,
     latestLoadSeq: cs.latestLoadSeq,

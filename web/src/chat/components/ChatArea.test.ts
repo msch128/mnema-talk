@@ -751,3 +751,18 @@ describe('ChatArea message menu trigger paths', () => {
     expect(rowComponent('new').props('grouped')).toBe(false)
   })
 })
+
+describe('ChatArea when the messages fail to load', () => {
+  it('says so with a retry instead of the empty channel, and retries the load', async () => {
+    const chat = setup()
+    chat.messages = []
+    chat.windowLoadFailed = true
+    const fetchMessages = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(true)
+    await nextTick()
+    const failed = w.get('[data-testid="chat-load-failed"]')
+    expect(failed.text()).toContain(t('chat.windowLoadFailed'))
+    expect(w.text()).not.toContain(t('chat.emptyBody'))
+    await failed.get('[data-testid="state-retry"]').trigger('click')
+    expect(fetchMessages).toHaveBeenCalledWith('ch1')
+  })
+})

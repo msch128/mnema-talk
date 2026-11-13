@@ -36,6 +36,7 @@ import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../../shared/lib/chatLogic'
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
+import StatePanel from '../../shared/components/StatePanel.vue'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
 // header with a close button, Discord's welcome texts, no member toggle.
@@ -245,6 +246,9 @@ const groupedIds = computed(() => {
         <p class="font-bold text-2xl text-mnema-text wrap-anywhere">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-muted mt-1">{{ beginningText }}</p>
       </div>
+
+      <!-- The channel's messages failed to load: never "no messages yet" -->
+      <StatePanel v-else-if="!chatStore.messages?.length && chatStore.windowLoadFailed" state="error" retryable data-testid="chat-load-failed" class="h-full justify-center" @retry="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)">{{ $t('chat.windowLoadFailed') }}</StatePanel>
 
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">

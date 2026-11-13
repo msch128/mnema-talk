@@ -214,6 +214,17 @@ const chatScenes: Scene[] = [
     reach: async (s) => { await open(s.page, `/c/${s.world.longName.id}`); await expect(s.page.getByTestId('chat-channel-name')).toBeVisible() },
   },
   {
+    name: 'channel whose messages fail to load',
+    reach: async (s) => {
+      const messages = `**/api/channels/${s.world.longName.id}/messages**`
+      await s.page.route(messages, route => route.fulfill({ status: 500, body: '{}' }))
+      await open(s.page, `/c/${s.world.longName.id}`)
+      // The chat says the load failed and offers a retry, never "no messages yet".
+      await expect(s.page.getByTestId('chat-load-failed').getByTestId('state-retry')).toBeVisible()
+      await s.page.unroute(messages)
+    },
+  },
+  {
     name: 'a list that fails to load',
     reach: async (s) => {
       await s.page.route('**/api/mentions?**', route => route.fulfill({ status: 500, body: '{}' }))

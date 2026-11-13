@@ -1097,6 +1097,7 @@
     "messageNotFound": "Nachricht nicht gefunden",
     "replyTargetGone": "Die Nachricht, auf die du antworten wolltest, gibt es nicht mehr. Deine Nachricht wurde ohne Antwort gesendet.",
     "messageLoadFailed": "Die Nachricht konnte nicht geladen werden. Versuche es noch einmal.",
+    "windowLoadFailed": "Die Nachrichten konnten nicht geladen werden.",
     "editFailed": "Die Änderung konnte nicht gespeichert werden. Versuche es noch einmal.",
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden. Versuche es noch einmal.",
     "sendFailed": "Die Nachricht konnte nicht gesendet werden. Versuche es noch einmal.",
