@@ -323,15 +323,19 @@ settings (**Admin area > Bots**):
   **server-wide by the bot's own role**, so the bot works in every channel
   members can see, including channels created later.
 
-**Private channels stay private.** A channel where `@everyone` is denied *View
-channels* (on the channel or its category) is a private one. A bot with
-access to all channels follows that one rule, which other bots do not: the
-bot does not see such a channel, whatever the server-wide grant says, until
-the channel is listed explicitly (the bot's own role then gets an allow
-overwrite there, exactly as with *Selected channels*). In the add dialog and
-the bot's settings the channels are listed under "private channels too". The
-rest of `@everyone`'s overwrites still do not apply to bots: only its *View
-channels* bit does, and only for a bot with this choice.
+**Private channels stay private.** A channel counts as private when
+`@everyone` alone does not leave *View channels* in place (on the channel, its
+category or server-wide): members see it only through a role or a member
+overwrite. A bot with access to all channels follows that one rule, which
+other bots do not: the bot does not see such a channel, whatever the
+server-wide grant says, until the channel is listed explicitly (the bot's own
+role then gets an allow overwrite there, exactly as with *Selected channels*).
+The same holds for a private category. In the add dialog and the bot's
+settings the channels are listed under "private channels too". Nothing else of
+`@everyone` applies to bots, with or without this choice: a bot with access to
+all channels may therefore write in a channel where `@everyone` is denied
+*Send messages* (an announcement channel); a member who lacks *Send messages*
+there cannot give the bot that permission everywhere, and the refusal says so.
 
 Nothing about who may grant what changes. *All channels* only ever grants
 channel permissions a manifest may ask for (view, send, attach, react, manage
@@ -344,15 +348,16 @@ denied it in any channel. For the same reason they cannot change a bot that
 reaches a channel they cannot view.
 
 **Switching back** to *Selected channels* removes the server-wide grants and
-writes overwrites for the channels chosen at that moment; the overwrites that
-were there before are replaced (a deny written by an admin stays). Switching
+writes overwrites for the channels chosen at that moment; the allow
+overwrites of the bot's own role in channels the caller can view are replaced
+(a deny written by an admin stays, and so do overwrites of categories). Switching
 to *All channels* replaces the bot's server-wide channel permissions with the
 chosen ones. Other permissions of the own role (and any role the bot holds)
 are not touched.
 
 `PUT /api/admin/bots/{id}/access` takes
 `{"access": "all" | "channels", "permissions": ["view_channel", ...], "channel_ids": [...]}`:
-`permissions` are the manifest's keys and replace what the choice granted
+`permissions` are permission keys (the six channel permissions of a manifest) and replace what the choice granted
 before; `channel_ids` are the channels of the bot's own overwrites (with
 `all`: the private channels it may also see), at most 500, each one the caller
 can view. It answers `200` with the access view (`mode`, `granted`,

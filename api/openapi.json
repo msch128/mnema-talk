@@ -1401,7 +1401,7 @@
             "type": "array"
           },
           "permissions": {
-            "description": "Permissions are permission keys, the manifest's set only: view_channel,\nsend_messages, attach_files, add_reactions, manage_messages,\nmention_everyone. They replace what the choice granted before.",
+            "description": "Permissions are permission keys, at most the channel permissions a\nmanifest may ask for: view_channel, send_messages, attach_files,\nadd_reactions, manage_messages, mention_everyone. They replace what the\nchoice granted before.",
             "items": {
               "type": "string"
             },
@@ -12467,7 +12467,7 @@
         ]
       },
       "put": {
-        "description": "Owner or Manage bots. Sets the bot's access: \"channels\" gives the listed permissions to the bot's own role in exactly the listed channels (its other server-wide channel grants and overwrites go), \"all\" gives them to the bot's own role server-wide, so the bot works in every channel plain members can see; a channel where @everyone is denied View channels stays hidden from it unless it is listed. Only channel permissions of a manifest (view, send, attach, react, manage messages, mention everyone) can be given, never Administrator or the admin area. The usual bot invariant applies: nobody but the Owner gives a bot anything elevated, and nobody gives a bot a permission they lack in a channel it reaches. A bot that reaches a channel the caller cannot view cannot be changed by the caller. Logged as bot.access.",
+        "description": "Owner or Manage bots. Sets the bot's access: \"channels\" gives the listed permissions to the bot's own role in exactly the listed channels (its other server-wide channel grants and overwrites go), \"all\" gives them to the bot's own role server-wide, so the bot works in every channel plain members can see; a channel where @everyone is denied View channels stays hidden from it unless it is listed. Only these channel permissions can be given: view, send, attach, react, manage messages, mention everyone; never Administrator or the admin area. Overwrites of the bot's own role in channels the caller cannot view stay. The usual bot invariant applies: nobody but the Owner gives a bot anything elevated, and nobody gives a bot a permission they lack in a channel it reaches. A bot that reaches a channel the caller cannot view cannot be changed by the caller either. Logged as bot.access.",
         "operationId": "setBotAccess",
         "parameters": [
           {

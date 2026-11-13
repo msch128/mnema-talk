@@ -266,3 +266,66 @@ func TestMakerCannotChangeABotThatReachesAChannelTheyCannotSee(t *testing.T) {
 		}
 	}
 }
+
+func TestAccessChoiceNeedsAuthorityOverTheBot(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+	senior := createRole(t, owner, "Seniors", 0)
+	maker := a.register(owner, "maker")
+	assignRoles(t, owner, maker, createRole(t, owner, "Bot makers", perm.ManageBots))
+	keys := []string{"view_channel", "send_messages"}
+	b := installAll(t, owner, "Mnemo", keys).Bot
+	wantStatus(t, "senior role for the bot", owner.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{"role_ids": []uuid.UUID{senior}}), http.StatusOK)
+
+	// The bot's highest role is not below the maker's.
+	wantStatus(t, "maker changes a senior bot", maker.put("/api/admin/bots/"+b.ID.String()+"/access", accessBody("channels", keys, open)), http.StatusForbidden)
+	if got := ownPerms(t, owner, b); got != perm.ViewChannel|perm.SendMessages {
+		t.Fatalf("the bot's role changed: %b", got)
+	}
+}
+
+func TestSwitchingKeepsOverwritesInChannelsTheCallerCannotView(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+	staff := privateChannel(t, a, owner, "staff")
+	maker := a.register(owner, "maker")
+	assignRoles(t, owner, maker, createRole(t, owner, "Bot makers", perm.ManageBots))
+	keys := []string{"view_channel", "send_messages"}
+	b := installAll(t, owner, "Mnemo", keys).Bot
+	// An allow of Send in the private channel, without View: the bot does not
+	// reach it, so the maker may manage the bot, but it is not theirs to drop.
+	role, _ := ownRoleOf(t, owner, b.UserID)
+	wantStatus(t, "own overwrite", putOverwrites(owner, "channels", staff,
+		overwrite("role", everyoneID(t, owner), 0, perm.ViewChannel), overwrite("role", role.ID, perm.SendMessages, 0)), http.StatusNoContent)
+
+	wantStatus(t, "to channels", maker.put("/api/admin/bots/"+b.ID.String()+"/access", accessBody("channels", keys, open)), http.StatusOK)
+	ows := ownRoleOverwrites(t, a, b.UserID)
+	if len(ows) != 2 || ows[open] != perm.ViewChannel|perm.SendMessages || ows[staff] != perm.SendMessages {
+		t.Fatalf("overwrites: %v", ows)
+	}
+}
+
+func TestAccessToAllChannelsKeepsAPrivateCategoryPrivate(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+	var cat struct{ ID uuid.UUID }
+	owner.post("/api/admin/categories", map[string]any{"name": "Staff"}).decode(t, &cat)
+	wantStatus(t, "private category", putOverwrites(owner, "categories", cat.ID, overwrite("role", everyoneID(t, owner), 0, perm.ViewChannel)), http.StatusNoContent)
+	wantStatus(t, "channel in the category", owner.post("/api/admin/channels", map[string]any{"name": "inside", "type": "text", "category_id": cat.ID}), http.StatusCreated)
+
+	out := installAll(t, owner, "Mnemo", allKeys)
+	bc := &botClient{t: t, a: a, token: out.Token.Secret, user: out.Bot.UserID}
+	if seen := botChannels(t, bc); !slices.Equal(seen, []uuid.UUID{open}) {
+		t.Fatalf("bot sees %v", seen)
+	}
+	var tree struct {
+		Categories []struct{ Name string } `json:"categories"`
+	}
+	bc.get(bot.BasePath+"/channels").decode(t, &tree)
+	if len(tree.Categories) != 0 {
+		t.Fatalf("the private category is listed: %+v", tree.Categories)
+	}
+}

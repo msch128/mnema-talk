@@ -105,16 +105,16 @@ and the bot's settings have one **Access** choice, **Selected channels** or
 - **Private channels.** The decision: they stay private. Bots do not inherit
   `@everyone`, so a plain server-wide grant would reach every private channel
   (that is why the first version offered per-channel grants only). A bot given
-  access to all channels follows one more rule: `@everyone`'s *View channels*
-  overwrite on a channel or category also applies to it, so a channel that
-  members cannot see by default is hidden from it too, until the admin lists
-  the channel explicitly, which gives the bot's own role an allow overwrite
-  there. The marker is a column, `bots.access_all` (migration 0107), not
-  something derived from the role's bits, so no existing bot changes: a bot
-  whose own role was given server-wide permissions in the role editor keeps
-  seeing private channels. Only the *View channels* bit of `@everyone` applies,
-  because the other `@everyone` overwrites describe what members get, which
-  the bot never had.
+  access to all channels follows one more rule: where `@everyone` alone does
+  not leave *View channels* in place (on the channel, its category or
+  server-wide), the bot does not see the channel either, until the admin lists
+  it explicitly, which gives the bot's own role an allow overwrite there. The
+  marker is a column, `bots.access_all` (migration 0107), not something derived
+  from the role's bits, so no existing bot changes: a bot whose own role was
+  given server-wide permissions in the role editor keeps seeing private
+  channels. The rule only ever takes View away; no other part of `@everyone`
+  applies to bots, so such a bot may write in a read-only channel of
+  `@everyone`.
 - **Who may grant what.** Unchanged. Only the manifest's channel permissions
   can be chosen, so the choice can never carry Administrator or an admin-area
   bit, and the existing bot invariant decides the rest: a non-Owner cannot give

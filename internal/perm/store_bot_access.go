@@ -2,6 +2,7 @@ package perm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -27,6 +28,10 @@ type BotAccess struct {
 	// bot's channels when All is false, the private channels it may also see
 	// when All is true.
 	Channels []uuid.UUID
+	// With Restrict, only overwrites in the channels of Within are replaced:
+	// what someone cannot see is not theirs to take away.
+	Within   []uuid.UUID
+	Restrict bool
 }
 
 // ApplyBotAccess stores the choice on the bot's own role. It must run in a
@@ -81,7 +86,8 @@ func clearBotOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 	rows, err := tx.Query(ctx, `
 		UPDATE permission_overwrites SET allow = allow & ~$2::bigint
 		WHERE role_id = $1 AND channel_id IS NOT NULL AND allow & $2::bigint <> 0
-		RETURNING channel_id`, role, int64(BotChannelPerms))
+		  AND (NOT $3::bool OR channel_id = ANY($4::uuid[]))
+		RETURNING channel_id`, role, int64(BotChannelPerms), a.Restrict, append([]uuid.UUID{}, a.Within...))
 	if err != nil {
 		return fmt.Errorf("drop bot overwrites: %w", err)
 	}
@@ -89,7 +95,8 @@ func clearBotOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 	if err != nil {
 		return fmt.Errorf("drop bot overwrites: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE role_id = $1 AND channel_id IS NOT NULL AND allow = 0 AND deny = 0`, role); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE role_id = $1 AND channel_id IS NOT NULL AND allow = 0 AND deny = 0 AND (NOT $2::bool OR channel_id = ANY($3::uuid[]))`,
+		role, a.Restrict, append([]uuid.UUID{}, a.Within...)); err != nil {
 		return fmt.Errorf("drop empty bot overwrites: %w", err)
 	}
 	for _, ch := range changed {
@@ -107,15 +114,25 @@ func clearBotOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 // permission they lack in a channel.
 func (s *Service) SetBotAccess(ctx context.Context, actor Subject, botUser uuid.UUID, a BotAccess) error {
 	return s.mutate(ctx, actor, ManageBots, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
-		if err := snap.CanActAs(actor, Subject{ID: botUser}); err != nil {
+		target := Subject{ID: botUser}
+		if err := snap.CanModerate(actor, target); err != nil {
+			return nil, err
+		}
+		if err := snap.CanActAs(actor, target); err != nil {
 			return nil, err
 		}
 		if err := CheckBotChannels(snap, actor, a.Channels); err != nil {
 			return nil, err
 		}
 		if err := tx.QueryRow(ctx, `SELECT id FROM roles WHERE bot_user_id = $1`, botUser).Scan(&a.Role); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, httpx.ErrNotFound("bot not found") // deleted since the request began
+			}
 			return nil, fmt.Errorf("load bot role: %w", err)
 		}
+		// nil means every channel: nothing to restrict.
+		a.Within = snap.ViewableChannels(actor)
+		a.Restrict = a.Within != nil && !snap.IsOwner(actor)
 		if err := ApplyBotAccess(ctx, tx, a); err != nil {
 			return nil, err
 		}

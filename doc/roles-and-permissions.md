@@ -236,8 +236,8 @@ Resolution, in this order:
 Bots do not inherit `@everyone`, so its overwrites do not apply to them. The one
 exception is a bot given access to **all channels** (its own role holds its
 channel permissions server-wide, see [bots](bots.md#give-a-bot-access-to-every-channel)):
-`@everyone`'s *View channels* allow and deny apply to it, so a private channel
-stays hidden from it unless an overwrite of its own role allows it.
+a channel that `@everyone` alone cannot view (on the channel, its category or
+server-wide) is hidden from it unless an overwrite of its own role allows it.
 
 Deleting a category folds its overwrites into its channels first, so a private
 category never turns its channels public.
