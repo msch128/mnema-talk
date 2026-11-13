@@ -282,7 +282,7 @@ branch) was waived when it landed there and is not reported again.
    the desktop clients' archive and manifest rules
    (`TestPublishedBundlesSatisfyDesktopLayout`). A failed run is the alert.
 4. Desktop builds are published from
-   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); this
+   [mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop); this
    repository's releases stopped attaching them after v0.7.3. They are unsigned
    Beta packages (see [desktop-app.md](desktop-app.md)). The server ships
    through Docker; releases do not publish standalone server binaries.

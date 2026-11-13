@@ -214,7 +214,7 @@ three clients.
 ### Windows
 
 The desktop app (this section covers its Windows build) lives in the separate
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository
+[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository
 and is an unsigned Tauri DEV client, including the Gaming integration described
 in the [usage guide](desktop-app.md#windows-gaming-dev). Its local instance
 selector checks HTTPS (or a loopback address) and the server's `web_client_api`
@@ -230,7 +230,7 @@ Status: unit-tested and run on macOS during development; the bundle verifier
 has a high-water mark, a security floor that rises with releases whose
 security fixes carry a `Security-Floor: raise` trailer and a session cookie kept in the OS keychain. Windows CI on the
 desktop repository
-([run 39423960431](https://github.com/msch128/mnema-talk-desktop/actions/runs/39423960431))
+([run 39423960431](https://github.com/mnema-xyz/talk-desktop/actions/runs/39423960431))
 checks the current web-client host. WebView2 presents the custom protocol as
 `https://mnema.localhost/` for the selector, the instance window and the
 gaming surfaces. The instance window leaves the microphone on WebView2's own
@@ -288,6 +288,6 @@ The remaining fixes and acceptance work follow:
 3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a single machine `make load-test full` is not met: it misses its gap and heap thresholds while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
-[Desktop requirements](desktop-app.md) and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
+[Desktop requirements](desktop-app.md) and [the native research checkpoint](https://github.com/mnema-xyz/talk-desktop/blob/main/experimental/README.md) describe
 these boundaries in more detail. Existing coverage and security gates remain
 in force.

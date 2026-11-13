@@ -25,7 +25,7 @@ in a major release) is described in [doc/api-stability.md](doc/api-stability.md)
 Please report security issues **privately** through GitHub's private
 vulnerability reporting:
 
-> <https://github.com/msch128/mnema-talk/security/advisories/new>
+> <https://github.com/mnema-xyz/talk/security/advisories/new>
 
 (Repository → *Security* → *Report a vulnerability*.)
 
@@ -1346,7 +1346,7 @@ details and the limits.
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
   and optional STUN/TURN, the server only asks GitHub for the latest release
   (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to
-  `api.github.com/repos/msch128/mnema-talk/releases/latest` every 30 minutes
+  `api.github.com/repos/mnema-xyz/talk/releases/latest` every 30 minutes
   with `If-None-Match`, a 10 s timeout, a 1 MiB response cap, redirects only
   to the same host, and a pause when GitHub answers 403/429. Only
   `tag_name`, `html_url` (accepted only for this repository's release pages),
@@ -1418,7 +1418,7 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
     issuer `https://token.actions.githubusercontent.com`, subject exactly
     `https://github.com/mnema-xyz/talk/.github/workflows/release.yml@refs/heads/main`
     (the repository's name in the mnema-xyz organization) or, for releases
-    from before the repository moved there, `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
+    from before the repository moved there (up to 3.2.0), `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
   - the BuildKit SLSA v1 provenance exists for every platform image, names that
     image as its subject, and records a GitHub Actions run and source
     repository of this project, **of the same owner as the signature** (an

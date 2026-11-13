@@ -1103,7 +1103,7 @@ updater`) has the reason. Details and limits are in
   `MNEMA_IMAGE=msch128/mnema-talk:latest` stays on Docker Hub. It trusts two
   origins, the release workflow of `github.com/mnema-xyz/talk` (the
   repository's name in the organization; the image keeps `mnema-talk`) and, for
-  releases from before the move, that of `github.com/msch128/mnema-talk`; the
+  releases from before the move, that of `github.com/mnema-xyz/talk`; the
   signature and the provenance must come from the same origin. Any other
   namespace or identity is refused. With `UPDATER_IMAGE_REPOSITORY` set, only
   that repository is trusted; with `UPDATER_CERT_IDENTITY_REGEXP` or

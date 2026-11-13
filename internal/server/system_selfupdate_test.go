@@ -24,7 +24,7 @@ func selfUpdateRequest() *http.Request {
 func TestConcurrentSelfUpdatesReserveOneSlot(t *testing.T) {
 	releases := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"tag_name":"v0.4.0","html_url":"https://github.com/msch128/mnema-talk/releases/tag/v0.4.0"}`))
+		_, _ = w.Write([]byte(`{"tag_name":"v0.4.0","html_url":"https://github.com/mnema-xyz/talk/releases/tag/v0.4.0"}`))
 	}))
 	defer releases.Close()
 	checker := update.NewChecker(releases.URL, "0.3.0")

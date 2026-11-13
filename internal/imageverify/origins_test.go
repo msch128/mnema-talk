@@ -171,3 +171,19 @@ func TestARegistryFailureOnTheSecondOriginIsNoVerdict(t *testing.T) {
 		t.Fatalf("err = %v, want a failure that is not a verdict on the image", err)
 	}
 }
+
+func TestTheOldOwnerVouchesForNothingAfterTheSwitchRelease(t *testing.T) {
+	if got := imageverify.DefaultOrigins()[1]; got.Source != legacy || got.MaxVersion != imageverify.LegacyMaxVersion {
+		t.Fatalf("legacy origin = %+v", got)
+	}
+	for version, want := range map[string]bool{"3.1.1": true, "3.2.0": true, "3.2.1": false, "4.0.0": false} {
+		f := newFixture(t)
+		rel := f.Push("1.0", Provenance{Source: legacy, Builder: legacy + "/actions/runs/7/attempts/1", Version: version},
+			Provenance{Source: legacy, Builder: legacy + "/actions/runs/7/attempts/1", Version: version})
+		f.Sign(rel, LegacyIdentity, rel.Digest)
+		_, err := f.VerifierFor(func() imageverify.Policy { p := imageverify.DefaultPolicy(); p.Repository = f.Repo; return p }(), f.Trust()).Verify(context.Background(), f.Repo+":1.0")
+		if want != (err == nil) {
+			t.Errorf("msch128 release %s: err = %v, want accepted=%v", version, err, want)
+		}
+	}
+}

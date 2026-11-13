@@ -4,8 +4,8 @@
 and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
 Website and docs: **[mnema.xyz](https://mnema.xyz)** ·
-Source: [GitHub](https://github.com/msch128/mnema-talk) ·
-Desktop app: [releases](https://github.com/msch128/mnema-talk-desktop/releases/latest)
+Source: [GitHub](https://github.com/mnema-xyz/talk) ·
+Desktop app: [releases](https://github.com/mnema-xyz/talk-desktop/releases/latest)
 
 This is the official server image: the Go server with the web app built in.
 It runs next to PostgreSQL and S3-compatible storage (SeaweedFS by default),
@@ -81,4 +81,4 @@ The same command works for the Docker Hub references.
 ## License
 
 AGPL-3.0. Security reports: see the
-[security policy](https://github.com/msch128/mnema-talk/security/policy).
+[security policy](https://github.com/mnema-xyz/talk/security/policy).

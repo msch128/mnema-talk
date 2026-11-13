@@ -19,10 +19,10 @@ BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 A server made with the setup assistant has no `scripts/` folder yet. Fetch the
 scripts of the release you run once (replace `X.Y.Z` with the version in
 Admin > System, or the newest on the
-[releases page](https://github.com/msch128/mnema-talk/releases)):
+[releases page](https://github.com/mnema-xyz/talk/releases)):
 
 ```sh
-base=https://raw.githubusercontent.com/msch128/mnema-talk/vX.Y.Z
+base=https://raw.githubusercontent.com/mnema-xyz/talk/vX.Y.Z
 mkdir -p scripts && cd scripts
 for f in backup.sh backup-common.sh restore.sh upgrade-postgres.sh health-check.sh; do curl -fsSLO "$base/scripts/$f"; done
 chmod +x *.sh && cd ..
@@ -102,7 +102,7 @@ Run in the deployment folder. The first lines look up the newest release; set
 `NEW` yourself to install another.
 
 ```sh
-NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # the newest release, or set a version
+NEW=$(curl -fsSL https://api.github.com/repos/mnema-xyz/talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # the newest release, or set a version
 [ -n "$NEW" ] || { echo "could not read the latest version; set NEW=x.y.z yourself" >&2; false; }
 
 # Note what runs now, for a rollback
@@ -111,7 +111,7 @@ curl -fsS http://127.0.0.1:8080/api/health
 cp docker-compose.yml docker-compose.yml.bak
 
 # Fetch the compose file (and scripts) of the new release
-base=https://raw.githubusercontent.com/msch128/mnema-talk/v$NEW
+base=https://raw.githubusercontent.com/mnema-xyz/talk/v$NEW
 curl -fsSLo docker-compose.yml        "$base/docker-compose.yml"
 curl -fsSLo .env.example.new          "$base/.env.example"
 for f in backup.sh backup-common.sh restore.sh upgrade-postgres.sh health-check.sh; do

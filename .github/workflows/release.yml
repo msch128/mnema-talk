@@ -30,7 +30,7 @@ name: Release
 #    SBOM attestations attached to the image. The same image is then copied
 #    by digest to Docker Hub (job dockerhub-mirror) when it is configured.
 #    The desktop app (Windows, macOS Apple silicon, Linux) lives in
-#    msch128/mnema-talk-desktop.
+#    mnema-xyz/talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
 #
 # Before a release is cut or merged, the most recent completed scheduled run
@@ -311,7 +311,7 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     env:
-      IMAGE: ghcr.io/msch128/mnema-talk
+      IMAGE: ghcr.io/mnema-xyz/mnema-talk
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -373,89 +373,6 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "$IMAGE@$DIGEST"
 
-  # The repository moves to the GitHub organization mnema-xyz, and GHCR does
-  # not redirect: from this release on the image is also published at
-  # ghcr.io/mnema-xyz/mnema-talk, which the defaults and docs name. A copy by
-  # digest (the index with its provenance and SBOM attestations, the same four
-  # tags as on Docker Hub), signed there with this workflow's identity and
-  # verified at both paths, so a release whose new path is incomplete fails.
-  # A workflow of a user-owned repository cannot write an organization's
-  # package with GITHUB_TOKEN: GHCR_MNEMA_XYZ_TOKEN is a classic PAT of the
-  # owner with write:packages only. After the transfer the image job pushes to
-  # the new path itself and this job goes.
-  org-ghcr:
-    # After release-notes as well: both edit the release body, never at once.
-    needs: [release-please, image, release-notes]
-    if: >-
-      !cancelled() && needs.release-please.outputs.release_created == 'true' &&
-      needs.image.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write # the release note about the new path, once it exists
-      id-token: write # keyless cosign signature (Sigstore)
-    env:
-      SOURCE: ghcr.io/msch128/mnema-talk
-      TARGET: ghcr.io/mnema-xyz/mnema-talk
-      TAG: ${{ needs.release-please.outputs.tag_name }}
-      GH_TOKEN: ${{ github.token }}
-      VERSION: ${{ needs.release-please.outputs.version }}
-      DIGEST: ${{ needs.image.outputs.digest }}
-    steps:
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
-
-      - name: Log in to GHCR with the organization token
-        env:
-          TOKEN: ${{ secrets.GHCR_MNEMA_XYZ_TOKEN }}
-        run: |
-          set -euo pipefail
-          [ -n "$TOKEN" ] || { echo "::error::GHCR_MNEMA_XYZ_TOKEN is not set: the image would not reach ghcr.io/mnema-xyz"; exit 1; }
-          # cosign and buildx read the same Docker credentials.
-          printf '%s' "$TOKEN" | docker login ghcr.io -u msch128 --password-stdin
-
-      - name: Verify the source, copy by digest, sign and verify the copy
-        run: |
-          set -euo pipefail
-          case "$DIGEST" in sha256:*) ;; *) echo "::error::no digest from the image job"; exit 1 ;; esac
-          identity='^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$'
-          cosign verify "$SOURCE@$DIGEST" --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp "$identity" >/dev/null
-          tags="$VERSION ${VERSION%.*} ${VERSION%%.*} latest"
-          args=()
-          for tag in $tags; do args+=(--tag "$TARGET:$tag"); done
-          docker buildx imagetools create "${args[@]}" "$SOURCE@$DIGEST"
-          for tag in $tags; do
-            got=$(docker buildx imagetools inspect "$TARGET:$tag" --format '{{json .Manifest}}' | jq -r .digest)
-            [ "$got" = "$DIGEST" ] || { echo "::error::$TARGET:$tag has digest $got, expected $DIGEST"; exit 1; }
-          done
-          cosign sign --yes "$TARGET@$DIGEST"
-          for _ in 1 2 3 4 5 6; do
-            if cosign verify "$TARGET@$DIGEST" --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --certificate-identity-regexp "$identity" >/dev/null; then
-              echo "Copied and signed $SOURCE@$DIGEST at $TARGET (tags: $tags)" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::the signature at $TARGET could not be verified"
-          exit 1
-
-      # Only once the image is complete at the new path does the release say so.
-      - name: Note the new image path in the release
-        run: |
-          set -euo pipefail
-          marker='<!-- image-moved -->'
-          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
-          case "$body" in *"$marker"*) echo "note already present"; exit 0 ;; esac
-          {
-            printf '%s\n\n' "$body"
-            printf '%s\n' "$marker"
-            printf '%s\n' "**The image moved to \`ghcr.io/mnema-xyz/mnema-talk\`** (GHCR does not redirect). From this release on, new releases reach GHCR only at the new path: set \`MNEMA_IMAGE\` in \`.env\` to it with the same tag and run \`docker compose pull && docker compose up -d\` once."
-          } > notes.md
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
-
   # Copies the image that the image job pushed to Docker Hub, by digest: no
   # rebuild, so the multi-arch index with its provenance and SBOM attestations
   # is byte-identical and keeps the GHCR digest. The Docker Hub reference is
@@ -498,7 +415,10 @@ jobs:
       packages: read # pull from GHCR
       id-token: write # keyless cosign signature (Sigstore)
     env:
-      SOURCE: ghcr.io/msch128/mnema-talk
+      SOURCE: ghcr.io/mnema-xyz/mnema-talk
+      # Releases before 3.2.0 exist only at the old path (GHCR does not
+      # redirect); a backfill of one reads it from there.
+      LEGACY_SOURCE: ghcr.io/msch128/mnema-talk
       VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.mirror_version || needs.release-please.outputs.version }}
       IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
       NAMESPACE: ${{ matrix.namespace || vars.DOCKERHUB_NAMESPACE }}
@@ -555,6 +475,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if ! docker buildx imagetools inspect "$SOURCE:$VERSION" >/dev/null 2>&1; then
+              SOURCE=$LEGACY_SOURCE
+              echo "SOURCE=$SOURCE" >> "$GITHUB_ENV"
+            fi
             digest=$(docker buildx imagetools inspect "$SOURCE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
           else
             digest=$IMAGE_DIGEST
@@ -564,7 +488,7 @@ jobs:
           esac
           cosign verify "$SOURCE@$digest" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null
+            --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null
           echo "DIGEST=$digest" >> "$GITHUB_ENV"
 
       # A release gets all four tags. A backfill moves latest and the
@@ -617,7 +541,7 @@ jobs:
           for _ in 1 2 3 4 5 6; do
             if cosign verify "$ref" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null; then
+              --certificate-identity-regexp '^https://github\.com/mnema-xyz/talk/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null; then
               exit 0
             fi
             sleep 10
@@ -875,7 +799,7 @@ jobs:
           case "$body" in *"$marker"*) echo "section already present"; exit 0 ;; esac
           # The releases page, not one tag: a tag URL freezes whatever was
           # current when this server release was published.
-          url="https://github.com/msch128/mnema-talk-desktop/releases"
+          url="https://github.com/mnema-xyz/talk-desktop/releases"
           {
             printf '%s\n\n' "$body"
             printf '%s\n' "$marker"
