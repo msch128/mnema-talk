@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect } from '../fixtures'
-import type { Combo } from './matrix'
+import { apiFetch, responseString } from '../helpers'
+import { type Combo, comboLabel } from './matrix'
 import { IMAGE, type World } from './seed'
 import { type Socket, joinTalk, seatParticipants } from './talk'
 
@@ -255,9 +256,13 @@ const otherScenes: Scene[] = [
   {
     name: 'forum post',
     reach: async (s) => {
-      await open(s.page, `/c/${s.world.forum.id}`)
-      await s.page.getByTestId('forum-post-card').first().click()
-      await expect(s.page.getByTestId('forum-post-header')).toBeVisible()
+      // A post of this combo's own, opened by its address: a click on a card of
+      // the list could land while the list was still being redrawn.
+      const title = `Forum post of ${comboLabel(s.combo)} with a title long enough to need two lines ${'or more '.repeat(4)}`
+      const post = await apiFetch(s.page, 'POST', `/api/channels/${s.world.forum.id}/posts`, { title, content: `Body. ${s.world.suffix}` })
+      expect(post.status).toBe(201)
+      await open(s.page, `/c/${s.world.forum.id}/t/${responseString(post, 'id')}`)
+      await expect(s.page.getByTestId('forum-post-header')).toContainText(title.slice(0, 40))
     },
   },
   { name: 'wiki page', smoke: true, reach: async (s) => { await open(s.page, `/wiki/${s.world.wikiSlug}`); await expect(s.page.getByTestId('wiki-title')).toBeVisible() } },
