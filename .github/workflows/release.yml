@@ -384,16 +384,21 @@ jobs:
   # owner with write:packages only. After the transfer the image job pushes to
   # the new path itself and this job goes.
   org-ghcr:
-    needs: [release-please, image]
-    if: needs.release-please.outputs.release_created == 'true' && needs.image.result == 'success'
+    # After release-notes as well: both edit the release body, never at once.
+    needs: [release-please, image, release-notes]
+    if: >-
+      !cancelled() && needs.release-please.outputs.release_created == 'true' &&
+      needs.image.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write # the release note about the new path, once it exists
       id-token: write # keyless cosign signature (Sigstore)
     env:
       SOURCE: ghcr.io/msch128/mnema-talk
       TARGET: ghcr.io/mnema-xyz/mnema-talk
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
       VERSION: ${{ needs.release-please.outputs.version }}
       DIGEST: ${{ needs.image.outputs.digest }}
     steps:
@@ -407,8 +412,8 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$TOKEN" ] || { echo "::error::GHCR_MNEMA_XYZ_TOKEN is not set: the image would not reach ghcr.io/mnema-xyz"; exit 1; }
+          # cosign and buildx read the same Docker credentials.
           printf '%s' "$TOKEN" | docker login ghcr.io -u msch128 --password-stdin
-          printf '%s' "$TOKEN" | cosign login ghcr.io -u msch128 --password-stdin
 
       - name: Verify the source, copy by digest, sign and verify the copy
         run: |
@@ -436,6 +441,20 @@ jobs:
           done
           echo "::error::the signature at $TARGET could not be verified"
           exit 1
+
+      # Only once the image is complete at the new path does the release say so.
+      - name: Note the new image path in the release
+        run: |
+          set -euo pipefail
+          marker='<!-- image-moved -->'
+          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+          case "$body" in *"$marker"*) echo "note already present"; exit 0 ;; esac
+          {
+            printf '%s\n\n' "$body"
+            printf '%s\n' "$marker"
+            printf '%s\n' "**The image moved to \`ghcr.io/mnema-xyz/mnema-talk\`** (GHCR does not redirect). From this release on, new releases reach GHCR only at the new path: set \`MNEMA_IMAGE\` in \`.env\` to it with the same tag and run \`docker compose pull && docker compose up -d\` once."
+          } > notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
 
   # Copies the image that the image job pushed to Docker Hub, by digest: no
   # rebuild, so the multi-arch index with its provenance and SBOM attestations
@@ -863,7 +882,6 @@ jobs:
             printf '%s\n\n' "### Desktop app (Beta)"
             printf '%s\n' "The desktop app (Beta, unsigned) for Windows, macOS and Linux is published in its own repository: [latest desktop release]($url)."
             printf '%s\n' "This server release carries the Docker image (\`ghcr.io/mnema-xyz/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
-            printf '\n%s\n' "**The image moved to \`ghcr.io/mnema-xyz/mnema-talk\`** (same tags and digests; GHCR does not redirect): set \`MNEMA_IMAGE\` in \`.env\` to the new path and run \`docker compose pull && docker compose up -d\` once; later releases are published only there."
           } > notes.md
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
 
