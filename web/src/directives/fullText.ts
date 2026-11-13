@@ -43,13 +43,13 @@ function hostOf(el: HTMLElement): HTMLElement {
 }
 
 /** Shows the whole text in the shared tooltip, if it is cut and the control has no tooltip of its own. */
-function showFull(el: FullTextElement): void {
+function showFull(el: FullTextElement, touch = false): void {
   refreshFullText(el)
   const host = hostOf(el) as TooltipElement
   const title = el.getAttribute('title')
   if (!title || (host !== el && host.__tip)) return
   el.__tip = { text: title, shortcut: '' }
-  showTip(el, true)
+  showTip(el, true, touch)
 }
 
 function wire(el: FullTextElement): () => void {
@@ -63,7 +63,7 @@ function wire(el: FullTextElement): () => void {
   const blur = () => hideTip(el)
   const enter = () => refreshFullText(el)
   const unwatch = watchSize(el)
-  const offTouch = holdToShow(el, () => showFull(el), () => hideTip(el))
+  const offTouch = holdToShow(el, () => showFull(el, true), () => hideTip(el))
   host.addEventListener('pointerenter', enter)
   host.addEventListener('focusin', focus)
   host.addEventListener('focusout', blur)

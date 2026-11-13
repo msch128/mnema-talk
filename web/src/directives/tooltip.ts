@@ -68,7 +68,11 @@ function position(target: HTMLElement) {
   tip.style.top = `${Math.round(top)}px`
 }
 
-export function showTip(target: TooltipElement, immediate = false) {
+/**
+ * Shows the target's tooltip. `touch`: asked for by a long press; on a touch
+ * screen only those show (style.css), since a tap is not a hover.
+ */
+export function showTip(target: TooltipElement, immediate = false, touch = false) {
   const data = target.__tip
   if (!data) return
   clearTimeout(showTimer)
@@ -85,6 +89,7 @@ export function showTip(target: TooltipElement, immediate = false) {
       kbd.textContent = data.shortcut
       tip.appendChild(kbd)
     }
+    tip.toggleAttribute('data-touch', touch)
     tip.hidden = false
     currentTarget = target
     target.setAttribute('aria-describedby', tip.id)
@@ -139,7 +144,7 @@ export const tooltip: ObjectDirective<TooltipElement, TooltipValue> = {
     el.addEventListener('focus', h.focus)
     el.addEventListener('blur', h.leave)
     el.addEventListener('keydown', h.key)
-    if (binding.modifiers?.visual) el.__tipTouchOff = holdToShow(el, () => showTip(el, true), () => hideTip(el))
+    if (binding.modifiers?.visual) el.__tipTouchOff = holdToShow(el, () => showTip(el, true, true), () => hideTip(el))
   },
   updated(el, binding) {
     setup(el, binding)

@@ -402,8 +402,9 @@
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
-  /* A tap is not a hover: tooltips would stick after it. */
-  .mnema-tooltip { display: none; }
+  /* A tap is not a hover: tooltips would stick after it. A long press asks
+     for one (data-touch, directives/tooltipTouch.ts). */
+  .mnema-tooltip:not([data-touch]) { display: none; }
 }
 
 /* The app is not selectable as a whole, but what went wrong is: error banners

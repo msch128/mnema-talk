@@ -536,7 +536,7 @@ describe('Sidebar drag and drop (admin)', () => {
     expect(select).toHaveBeenCalledWith(expect.objectContaining({ id: 'random' }))
   })
 
-  it('touch: a long press picks a row up, lifting without moving opens its menu', async () => {
+  it('touch: a long press picks a row up in place, lifting without moving opens its menu', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     await mountSidebar()
     layoutDom()
@@ -544,12 +544,27 @@ describe('Sidebar drag and drop (admin)', () => {
     rowOf('random').element.dispatchEvent(pointerEvent('pointerdown', { y, pointerType: 'touch' }))
     vi.advanceTimersByTime(DRAG_DEFAULTS.longPressMs)
     await nextTick()
-    expect(document.querySelector('[data-testid="drag-ghost"]')).not.toBeNull()
+    // Held still, nothing follows the finger: the press may be reading a cut name.
+    expect(document.documentElement.classList.contains('mnema-dragging')).toBe(true)
+    expect(document.querySelector('[data-testid="drag-ghost"]')).toBeNull()
     window.dispatchEvent(pointerEvent('pointerup', { y, pointerType: 'touch' }))
     await flush()
     expect(document.querySelector('[role="menu"]')).not.toBeNull()
     expect(q('[role="menu"]').textContent).toContain('Kanal bearbeiten')
     expect(puts()).toHaveLength(0)
+  })
+
+  it('touch: a picked-up row shows as dragged once the finger moves', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    await mountSidebar()
+    layoutDom()
+    const y = yIn(rowOf('random'), 0.5)
+    rowOf('random').element.dispatchEvent(pointerEvent('pointerdown', { y, pointerType: 'touch' }))
+    vi.advanceTimersByTime(DRAG_DEFAULTS.longPressMs)
+    window.dispatchEvent(pointerEvent('pointermove', { y: y + 30, pointerType: 'touch' }))
+    await nextTick()
+    expect(document.querySelector('[data-testid="drag-ghost"]')).not.toBeNull()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
   })
 })
 

@@ -395,8 +395,13 @@ describe('touch', () => {
     expect(drag.state.phase).toBe('dragging')
     expect(vibrate).toHaveBeenCalledWith(10)
     expect(calls.start).toHaveLength(1)
+    // Picked up in place: it has not moved until the finger does.
+    expect(drag.state.moved).toBe(false)
+    move({ ...touch, x: 7, y: 8 })
+    expect(drag.state.moved).toBe(false)
 
     move({ ...touch, x: 5, y: 120 })
+    expect(drag.state.moved).toBe(true)
     up({ ...touch, x: 5, y: 120 })
     expect(calls.drop).toEqual([[{ id: 'a' }, { y: 120 }]])
   })
@@ -434,6 +439,7 @@ describe('touch', () => {
     vi.advanceTimersByTime(DRAG_DEFAULTS.longPressMs)
     move({ ...touch, x: 7, y: 8 })
     up({ ...touch, x: 7, y: 8 })
+    expect(drag.state.moved).toBe(false)
     expect(calls.longPress).toEqual([{ id: 'a' }])
     expect(calls.drop).toEqual([])
     expect(calls.end).toEqual([[{ id: 'a' }, false]])

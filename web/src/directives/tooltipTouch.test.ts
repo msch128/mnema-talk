@@ -58,4 +58,47 @@ describe('holdToShow', () => {
     vi.advanceTimersByTime(1000)
     expect(show).not.toHaveBeenCalled()
   })
+
+  it('puts the shown text away when the finger moves on', () => {
+    el.dispatchEvent(pointer('pointerdown', 'touch'))
+    vi.advanceTimersByTime(500)
+    expect(show).toHaveBeenCalledOnce()
+    el.dispatchEvent(pointer('pointermove', 'touch', 10, 14))
+    expect(hide).not.toHaveBeenCalled()
+    el.dispatchEvent(pointer('pointermove', 'touch', 10, 40))
+    expect(hide).toHaveBeenCalledOnce()
+  })
+})
+
+describe('holdToShow on a text inside a control', () => {
+  // The control's touch area (::after) lies over the text, so the press reaches the control.
+  let control: HTMLElement
+  let text: HTMLElement
+  let show: ReturnType<typeof vi.fn<() => void>>
+  let off: () => void
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    control = document.createElement('div')
+    control.setAttribute('role', 'button')
+    text = document.createElement('span')
+    control.appendChild(text)
+    document.body.appendChild(control)
+    vi.spyOn(text, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 0, 200, 20))
+    show = vi.fn<() => void>()
+    off = holdToShow(text, show, () => undefined)
+  })
+  afterEach(() => { off(); control.remove(); vi.useRealTimers() })
+
+  it('shows the text when the control is held on the text', () => {
+    control.dispatchEvent(pointer('pointerdown', 'touch', 120, 10))
+    vi.advanceTimersByTime(500)
+    expect(show).toHaveBeenCalledOnce()
+  })
+
+  it('leaves a press elsewhere on the control to the control', () => {
+    control.dispatchEvent(pointer('pointerdown', 'touch', 10, 10))
+    vi.advanceTimersByTime(500)
+    expect(show).not.toHaveBeenCalled()
+  })
 })

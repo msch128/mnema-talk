@@ -21,6 +21,7 @@ interface ReorderOptions { layout: ComputedRef<SidebarTree>; commit: ReturnType<
 import { locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory } from '../../shared/lib/channelLayout'
 import { resolveChannelDrop, resolveCategoryDrop } from '../lib/channelDrop'
 import { useSortableDrag } from '../../shared/composables/useSortableDrag'
+import { hideTip } from '../../directives/tooltip'
 import { t } from '../../i18n'
 
 // data-drop-section value of the headless uncategorized group.
@@ -299,6 +300,8 @@ export function useSidebarReorder({ layout, commit, collapsed, expandCategory, e
 
   function handleLongPress(item: SidebarItem, e: PointerEvent) {
     const at = item.kind === 'channel' ? locateChannel(layout.value, item.id)?.channel : locateCategory(layout.value, item.id)?.category
+    // The menu takes over from the full name the hold showed.
+    hideTip()
     if (at) onLongPress?.(item.kind, at, e)
   }
 
@@ -318,7 +321,9 @@ export function useSidebarReorder({ layout, commit, collapsed, expandCategory, e
 
   peeks.watchDrag(drag)
 
-  const dragItem = computed(() => (drag.state.phase === 'dragging' ? drag.state.item : null))
+  // A touch pick-up shows as a drag once the finger moves: held still, the
+  // press shows a cut name in full (v-full-text) and the ghost would hide it.
+  const dragItem = computed(() => (drag.state.phase === 'dragging' && drag.state.moved ? drag.state.item : null))
 
   function startDrag(e: PointerEvent, _kind: ItemKind, entity: Channel | Category) {
     if (enabled()) drag.pointerDown(e, itemOf(entity))
