@@ -93,7 +93,7 @@ watch(() => chatStore.activeChannel?.id, () => { topicOpen.value = false })
 // The name keeps the room it needs; only beside a topic is it capped so the
 // topic stays visible too.
 const titleClass = computed(() => {
-  if (!showTopic.value) return 'min-w-0'
+  if (!showTopic.value) return ''
   return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-none'
 })
 
@@ -140,7 +140,7 @@ function openNotificationMenu(e: MouseEvent) {
         <span
           v-full-text
           data-testid="chat-channel-name"
-          :class="['max-md:max-w-full font-semibold text-base text-mnema-text truncate', titleClass]"
+          :class="['min-w-[3em] max-md:max-w-full font-semibold text-base text-mnema-text truncate', titleClass]"
         >
           {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>

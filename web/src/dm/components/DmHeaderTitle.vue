@@ -39,7 +39,7 @@ function activate() {
   >
     <DmAvatar :dm="dm" ring-class="bg-mnema-canvas" />
     <span class="min-w-0">
-      <span v-full-text data-testid="chat-channel-name" class="block truncate text-base font-semibold leading-5 text-mnema-text">{{ title }}</span>
+      <span v-full-text data-testid="chat-channel-name" class="block min-w-[3em] truncate text-base font-semibold leading-5 text-mnema-text">{{ title }}</span>
       <span v-full-text v-if="dm.group" class="block truncate text-xs leading-4 text-mnema-tertiary" data-testid="dm-header-members">
         {{ $t('dm.memberCount', { n: dm.members.length }) }}
       </span>
