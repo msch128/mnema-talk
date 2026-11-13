@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, trackPeerConnections, leaveTalks, expectTalkLive } from './helpers'
+import { apiFetch, leaveTalks, expectTalkLive } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -39,7 +39,6 @@ async function signIn(page: Page, username: string, password: string) {
 test('right-clicking the microphone switches the input device with the fake devices', async ({ browser, browserName }) => {
   test.skip(browserName !== 'chromium', 'The fake devices are a Chromium flag set')
   const context = await browser.newContext({ permissions: ['microphone', 'camera'] })
-  await context.addInitScript(trackPeerConnections)
   await context.addInitScript(recordMicrophoneRequests)
   const page = await context.newPage()
 

@@ -31,11 +31,6 @@ const fakeScreenAndVisibility = () => {
     }, 33)
     return canvas.captureStream(30)
   }
-  const Native = window.RTCPeerConnection
-  window.__pcs = []
-  window.RTCPeerConnection = class extends Native {
-    constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) { super(...args); window.__pcs.push(this) }
-  }
   let hidden = false
   Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (hidden ? 'hidden' : 'visible') })

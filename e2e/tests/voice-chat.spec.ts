@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, responseString, bounds, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -33,7 +33,6 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   opened.push(aCtx)
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   opened.push(bCtx)
-  await aCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
   for (const [name, page] of [['a', a], ['b', b]] as const) {
