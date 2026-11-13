@@ -131,6 +131,26 @@ common paths.
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
 
+## What a bot cannot do
+
+A bot reads and writes messages, reactions, slash commands and components, and
+nothing that manages people or the server. The routes under `/api/bot/v1` are
+the full list ([REST API](#rest-api)): there is none for roles, members,
+bans or timeouts, webhooks, channels, bots or settings, and no role or
+permission a bot holds adds one, not even Administrator. Besides, a bot cannot
+join a Talk (voice), reads no direct messages, and is not told about other
+members' presence.
+
+In particular a bot **cannot give or take a role**, so there are no *reaction
+roles* (a reaction that gives a role): the reaction event reaches the bot, but
+nothing it could call changes a member's roles. The way to let members choose
+their own roles is a **self-assignable role**: an admin with *Manage roles*
+turns on *Members can assign this role to themselves*, and members switch it on
+or off under *Settings > Roles*, without any bot or admin involved. It is
+limited to harmless roles ([roles members choose
+themselves](roles-and-permissions.md#roles-members-choose-themselves)); bots
+cannot use it either.
+
 ## Tokens
 
 Each bot holds up to 10 active API tokens (`mnb_...`, 256 random bits).
@@ -330,7 +350,7 @@ that posts (a message, an upload, the response to a command): a post inside the
 wait answers `429` with `retry_after`. A bot whose roles give it Manage messages
 is exempt, again like a member, and may also reply under a locked forum post.
 
-Mentions: `@username` notifies members who can view the channel; `@all` and
+Mentions (all the rules in one place: [allowed mentions](allowed-mentions.md)): `@username` notifies members who can view the channel; `@all` and
 `@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
 contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention @all and @here it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit (which takes no `allowed_mentions`, so editing a message removes its role mentions instead of adding them). Only members who can view the channel are notified. The upload route takes the same object as the form field `allowed_mentions` (JSON-encoded, for example `{"parse":["everyone","roles"]}`) and applies the same rules to its caption: without the field the caption notifies the members it names, never `@all`, `@here` or a role. Bots cannot join Talks (voice) in v1.
 
@@ -342,7 +362,8 @@ tokens. Unicode emoji work as typed.
 ## Gateway
 
 The gateway pushes events to a bot over a WebSocket, with Discord's opcodes
-and flow. OpenAPI cannot describe it, so this page is its reference.
+and flow. OpenAPI cannot describe it, so this page is its reference; the payload of each
+event is in [gateway events](gateway-events.md).
 `GET /api/bot/v1/gateway` (with the token) returns its address, the
 heartbeat interval and the connection cap; the same path is the gateway when
 the request is a WebSocket upgrade.
@@ -776,6 +797,11 @@ registration, interactions (`reply`, `deferReply`, `editReply`, `followUp`,
 `update`, `deferUpdate`, `showModal`), components and modals, and the add
 link. Each README shows how to install it and has three examples: an echo
 bot, a slash command bot, and a buttons and modal bot.
+
+A complete first bot in both languages is in the
+[SDK quick start](bot-sdk-quickstart.md); [recipes](bot-recipes.md) answer common
+tasks, [gateway events](gateway-events.md) shows every event's payload and
+[allowed mentions](allowed-mentions.md) whom a message may notify.
 
 ```ts
 import { Client, Intents, actionRow, button, ButtonStyle } from 'mnema-talk-sdk'
