@@ -350,6 +350,17 @@ bot, and cannot give *Send messages* to a bot everywhere if they are
 denied it in any channel. For the same reason they cannot change a bot that
 reaches a channel they cannot view.
 
+*All channels* needs *View channels* among the permissions (the server answers
+`400` otherwise). Because the bot follows what members see, opening a private
+channel to `@everyone` (or giving `@everyone` *View channels*) widens where the
+bot works. The bot invariant therefore applies to that edit as to every other:
+a member without a permission the bot holds, such as *Manage messages*, cannot
+open a channel to everyone while such a bot exists. Likewise, switching back to
+*Selected channels* only removes what the choice gave; *View channels* that a
+role the bot holds besides its own (or the shared Bot role) grants server-wide
+keeps working, private channels included, and the same invariant guards that
+switch.
+
 **Switching back** to *Selected channels* removes the server-wide grants and
 writes overwrites for the channels chosen at that moment. What the bot's own
 role allowed before, in channels and categories the caller can view in full,

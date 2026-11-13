@@ -170,6 +170,10 @@ func TestSwitchingBetweenAllAndSelectedChannels(t *testing.T) {
 		wantStatus(t, key, res, http.StatusBadRequest)
 	}
 	wantStatus(t, "unknown access", owner.put(path, accessBody("some", allKeys)), http.StatusBadRequest)
+	wantStatus(t, "all without view", owner.put(path, accessBody("all", []string{"send_messages"})), http.StatusBadRequest)
+	blind := installBody(testManifest("Blind"), []string{"send_messages"}, nil)
+	blind["access"] = "all"
+	wantStatus(t, "install all without view", owner.post("/api/admin/bots/install", blind), http.StatusBadRequest)
 	wantStatus(t, "hidden channel", owner.put(path, accessBody("channels", allKeys, uuid.New())), http.StatusNotFound)
 	if got := ownPerms(t, owner, b); got != wantAll {
 		t.Fatalf("a refused change changed the role: %b", got)

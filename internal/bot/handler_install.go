@@ -117,6 +117,9 @@ func planInstall(req InstallRequest) (installPlan, error) {
 	case "", AccessChannels:
 	case AccessAll:
 		p.all = true
+		if !p.perms.Has(perm.ViewChannel) {
+			return installPlan{}, httpx.ErrInvalidInput(`access "all" needs the view_channel permission: without it the bot sees nothing`)
+		}
 	default:
 		return installPlan{}, httpx.ErrInvalidInput(`access must be "channels" or "all"`)
 	}

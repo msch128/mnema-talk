@@ -33,7 +33,7 @@ type AccessRequest struct {
 // setAccess handles PUT /api/admin/bots/{id}/access.
 //
 // @Summary Choose which channels a bot works in
-// @Description Owner or Manage bots. Sets the bot's access: "channels" gives the listed permissions to the bot's own role in exactly the listed channels (its other server-wide channel grants and overwrites go), "all" gives them to the bot's own role server-wide, so the bot works in every channel plain members can see; a channel where @everyone is denied View channels stays hidden from it unless it is listed. Only these channel permissions can be given: view, send, attach, react, manage messages, mention everyone; never Administrator or the admin area. Overwrites of the bot's own role in channels the caller cannot view stay. The usual bot invariant applies: nobody but the Owner gives a bot anything elevated, and nobody gives a bot a permission they lack in a channel it reaches. A bot that reaches a channel the caller cannot view cannot be changed by the caller either. Logged as bot.access.
+// @Description Owner or Manage bots. Sets the bot's access: "channels" gives the listed permissions to the bot's own role in exactly the listed channels (its other server-wide channel grants and overwrites go), "all" gives them to the bot's own role server-wide, so the bot works in every channel plain members can see; a channel where @everyone is denied View channels stays hidden from it unless it is listed. Only these channel permissions can be given: view, send, attach, react, manage messages, mention everyone; never Administrator or the admin area. A permission that is both given and listed lifts a deny of the bot's own role in that channel. Overwrites of the bot's own role in channels the caller cannot view stay. "all" needs view_channel. The usual bot invariant applies: nobody but the Owner gives a bot anything elevated, and nobody gives a bot a permission they lack in a channel it reaches. A bot that reaches a channel the caller cannot view cannot be changed by the caller either. Logged as bot.access.
 // @ID setBotAccess
 // @Tags Bots
 // @Accept json
@@ -96,6 +96,9 @@ func planAccess(req AccessRequest) (perm.BotAccess, error) {
 	}
 	for _, k := range keys {
 		a.Allow |= k.Bit
+	}
+	if a.All && !a.Allow.Has(perm.ViewChannel) {
+		return a, httpx.ErrInvalidInput(`access "all" needs the view_channel permission: without it the bot sees nothing`)
 	}
 	a.Channels = uniqueChannels(req.ChannelIDs)
 	if len(a.Channels) > maxInstallChannels {
