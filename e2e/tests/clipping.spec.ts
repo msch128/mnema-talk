@@ -111,6 +111,9 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   await browserFont(mp)
   await signInApi(mp, world.member.username, world.member.password)
   await apiFetch(mp, 'PUT', '/api/users/me/locale', { locale: combo.locale })
+  // The member is new to the welcome flow on every combo, whatever an earlier
+  // combo or scene did with it: the server is told the flow is not done.
+  expect((await apiFetch(mp, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   await mp.goto('/')
   const welcome = mp.getByRole('dialog')
   if (await welcome.isVisible({ timeout: 10_000 }).catch(() => false)) await audit(mp, info, 'welcome flow', report)
