@@ -1,8 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect } from '../fixtures'
-import { apiFetch, responseString } from '../helpers'
-import { type Combo, comboLabel } from './matrix'
-import { IMAGE, type World } from './seed'
+import type { Combo } from './matrix'
+import { IMAGE, LONG_WORD, type World } from './seed'
 import { type Socket, joinTalk, seatParticipants } from './talk'
 
 // Every view and state the sweep audits, as a table: a name, whether it runs
@@ -256,14 +255,10 @@ const otherScenes: Scene[] = [
   {
     name: 'forum post',
     reach: async (s) => {
-      // A post of this combo's own, opened by its address: a click on a card of
-      // the list could land while the list was still being redrawn.
-      // Titles hold at most 100 characters (internal/chat/forum).
-      const title = `Post of ${comboLabel(s.combo)}, a title long enough to need two lines ${'or more '.repeat(6)}`.slice(0, 100).trim()
-      const post = await apiFetch(s.page, 'POST', `/api/channels/${s.world.forum.id}/posts`, { title, content: `Body. ${s.world.suffix}` })
-      expect(post.status, JSON.stringify(post.json)).toBe(201)
-      await open(s.page, `/c/${s.world.forum.id}/t/${responseString(post, 'id')}`)
-      await expect(s.page.getByTestId('forum-post-header')).toContainText(title.slice(0, 40))
+      // The seeded post, opened by its address: a click on a card of the list
+      // could land while the list was still being redrawn.
+      await open(s.page, `/c/${s.world.forum.id}/t/${s.world.forum.postId}`)
+      await expect(s.page.getByTestId('forum-post-header')).toContainText(LONG_WORD.slice(0, 20))
     },
   },
   { name: 'wiki page', smoke: true, reach: async (s) => { await open(s.page, `/wiki/${s.world.wikiSlug}`); await expect(s.page.getByTestId('wiki-title')).toBeVisible() } },

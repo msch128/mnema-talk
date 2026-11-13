@@ -19,7 +19,7 @@ export interface World {
   chat: { id: string; slug: string; name: string }
   longName: { id: string; slug: string; name: string }
   talk: { id: string; slug: string; name: string }
-  forum: { id: string; slug: string }
+  forum: { id: string; slug: string; postId: string }
   wikiSlug: string
   eventId: string
   dmId: string
@@ -30,7 +30,7 @@ export interface World {
   lastMessageText: string
 }
 
-const LONG_WORD = 'Pneumonoultramicroscopicsilicovolcanoconiosis'.repeat(3)
+export const LONG_WORD = 'Pneumonoultramicroscopicsilicovolcanoconiosis'.repeat(3)
 const LONG_LINK = `https://docs.example.com/guides/${'very-long-path-segment-'.repeat(8)}end?query=${'value'.repeat(12)}`
 const CODE = [
   '```ts',
@@ -186,6 +186,8 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   const talk = await channel(admin, `A Talk with a long name for the sweep ${suffix}`.slice(0, 64), 'voice')
   const forum = await channel(admin, `clip-forum-${suffix}`, 'forum')
   for (let i = 0; i < 3; i++) await ok(admin, 'POST', `/api/channels/${forum.id}/posts`, { title: `Forum post ${i} with a title long enough to need two lines ${'or more '.repeat(4)}`, content: `Body ${i}. ${LONG_WORD}` })
+  // The post the "forum post" scene opens by its address: an unbreakable title (at most 100 characters).
+  const longPost = await ok(admin, 'POST', `/api/channels/${forum.id}/posts`, { title: LONG_WORD.slice(0, 100), content: `A post with an unbreakable title. ${LONG_WORD}` })
   const wiki = await ok(admin, 'POST', '/api/wiki/pages', { title: `A wiki page with a long title for the sweep ${suffix}`, content: `# Heading\n\n${'Paragraph text. '.repeat(40)}\n\n${CODE}\n\n| Column one | Column two with a long header | Three |\n|---|---|---|\n| ${LONG_WORD} | b | c |\n\n${LONG_LINK}` })
   const start = new Date(Date.now() + 3 * 86_400_000).toISOString()
   const event = await ok(admin, 'POST', '/api/events', { title: `Community evening with a long title ${'and more words '.repeat(3)}`.slice(0, 100), description: `${'Description text. '.repeat(20)}${LONG_LINK}`, start_time: start, location: `A location with a long address, ${'street '.repeat(5)}` })
@@ -204,7 +206,7 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
     groupDmId = responseString(await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] }), 'id')
     await post(member, groupDmId, 'Hello group')
   }
-  return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
+  return { longName, talk, forum: { id: forum.id, slug: forum.slug, postId: responseString(longPost, 'id') }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
 /**
