@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0](https://github.com/msch128/mnema-talk/compare/v3.0.13...v3.1.0) (2026-11-13)
+
+
+### Features
+
+* add bots from a manifest, with the permissions the installer picks per channel ([08a00d0](https://github.com/msch128/mnema-talk/commit/08a00d0525bd4113118f634e36884be5debff916))
+* buttons, selects and forms on bot messages, with interactions, deferred answers and edits of the original answer ([08a00d0](https://github.com/msch128/mnema-talk/commit/08a00d0525bd4113118f634e36884be5debff916))
+* official bot SDKs for TypeScript and Go, packed with every release ([08a00d0](https://github.com/msch128/mnema-talk/commit/08a00d0525bd4113118f634e36884be5debff916))
+
+
+### Documentation
+
+* the bot platform's design and the review reports ([08a00d0](https://github.com/msch128/mnema-talk/commit/08a00d0525bd4113118f634e36884be5debff916))
+
 ## [3.0.13](https://github.com/msch128/mnema-talk/compare/v3.0.12...v3.0.13) (2026-11-13)
 
 
