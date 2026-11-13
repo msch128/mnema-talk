@@ -56,6 +56,14 @@ describe('drafts', () => {
     expect(draftsAtRisk()).toBe(false)
   })
 
+  it('puts nothing at risk once the last draft is gone, also when storage is fully blocked', () => {
+    failStorage('setItem', 'getItem', 'key', 'removeItem')
+    setDraft('u1', channelDraftKey('c1'), { text: 'only in memory', reply: null })
+    expect(draftsAtRisk()).toBe(true)
+    setDraft('u1', channelDraftKey('c1'), null)
+    expect(draftsAtRisk()).toBe(false)
+  })
+
   it('keeps text and reply target per channel and thread', () => {
     setDraft('u1', channelDraftKey('c1'), { text: 'hello', reply: { id: 'm1', display_name: 'Max' } })
     setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })

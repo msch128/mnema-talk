@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import { useDraftSlot } from './useDraftSlot'
 import { useAuthStore } from '../../stores/auth'
-import { clearAllDrafts, DRAFT_KEY_PREFIX, getDraft, hasDraft, type DraftReply } from '../lib/drafts'
+import { clearAllDrafts, DRAFT_KEY_PREFIX, draftsAtRisk, getDraft, hasDraft, type DraftReply } from '../lib/drafts'
 import { userFixture } from '../../test-fixtures.fixture'
 
 const slot = ref<string | null>('c:one')
@@ -104,5 +104,38 @@ describe('draft per composer slot', () => {
     useAuthStore().user = null
     await typeText('anonymous')
     expect(Object.keys(localStorage)).toEqual([])
+  })
+})
+
+describe('text typed and not written yet', () => {
+  it('puts the draft at risk until the save after the pause in typing', async () => {
+    mount(Harness)
+    text.value = 'half a thought'
+    await nextTick()
+    expect(draftsAtRisk()).toBe(true)
+    vi.advanceTimersByTime(399)
+    expect(draftsAtRisk()).toBe(true)
+    vi.advanceTimersByTime(1)
+    expect(draftsAtRisk()).toBe(false)
+    expect(getDraft('me', 'c:one')?.text).toBe('half a thought')
+  })
+
+  it('is written, and no longer at risk, when the composer goes', async () => {
+    const wrapper = mount(Harness)
+    text.value = 'leaving'
+    await nextTick()
+    expect(draftsAtRisk()).toBe(true)
+    wrapper.unmount()
+    expect(draftsAtRisk()).toBe(false)
+    expect(getDraft('me', 'c:one')?.text).toBe('leaving')
+  })
+
+  it('is written, and no longer at risk, when the page is hidden for good', async () => {
+    mount(Harness)
+    text.value = 'closing'
+    await nextTick()
+    window.dispatchEvent(new Event('pagehide'))
+    expect(draftsAtRisk()).toBe(false)
+    expect(getDraft('me', 'c:one')?.text).toBe('closing')
   })
 })

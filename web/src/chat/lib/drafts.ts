@@ -152,7 +152,8 @@ function write(uid: string, items: Items) {
     // Storage blocked or full: drafts then live only until the page closes.
     unsaved = true
   }
-  refused.value = unsaved
+  // Nothing is at risk once no draft is left, even when storage refused to forget the last one.
+  refused.value = unsaved && Object.keys(items).length > 0
 }
 
 // Composers with typed text that is not written yet (a save waits for a pause in typing).
