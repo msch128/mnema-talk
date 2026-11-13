@@ -606,18 +606,19 @@ jobs:
           echo "::error::the Docker Hub signature could not be verified"
           exit 1
 
-      # The repository page on Docker Hub: short and full description from
+      # The repository page of the organization's Docker Hub copy (mnemaxyz
+      # only; the msch128 copy keeps its page as it is): short and full description from
       # deploy/dockerhub/ of this run's commit on main, so a backfill of an
       # old version also gets the current text (the full one is a Docker Hub
       # specific overview; the repository README is too long for it).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.cfg.outputs.enabled == 'true'
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
         with:
           persist-credentials: false
           sparse-checkout: deploy/dockerhub
 
       - name: Read the short description
-        if: steps.cfg.outputs.enabled == 'true'
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
         id: short
         run: |
           set -euo pipefail
@@ -626,7 +627,7 @@ jobs:
           echo "text=$text" >> "$GITHUB_OUTPUT"
 
       - uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
-        if: steps.cfg.outputs.enabled == 'true'
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
         with:
           username: ${{ secrets[matrix.user_secret] }}
           password: ${{ secrets[matrix.token_secret] }}
