@@ -157,14 +157,15 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="scrim fixed inset-0 flex items-center justify-center p-4 z-50">
+  <div class="scrim fixed inset-0 flex justify-center overflow-y-auto p-4 z-50">
+    <!-- Centred while it fits (my-auto); on a short window the card scrolls instead of losing its top. -->
     <div
       ref="panel"
       role="dialog"
       aria-modal="true"
       :aria-labelledby="titleId"
       tabindex="-1"
-      class="dialog-panel bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5 focus:outline-hidden"
+      class="dialog-panel my-auto bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5 focus:outline-hidden"
     >
       <!-- Brand & Title -->
       <div class="text-center space-y-2">
