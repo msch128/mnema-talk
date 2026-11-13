@@ -77,7 +77,7 @@ func (a *app) endLifetime(ids ...uuid.UUID) {
 // endLifetimeInPlace ends the lifetimes a second ago and keeps the messages'
 // times, for a test whose other rows depend on when a message was written (the
 // store trace's read markers). The bounds check is lifted for this one
-// statement and put back as it was (NOT VALID, migration 0105).
+// statement and put back as it was (NOT VALID, migration 0106).
 func (a *app) endLifetimeInPlace(ids ...uuid.UUID) {
 	a.t.Helper()
 	ctx := context.Background()

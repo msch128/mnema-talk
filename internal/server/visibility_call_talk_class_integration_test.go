@@ -70,7 +70,7 @@ func TestAReportOfACallChatIsFiledLikeOneOfTheConversation(t *testing.T) {
 // kept an auto-delete setting from before the admin routes refused it was swept
 // like a channel, and the run was audited (channel.auto_delete_run) with the
 // call's id and name, which the Owner reads. Like a conversation it is never
-// swept now: the schema refuses a setting of its own (migration 0105) and the
+// swept now: the schema refuses a setting of its own (migration 0106) and the
 // community default passes it by.
 func TestTheAutoDeleteSweepLeavesACallTalkAlone(t *testing.T) {
 	w := newCallChatWorld(t)

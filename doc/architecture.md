@@ -265,7 +265,7 @@ anonymous polls that existed before 1.2 the same way (see
 `channels.auto_delete_hours` (NULL follows `instance_settings.auto_delete_default_hours`,
 0 is off, up to 8760) and `auto_delete_scope` (`all` or `attachments`; a check
 constraint forbids a period on conversations and their call Talks, migration
-0105) are read by `channels.AutoDeleter`
+0106) are read by `channels.AutoDeleter`
 ([`internal/chat/channels/auto_delete.go`](../internal/chat/channels/auto_delete.go)), a
 background loop started with the router that runs on whole multiples of ten
 minutes. Each pass lists the channels with an effective period and works

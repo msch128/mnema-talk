@@ -71,7 +71,7 @@ func hookedPool(t *testing.T, source *db.Pool, hook *beforeStatement) *db.Pool {
 // still has a reply younger than the cutoff or a pinned one" (sweepBatch). The
 // pin goes through the route and is in flight when the sweep selects: it has
 // changed the reply and holds its row lock, but has not committed (its foreign
-// key check on pinned_by waits for the user row the test holds). Since 0105
+// key check on pinned_by waits for the user row the test holds). Since 0106
 // the sweep's batch share-locks the channel row before it selects, and the pin
 // holds that row: the user row is let go when the sweep reaches that lock, the
 // pin commits, and the batch then sees the pinned reply. The pinned reply and

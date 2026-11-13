@@ -10,7 +10,7 @@ import (
 )
 
 // The bounds of a message's lifetime (doc/timed-messages.md). The database
-// holds the same ones (migration 0105).
+// holds the same ones (migration 0106).
 const (
 	MinLifetimeSeconds = 60
 	MaxLifetimeSeconds = 30 * 24 * 60 * 60

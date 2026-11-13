@@ -176,4 +176,4 @@ All changes are additive ([API stability](api-stability.md)).
 - Upgrading: a channel whose auto-delete was off by its own setting (its last
   `channel.auto_delete_set` entry) stays off; every other channel without a
   period follows the community default, which is off until set
-  ([upgrade notes](upgrade.md#messages-with-a-lifetime-auto-delete-in-hours-migration-0105)).
+  ([upgrade notes](upgrade.md#messages-with-a-lifetime-auto-delete-in-hours-migration-0106)).

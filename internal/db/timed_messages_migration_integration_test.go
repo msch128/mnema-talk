@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// 0105 on a database with data: channels of every kind (a text channel with a
+// 0106 on a database with data: channels of every kind (a text channel with a
 // period, one turned off by its own setting, one never set, a conversation
 // and a call Talk that still holds a period from before the routes refused
 // it), a message, a file, a scheduled message and the settings row.
@@ -28,7 +28,7 @@ func TestTimedMessagesMigrationKeepsEveryRow(t *testing.T) {
 	}
 	before := fstest.MapFS{}
 	for _, name := range files {
-		if name >= "0105" {
+		if name >= "0106" {
 			break
 		}
 		b, err := fs.ReadFile(sub, name)
@@ -64,7 +64,7 @@ func TestTimedMessagesMigrationKeepsEveryRow(t *testing.T) {
 	exec(`INSERT INTO scheduled_messages (user_id, channel_id, content, send_at) VALUES ($1, $2, 'later', now() + interval '1 day')`, user, week)
 
 	if err := p.MigrateFS(ctx, sub); err != nil {
-		t.Fatalf("0105 on seeded data: %v", err)
+		t.Fatalf("0106 on seeded data: %v", err)
 	}
 	for id, want := range map[uuid.UUID]*int{week: ptr(168), off: ptr(0), never: nil, dm: nil, call: nil} {
 		var got *int
@@ -85,7 +85,7 @@ func TestTimedMessagesMigrationKeepsEveryRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	if expires != nil || width != nil || lifetime != nil || !enabled || maxSeconds != 2592000 || defaultHours != 0 {
-		t.Errorf("after 0105: expires %v, width %v, lifetime %v, enabled %v, max %d, default %d", expires, width, lifetime, enabled, maxSeconds, defaultHours)
+		t.Errorf("after 0106: expires %v, width %v, lifetime %v, enabled %v, max %d, default %d", expires, width, lifetime, enabled, maxSeconds, defaultHours)
 	}
 	if _, err := p.Exec(ctx, `UPDATE channels SET auto_delete_hours = 24 WHERE id = $1`, call); err == nil {
 		t.Error("the schema took a period on a call Talk")
