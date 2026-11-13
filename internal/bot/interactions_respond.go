@@ -14,7 +14,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // ResponseData is the message of an interaction response or a follow-up.
@@ -26,6 +25,8 @@ type ResponseData struct {
 	// Flags: 64 makes the response ephemeral, visible only to the member who ran
 	// the command (never stored).
 	Flags int `json:"flags" enums:"0,64"`
+	// AllowedMentions narrows whom the message notifies, as on a post.
+	AllowedMentions *botapi.BotAllowedMentions `json:"allowed_mentions" binding:"optional"`
 }
 
 // CallbackData is the data of a callback: the message of type 4, the update
@@ -40,6 +41,9 @@ type CallbackData struct {
 	// CustomID and Title belong to a modal (type 9); its components are rows of text inputs.
 	CustomID string `json:"custom_id" maxLength:"100" binding:"optional"`
 	Title    string `json:"title" maxLength:"45" binding:"optional"`
+	// AllowedMentions narrows whom the message of type 4, or the new text of
+	// type 7, notifies, as on a post.
+	AllowedMentions *botapi.BotAllowedMentions `json:"allowed_mentions" binding:"optional"`
 }
 
 // CallbackRequest is the body of the first response to an interaction.
@@ -67,6 +71,7 @@ func (d *CallbackData) response() ResponseData {
 		out.Components = *d.Components
 	}
 	out.Flags = d.Flags
+	out.AllowedMentions = d.AllowedMentions
 	return out
 }
 
@@ -224,6 +229,7 @@ type message struct {
 	embeds     []core.Embed
 	components []core.ActionRow
 	ephemeral  bool
+	allowed    *messages.AllowedMentions
 }
 
 // validate checks the content, embeds and components of a response.
@@ -236,7 +242,8 @@ func validate(d ResponseData) (*message, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &message{content: content, embeds: embeds, components: comps, ephemeral: d.Flags&flagEphemeral != 0}, nil
+	return &message{content: content, embeds: embeds, components: comps, ephemeral: d.Flags&flagEphemeral != 0,
+		allowed: (*messages.AllowedMentions)(d.AllowedMentions)}, nil
 }
 
 // respond posts the message of a response, or shows it to the invoker only
@@ -255,12 +262,10 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 		c.showNote(in.botName, in.avatar, n, false)
 		return nil, source{note: n.id}, nil
 	}
-	// A command response never mentions everyone; members are notified only
-	// when they can see the channel.
-	ctx = mentions.WithMentionPolicy(botapi.SendContext(ctx, p), mentions.MentionPolicy{
-		NoEveryone: true,
-		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, in.channel).Has(perm.ViewChannel) },
-	})
+	// A response notifies like a post of the bot: allowed_mentions narrows it,
+	// @all, @here and roles only when it asks for them (and the bot may), and
+	// only members who can see the channel.
+	ctx = mentions.WithMentionPolicy(botapi.SendContext(ctx, p), messages.BotMentionPolicy(snap, in.channel, p, m.allowed))
 	var also func(tx pgx.Tx, id uuid.UUID) error
 	if len(m.components) > 0 {
 		also = func(tx pgx.Tx, id uuid.UUID) error { return core.SaveComponents(ctx, tx, id, m.components) }

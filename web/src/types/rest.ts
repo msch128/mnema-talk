@@ -841,6 +841,7 @@ export function isBotBot(value: unknown): value is BotBot {
 export const decodeBotBot = decoder("bot.Bot", isBotBot)
 
 export type BotCallbackData = {
+  allowed_mentions?: ChatBotAllowedMentions
   components?: Array<ChatActionRow>
   content?: string
   custom_id?: string
@@ -851,6 +852,7 @@ export type BotCallbackData = {
 
 export function isBotCallbackData(value: unknown): value is BotCallbackData {
   return isRecord(value)
+    && (!hasOwn(value, "allowed_mentions") || isChatBotAllowedMentions(value["allowed_mentions"]))
     && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (!hasOwn(value, "content") || isString(value["content"], 4000))
     && (!hasOwn(value, "custom_id") || isString(value["custom_id"], 100))
@@ -1181,6 +1183,7 @@ export function isBotOption(value: unknown): value is BotOption {
 export const decodeBotOption = decoder("bot.Option", isBotOption)
 
 export type BotOriginalEdit = {
+  allowed_mentions?: ChatBotAllowedMentions
   components?: Array<ChatActionRow>
   content?: string
   embeds?: Array<ChatInEmbed>
@@ -1188,6 +1191,7 @@ export type BotOriginalEdit = {
 
 export function isBotOriginalEdit(value: unknown): value is BotOriginalEdit {
   return isRecord(value)
+    && (!hasOwn(value, "allowed_mentions") || isChatBotAllowedMentions(value["allowed_mentions"]))
     && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (!hasOwn(value, "content") || isString(value["content"], 4000))
     && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatInEmbed(item)))
@@ -1196,6 +1200,7 @@ export function isBotOriginalEdit(value: unknown): value is BotOriginalEdit {
 export const decodeBotOriginalEdit = decoder("bot.OriginalEdit", isBotOriginalEdit)
 
 export type BotResponseData = {
+  allowed_mentions?: ChatBotAllowedMentions
   components?: Array<ChatActionRow>
   content: string
   embeds: Array<ChatInEmbed>
@@ -1204,6 +1209,7 @@ export type BotResponseData = {
 
 export function isBotResponseData(value: unknown): value is BotResponseData {
   return isRecord(value)
+    && (!hasOwn(value, "allowed_mentions") || isChatBotAllowedMentions(value["allowed_mentions"]))
     && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatInEmbed(item)))
@@ -1228,6 +1234,7 @@ export type BotSelf = {
   avatar_url?: string
   bot: true
   bot_id: string
+  handle: string
   id: string
   username: string
 }
@@ -1238,6 +1245,7 @@ export function isBotSelf(value: unknown): value is BotSelf {
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "bot") && (value["bot"] === true))
     && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
+    && (hasOwn(value, "handle") && isString(value["handle"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
 }

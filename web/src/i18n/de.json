@@ -675,6 +675,7 @@
       "srvDataRequiredType7": "Callback-Typ 7 braucht data.",
       "srvDataRequiredType9": "Callback-Typ 9 braucht data mit custom_id, title und components.",
       "srvFillRequiredFields": "Füll alle Pflichtfelder aus.",
+      "srvFlagsOnOriginal": "Beim Bearbeiten der ursprünglichen Antwort lassen sich keine Flags setzen: Ob die Antwort nur für dich sichtbar ist, legt die erste Antwort fest.",
       "srvInvalidModalId": "Ungültiges Formular.",
       "srvModalNotFound": "Dieses Formular ist abgelaufen. Fang beim Bot noch einmal an.",
       "srvInteractionAnsweredModal": "Die Interaktion wurde mit einem Formular beantwortet: Antworte stattdessen auf dessen Absendung.",

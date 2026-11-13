@@ -174,7 +174,10 @@ export interface Member {
 export interface BotSelf {
   id: string
   bot_id: string
+  /** The bot's name as members see it (its display name). */
   username: string
+  /** The account's unique name, the one members mention (@bot-...); Discord calls this the username. */
+  handle: string
   bot: true
   avatar_url?: string
   allowed_intents: number

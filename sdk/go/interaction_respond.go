@@ -26,15 +26,22 @@ type Response struct {
 	Components []Component
 	// Ephemeral shows the response to the member only (flags 64).
 	Ephemeral bool
+	// AllowedMentions narrows whom the message notifies, as on a post; nil
+	// notifies the members it names, never @all, @here or a role.
+	AllowedMentions *AllowedMentions
 }
 
 // Edit changes a response or the message a component is on (EditReply,
 // Update). Nil fields stay as they are; an empty Components slice removes
-// the components.
+// the components. It has no Ephemeral: the first response (Reply or
+// DeferReply) decides whether an answer is ephemeral, and the server refuses
+// flags on an edit.
 type Edit struct {
 	Content    *string      `json:"content,omitempty"`
 	Embeds     *[]Embed     `json:"embeds,omitempty"`
 	Components *[]Component `json:"components,omitempty"`
+	// AllowedMentions narrows whom the new text notifies, as on a post.
+	AllowedMentions *AllowedMentions `json:"allowed_mentions,omitempty"`
 }
 
 type responseData struct {
@@ -42,13 +49,15 @@ type responseData struct {
 	Embeds     []Embed     `json:"embeds,omitempty"`
 	Components []Component `json:"components,omitempty"`
 	Flags      int         `json:"flags"`
+	// AllowedMentions is sent only when set.
+	AllowedMentions *AllowedMentions `json:"allowed_mentions,omitempty"`
 }
 
 func (r Response) data() (responseData, error) {
 	if err := ValidateComponents(r.Components); err != nil {
 		return responseData{}, err
 	}
-	d := responseData{Content: r.Content, Embeds: r.Embeds, Components: r.Components}
+	d := responseData{Content: r.Content, Embeds: r.Embeds, Components: r.Components, AllowedMentions: r.AllowedMentions}
 	if r.Ephemeral {
 		d.Flags = FlagEphemeral
 	}

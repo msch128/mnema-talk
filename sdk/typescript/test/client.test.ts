@@ -123,7 +123,7 @@ describe('interactions', () => {
     assert.equal(i.commandName, 'roll')
     assert.equal(i.options.get('sides'), 20)
     assert.equal(i.options.get('loud'), true)
-    assert.equal(i.user?.username, 'max')
+    assert.equal(i.user.username, 'max')
     await i.reply({ content: 'You rolled 7', ephemeral: true })
     const cb = calls.at(-1)!
     assert.equal(cb.url, '/api/bot/v1/interactions/i1/tok/callback')

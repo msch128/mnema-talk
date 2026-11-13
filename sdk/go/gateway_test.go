@@ -75,7 +75,7 @@ func TestDispatchesAreDecodedAndDeliveredToTheirHandlers(t *testing.T) {
 		"data":   map[string]any{"id": "cmd", "name": "ping", "options": []map[string]any{{"name": "n", "type": 4, "value": 3}}},
 		"member": map[string]any{"user": map[string]any{"id": "u-1", "username": "max"}}})
 	i := waitFor(t, interactions, "INTERACTION_CREATE")
-	if i.CommandName() != "ping" || i.Option("n").Int() != 3 || i.User == nil || i.User.Username != "max" || i.rest != c.REST {
+	if i.CommandName() != "ping" || i.Option("n").Int() != 3 || i.User.Username != "max" || i.rest != c.REST {
 		t.Fatalf("interaction = %+v", i)
 	}
 	fc.dispatch(t, 6, "SOMETHING_NEW", map[string]any{})

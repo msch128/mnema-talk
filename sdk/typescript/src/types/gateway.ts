@@ -14,7 +14,10 @@ export interface ReadyUser {
   /** The bot's user id: the author of its messages and the id in `mentions`. */
   id: string
   bot_id: string
+  /** The bot's name as members see it (its display name). */
   username: string
+  /** The account's unique name, the one members mention (@bot-...); Discord calls this the username. */
+  handle: string
   bot: true
   avatar_url?: string
 }

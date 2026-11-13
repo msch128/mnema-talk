@@ -1,7 +1,7 @@
 // The routes of the bot REST API (/api/bot/v1), typed.
 import { validateCommand, validateCommands } from '../builders/commands.ts'
 import { validateMessageComponents } from '../builders/validate.ts'
-import type { Command, CommandInput, InteractionCallback, InteractionResponseData } from '../types/commands.ts'
+import type { Command, CommandInput, InteractionCallback, InteractionEditData, InteractionResponseData } from '../types/commands.ts'
 import type {
   BotSelf,
   ChannelHierarchy,
@@ -141,7 +141,7 @@ export class RestClient {
   }
 
   /** Edits (or, after callback 5, posts) the original response; undefined for an ephemeral note. */
-  editOriginalResponse(id: string, token: string, data: InteractionResponseData): Promise<Message | undefined> {
+  editOriginalResponse(id: string, token: string, data: InteractionEditData): Promise<Message | undefined> {
     checkComponents(data)
     return this.core.request('PATCH', `${interactionPath(id, token)}/messages/@original`, { body: data })
   }

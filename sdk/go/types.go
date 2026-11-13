@@ -4,9 +4,13 @@ import "time"
 
 // Self is the bot account, the answer of GET /users/@me.
 type Self struct {
-	ID             string  `json:"id"`
-	BotID          string  `json:"bot_id"`
-	Username       string  `json:"username"`
+	ID    string `json:"id"`
+	BotID string `json:"bot_id"`
+	// Username is the bot's name as members see it (its display name).
+	Username string `json:"username"`
+	// Handle is the account's unique name, the one members mention
+	// (@bot-...); Discord calls this the username.
+	Handle         string  `json:"handle,omitempty"`
 	Bot            bool    `json:"bot"`
 	AvatarURL      string  `json:"avatar_url,omitempty"`
 	AllowedIntents Intents `json:"allowed_intents"`

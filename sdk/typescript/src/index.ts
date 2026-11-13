@@ -27,7 +27,7 @@ export type {
 
 export { Client, gatewayUrlFor, type ClientEvents, type ClientOptions } from './client/client.ts'
 export { CommandManager } from './client/commands.ts'
-export { Interaction, type ReplyData } from './client/interaction.ts'
+export { Interaction, type EditData, type ReplyData } from './client/interaction.ts'
 
 export { RestClient } from './rest/client.ts'
 export { RestError } from './rest/error.ts'

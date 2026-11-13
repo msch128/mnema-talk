@@ -1424,6 +1424,10 @@
       },
       "bot.CallbackData": {
         "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the message of type 4, or the new text of\ntype 7, notifies, as on a post."
+          },
           "components": {
             "items": {
               "$ref": "#/components/schemas/chat.ActionRow"
@@ -2020,6 +2024,10 @@
       },
       "bot.OriginalEdit": {
         "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the new text notifies, as on a post."
+          },
           "components": {
             "items": {
               "$ref": "#/components/schemas/chat.ActionRow"
@@ -2041,6 +2049,10 @@
       },
       "bot.ResponseData": {
         "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the message notifies, as on a post."
+          },
           "components": {
             "description": "Components are buttons and select menus (doc/bots.md, Message components).",
             "items": {
@@ -2108,12 +2120,17 @@
             "format": "uuid",
             "type": "string"
           },
+          "handle": {
+            "description": "Handle is the account's unique name, the one members mention\n(@bot-...); Discord calls this the username.",
+            "type": "string"
+          },
           "id": {
             "description": "ID is the bot's user ID: the author of its messages (user_id).",
             "format": "uuid",
             "type": "string"
           },
           "username": {
+            "description": "Name is the bot's name as members see it (its display name).",
             "type": "string"
           }
         },
@@ -2121,6 +2138,7 @@
           "allowed_intents",
           "bot",
           "bot_id",
+          "handle",
           "id",
           "username"
         ],

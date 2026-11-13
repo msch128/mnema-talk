@@ -40,6 +40,9 @@ type BotMessageEdit struct {
 	Content    *string
 	Embeds     *[]core.Embed
 	Components *[]core.ActionRow
+	// AllowedMentions narrows whom the new text notifies, as on a post; nil is
+	// the policy of a post without it (members named, never @all, @here or a role).
+	AllowedMentions *messages.AllowedMentions
 }
 
 // DecodeComponents reads the components of a request body that were kept raw
@@ -85,7 +88,7 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	ctx, err := a.editContext(r.Context(), user, ref.ChannelID)
+	ctx, err := a.editContext(r.Context(), user, ref.ChannelID, nil)
 	if err != nil {
 		return err
 	}
@@ -115,7 +118,7 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 // editContext requires Send messages of the bot in the channel and carries
 // the mention policy of its sends (messages.BotMentionPolicy), so an edit
 // never reaches more than a send does.
-func (a *API) editContext(ctx context.Context, user *auth.User, ch uuid.UUID) (context.Context, error) {
+func (a *API) editContext(ctx context.Context, user *auth.User, ch uuid.UUID, am *messages.AllowedMentions) (context.Context, error) {
 	snap, p, err := ChannelPermsOf(ctx, a.Guard.Perms, user, ch)
 	if err != nil {
 		return nil, err
@@ -123,7 +126,7 @@ func (a *API) editContext(ctx context.Context, user *auth.User, ch uuid.UUID) (c
 	if err := snap.Deny(user.Subject(), p, perm.SendMessages); err != nil {
 		return nil, err
 	}
-	return mentions.WithMentionPolicy(ctx, messages.BotMentionPolicy(snap, ch, p, nil)), nil
+	return mentions.WithMentionPolicy(ctx, messages.BotMentionPolicy(snap, ch, p, am)), nil
 }
 
 // EditBotMessage edits the bot's own message msgID of channel ch (an
@@ -134,7 +137,7 @@ func (a *API) EditBotMessage(ctx context.Context, bot *auth.User, ch, msgID uuid
 	if err := a.ownMessageIn(ctx, bot, ch, msgID); err != nil {
 		return nil, err
 	}
-	ctx, err := a.editContext(ctx, bot, ch)
+	ctx, err := a.editContext(ctx, bot, ch, e.AllowedMentions)
 	if err != nil {
 		return nil, err
 	}

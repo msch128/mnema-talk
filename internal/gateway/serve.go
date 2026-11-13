@@ -54,11 +54,15 @@ type Ready struct {
 
 // ReadyUser is the bot as READY shows it.
 type ReadyUser struct {
-	ID        uuid.UUID `json:"id"`
-	BotID     uuid.UUID `json:"bot_id"`
-	Username  string    `json:"username"`
-	Bot       bool      `json:"bot"`
-	AvatarURL string    `json:"avatar_url,omitempty"`
+	ID    uuid.UUID `json:"id"`
+	BotID uuid.UUID `json:"bot_id"`
+	// Username is the bot's name as members see it (its display name).
+	Username string `json:"username"`
+	// Handle is the account's unique name, the one members mention
+	// (@bot-...); Discord calls this the username.
+	Handle    string `json:"handle"`
+	Bot       bool   `json:"bot"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
 // frameLimiter allows framesPerMinute frames in each minute.
@@ -122,7 +126,7 @@ func validIntents(intents *int64, allowed int64) int {
 func (g *Gateway) sendReady(s *session, creds *bot.Credentials) error {
 	ready, err := json.Marshal(Ready{
 		V: Version, SessionID: s.id, Intents: s.intents, ResumeURL: g.wsURL(), Heartbeat: int(g.timings().Heartbeat / time.Millisecond),
-		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Bot: true, AvatarURL: creds.User.AvatarURL},
+		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Handle: creds.User.Username, Bot: true, AvatarURL: creds.User.AvatarURL},
 	})
 	if err != nil {
 		return err

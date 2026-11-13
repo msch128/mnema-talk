@@ -27,8 +27,8 @@ var errNoMessages = errors.New("bot commands: no message editor configured")
 
 // parseEdit checks an update of a message or a note: each field left out
 // (nil) stays as it is.
-func parseEdit(content *string, embeds *[]messages.InEmbed, comps *[]core.ActionRow) (botapi.BotMessageEdit, error) {
-	var e botapi.BotMessageEdit
+func parseEdit(content *string, embeds *[]messages.InEmbed, comps *[]core.ActionRow, am *botapi.BotAllowedMentions) (botapi.BotMessageEdit, error) {
+	e := botapi.BotMessageEdit{AllowedMentions: (*messages.AllowedMentions)(am)}
 	if content != nil {
 		c, err := core.ValidateContent(*content, true)
 		if err != nil {
@@ -58,7 +58,7 @@ func parseUpdate(d *CallbackData) (botapi.BotMessageEdit, error) {
 	if d == nil {
 		return botapi.BotMessageEdit{}, httpx.ErrInvalidInput("data is required for type 7")
 	}
-	return parseEdit(d.Content, d.Embeds, d.Components)
+	return parseEdit(d.Content, d.Embeds, d.Components, d.AllowedMentions)
 }
 
 // answerUpdate is callback 7: the message the component is on changes. When

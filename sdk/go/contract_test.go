@@ -14,6 +14,7 @@ package mnema
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
@@ -90,6 +91,9 @@ func (b *contractBot) me(t *testing.T) {
 	if me.AllowedIntents&contractIntents != contractIntents {
 		t.Fatalf("allowed_intents %d lacks %d", me.AllowedIntents, contractIntents)
 	}
+	if !strings.HasPrefix(me.Handle, "bot-") {
+		t.Fatalf("handle = %q, want the name members mention", me.Handle)
+	}
 	b.self = me
 }
 
@@ -98,6 +102,9 @@ func (b *contractBot) connect(t *testing.T) {
 	r := await(t, b.ready, "READY", func(*Ready) bool { return true })
 	if r.V != 1 || r.User.ID != b.self.ID || !r.User.Bot || r.Intents != contractIntents || r.SessionID == "" || r.HeartbeatInterval <= 0 {
 		t.Fatalf("ready = %+v", r)
+	}
+	if r.User.Handle != b.self.Handle {
+		t.Fatalf("READY handle %q, @me handle %q", r.User.Handle, b.self.Handle)
 	}
 	if !strings.HasPrefix(r.ResumeGatewayURL, "ws://") && !strings.HasPrefix(r.ResumeGatewayURL, "wss://") {
 		t.Fatalf("resume_gateway_url = %q", r.ResumeGatewayURL)
@@ -144,7 +151,7 @@ func (b *contractBot) command(t *testing.T) {
 	}
 	b.member.call(t, http.MethodPost, "/api/channels/"+b.env.channel+"/interactions", map[string]any{"command_id": cmd.ID, "options": map[string]any{"text": b.run}}, http.StatusAccepted, &invoked)
 	i := await(t, b.interactions, "the command interaction", func(i *Interaction) bool { return i.IsCommand() && i.CommandName() == "contract-echo-go" })
-	if i.ID != invoked.InteractionID || i.ChannelID != b.env.channel || i.Data.ID != cmd.ID || i.Option("text").String() != b.run || i.User == nil || i.User.ID == "" {
+	if i.ID != invoked.InteractionID || i.ChannelID != b.env.channel || i.Data.ID != cmd.ID || i.Option("text").String() != b.run || i.User.ID == "" {
 		t.Fatalf("interaction = %+v", i)
 	}
 	if err := i.Reply(ctx, Response{Content: "echo: " + b.run}); err != nil {
@@ -153,6 +160,34 @@ func (b *contractBot) command(t *testing.T) {
 	m := await(t, b.messages, "the reply", func(m *Message) bool { return m.Content == "echo: "+b.run })
 	if m.UserID != b.self.ID {
 		t.Fatalf("reply = %+v", m)
+	}
+	answersFollowTheirRoutes(t, i)
+}
+
+// answersFollowTheirRoutes sends what each answer route takes:
+// allowed_mentions on follow-ups and @original, flags on follow-ups only.
+func answersFollowTheirRoutes(t *testing.T, i *Interaction) {
+	ctx := background(t)
+	name := "@" + i.User.Username
+	quiet, err := i.FollowUp(ctx, Response{Content: "quiet " + name, AllowedMentions: &AllowedMentions{Parse: []string{}}})
+	if err != nil || quiet == nil || quiet.MentionsUser(i.User.ID) {
+		t.Fatalf("quiet follow-up = %+v, %v", quiet, err)
+	}
+	loud, err := i.FollowUp(ctx, Response{Content: "loud " + name})
+	if err != nil || loud == nil || !loud.MentionsUser(i.User.ID) {
+		t.Fatalf("loud follow-up = %+v, %v", loud, err)
+	}
+	if note, err := i.FollowUp(ctx, Response{Content: "psst", Ephemeral: true}); err != nil || note != nil {
+		t.Fatalf("ephemeral follow-up = %+v, %v", note, err)
+	}
+	edited, err := i.EditReply(ctx, Edit{Content: Ptr("edited " + name), AllowedMentions: &AllowedMentions{Parse: []string{}}})
+	if err != nil || edited == nil || edited.MentionsUser(i.User.ID) {
+		t.Fatalf("edited = %+v, %v", edited, err)
+	}
+	_, err = call[Message](ctx, i.rest, http.MethodPatch, i.path("/messages/@original"), map[string]any{"content": "x", "flags": FlagEphemeral})
+	var re *RESTError
+	if !errors.As(err, &re) || re.Status != http.StatusBadRequest || !strings.Contains(re.Message, "flags cannot be set on @original") {
+		t.Fatalf("flags on @original: %v", err)
 	}
 }
 

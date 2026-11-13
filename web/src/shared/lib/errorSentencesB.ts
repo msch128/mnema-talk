@@ -6,6 +6,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['file storage unavailable', 'srvFileStorageUnavailable'],
   ['filename is too long', 'srvFilenameIsTooLong'],
   ['fill in every required field', 'srvFillRequiredFields'],
+  ['flags cannot be set on @original: the first response decides whether the answer is ephemeral (flags 64 on callback 4 or 5)', 'srvFlagsOnOriginal'],
   ['forum tag not found', 'srvForumTagNotFound'],
   ['frequency must be weekly, biweekly or monthly', 'srvFrequencyMustBeWeekly'],
   ['guidelines contains invalid characters', 'fieldInvalidChars', [], { field: 'guidelines' }],

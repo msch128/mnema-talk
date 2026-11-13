@@ -36,15 +36,15 @@ func TestCommandInteractionsExposeTheirOptionsTyped(t *testing.T) {
 }
 
 func TestComponentAndModalInteractionsExposeCustomIDsValuesAndFields(t *testing.T) {
-	sel := decodeInteraction(t, `{"type":3,"message":{"id":"m"},"data":{"custom_id":"env","component_type":3,"values":["prod"]}}`, nil)
+	sel := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"type":3,"message":{"id":"m"},"data":{"custom_id":"env","component_type":3,"values":["prod"]}}`, nil)
 	if !sel.IsSelect() || sel.IsButton() || sel.CustomID() != "env" || sel.Values()[0] != "prod" || sel.CommandName() != "" {
 		t.Fatalf("select = %+v", sel)
 	}
-	users := decodeInteraction(t, `{"type":3,"data":{"custom_id":"who","component_type":5,"values":["u"],"resolved":{"users":{"u":{"id":"u","username":"max"}}}}}`, nil)
+	users := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"type":3,"data":{"custom_id":"who","component_type":5,"values":["u"],"resolved":{"users":{"u":{"id":"u","username":"max"}}}}}`, nil)
 	if !users.IsSelect() || users.Data.Resolved.Users["u"].Username != "max" {
 		t.Fatalf("user select = %+v", users)
 	}
-	modal := decodeInteraction(t, `{"type":5,"data":{"custom_id":"feedback","components":[{"type":1,"components":[{"type":4,"custom_id":"subject","value":"Login"}]}]}}`, nil)
+	modal := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"type":5,"data":{"custom_id":"feedback","components":[{"type":1,"components":[{"type":4,"custom_id":"subject","value":"Login"}]}]}}`, nil)
 	if !modal.IsModalSubmit() || modal.Field("subject") != "Login" || modal.Field("body") != "" {
 		t.Fatalf("modal = %+v", modal)
 	}
@@ -78,11 +78,11 @@ func TestResponsesUseTheDocumentedCallbacksAndRoutes(t *testing.T) {
 	if err := cmd.Update(ctx, Edit{}); !errors.Is(err, ErrNotFromComponent) {
 		t.Fatalf("Update on a command = %v", err)
 	}
-	click := decodeInteraction(t, `{"id":"i2","token":"tok","type":3,"message":{"id":"m"},"data":{"custom_id":"b","component_type":2}}`, r)
+	click := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"id":"i2","token":"tok","type":3,"message":{"id":"m"},"data":{"custom_id":"b","component_type":2}}`, r)
 	if err := click.Update(ctx, Edit{Content: Ptr("clicked"), Components: &[]Component{}}); err != nil {
 		t.Fatal(err)
 	}
-	other := decodeInteraction(t, `{"id":"i3","token":"tok","type":3,"message":{"id":"m"},"data":{"custom_id":"b","component_type":2}}`, r)
+	other := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"id":"i3","token":"tok","type":3,"message":{"id":"m"},"data":{"custom_id":"b","component_type":2}}`, r)
 	if err := other.ShowModal(ctx, NewModal("fb", "Feedback", TextInput{CustomID: "subject", Label: "Subject"})); err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestReplyAndDeferUpdateSendTheirCallbackTypes(t *testing.T) {
 	if err := decodeInteraction(t, commandJSON, r).Reply(ctx, Response{Content: "pong", Ephemeral: true}); err != nil {
 		t.Fatal(err)
 	}
-	click := decodeInteraction(t, `{"id":"i2","token":"tok","type":3,"data":{"custom_id":"b","component_type":2}}`, r)
+	click := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"id":"i2","token":"tok","type":3,"data":{"custom_id":"b","component_type":2}}`, r)
 	if err := click.DeferUpdate(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestReplyAndDeferUpdateSendTheirCallbackTypes(t *testing.T) {
 }
 
 func TestAModalSubmitCannotOpenAnotherModal(t *testing.T) {
-	i := decodeInteraction(t, `{"type":5,"data":{"custom_id":"x"}}`, nil)
+	i := decodeInteraction(t, `{"member":{"user":{"id":"u0","username":"max"}},"type":5,"data":{"custom_id":"x"}}`, nil)
 	if err := i.ShowModal(context.Background(), NewModal("y", "Y", TextInput{CustomID: "a", Label: "A"})); err == nil {
 		t.Fatal("a modal submit opened a modal")
 	}

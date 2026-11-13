@@ -370,9 +370,13 @@ bytes and 120 a minute.
 | 9 | INVALID_SESSION | server | `d: false`: the session cannot be resumed; send IDENTIFY on the same connection |
 | 7 | RECONNECT | server | reserved; the server closes instead |
 
-`READY` carries `v`, `user` (`id`, `bot_id`, `username`, `bot`, `avatar_url`),
-`session_id`, `intents` (granted), `resume_gateway_url` and
-`heartbeat_interval`.
+`READY` carries `v`, `user` (`id`, `bot_id`, `username`, `handle`, `bot`,
+`avatar_url`), `session_id`, `intents` (granted), `resume_gateway_url` and
+`heartbeat_interval`. `username` is the bot's name as members see it (its
+display name, as it always was); `handle` is the account's unique name, the
+one members type to mention it (`@bot-…`; a message's `mentions` lists the
+bot's `id`), so a bot can find `@` plus its handle in a text without the
+`GUILD_MEMBERS` intent. `GET /users/@me` carries both too.
 
 ### Presence updates
 
@@ -580,8 +584,16 @@ member.
   `@original`, callback `7` on its components), one with `"deleted": true`
   removes it.
 
-The bot needs *Send messages* in the channel when it responds; responses never
-notify `@all` or `@here`. Interactions live in the server's memory: a restart
+The bot needs *Send messages* in the channel when it responds. A message a
+response posts (callback `4`, a follow-up, the first `PATCH @original` after
+callback `5`) and the new text of an update or an `@original` edit take
+`allowed_mentions` exactly like a post: without it they notify the members
+they name and never `@all`, `@here` or a role; with it they notify what it
+asks for and the bot may. `flags` (`64`, ephemeral) is taken by callback `4`,
+callback `5` and follow-ups; an `@original` edit refuses it (`400`, "flags
+cannot be set on @original"), because the first response decides whether an
+answer is ephemeral. Every interaction carries the member who caused it in
+`member.user`. Interactions live in the server's memory: a restart
 within the 15 minutes makes the token unknown (`404`). Components are not
 affected: their `custom_id` is stored with the message and every click is a
 new interaction (see [Message components](#message-components)).
@@ -724,7 +736,8 @@ the component. The first answer must come within 15 minutes; follow-ups and
 the message posted by callback `4` (or by the first `PATCH @original` after
 callback `5`); for a component interaction answered with `6` or `7` it is
 the message (or note) the component is on. `PATCH .../messages/@original`
-takes `content`, `embeds` and `components` (absent ones stay) and answers
+takes `content`, `embeds`, `components` (absent ones stay) and
+`allowed_mentions`, but no `flags`, and answers
 the message (`200`), or `204` for an ephemeral note, which the member sees
 replaced. `DELETE` answers `204`; afterwards `@original` is unknown
 (`10008`), and so it is before an answer that has one (`409` before any
@@ -929,6 +942,7 @@ mutation is reported to the audit log.
 | Components | buttons, selects (string, user, role, mentionable, channel), modals, newer layout components | buttons, selects (string, user, role, channel), modals with text inputs; no mentionable select, no layout components |
 | Interaction tokens | 15 minutes | the same, kept in memory: a restart drops the ones in flight; components keep working, each click is a new interaction |
 | Ids | snowflakes | UUIDs |
+| A bot's names | `username` is the unique handle, `global_name` the display name | `username` is the display name (the name members see), `handle` the unique name members mention (`@bot-…`); there is no `global_name`. Kept this way because existing bots read `username` as the name (doc/api-stability.md) |
 | Default access | bots get `@everyone` | bots get nothing until given a role |
 | Member list | bots are listed, with a BOT tag | the same; webhook authors are not listed and are tagged Webhook (Discord tags them BOT) |
 | The bot's role | every bot has a managed role named after it (the "integration" role) | the same: each bot has a managed role named after it, held by it only, renamed and deleted with it, with permissions under the bot invariant. Plus one shared managed role named Bot that every bot holds (it groups bots in the member list). Existing bots' grants were not moved into their new role |

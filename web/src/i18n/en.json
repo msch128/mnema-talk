@@ -675,6 +675,7 @@
       "srvDataRequiredType7": "Callback type 7 needs data.",
       "srvDataRequiredType9": "Callback type 9 needs data with custom_id, title and components.",
       "srvFillRequiredFields": "Fill in every required field.",
+      "srvFlagsOnOriginal": "Flags cannot be set when editing the original response: the first response decides whether the answer is ephemeral.",
       "srvInvalidModalId": "Invalid form.",
       "srvModalNotFound": "This form expired. Start again from the bot.",
       "srvInteractionAnsweredModal": "The interaction was answered with a form: answer its submission instead.",

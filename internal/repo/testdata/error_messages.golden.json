@@ -211,6 +211,7 @@
   "file storage unavailable",
   "filename is too long",
   "fill in every required field",
+  "flags cannot be set on @original: the first response decides whether the answer is ephemeral (flags 64 on callback 4 or 5)",
   "forum tag not found",
   "frequency must be weekly, biweekly or monthly",
   "guidelines contains invalid characters",

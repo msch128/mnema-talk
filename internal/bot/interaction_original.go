@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -16,7 +17,14 @@ type OriginalEdit struct {
 	Content    *string             `json:"content" maxLength:"4000" binding:"optional"`
 	Embeds     *[]messages.InEmbed `json:"embeds" binding:"optional"`
 	Components *[]core.ActionRow   `json:"components" binding:"optional"`
+	// AllowedMentions narrows whom the new text notifies, as on a post.
+	AllowedMentions *botapi.BotAllowedMentions `json:"allowed_mentions" binding:"optional"`
+	// Flags is not accepted: whether the answer is ephemeral is decided by the
+	// first response. It is read only to refuse it with a clear message.
+	Flags *int `json:"flags" swaggerignore:"true"`
 }
+
+var errFlagsOnOriginal = httpx.ErrInvalidInput("flags cannot be set on @original: the first response decides whether the answer is ephemeral (flags 64 on callback 4 or 5)")
 
 var errNoOriginal = httpx.ErrNotFound("unknown message: the interaction has no original response")
 
@@ -67,7 +75,10 @@ func (c *Commands) editOriginal(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	e, err := parseEdit(req.Content, req.Embeds, req.Components)
+	if req.Flags != nil {
+		return errFlagsOnOriginal
+	}
+	e, err := parseEdit(req.Content, req.Embeds, req.Components, req.AllowedMentions)
 	if err != nil {
 		return err
 	}
@@ -102,7 +113,7 @@ func (c *Commands) editOriginal(w http.ResponseWriter, r *http.Request) error {
 // original response and counts as one of the messages.
 func (c *Commands) postOriginal(r *http.Request, in *interaction, req OriginalEdit) (*core.Message, error) {
 	_, later := c.store.state(in)
-	d := CallbackData{Content: req.Content, Embeds: req.Embeds, Components: req.Components}
+	d := CallbackData{Content: req.Content, Embeds: req.Embeds, Components: req.Components, AllowedMentions: req.AllowedMentions}
 	if later {
 		d.Flags = flagEphemeral
 	}

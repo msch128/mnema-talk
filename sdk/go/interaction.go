@@ -3,6 +3,7 @@ package mnema
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"sync"
 )
@@ -29,8 +30,9 @@ type Interaction struct {
 	ChannelID     string             `json:"channel_id"`
 	ApplicationID string             `json:"application_id"`
 	Member        *InteractionMember `json:"member,omitempty"`
-	// User is the member who caused the interaction (Member.User).
-	User *User `json:"-"`
+	// User is the member who caused the interaction (Member.User). The server
+	// sends it with every interaction; one without it is not delivered.
+	User User `json:"-"`
 	// Message is the message the component is on (type 3, and type 5 when
 	// the modal came from a component).
 	Message *Message        `json:"message,omitempty"`
@@ -126,6 +128,8 @@ func (o *InteractionOption) Bool() bool {
 	return o != nil && json.Unmarshal(o.Value, &b) == nil && b
 }
 
+var errNoInteractionUser = errors.New("mnema: an interaction without member.user")
+
 // UnmarshalJSON decodes the interaction and fills User from Member.
 func (i *Interaction) UnmarshalJSON(b []byte) error {
 	type plain struct {
@@ -144,10 +148,14 @@ func (i *Interaction) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	i.ID, i.Token, i.Type, i.ChannelID, i.ApplicationID = p.ID, p.Token, p.Type, p.ChannelID, p.ApplicationID
-	i.Member, i.User, i.Message, i.Data = p.Member, p.User, p.Message, p.Data
-	if i.User == nil && i.Member != nil {
-		u := i.Member.User
-		i.User = &u
+	i.Member, i.Message, i.Data = p.Member, p.Message, p.Data
+	switch {
+	case p.User != nil:
+		i.User = *p.User
+	case p.Member != nil:
+		i.User = p.Member.User
+	default:
+		return errNoInteractionUser
 	}
 	return nil
 }

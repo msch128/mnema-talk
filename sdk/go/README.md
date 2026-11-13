@@ -171,7 +171,7 @@ message a component is on) and `Data`, plus helpers: `CommandName()`,
 
 | Method | Callback | For |
 |---|---|---|
-| `Reply(ctx, mnema.Response{Content, Embeds, Components, Ephemeral})` | 4 | commands, components, modal submits |
+| `Reply(ctx, mnema.Response{Content, Embeds, Components, AllowedMentions, Ephemeral})` | 4 | commands, components, modal submits |
 | `DeferReply(ctx, ephemeral)` | 5 | the same; answer later with `EditReply` or `FollowUp` |
 | `Update(ctx, mnema.Edit{...})` | 7 | components (and modal submits opened from one) |
 | `DeferUpdate(ctx)` | 6 | the same |
@@ -181,7 +181,14 @@ message a component is on) and `Data`, plus helpers: `CommandName()`,
 
 The first answer must come within 15 minutes and can be given once (a second
 one returns `mnema.ErrAlreadyAnswered`). `EditReply` and `FollowUp` return a
-nil message for an ephemeral response, which is never stored.
+nil message for an ephemeral response, which is never stored. `Ephemeral`
+belongs to `Reply`, `DeferReply` and `FollowUp`; `mnema.Edit` (for
+`EditReply` and `Update`) has none, because the first response decides and
+the server refuses flags on an edit. `AllowedMentions` works as on
+`CreateMessage`: without it an answer notifies the members it names, never
+`@all`, `@here` or a role. `i.User` is always set: the server sends the member
+with every interaction. `Ready.User.Handle` is the name members mention the
+bot by (`@bot-...`); `Ready.User.Username` is its display name.
 
 ## Components and modals
 

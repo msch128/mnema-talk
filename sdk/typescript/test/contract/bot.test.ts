@@ -10,6 +10,7 @@ import {
   Intents,
   modal,
   RestClient,
+  RestError,
   textInput,
   type ClientEvents,
   type Interaction,
@@ -55,12 +56,15 @@ describe('contract with a running server', { skip }, () => {
     await client?.close()
   })
 
+  let botHandle = ''
   test('GET /users/@me answers the bot with its allowed intents', async () => {
     const me = await client.rest.getMe()
     assert.equal(me.bot, true)
     assert.match(me.id, /^[0-9a-f-]{36}$/)
     assert.equal(me.allowed_intents & intents, intents, `allowed_intents ${me.allowed_intents} lacks ${intents}`)
+    assert.match(me.handle, /^bot-/, 'the handle is the name members mention')
     botUserId = me.id
+    botHandle = me.handle
   })
 
   test('connect identifies and READY carries the session and the granted intents', async () => {
@@ -72,6 +76,7 @@ describe('contract with a running server', { skip }, () => {
     assert.ok(ready.session_id.length > 0)
     assert.match(ready.resume_gateway_url, /^wss?:\/\//)
     assert.ok(ready.heartbeat_interval > 0)
+    assert.equal(ready.user.handle, botHandle)
     assert.equal(client.user?.id, botUserId)
   })
 
@@ -107,11 +112,30 @@ describe('contract with a running server', { skip }, () => {
     assert.equal(i.channelId, env.channel)
     assert.equal(i.options.get('text'), run)
     assert.equal(i.commandId, commandId)
-    assert.ok(i.user?.id)
+    assert.ok(i.user.id)
     const reply = next(client, 'messageCreate', (m) => m.content === `echo: ${run}`)
     await i.reply({ content: `echo: ${run}` })
     const [m] = await reply
     assert.equal(m.user_id, botUserId)
+    commandRun = i
+  })
+
+  let commandRun: Interaction | undefined
+  test('the answers take allowed_mentions like a post, and @original takes no flags', async () => {
+    const i = commandRun!
+    const name = `@${i.user.username}`
+    const quiet = await i.followUp({ content: `quiet ${name}`, allowed_mentions: { parse: [] } })
+    assert.ok(quiet && !quiet.mentions.includes(i.user.id), 'parse [] notifies nobody')
+    const loud = await i.followUp({ content: `loud ${name}` })
+    assert.ok(loud && loud.mentions.includes(i.user.id), 'without allowed_mentions the member named is notified')
+    assert.equal(await i.followUp({ content: 'psst', ephemeral: true }), undefined)
+    const edited = await i.editReply({ content: `edited ${name}`, allowed_mentions: { parse: [] } })
+    assert.ok(edited && !edited.mentions.includes(i.user.id))
+    await assert.rejects(i.editReply({ content: 'x', ephemeral: true } as never), TypeError)
+    await assert.rejects(
+      client.rest.editOriginalResponse(i.id, i.token, { content: 'x', flags: 64 } as never),
+      (e: unknown) => e instanceof RestError && e.status === 400 && /flags cannot be set on @original/.test(e.message),
+    )
   })
 
   test('a button click reaches the SDK, which updates the message the member sees', async () => {

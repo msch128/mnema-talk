@@ -184,16 +184,23 @@ tell them apart. Answer within 15 minutes:
 
 | Method | Callback | For |
 |---|---|---|
-| `reply({ content, embeds, components, ephemeral? })` | 4 | all |
+| `reply({ content, embeds, components, allowed_mentions?, ephemeral? })` | 4 | all |
 | `deferReply({ ephemeral? })` | 5, then `editReply` | all |
-| `update({ content?, embeds?, components? })` | 7 | components (and modal submits from one) |
+| `update({ content?, embeds?, components?, allowed_mentions? })` | 7 | components (and modal submits from one) |
 | `deferUpdate()` | 6 | components |
 | `showModal(modal(...))` | 9 | commands and components |
-| `editReply(data)`, `deleteReply()` | `PATCH`, `DELETE .../messages/@original` | after the first answer |
-| `followUp(data)` | `POST .../followups` (up to 5 responses in total) | after the first answer |
+| `editReply({ content?, embeds?, components?, allowed_mentions? })`, `deleteReply()` | `PATCH`, `DELETE .../messages/@original` | after the first answer |
+| `followUp({ content, embeds, components, allowed_mentions?, ephemeral? })` | `POST .../followups` (up to 5 responses in total) | after the first answer |
 
 `ephemeral: true` sets flags `64`: only the member who caused the
-interaction sees it, and it is never stored.
+interaction sees it, and it is never stored. It belongs to `reply`,
+`deferReply` and `followUp`; `editReply` and `update` take no `ephemeral`
+(the first response decides, and the server refuses flags on an edit).
+`allowed_mentions` works as on `createMessage`: without it an answer notifies
+the members it names, never `@all`, `@here` or a role. `i.user` is always
+set: the server sends the member with every interaction. `client.user.handle`
+(from READY) is the name members mention the bot by (`@bot-...`);
+`client.user.username` is its display name.
 
 ## Components and modals
 

@@ -3,7 +3,7 @@
 import { CallbackType, InteractionType, MessageFlags } from '../constants.ts'
 import { validateModal } from '../builders/validate.ts'
 import type { RestClient } from '../rest/client.ts'
-import type { InteractionResponseData } from '../types/commands.ts'
+import type { InteractionEditData, InteractionResponseData } from '../types/commands.ts'
 import type { ModalData } from '../types/components.ts'
 import type {
   InteractionMessage,
@@ -13,14 +13,28 @@ import type {
 } from '../types/gateway.ts'
 import type { Message } from '../types/messages.ts'
 
-/** What reply, followUp, editReply and update take: a string is the content. */
+/** What reply and followUp take: a string is the content. */
 export type ReplyData = string | (InteractionResponseData & { ephemeral?: boolean })
+
+/**
+ * What editReply and update take: a string is the content. No ephemeral or
+ * flags: the first response decides whether an answer is ephemeral.
+ */
+export type EditData = string | InteractionEditData
 
 function toData(data: ReplyData): InteractionResponseData {
   if (typeof data === 'string') return { content: data }
   const { ephemeral, ...rest } = data
   if (ephemeral) rest.flags = (rest.flags ?? 0) | MessageFlags.Ephemeral
   return rest
+}
+
+function toEdit(data: EditData, what: string): InteractionEditData {
+  if (typeof data === 'string') return { content: data }
+  if ('ephemeral' in data || 'flags' in data) {
+    throw new TypeError(`${what}: ephemeral and flags belong to the first response (reply or deferReply), not to an edit`)
+  }
+  return data
 }
 
 const SELECT_TYPES = new Set([3, 5, 6, 8])
@@ -31,9 +45,8 @@ export class Interaction {
   readonly type: 2 | 3 | 5
   readonly channelId: string
   readonly applicationId: string
-  /** The member who ran the command, clicked or submitted. */
-  /** The member who caused the interaction; absent only when a server sends none. */
-  readonly user: InteractionUser | undefined
+  /** The member who ran the command, clicked or submitted; the server sends it with every interaction. */
+  readonly user: InteractionUser
   /** The message a component is on (also for a modal opened from a component). */
   readonly message: InteractionMessage | undefined
   /** The command's name (type 2), else ''. */
@@ -71,7 +84,9 @@ export class Interaction {
     this.type = payload.type
     this.channelId = payload.channel_id
     this.applicationId = payload.application_id
-    this.user = payload.member?.user
+    const user = payload.member?.user
+    if (!user) throw new TypeError('an interaction without member.user')
+    this.user = user
     this.message = payload.message
     this.commandName = d.name ?? ''
     this.commandId = d.id
@@ -116,8 +131,8 @@ export class Interaction {
   }
 
   /** Edits the original response, or posts it after deferReply; undefined for an ephemeral note. */
-  editReply(data: ReplyData): Promise<Message | undefined> {
-    return this.rest.editOriginalResponse(this.id, this.token, toData(data))
+  async editReply(data: EditData): Promise<Message | undefined> {
+    return this.rest.editOriginalResponse(this.id, this.token, toEdit(data, 'editReply'))
   }
 
   deleteReply(): Promise<void> {
@@ -130,9 +145,9 @@ export class Interaction {
   }
 
   /** Updates the message the component is on (callback 7); absent fields stay. */
-  async update(data: ReplyData): Promise<void> {
+  async update(data: EditData): Promise<void> {
     this.requireComponentOrigin('update')
-    await this.callback({ type: CallbackType.UpdateMessage, data: toData(data) })
+    await this.callback({ type: CallbackType.UpdateMessage, data: toEdit(data, 'update') })
   }
 
   /** Acknowledges a click without changing anything yet (callback 6). */
