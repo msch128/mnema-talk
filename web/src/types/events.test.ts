@@ -60,7 +60,12 @@ const examples: Record<ServerEventType, unknown[]> = {
   pins_changed: [{ channel_id: id, message_id: id, pinned: true, actor_id: id, actor_name: 'Mod' }, { channel_id: id, message_id: id, pinned: false, actor_id: id, actor_name: '' }],
   interaction_response: [
     { channel_id: id, bot_id: id, bot_name: 'helper', content: 'psst', embeds: null, created_at: FIXTURE_TIMESTAMP },
-    { channel_id: id, bot_id: id, bot_name: 'helper', bot_avatar_url: '/api/media/x', content: '', embeds: [{ title: 'T', description: 'D' }, {}], created_at: FIXTURE_TIMESTAMP }
+    { channel_id: id, bot_id: id, bot_name: 'helper', bot_avatar_url: '/api/media/x', content: '', embeds: [{ title: 'T', description: 'D' }, {}], created_at: FIXTURE_TIMESTAMP },
+    { id, channel_id: id, bot_id: id, bot_name: 'helper', content: 'Sure?', embeds: null, components: [{ type: 1, components: [{ type: 2, style: 1, label: 'Yes', custom_id: 'yes' }] }], created_at: FIXTURE_TIMESTAMP },
+    { id, channel_id: id, bot_id: id, bot_name: 'helper', content: '', embeds: null, deleted: true, created_at: FIXTURE_TIMESTAMP }
+  ],
+  interaction_modal: [
+    { id, channel_id: id, bot_id: id, bot_name: 'helper', bot_avatar_url: '', title: 'Feedback', components: [{ type: 1, components: [{ type: 4, custom_id: 'subject', label: 'Subject', style: 1 }] }] }
   ],
   user_update: [userFixture(), { id, disabled: false }, { id, disabled: true }],
   member_timeout: [{ id, timeout_until: FIXTURE_TIMESTAMP }, { id, timeout_until: null }],

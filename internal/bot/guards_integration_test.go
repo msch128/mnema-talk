@@ -23,6 +23,8 @@ import (
 var routeGuards = map[string]string{
 	"GET /admin/bots":                                   "none",
 	"POST /admin/bots":                                  "none",
+	"POST /admin/bots/manifests/check":                  "none",
+	"POST /admin/bots/install":                          "none",
 	"GET /admin/bots/{id}":                              "load",
 	"PATCH /admin/bots/{id}":                            "acting",
 	"DELETE /admin/bots/{id}":                           "acting",
@@ -134,6 +136,8 @@ func verifyRouteGuards(t *testing.T, h *Handler, manager *auth.User, f fixtureBo
 		"POST /admin/bots/{id}/tokens":                `{"expires_at":"` + later + `"}`,
 		"PATCH /admin/bots/{id}/commands/{commandID}": `{"disabled":true}`,
 		"POST /admin/bots":                            `{"name":"fresh"}`,
+		"POST /admin/bots/manifests/check":            `{"manifest_version":1,"name":"checked"}`,
+		"POST /admin/bots/install":                    `{"manifest":{"manifest_version":1,"name":"installed"},"permissions":[],"intents":[],"channel_ids":[]}`,
 	}
 	replacer := strings.NewReplacer("{id}", f.bot.ID.String(), "{tokenID}", f.token.ID.String(), "{commandID}", f.cmd.ID.String())
 	for route, guard := range routeGuards {

@@ -178,10 +178,12 @@ func writeDocument(out string, doc obj) error {
 }
 
 // renameAtMe renames the paths swag could not spell: its route syntax has no
-// '@', so routes with a literal "@me" segment are annotated as "/at_me".
+// '@', so routes with a literal "@me" or "@original" segment are annotated as
+// "/at_me" and "/at_original".
 func renameAtMe(paths obj) {
+	at := strings.NewReplacer("/at_me", "/@me", "/at_original", "/@original")
 	for p, item := range paths {
-		if renamed := strings.ReplaceAll(p, "/at_me", "/@me"); renamed != p {
+		if renamed := at.Replace(p); renamed != p {
 			delete(paths, p)
 			paths[renamed] = item
 		}

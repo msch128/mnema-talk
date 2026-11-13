@@ -27,6 +27,13 @@ func TestNormalizeKeepsEverythingButWhatChangesBetweenRuns(t *testing.T) {
 	}
 }
 
+func TestNormalizeHidesTheRandomPartOfABotsAccountName(t *testing.T) {
+	got := Normalize([]byte(`{"username":"bot-3ecf9e2675ab","display_name":"bot-helper"}`))
+	if want := `{"username":"bot-<hex>","display_name":"bot-helper"}`; got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
 func TestGoldenFileIsWrittenOnRequestAndComparedOtherwise(t *testing.T) {
 	t.Chdir(t.TempDir())
 	record := func(tb testing.TB, payload string) {

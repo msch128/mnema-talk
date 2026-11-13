@@ -17,6 +17,7 @@
     "PermissionsChanged": "permissions_changed",
     "SystemUpdate": "system_update",
     "InteractionResponse": "interaction_response",
+    "InteractionModal": "interaction_modal",
     "WebrtcMediaState": "webrtc_media_state",
     "PresenceUpdate": "presence_update",
     "UserStats": "user_stats",

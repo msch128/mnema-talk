@@ -3,7 +3,7 @@
 // the right. The server checks every rule; this only offers what fits.
 import { useReloadOnActivate } from '../../shared/composables/useReloadOnActivate'
 import { ref, computed, onMounted } from 'vue'
-import { Bot, Plus } from '@lucide/vue'
+import { Bot, FileJson, Plus } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
 import { arrayDecoder } from '../../types/validation'
 import { decodeBotBot, isBotBot } from '../../types/rest'
@@ -13,6 +13,9 @@ import { usePermissionsStore } from '../../stores/permissions'
 import { useToastStore } from '../../stores/toast'
 import { t, locale } from '../../i18n'
 import BotDetailPanel from './BotDetailPanel.vue'
+import BotManifestInstall from './BotManifestInstall.vue'
+import BotSecretDialog from './BotSecretDialog.vue'
+import { takePendingBotManifest } from '../../shared/lib/botAddLink'
 import EmptyState from '../../shared/components/EmptyState.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
 
@@ -23,6 +26,11 @@ const loaded = ref(false)
 const failed = ref(false)
 const selectedId = ref<string | null>(null)
 const detail = ref<{ guard: () => Promise<boolean> } | null>(null)
+const installer = ref<{ guard: () => Promise<boolean> } | null>(null)
+// Adding from a manifest replaces the detail; linked is an add link's manifest.
+const adding = ref<{ linked: string } | null>(null)
+// The token of a bot just added, shown once.
+const secret = ref<{ value: string; botName: string } | null>(null)
 const newName = ref('')
 const busy = ref(false)
 
@@ -48,14 +56,21 @@ async function load() {
   }
 }
 
+// What is open on the right may hold unsaved work: it is asked before it is replaced.
+async function mayLeave(): Promise<boolean> {
+  if (detail.value && !(await detail.value.guard())) return false
+  return !installer.value || installer.value.guard()
+}
+
 async function create() {
   const name = newName.value.trim()
-  if (!name || busy.value || (detail.value && !(await detail.value.guard()))) return
+  if (!name || busy.value || !(await mayLeave())) return
   busy.value = true
   try {
     const bot = await api('/api/admin/bots', { method: 'POST', json: { name }, decode: decodeBotBot })
     bots.value = [...bots.value, bot]
     selectedId.value = bot.id
+    adding.value = null
     newName.value = ''
     toasts.success(t('bots.created'))
   } catch (e) {
@@ -67,8 +82,22 @@ async function create() {
 
 // Another bot (or a new one) replaces the open detail: unsaved edits are asked about first.
 async function select(id: string) {
-  if (id === selectedId.value || (detail.value && !(await detail.value.guard()))) return
+  if ((id === selectedId.value && !adding.value) || !(await mayLeave())) return
+  adding.value = null
   selectedId.value = id
+}
+
+async function startAdding() {
+  if (adding.value || !(await mayLeave())) return
+  selectedId.value = null
+  adding.value = { linked: '' }
+}
+
+function onInstalled(bot: BotBot, token: string) {
+  bots.value = [...bots.value.filter(b => b.id !== bot.id), bot]
+  adding.value = null
+  selectedId.value = bot.id
+  secret.value = { value: token, botName: bot.name }
 }
 
 function onUpdated(bot: BotBot) {
@@ -81,6 +110,8 @@ function onDeleted(id: string) {
 
 useReloadOnActivate(load)
 onMounted(async () => {
+  const linked = takePendingBotManifest()
+  if (linked) adding.value = { linked }
   await Promise.all([load(), permissions.loadRoles()])
 })
 </script>
@@ -102,6 +133,10 @@ onMounted(async () => {
             <span>{{ $t('bots.new') }}</span>
           </button>
         </form>
+        <button type="button" class="btn btn-secondary btn-sm w-full" :aria-pressed="adding ? 'true' : 'false'" data-testid="bot-add-manifest" @click="startAdding">
+          <FileJson class="h-4 w-4" aria-hidden="true" />
+          <span>{{ $t('bots.manifest.add') }}</span>
+        </button>
         <StatePanel v-if="failed && !bots.length" state="error" retryable class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="bots-error" @retry="load">{{ $t('bots.loadFailed') }}</StatePanel>
         <EmptyState v-else-if="loaded && !bots.length" :icon="Bot" :text="$t('bots.empty')" :hint="$t('bots.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" />
         <ul v-if="bots.length" :aria-label="$t('bots.list')" class="overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
@@ -125,8 +160,10 @@ onMounted(async () => {
         </ul>
       </div>
 
-      <BotDetailPanel v-if="selected" ref="detail" :key="selected.id" :bot="selected" @updated="onUpdated" @deleted="onDeleted" />
+      <BotManifestInstall v-if="adding" ref="installer" :linked="adding.linked" @installed="onInstalled" @cancel="adding = null" />
+      <BotDetailPanel v-else-if="selected" ref="detail" :key="selected.id" :bot="selected" @updated="onUpdated" @deleted="onDeleted" />
       <p v-else class="text-sm text-mnema-tertiary">{{ $t('bots.select') }}</p>
     </div>
+    <BotSecretDialog v-if="secret" :secret="secret.value" :bot-name="secret.botName" @close="secret = null" />
   </section>
 </template>

@@ -31,16 +31,21 @@ type Commands struct {
 	// Builtins are the server's own commands (internal/slash), listed and run
 	// next to the bots'; nil means none.
 	Builtins *slash.Registry
+	// Messages edits and deletes the bots' messages for the responses to
+	// interactions (callback 7, @original); required for those.
+	Messages BotMessages
 
 	store   *interactionStore
 	invokes *httpx.RateLimiter
+	clicks  *httpx.RateLimiter
 }
 
 // NewCommands returns Commands with its state. It panics without Perms.
 func NewCommands(c Commands) *Commands {
 	perm.Must(c.Perms, "slash commands")
-	c.store = &interactionStore{m: map[uuid.UUID]*interaction{}, now: time.Now}
+	c.store = newInteractionStore(time.Now)
 	c.invokes = httpx.NewRateLimiter(invokesPerMinute, time.Minute).Named("bot_invoke")
+	c.clicks = httpx.NewRateLimiter(clicksPerMinute, time.Minute).Named("bot_click")
 	return &c
 }
 
@@ -48,6 +53,9 @@ func NewCommands(c Commands) *Commands {
 func (c *Commands) MountMember(r chi.Router) {
 	r.Get("/channels/{channelID}/commands", httpx.Handle(c.listForChannel))
 	r.Post("/channels/{channelID}/interactions", httpx.Handle(c.invoke))
+	r.Post("/channels/{channelID}/messages/{messageID}/components", httpx.Handle(c.useMessageComponent))
+	r.Post("/channels/{channelID}/ephemeral/{noteID}/components", httpx.Handle(c.useNoteComponent))
+	r.Post("/channels/{channelID}/modals/{modalID}", httpx.Handle(c.submitModal))
 }
 
 // MountBot registers the bot API routes (the bot middleware applies).
@@ -58,6 +66,8 @@ func (c *Commands) MountBot(r chi.Router) {
 	r.Delete("/commands/{commandID}", httpx.HandleDiscord(c.botDelete))
 	r.Post("/interactions/{interactionID}/{token}/callback", httpx.HandleDiscord(c.callback))
 	r.Post("/interactions/{interactionID}/{token}/followups", httpx.HandleDiscord(c.followup))
+	r.Patch("/interactions/{interactionID}/{token}/messages/@original", httpx.HandleDiscord(c.editOriginal))
+	r.Delete("/interactions/{interactionID}/{token}/messages/@original", httpx.HandleDiscord(c.deleteOriginal))
 }
 
 // ChannelCommand is a command as the composer lists it.
@@ -172,7 +182,7 @@ func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Comma
 	return json.Marshal(map[string]any{
 		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
 		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
-		"member": map[string]any{"user": map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL}},
+		"member": memberPayload(user),
 	})
 }
 
@@ -220,7 +230,7 @@ func (c *Commands) checkInvokeRate(w http.ResponseWriter, userID string) error {
 
 func (c *Commands) registerInteraction(cmd *Command, botUser uuid.UUID, name string, avatar *string, ch, invoker uuid.UUID) (uuid.UUID, string, error) {
 	id := uuid.New()
-	token, ok := c.store.add(id, &interaction{botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: invoker})
+	token, ok := c.store.add(id, &interaction{kind: InteractionApplicationCommand, botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: invoker})
 	if !ok {
 		return uuid.Nil, "", httpx.ErrRateLimited()
 	}

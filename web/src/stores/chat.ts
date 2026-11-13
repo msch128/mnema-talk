@@ -23,7 +23,7 @@ import { dismissPinNotice, fetchPins } from './chat/pins'
 import { dmActions } from './chat/dmActions'
 import { beginEditPending, cancelPending, endEditPending, editPending, retryPending } from './chat/outbox'
 
-export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
+export type { BotModal, EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
 
 /** What the store shows of the chat state, as the refs the modules update. */
@@ -36,6 +36,7 @@ function exposedState(cs: ChatState) {
     categories: cs.categories,
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
+    botModal: cs.botModal,
     pinsSignal: cs.pinsSignal,
     forumTagsSignal: cs.forumTagsSignal,
     forumPostsSignal: cs.forumPostsSignal,

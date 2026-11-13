@@ -24,13 +24,14 @@ var (
 	uuidPattern = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
 	timePattern = regexp.MustCompile(`\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)`)
 	// A message's number comes from a sequence that outlives a test database
-	// reset; an incoming webhook's account name ends in random hex.
+	// reset; the account names of an incoming webhook and a bot end in random hex.
 	numberPattern  = regexp.MustCompile(`"number":-?\d+`)
 	webhookPattern = regexp.MustCompile(`"wh-[0-9a-f]{16}"`)
+	botPattern     = regexp.MustCompile(`"bot-[0-9a-f]{12}"`)
 )
 
 // Normalize replaces what differs from run to run in a frame: IDs, timestamps,
-// message numbers and the generated account name of an incoming webhook. Every distinct ID
+// message numbers and the generated account names of incoming webhooks and bots. Every distinct ID
 // gets its own number in order of appearance, so two fields that carry the
 // same ID still show it.
 func Normalize(frame []byte) string {
@@ -45,7 +46,8 @@ func Normalize(frame []byte) string {
 	})
 	out = timePattern.ReplaceAllString(out, "<time>")
 	out = numberPattern.ReplaceAllString(out, `"number":<n>`)
-	return webhookPattern.ReplaceAllString(out, `"wh-<hex>"`)
+	out = webhookPattern.ReplaceAllString(out, `"wh-<hex>"`)
+	return botPattern.ReplaceAllString(out, `"bot-<hex>"`)
 }
 
 // Golden collects the frames of one test, grouped by the step that caused them.

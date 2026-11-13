@@ -2,9 +2,9 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../shared/lib/moderation'
 import type { Message, Poll, ReactionSummary, User, UserUpdate, VoiceUser, Presence } from './domain'
-import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
+import type { ChatActionRow, ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
 import { withMessageDefaults } from '../shared/lib/compat/olderServers'
-import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isCommunityeventsCommunityEvent } from './rest'
+import { isAuthUser, isChatActionRow, isChatMessage, isChatPoll, isChatReactionSummary, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { NOTICE_EVENT_CHECKS } from './noticeEvents'
@@ -48,13 +48,28 @@ function isBotActivity(value: unknown): value is BotActivity {
 }
 
 export interface InteractionResponse {
+  /** The note; a later response with the same id replaces it, one with deleted removes it. Older servers send none. */
+  id?: string
   channel_id: string
   bot_id: string
   bot_name: string
   bot_avatar_url?: string
   content: string
   embeds: { title?: string; description?: string }[] | null
+  components?: ChatActionRow[]
+  deleted?: boolean
   created_at: string
+}
+
+/** A form a bot opened for this member (callback type 9); submit with POST /api/channels/{channel_id}/modals/{id}. */
+export interface InteractionModal {
+  id: string
+  channel_id: string
+  bot_id: string
+  bot_name: string
+  bot_avatar_url: string
+  title: string
+  components: ChatActionRow[]
 }
 
 export interface ServerEventPayloads {
@@ -105,6 +120,7 @@ export interface ServerEventPayloads {
   /** A message was pinned or unpinned: refetch GET /api/channels/{id}/pins and note it in the channel. */
   pins_changed: { channel_id: string; message_id: string; pinned: boolean; actor_id: string; actor_name: string; pinned_at?: string; pinned_by?: ChatUserRef }
   interaction_response: InteractionResponse
+  interaction_modal: InteractionModal
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
   member_timeout: { id: string; timeout_until: string | null }
@@ -266,7 +282,16 @@ function isInteractionResponse(payload: Record<string, unknown>): boolean {
   if (!isIdentifier(payload['channel_id']) || !isIdentifier(payload['bot_id'])) return false
   if (!isString(payload['bot_name'], 64) || !isString(payload['content'], 8_000)) return false
   if (!isOptionalAvatarUrl(payload) || !isOptionalNoteEmbeds(payload['embeds'])) return false
+  if (hasOwn(payload, 'id') && !isIdentifier(payload['id'])) return false
+  if (hasOwn(payload, 'components') && !isArrayOf(payload['components'], isChatActionRow)) return false
+  if (hasOwn(payload, 'deleted') && typeof payload['deleted'] !== 'boolean') return false
   return isTimestamp(payload['created_at'])
+}
+
+function isInteractionModal(payload: Record<string, unknown>): boolean {
+  if (!isIdentifier(payload['id']) || !isIdentifier(payload['channel_id']) || !isIdentifier(payload['bot_id'])) return false
+  if (!isString(payload['bot_name'], 64) || !isString(payload['title'], 45) || !isOptionalAvatarUrl(payload)) return false
+  return isArrayOf(payload['components'], isChatActionRow)
 }
 
 // Events whose payload is a JSON object, by event type.
@@ -290,6 +315,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && isArrayOf(payload['reactions'], isChatReactionSummary)],
   ['poll_update', payload => isIdentifier(payload['message_id']) && isIdentifier(payload['channel_id']) && isChatPoll(payload['poll'])],
   ['interaction_response', isInteractionResponse],
+  ['interaction_modal', isInteractionModal],
   ['user_update', payload => hasOwn(payload, 'disabled')
     ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
     : isAuthUser(payload)],
@@ -357,7 +383,7 @@ const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_no
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'interaction_modal', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated', 'reports_open'
 ])

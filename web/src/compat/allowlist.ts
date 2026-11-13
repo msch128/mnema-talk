@@ -19,4 +19,5 @@ export const newEndpoints: ReadonlyArray<{ method: string, path: string, expectO
 ]
 
 /** WebSocket events added since the oldest baseline. A client ignores unknown names, so an entry says the app copes without it. */
-export const newEvents: readonly string[] = ['reports_open']
+// interaction_modal: an older server opens no bot forms, so the dialog simply never shows.
+export const newEvents: readonly string[] = ['reports_open', 'interaction_modal']

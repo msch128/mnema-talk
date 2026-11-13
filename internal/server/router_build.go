@@ -221,7 +221,7 @@ func (c *components) newWebhooks() {
 // gateway into the hub and the permission service.
 func (c *components) newBots() {
 	d, hub := c.d, c.hub
-	c.botH = bot.NewHandler(bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub})
+	c.botH = bot.NewHandler(bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub, Audit: c.auditLog})
 	c.botAuthn = bot.NewAuthenticator(d.DB, c.permSvc)
 	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
 	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Posts: c.chatH.Posts(), Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
@@ -238,6 +238,7 @@ func (c *components) newBots() {
 	}
 	c.authH.OnAccountEnded = gw.RevokeUser
 	c.cmds.Deliver = gw
+	c.cmds.Messages = c.chatH.BotMessages()
 	safego.Go("bot_gateway", safego.Crash, func() { gw.Run(c.ctx) })
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).

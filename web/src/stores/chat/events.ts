@@ -37,6 +37,23 @@ import { clearTypingForUser, handleTypingEvent } from './typing'
 type Payload<K extends ServerEventType> = ServerEventPayloads[K]
 type Handlers = { [K in ServerEventType]: (cx: Cx, p: Payload<K>) => void }
 
+// A private reply: a new note, the replacement of the note with its id, or its removal.
+function onInteractionResponse({ cs }: Cx, p: Payload<'interaction_response'>) {
+  if (!p?.channel_id) return
+  const { id: noteId, deleted, ...rest } = p
+  const notes = cs.ephemeral.value
+  if (deleted && noteId) {
+    cs.ephemeral.value = notes.filter(n => n.note_id !== noteId)
+    return
+  }
+  // An older server sends no id: every response is a note of its own.
+  const at = noteId ? notes.findIndex(n => n.note_id === noteId) : -1
+  // components is left out when the response has none: a replacement drops the old ones.
+  const note = { ...rest, components: rest.components ?? [], note_id: noteId ?? '' }
+  if (at >= 0) cs.ephemeral.value = notes.map((n, i) => (i === at ? { ...note, id: n.id } : n))
+  else cs.ephemeral.value = [...notes, { ...note, id: ++cs.ephemeralSeq }].slice(-MAX_EPHEMERAL)
+}
+
 function onPresenceSnapshot({ cs }: Cx, p: Payload<'presence_snapshot'>) {
   const snapshot = snapshotToMap(p)
   for (const id of cs.disabledMembers.keys()) {
@@ -272,7 +289,8 @@ const HANDLERS: Handlers = {
   },
   message_update: (cx, p) => {
     if (!p) return
-    applyToMessage(cx, p.id, m => Object.assign(m, p))
+    // Absent components mean none (a bot removed them): the old ones must not stay.
+    applyToMessage(cx, p.id, m => { if (!p.components) delete m.components; Object.assign(m, p) })
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
     noteDmMessageChanged(cx, p.channel_id)
@@ -288,9 +306,8 @@ const HANDLERS: Handlers = {
     if (p?.message_id) applyToMessage(cx, p.message_id, m => { m.reactions = p.reactions })
   },
   poll_update: (cx, p) => { if (p?.message_id) applyPoll(cx, p.message_id, p.poll) },
-  interaction_response: ({ cs }, p) => {
-    if (p?.channel_id) cs.ephemeral.value = [...cs.ephemeral.value, { ...p, id: ++cs.ephemeralSeq }].slice(-MAX_EPHEMERAL)
-  },
+  interaction_response: onInteractionResponse,
+  interaction_modal: ({ cs }, p) => { if (p?.channel_id) cs.botModal.value = p },
   webrtc_offer: ({ cs }, p) => { cs.webrtcOfferHandler?.(p) },
   webrtc_candidate: ({ cs }, p) => { cs.webrtcCandidateHandler?.(p) },
   media_handshake: ({ cs }, p) => { cs.mediaHandshakeHandler?.(p) },

@@ -812,7 +812,9 @@ export type BotBot = {
   avatar_url?: string
   created_at: string
   created_by?: string
+  description?: string
   disabled: boolean
+  homepage?: string
   id: string
   last_active_at?: string
   name: string
@@ -826,7 +828,9 @@ export function isBotBot(value: unknown): value is BotBot {
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (!hasOwn(value, "created_by") || isIdentifier(value["created_by"]))
+    && (!hasOwn(value, "description") || isString(value["description"], 200))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
+    && (!hasOwn(value, "homepage") || isString(value["homepage"], 512))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "last_active_at") || isTimestamp(value["last_active_at"]))
     && (hasOwn(value, "name") && isString(value["name"], 24))
@@ -836,15 +840,36 @@ export function isBotBot(value: unknown): value is BotBot {
 
 export const decodeBotBot = decoder("bot.Bot", isBotBot)
 
+export type BotCallbackData = {
+  components?: Array<ChatActionRow>
+  content?: string
+  custom_id?: string
+  embeds?: Array<ChatInEmbed>
+  flags?: 0 | 64
+  title?: string
+}
+
+export function isBotCallbackData(value: unknown): value is BotCallbackData {
+  return isRecord(value)
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
+    && (!hasOwn(value, "content") || isString(value["content"], 4000))
+    && (!hasOwn(value, "custom_id") || isString(value["custom_id"], 100))
+    && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatInEmbed(item)))
+    && (!hasOwn(value, "flags") || (value["flags"] === 0 || value["flags"] === 64))
+    && (!hasOwn(value, "title") || isString(value["title"], 45))
+}
+
+export const decodeBotCallbackData = decoder("bot.CallbackData", isBotCallbackData)
+
 export type BotCallbackRequest = {
-  data: BotResponseData
-  type: 4 | 5
+  data: BotCallbackData
+  type: 4 | 5 | 6 | 7 | 9
 }
 
 export function isBotCallbackRequest(value: unknown): value is BotCallbackRequest {
   return isRecord(value)
-    && (hasOwn(value, "data") && isBotResponseData(value["data"]))
-    && (hasOwn(value, "type") && (value["type"] === 4 || value["type"] === 5))
+    && (hasOwn(value, "data") && isBotCallbackData(value["data"]))
+    && (hasOwn(value, "type") && (value["type"] === 4 || value["type"] === 5 || value["type"] === 6 || value["type"] === 7 || value["type"] === 9))
 }
 
 export const decodeBotCallbackRequest = decoder("bot.CallbackRequest", isBotCallbackRequest)
@@ -892,6 +917,29 @@ export function isBotChannelCommand(value: unknown): value is BotChannelCommand 
 }
 
 export const decodeBotChannelCommand = decoder("bot.ChannelCommand", isBotChannelCommand)
+
+export type BotCheckedManifest = {
+  commands: Array<BotCommandInput>
+  description: string
+  homepage: string
+  intents: Array<BotManifestIntent>
+  manifest_version: 1
+  name: string
+  permissions: Array<BotManifestPermission>
+}
+
+export function isBotCheckedManifest(value: unknown): value is BotCheckedManifest {
+  return isRecord(value)
+    && (hasOwn(value, "commands") && isArrayOf(value["commands"], item => isBotCommandInput(item)))
+    && (hasOwn(value, "description") && isString(value["description"], 200))
+    && (hasOwn(value, "homepage") && isString(value["homepage"], 512))
+    && (hasOwn(value, "intents") && isArrayOf(value["intents"], item => isBotManifestIntent(item)))
+    && (hasOwn(value, "manifest_version") && (value["manifest_version"] === 1))
+    && (hasOwn(value, "name") && isString(value["name"], 24))
+    && (hasOwn(value, "permissions") && isArrayOf(value["permissions"], item => isBotManifestPermission(item)))
+}
+
+export const decodeBotCheckedManifest = decoder("bot.CheckedManifest", isBotCheckedManifest)
 
 export type BotCommand = {
   bot_id: string
@@ -942,6 +990,19 @@ export function isBotCommandPatch(value: unknown): value is BotCommandPatch {
 
 export const decodeBotCommandPatch = decoder("bot.CommandPatch", isBotCommandPatch)
 
+export type BotComponentUse = {
+  custom_id: string
+  values?: Array<string>
+}
+
+export function isBotComponentUse(value: unknown): value is BotComponentUse {
+  return isRecord(value)
+    && (hasOwn(value, "custom_id") && isString(value["custom_id"], 100))
+    && (!hasOwn(value, "values") || isArrayOf(value["values"], item => isString(item)))
+}
+
+export const decodeBotComponentUse = decoder("bot.ComponentUse", isBotComponentUse)
+
 export type BotCreateRequest = {
   allowed_intents?: number
   name: string
@@ -954,6 +1015,36 @@ export function isBotCreateRequest(value: unknown): value is BotCreateRequest {
 }
 
 export const decodeBotCreateRequest = decoder("bot.CreateRequest", isBotCreateRequest)
+
+export type BotInstallRequest = {
+  channel_ids: Array<string>
+  intents: Array<string>
+  manifest: BotManifest
+  permissions: Array<string>
+}
+
+export function isBotInstallRequest(value: unknown): value is BotInstallRequest {
+  return isRecord(value)
+    && (hasOwn(value, "channel_ids") && isArrayOf(value["channel_ids"], item => isIdentifier(item)))
+    && (hasOwn(value, "intents") && isArrayOf(value["intents"], item => isString(item)))
+    && (hasOwn(value, "manifest") && isBotManifest(value["manifest"]))
+    && (hasOwn(value, "permissions") && isArrayOf(value["permissions"], item => isString(item)))
+}
+
+export const decodeBotInstallRequest = decoder("bot.InstallRequest", isBotInstallRequest)
+
+export type BotInstallResponse = {
+  bot: BotBot
+  token: BotNewTokenResponse
+}
+
+export function isBotInstallResponse(value: unknown): value is BotInstallResponse {
+  return isRecord(value)
+    && (hasOwn(value, "bot") && isBotBot(value["bot"]))
+    && (hasOwn(value, "token") && isBotNewTokenResponse(value["token"]))
+}
+
+export const decodeBotInstallResponse = decoder("bot.InstallResponse", isBotInstallResponse)
 
 export type BotInvokeRequest = {
   command_id: string
@@ -978,6 +1069,70 @@ export function isBotInvoked(value: unknown): value is BotInvoked {
 }
 
 export const decodeBotInvoked = decoder("bot.Invoked", isBotInvoked)
+
+export type BotManifest = {
+  avatar?: string
+  commands?: Array<BotCommandInput>
+  description?: string
+  homepage?: string
+  intents?: Array<string>
+  manifest_version: 1
+  name: string
+  permissions?: Array<string>
+}
+
+export function isBotManifest(value: unknown): value is BotManifest {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar") || isString(value["avatar"]))
+    && (!hasOwn(value, "commands") || isArrayOf(value["commands"], item => isBotCommandInput(item)))
+    && (!hasOwn(value, "description") || isString(value["description"], 200))
+    && (!hasOwn(value, "homepage") || isString(value["homepage"], 512))
+    && (!hasOwn(value, "intents") || isArrayOf(value["intents"], item => isString(item)))
+    && (hasOwn(value, "manifest_version") && (value["manifest_version"] === 1))
+    && (hasOwn(value, "name") && isString(value["name"], 24))
+    && (!hasOwn(value, "permissions") || isArrayOf(value["permissions"], item => isString(item)))
+}
+
+export const decodeBotManifest = decoder("bot.Manifest", isBotManifest)
+
+export type BotManifestIntent = {
+  bit: number
+  name: "GUILDS" | "GUILD_MEMBERS" | "GUILD_MESSAGES" | "GUILD_MESSAGE_REACTIONS"
+}
+
+export function isBotManifestIntent(value: unknown): value is BotManifestIntent {
+  return isRecord(value)
+    && (hasOwn(value, "bit") && (isInteger(value["bit"]) && value["bit"] >= 1))
+    && (hasOwn(value, "name") && (value["name"] === "GUILDS" || value["name"] === "GUILD_MEMBERS" || value["name"] === "GUILD_MESSAGES" || value["name"] === "GUILD_MESSAGE_REACTIONS"))
+}
+
+export const decodeBotManifestIntent = decoder("bot.ManifestIntent", isBotManifestIntent)
+
+export type BotManifestPermission = {
+  bit: number
+  key: string
+  name: string
+}
+
+export function isBotManifestPermission(value: unknown): value is BotManifestPermission {
+  return isRecord(value)
+    && (hasOwn(value, "bit") && (isInteger(value["bit"]) && value["bit"] >= 1))
+    && (hasOwn(value, "key") && isString(value["key"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+}
+
+export const decodeBotManifestPermission = decoder("bot.ManifestPermission", isBotManifestPermission)
+
+export type BotModalSubmit = {
+  values: Record<string, unknown>
+}
+
+export function isBotModalSubmit(value: unknown): value is BotModalSubmit {
+  return isRecord(value)
+    && (hasOwn(value, "values") && isRecord(value["values"]))
+}
+
+export const decodeBotModalSubmit = decoder("bot.ModalSubmit", isBotModalSubmit)
 
 export type BotNewTokenResponse = {
   created_at: string
@@ -1025,7 +1180,23 @@ export function isBotOption(value: unknown): value is BotOption {
 
 export const decodeBotOption = decoder("bot.Option", isBotOption)
 
+export type BotOriginalEdit = {
+  components?: Array<ChatActionRow>
+  content?: string
+  embeds?: Array<ChatInEmbed>
+}
+
+export function isBotOriginalEdit(value: unknown): value is BotOriginalEdit {
+  return isRecord(value)
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
+    && (!hasOwn(value, "content") || isString(value["content"], 4000))
+    && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatInEmbed(item)))
+}
+
+export const decodeBotOriginalEdit = decoder("bot.OriginalEdit", isBotOriginalEdit)
+
 export type BotResponseData = {
+  components?: Array<ChatActionRow>
   content: string
   embeds: Array<ChatInEmbed>
   flags: 0 | 64
@@ -1033,6 +1204,7 @@ export type BotResponseData = {
 
 export function isBotResponseData(value: unknown): value is BotResponseData {
   return isRecord(value)
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatInEmbed(item)))
     && (hasOwn(value, "flags") && (value["flags"] === 0 || value["flags"] === 64))
@@ -1125,6 +1297,19 @@ export function isBotUpdateRequest(value: unknown): value is BotUpdateRequest {
 
 export const decodeBotUpdateRequest = decoder("bot.UpdateRequest", isBotUpdateRequest)
 
+export type ChatActionRow = {
+  components?: Array<ChatComponent>
+  type: number
+}
+
+export function isChatActionRow(value: unknown): value is ChatActionRow {
+  return isRecord(value)
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatComponent(item)))
+    && (hasOwn(value, "type") && isInteger(value["type"]))
+}
+
+export const decodeChatActionRow = decoder("chat.ActionRow", isChatActionRow)
+
 export type ChatAddDMMemberRequest = {
   user_id: string
 }
@@ -1164,6 +1349,7 @@ export const decodeChatBotAllowedMentions = decoder("chat.BotAllowedMentions", i
 
 export type ChatBotCreateMessageRequest = {
   allowed_mentions: ChatBotAllowedMentions
+  components?: Array<ChatActionRow>
   content: string
   embeds: Array<ChatEmbed>
   message_reference: ChatBotMessageReference
@@ -1173,6 +1359,7 @@ export type ChatBotCreateMessageRequest = {
 export function isChatBotCreateMessageRequest(value: unknown): value is ChatBotCreateMessageRequest {
   return isRecord(value)
     && (hasOwn(value, "allowed_mentions") && isChatBotAllowedMentions(value["allowed_mentions"]))
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatEmbed(item)))
     && (hasOwn(value, "message_reference") && isChatBotMessageReference(value["message_reference"]))
@@ -1180,6 +1367,19 @@ export function isChatBotCreateMessageRequest(value: unknown): value is ChatBotC
 }
 
 export const decodeChatBotCreateMessageRequest = decoder("chat.BotCreateMessageRequest", isChatBotCreateMessageRequest)
+
+export type ChatBotEditMessageRequest = {
+  components?: Array<ChatActionRow>
+  content?: string | null
+}
+
+export function isChatBotEditMessageRequest(value: unknown): value is ChatBotEditMessageRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
+    && (!hasOwn(value, "content") || (isString(value["content"], 4000) || value["content"] === null))
+}
+
+export const decodeChatBotEditMessageRequest = decoder("chat.BotEditMessageRequest", isChatBotEditMessageRequest)
 
 export type ChatBotMember = {
   avatar_url?: string
@@ -1377,6 +1577,56 @@ export function isChatChannelType(value: unknown): value is ChatChannelType {
 }
 
 export const decodeChatChannelType = decoder("chat.ChannelType", isChatChannelType)
+
+export type ChatComponent = {
+  custom_id?: string
+  disabled?: boolean
+  emoji?: ChatComponentEmoji
+  label?: string
+  max_length?: number
+  max_values?: number
+  min_length?: number
+  min_values?: number
+  options?: Array<ChatSelectOption>
+  placeholder?: string
+  required?: boolean
+  style?: number
+  type: number
+  url?: string
+  value?: string
+}
+
+export function isChatComponent(value: unknown): value is ChatComponent {
+  return isRecord(value)
+    && (!hasOwn(value, "custom_id") || isString(value["custom_id"]))
+    && (!hasOwn(value, "disabled") || typeof value["disabled"] === 'boolean')
+    && (!hasOwn(value, "emoji") || isChatComponentEmoji(value["emoji"]))
+    && (!hasOwn(value, "label") || isString(value["label"]))
+    && (!hasOwn(value, "max_length") || isInteger(value["max_length"]))
+    && (!hasOwn(value, "max_values") || isInteger(value["max_values"]))
+    && (!hasOwn(value, "min_length") || isInteger(value["min_length"]))
+    && (!hasOwn(value, "min_values") || isInteger(value["min_values"]))
+    && (!hasOwn(value, "options") || isArrayOf(value["options"], item => isChatSelectOption(item)))
+    && (!hasOwn(value, "placeholder") || isString(value["placeholder"]))
+    && (!hasOwn(value, "required") || typeof value["required"] === 'boolean')
+    && (!hasOwn(value, "style") || isInteger(value["style"]))
+    && (hasOwn(value, "type") && isInteger(value["type"]))
+    && (!hasOwn(value, "url") || isString(value["url"]))
+    && (!hasOwn(value, "value") || isString(value["value"]))
+}
+
+export const decodeChatComponent = decoder("chat.Component", isChatComponent)
+
+export type ChatComponentEmoji = {
+  name?: string
+}
+
+export function isChatComponentEmoji(value: unknown): value is ChatComponentEmoji {
+  return isRecord(value)
+    && (!hasOwn(value, "name") || isString(value["name"]))
+}
+
+export const decodeChatComponentEmoji = decoder("chat.ComponentEmoji", isChatComponentEmoji)
 
 export type ChatCreateCategoryRequest = {
   name: string
@@ -2004,6 +2254,7 @@ export type ChatMessage = {
   attachments: Array<ChatMediaAttachment>
   avatar_url?: string
   channel_id: string
+  components?: Array<ChatActionRow>
   content: string
   created_at: string
   direct_mentions?: Array<string>
@@ -2042,6 +2293,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "attachments") && isArrayOf(value["attachments"], item => isChatMediaAttachment(item)))
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (!hasOwn(value, "direct_mentions") || isArrayOf(value["direct_mentions"], item => isIdentifier(item)))
@@ -2600,6 +2852,25 @@ export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
 }
 
 export const decodeChatSearchRoot = decoder("chat.SearchRoot", isChatSearchRoot)
+
+export type ChatSelectOption = {
+  default?: boolean
+  description?: string
+  emoji?: ChatComponentEmoji
+  label?: string
+  value?: string
+}
+
+export function isChatSelectOption(value: unknown): value is ChatSelectOption {
+  return isRecord(value)
+    && (!hasOwn(value, "default") || typeof value["default"] === 'boolean')
+    && (!hasOwn(value, "description") || isString(value["description"]))
+    && (!hasOwn(value, "emoji") || isChatComponentEmoji(value["emoji"]))
+    && (!hasOwn(value, "label") || isString(value["label"]))
+    && (!hasOwn(value, "value") || isString(value["value"]))
+}
+
+export const decodeChatSelectOption = decoder("chat.SelectOption", isChatSelectOption)
 
 export type ChatServerNotify = {
   level: ChatNotifyLevel

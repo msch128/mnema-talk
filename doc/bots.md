@@ -127,6 +127,7 @@ common paths.
 | Editing a role a bot holds | the usual role rules, and adding Administrator or admin-area bits is Owner-only |
 | Reordering roles | moves positions only, grants no permission |
 | Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one elevated channel permission) is Owner-only |
+| Adding a bot from a manifest (`POST /bots/install`) | *Manage bots* (checked again under the permission lock); channel permissions only, never elevated; allow overwrites of the new bot's own role in the channels the installer ticked and can view, each within what the installer holds there (the refusal names the permission and the channel) |
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
 
@@ -211,7 +212,7 @@ configuration.
 | `description` | optional, up to 200 characters, shown in the Bots tab |
 | `homepage` | optional `https` URL, up to 512 characters, shown as a link |
 | `avatar` | optional `data:` URL of a PNG, JPEG or WebP image of at most 256 KB; the web app uploads it through the avatar route, the server never fetches anything |
-| `intents` | optional, names from [Intents and events](#intents-and-events): `GUILDS`, `GUILD_MEMBERS`, `GUILD_MESSAGES`, `GUILD_MESSAGE_REACTIONS` |
+| `intents` | optional, names from [Intents and events](#intents-and-events): `GUILDS`, `GUILD_MEMBERS`, `GUILD_MESSAGES`, `GUILD_MESSAGE_REACTIONS`; another name is refused |
 | `permissions` | optional, channel permissions only: `view_channel`, `send_messages`, `attach_files`, `add_reactions`, `manage_messages`, `mention_everyone`. Anything else (Administrator, admin-area permissions, voice) is refused: the Owner grants those by hand |
 | `commands` | optional, at most 50, each as for `PUT /api/bot/v1/commands` |
 
@@ -231,10 +232,14 @@ build it (`addBotLink(serverUrl, manifest)`, `mnema.AddBotLink`). A bot's
 README usually shows the manifest and the link with a placeholder for the
 server's address.
 
-**The confirm screen** shows the name, avatar, description and homepage, each
-intent and permission the bot asks for (all ticked, each can be unticked),
-its commands, and the channels the installer can see (none ticked). Nothing
-is created until **Add bot**:
+**The confirm screen** shows the name, avatar, description and homepage,
+quoted and labelled as the bot's own words (never like text of the app),
+each intent and permission the bot asks for (ticked, except Mention
+everyone and Manage messages, which ping or moderate and start unticked;
+each can be ticked or unticked within what the manifest asks), its commands
+(one with a built-in's name is marked as the bot's: it is listed next to the
+built-in, not instead of it), and the channels the installer can see (none
+ticked). Nothing is created until **Add bot**:
 
 - The requested permissions become **allow overwrites of the bot's own
   role** in the ticked channels (and nothing server-wide: bots do not inherit
@@ -251,15 +256,35 @@ the installer may only grant, in each channel, what they hold there
 themselves, the installer can untick but never add, and a manifest can never
 ask for anything elevated. Installing needs *Manage bots*, not *Manage
 channels*: the overwrites it writes belong to the new bot's own role, which
-nobody else holds, so they change nothing for any member. The install is
+nobody else holds, so they change nothing for any member. They do change
+what the **bot** may do there, by the usual resolution order
+([roles and permissions](roles-and-permissions.md#channel-and-category-overwrites)): in a channel, all of a member's
+role denies apply first and then all of its role allows, so an allow written
+on the bot's own role **wins over a deny on the shared Bot role** (or on any
+other role the bot holds) in that channel and its category. Only a deny set
+for the bot itself (a member overwrite) still beats it. This is the same as
+giving a bot a role that has channel overwrites, which *Manage bots* could
+always do; the bot invariant still caps every allow at what the installer
+holds in that channel. To keep a bot out of a channel whatever its roles say,
+deny the bot itself there, or do not tick the channel. The install is
 logged (`bot.installed`). Afterwards it is an ordinary bot.
 
-The routes are `POST /api/admin/bots/manifests/check` (validates a manifest
-and answers it normalised, with the names of its permissions and intents;
-no side effects) and `POST /api/admin/bots/install`
+The routes are `POST /api/admin/bots/manifests/check` (the body is the
+manifest; it is validated and answered normalised: cleaned text, `intents` as
+`{"name", "bit"}` in bit order, `permissions` as `{"key", "name", "bit"}` in
+the order of the permission list, no duplicates, without the avatar; no side
+effects) and `POST /api/admin/bots/install`
 (`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...]}`,
-the lists being what the installer kept ticked; answers `201` with the bot
-and the token).
+the lists being what the installer kept ticked, at most 500 channels; answers
+`201` with `{"bot": {...}, "token": {...}}`, the token as when issuing one,
+its `secret` shown once). A refusal creates nothing: `400` for an invalid
+manifest or a kept permission or intent that is not in it (the message names
+it), `404` for a listed id that is not a channel of the community the installer
+can view (categories and direct message conversations included), `403` for a
+kept permission the installer does not hold in a listed channel (the message
+names both), `409` at the bot limit or for a temporary Talk (it follows its
+lobby). The manifest's description and homepage are part of the bot
+(`description`, `homepage`, absent for a bot created by hand).
 
 ## REST API
 
@@ -543,13 +568,17 @@ member.
   a [modal](#modals) instead. All callback types are in
   [Interactions in detail](#interactions-in-detail).
 - `POST .../followups` with `data` as the body sends more messages, up to 5
-  responses in total.
+  messages in total (callback `4`, the message posted after `type 5` and the
+  follow-ups; acknowledging and editing count none).
 - `PATCH .../messages/@original` edits the first response, and after a
   `type 5` posts it; `DELETE .../messages/@original` deletes it.
 - **Ephemeral:** `"flags": 64` shows the response to the member who ran the
   command only. It is sent as the `interaction_response` WebSocket event to
   that member's sessions, shown as a private note in the channel, and **never
-  stored**; if the member is offline they miss it.
+  stored**; if the member is offline they miss it. Each note has an `id`; an
+  `interaction_response` with the same `id` replaces it (an edit of
+  `@original`, callback `7` on its components), one with `"deleted": true`
+  removes it.
 
 The bot needs *Send messages* in the channel when it responds; responses never
 notify `@all` or `@here`. Interactions live in the server's memory: a restart
@@ -581,16 +610,21 @@ Only bot accounts can set them, on their own messages.
 | `1` | action row | `components`: up to 5 buttons, or exactly one select |
 | `2` | button | `style` `1` primary, `2` secondary, `3` success, `4` danger (each with `custom_id`) or `5` link (with `url`, `http` or `https`, no `custom_id`); `label` (up to 80 characters) and/or `emoji` (`{"name": "👍"}`, a Unicode emoji); `disabled` |
 | `3` | string select | `custom_id`, `options` (1 to 25: `label` and `value` up to 100 characters, `description` up to 100, `default`; values unique), `placeholder` (up to 150), `min_values` (0 to 25, default 1), `max_values` (1 to 25, default 1), `disabled` |
-| `5` | user select | members; `custom_id`, `placeholder`, `min_values`, `max_values`, `disabled` |
+| `5` | user select | members (not bots); `custom_id`, `placeholder`, `min_values`, `max_values`, `disabled` |
 | `6` | role select | roles (not `@everyone`, not the managed bot roles); same fields |
-| `8` | channel select | text, forum and announcement channels; same fields |
+| `8` | channel select | text, voice and forum channels (never a conversation); same fields |
 
 A `custom_id` is 1 to 100 characters, unique within the message; it is the
 bot's own state (`"deploy:v2.4"`), returned with every click. At most 5 rows,
 25 components. A message may consist of components only (no content, no
 embeds). Mentionable selects (type `7`) and Discord's newer layout
 components are not offered; a message that contains them is refused (`50035`),
-so a bot learns at once instead of posting a message with holes.
+so a bot learns at once instead of posting a message with holes. Labels,
+placeholders and option texts are cleaned like names (one line, no invisible
+characters); a `custom_id` or an option `value` is returned exactly, so one
+with control characters is refused instead of changed. An edit that leaves
+the content as it is (only `components`, or callback `7` without `content`)
+does not mark the message edited.
 
 **Clicks.** Any member who can view the channel can use a message's
 components, also in a read-only channel, unless they are timed out. The web
@@ -600,13 +634,18 @@ its address after the usual external link prompt). A click is
 `{"custom_id": "env", "values": ["prod"]}` (members and the web app; `values`
 only for selects). The server checks the message still has that enabled
 component, that string select values are among its options, the count
-between `min_values` and `max_values`, and that user, role and channel values
-are ones the member can see: active members who can view the channel, roles
-that exist, channels the member can view **and the bot can view**. It then
+between `min_values` and `max_values` (each value once), and that user, role
+and channel values are ones the member can see: active members (not bots) who
+can view the channel, like a member option of a command, roles that exist,
+channels the member can view **and the bot can view**. It then
 creates a **new** interaction and delivers it to the bot (`202`, `409` when
 the bot is not connected, `404` when the message, the component or the bot's
-access is gone). Clicks and modal submits are limited to 30 a minute per
-member.
+access is gone: the component disabled, the bot disabled or deleted or unable
+to view the channel; a member who cannot view the channel gets the `404` of a
+hidden channel, a timed-out one `403`). Clicks and modal submits are limited
+to 30 a minute per member, apart from the 20 command runs. `message` is the
+message as the bot API shows it at the click; one deleted meanwhile is not
+delivered.
 
 ```json
 {"op": 0, "t": "INTERACTION_CREATE", "s": 12, "d": {
@@ -625,6 +664,8 @@ They are not stored, so their components work for the 15 minutes the
 interaction lives and only for the member who sees the note; a click is
 `POST /api/channels/{id}/ephemeral/{noteID}/components` and reaches the bot
 with `message: {"id": "<note id>", "flags": 64, "content": ..., "components": ...}`.
+The server remembers at most 5,000 notes (1,000 per bot); a note beyond that
+is still shown, but its components answer `404`.
 
 ## Modals
 
@@ -645,7 +686,8 @@ true), `value` (prefilled, up to 4000), `placeholder` (up to 100). The modal
 reaches the member as the `interaction_modal` WebSocket event and the web app
 shows it as a dialog. Submitting is
 `POST /api/channels/{id}/modals/{modalID}` `{"values": {"subject": "...", "body": "..."}}`;
-the server checks the lengths and required inputs and delivers
+the server trims each answer, checks the lengths and required inputs (an
+input left out is not filled in; an unknown one is refused) and delivers
 `INTERACTION_CREATE` type 5:
 
 ```json
@@ -656,8 +698,9 @@ the server checks the lengths and required inputs and delivers
 
 A modal can be submitted once, by the member it was opened for, within 15
 minutes; after a restart of the server an open modal is gone (submitting
-answers `404`, the web app says so and the member starts again). Closing it
-sends nothing to the bot.
+answers `404`, the web app says so and the member starts again). A submit
+refused for its answers (`400`) or because the bot is not connected (`409`)
+leaves the modal open. Closing it sends nothing to the bot.
 
 ## Interactions in detail
 
@@ -679,13 +722,19 @@ Callback `6` or `7` on a modal submit that came from a component work like on
 the component. The first answer must come within 15 minutes; follow-ups and
 `@original` edits work for the same 15 minutes. The original response is
 the message posted by callback `4` (or by the first `PATCH @original` after
-callback `5`); for a component interaction it is the message the component
-is on. `PATCH .../messages/@original` takes `content`, `embeds` and
-`components` (absent ones stay) and answers the message (`200`), or `204`
-for an ephemeral note, which the member sees replaced. `DELETE` answers
-`204`. Updating or editing a message is allowed while the bot can send in
+callback `5`); for a component interaction answered with `6` or `7` it is
+the message (or note) the component is on. `PATCH .../messages/@original`
+takes `content`, `embeds` and `components` (absent ones stay) and answers
+the message (`200`), or `204` for an ephemeral note, which the member sees
+replaced. `DELETE` answers `204`; afterwards `@original` is unknown
+(`10008`), and so it is before an answer that has one (`409` before any
+answer, `404` after a modal or before the message of a callback `5` is
+posted). Updating or editing a message is allowed while the bot can send in
 the channel, like any of its edits; it is announced as `MESSAGE_UPDATE` and
-`message_update`.
+`message_update`. When the message a component is on was deleted after the
+click, callback `7` answers `404` (`10008`) and the interaction can still be
+answered otherwise (`4`, `5`, `6`). Follow-ups are refused after a modal
+(`409`): the bot answers the submit instead.
 
 ## SDKs
 
