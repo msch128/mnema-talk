@@ -200,6 +200,9 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
       const outY = Math.max(box.top - r.top, r.bottom - box.bottom)
       const fullyOut = r.right <= box.left || r.left >= box.right || r.bottom <= box.top || r.top >= box.bottom
       if (fullyOut) return // scrolled away or a closed panel: not a partial cut
+      // Inside a one-line truncation or a line clamp: the truncation rule judges the whole text.
+      const s = styleOf(a.el)
+      if (deliberateTruncation(a.el, s, 'x') || deliberateTruncation(a.el, s, 'y')) return
       const cutX = outX > tol && clips(a.x)
       const cutY = outY > tol && clips(a.y)
       if (cutX || cutY) {
