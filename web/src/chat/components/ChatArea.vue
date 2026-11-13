@@ -228,7 +228,7 @@ const groupedIds = computed(() => {
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">
-    <div ref="messageContainer" class="msg-list flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
+    <div ref="messageContainer" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
       <div v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex items-center justify-center text-mnema-tertiary">
         <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
