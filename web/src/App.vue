@@ -105,7 +105,9 @@ if (isCompact.value) chatStore.showMemberList = false
 // A window that shrinks into the phone layout (the desktop client at its minimum) would turn an open
 // member list into a full-screen panel over the chat and the button that opens the channels.
 watch(isCompact, compact => { if (compact) chatStore.showMemberList = false })
-watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
+// Compared as one string: an array is a new value on every run, and the getter reruns whenever the
+// active channel's object is refreshed (a Talk's voice updates), which closed the phone's drawer by itself.
+watch(() => `${chatStore.activeChannel?.id}|${voiceStore.currentChannelId}|${voiceStore.activeView}`, closeNav)
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
 watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.dialogOpen) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
