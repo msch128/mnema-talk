@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { deflateSync } from 'node:zlib'
 import type { Browser, Page } from '@playwright/test'
 import { apiFetch, responseString, responseUserId } from '../helpers'
@@ -199,9 +199,16 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
+/**
+ * Names this server's run in the cache files: the Owner's id, a random UUID the
+ * fresh database gave, so a later run against the same address seeds anew.
+ */
+function runKey(baseURL: string, adminId: string): string {
+  return `${baseURL.replace(/[^a-zA-Z0-9]+/g, '-')}-${adminId}`
+}
+
 /** The names and password of this run's two members, kept for the whole run so a reseed signs them in. */
-function runMembers(baseURL: string, outputDir: string): { name: string; password: string } {
-  const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
+function runMembers(key: string, outputDir: string): { name: string; password: string } {
   const path = join(outputDir, `clip-members-${key}.json`)
   if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as { name: string; password: string }
   const name = Date.now().toString(36)
@@ -210,21 +217,24 @@ function runMembers(baseURL: string, outputDir: string): { name: string; passwor
   return members
 }
 
-function cachePath(baseURL: string, outputDir: string): string {
-  const key = createHash('sha256').update(`${baseURL} ${ADMIN_PASSWORD}`).digest('hex').slice(0, 16)
+function cachePath(key: string, outputDir: string): string {
   return join(outputDir, `clip-world-${key}.json`)
 }
 
 /** Seeds the world once per server and returns it; later workers read the cached ids. */
 export async function seedWorld(browser: Browser, baseURL: string, outputDir: string): Promise<World> {
   mkdirSync(outputDir, { recursive: true })
-  const cache = cachePath(baseURL, outputDir)
-  if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8')) as World
-  const suffix = Date.now().toString(36)
   const admin = await (await browser.newContext()).newPage()
   await signInApi(admin)
   const adminId = responseUserId(await apiFetch(admin, 'GET', '/api/auth/me'))
-  const { name, password } = runMembers(baseURL, outputDir)
+  const key = runKey(baseURL, adminId)
+  const cache = cachePath(key, outputDir)
+  if (existsSync(cache)) {
+    await admin.context().close()
+    return JSON.parse(readFileSync(cache, 'utf8')) as World
+  }
+  const suffix = Date.now().toString(36)
+  const { name, password } = runMembers(key, outputDir)
   const member = await registerMember(browser, admin, `clip_member_${name}`, password)
   const other = await registerMember(browser, admin, `clip_blocked_${name}`, password)
   const { chat, imageMessageText } = await seedChat(admin, member.page, `clip_member_${name}`, suffix)
@@ -250,13 +260,16 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
  * channels, unread messages, mentions and events. The next worker seeds anew.
  */
 export async function removeWorld(browser: Browser, baseURL: string, outputDir: string): Promise<void> {
-  const cache = cachePath(baseURL, outputDir)
-  if (!existsSync(cache)) return
-  const world = JSON.parse(readFileSync(cache, 'utf8')) as World
-  rmSync(cache)
   const ctx = await browser.newContext()
   const admin = await ctx.newPage()
   await signInApi(admin)
+  const cache = cachePath(runKey(baseURL, responseUserId(await apiFetch(admin, 'GET', '/api/auth/me'))), outputDir)
+  if (!existsSync(cache)) {
+    await ctx.close()
+    return
+  }
+  const world = JSON.parse(readFileSync(cache, 'utf8')) as World
+  rmSync(cache)
   const statuses: number[] = []
   for (const id of [world.chat.id, world.longName.id, world.talk.id, world.forum.id]) statuses.push((await apiFetch(admin, 'DELETE', `/api/admin/channels/${id}`)).status)
   for (const id of [world.dmId, world.groupDmId]) statuses.push((await apiFetch(admin, 'PUT', `/api/dms/${id}/hidden`, { hidden: true })).status)
