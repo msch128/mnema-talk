@@ -16,6 +16,7 @@ import ReactionPalette from '../../shared/components/ReactionPalette.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
 import PollCard from './PollCard.vue'
+import BotMessageComponents from './BotMessageComponents.vue'
 import BotBadge from '../../shared/components/BotBadge.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
@@ -232,6 +233,9 @@ defineExpose({ el: row })
 
       <!-- Webhook cards -->
       <MessageEmbeds :embeds="msg.embeds ?? []" :author="msg.display_name || msg.username" :author-id="msg.user_id" :channel-id="msg.channel_id" />
+
+      <!-- A bot's buttons and select menus -->
+      <BotMessageComponents v-if="!editing" :msg="msg" />
 
       <!-- Poll options and results -->
       <PollCard v-if="msg.poll" :msg="msg" />

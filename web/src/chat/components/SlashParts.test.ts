@@ -137,8 +137,9 @@ describe('SlashCommandBar', () => {
 })
 
 describe('EphemeralNotes', () => {
+  let noteSeq = 0
   const note = (channel: string, content: string, embeds: { title?: string; description?: string }[] | null = null) => ({
-    channel_id: channel, bot_id: 'b', bot_name: 'helper', content, embeds, created_at: '2026-01-01T00:00:00Z'
+    id: `note-${++noteSeq}`, channel_id: channel, bot_id: 'b', bot_name: 'helper', content, embeds, created_at: '2026-01-01T00:00:00Z'
   })
 
   it('shows the private replies of one channel and dismisses them', async () => {

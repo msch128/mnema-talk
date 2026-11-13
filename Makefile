@@ -147,7 +147,7 @@ lint: $(WEB_DEPS) ## gofmt check, go vet, staticcheck, cognitive complexity, esl
 complexity-check: ## Fail on Go functions above cognitive complexity 15 (scripts/complexity-allowlist.txt only shrinks); file and function length are checked by internal/repo
 	scripts/complexity-check.sh $(GOCOGNIT_VERSION)
 
-staticcheck: ## Fail on staticcheck findings in both Go modules (scripts/staticcheck-allowlist.txt only shrinks)
+staticcheck: ## Fail on staticcheck findings in every Go module (main, load-test viewer, bot SDK) (scripts/staticcheck-allowlist.txt only shrinks)
 	scripts/staticcheck.sh $(STATICCHECK_VERSION)
 
 bench: ## Hub fan-out, permission snapshot load and SFU forward benchmarks against scripts/bench-baseline.txt (Docker, or TEST_DATABASE_URL); timing is printed, only more allocations on the SFU forward path fail

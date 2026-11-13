@@ -170,3 +170,29 @@ func untyped(n Node, path string) string {
 	}
 	return ""
 }
+
+// treeNode contains itself, like a component row that holds components: its
+// description must end in a reference instead of recursing for ever.
+type treeNode struct {
+	Name     string     `json:"name"`
+	Children []treeNode `json:"children"`
+	Parent   *treeNode  `json:"parent"`
+}
+
+func TestATypeThatContainsItselfIsDescribedOnceAndThenReferred(t *testing.T) {
+	d := describer{known: func(string) bool { return false }, open: map[reflect.Type]bool{}}
+	n := d.node(reflect.TypeFor[treeNode](), "")
+	if n.Kind != "object" || len(n.Fields) != 3 {
+		t.Fatalf("node: %+v", n)
+	}
+	children, parent := n.Fields[1].Type, n.Fields[2].Type
+	if children.Kind != "array" || children.Items.Kind != "ref" || children.Items.Ref != "registry.treeNode" {
+		t.Fatalf("children: %+v", children)
+	}
+	if parent.Kind != "ref" || parent.Ref != "registry.treeNode" || !parent.Nullable {
+		t.Fatalf("parent: %+v", parent)
+	}
+	if len(d.open) != 0 {
+		t.Fatalf("open after describing: %v", d.open)
+	}
+}

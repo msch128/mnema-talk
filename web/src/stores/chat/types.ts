@@ -1,5 +1,5 @@
 import type { Message, User } from '../../types/domain'
-import type { InteractionResponse } from '../../types/events'
+import type { InteractionModal, InteractionResponse } from '../../types/events'
 
 export type ThreadRoot = Pick<Message, 'id'> & Partial<Omit<Message, 'id'>>
 export type ProfilePreview = Pick<User, 'id' | 'username' | 'display_name' | 'role'> & Partial<Omit<User, 'id' | 'username' | 'display_name' | 'role'>>
@@ -10,10 +10,18 @@ export type Timer = ReturnType<typeof setTimeout>
 /** A compact note under the messages: someone pinned a message here. Kept in memory until dismissed. */
 export interface PinNotice { id: number; channel_id: string; message_id: string; actor_name: string }
 
-/** A private reply of a bot to a slash command, shown in its channel until dismissed. */
-export interface EphemeralNote extends InteractionResponse {
+/**
+ * A private reply of a bot, shown in its channel until dismissed. id is local
+ * (the list's key); note_id is the server's, which a later response replaces or
+ * removes and a click on the note's components names.
+ */
+export interface EphemeralNote extends Omit<InteractionResponse, 'id' | 'deleted'> {
   id: number
+  note_id: string
 }
+
+/** A form a bot opened for this member, shown as a dialog until sent or closed. */
+export type BotModal = InteractionModal
 
 export const MAX_PENDING_LIVE = 200
 // A channel is marked read on the server at most this often while messages stream in.

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -28,19 +29,28 @@ type Commands struct {
 	Online mentions.OnlineSource
 	// Deliver sends interactions to bots; required.
 	Deliver Deliverer
+	// AllowSend takes a post from the bot's limit in a channel (the
+	// authenticator's): an update or @original edit that may notify counts
+	// like a post, as the REST edit does. nil does not limit.
+	AllowSend func(botID, ch uuid.UUID) (bool, time.Duration)
 	// Builtins are the server's own commands (internal/slash), listed and run
 	// next to the bots'; nil means none.
 	Builtins *slash.Registry
+	// Messages edits and deletes the bots' messages for the responses to
+	// interactions (callback 7, @original); required for those.
+	Messages BotMessages
 
 	store   *interactionStore
 	invokes *httpx.RateLimiter
+	clicks  *httpx.RateLimiter
 }
 
 // NewCommands returns Commands with its state. It panics without Perms.
 func NewCommands(c Commands) *Commands {
 	perm.Must(c.Perms, "slash commands")
-	c.store = &interactionStore{m: map[uuid.UUID]*interaction{}, now: time.Now}
+	c.store = newInteractionStore(time.Now)
 	c.invokes = httpx.NewRateLimiter(invokesPerMinute, time.Minute).Named("bot_invoke")
+	c.clicks = httpx.NewRateLimiter(clicksPerMinute, time.Minute).Named("bot_click")
 	return &c
 }
 
@@ -48,6 +58,9 @@ func NewCommands(c Commands) *Commands {
 func (c *Commands) MountMember(r chi.Router) {
 	r.Get("/channels/{channelID}/commands", httpx.Handle(c.listForChannel))
 	r.Post("/channels/{channelID}/interactions", httpx.Handle(c.invoke))
+	r.Post("/channels/{channelID}/messages/{messageID}/components", httpx.Handle(c.useMessageComponent))
+	r.Post("/channels/{channelID}/ephemeral/{noteID}/components", httpx.Handle(c.useNoteComponent))
+	r.Post("/channels/{channelID}/modals/{modalID}", httpx.Handle(c.submitModal))
 }
 
 // MountBot registers the bot API routes (the bot middleware applies).
@@ -58,6 +71,8 @@ func (c *Commands) MountBot(r chi.Router) {
 	r.Delete("/commands/{commandID}", httpx.HandleDiscord(c.botDelete))
 	r.Post("/interactions/{interactionID}/{token}/callback", httpx.HandleDiscord(c.callback))
 	r.Post("/interactions/{interactionID}/{token}/followups", httpx.HandleDiscord(c.followup))
+	r.Patch("/interactions/{interactionID}/{token}/messages/@original", httpx.HandleDiscord(c.editOriginal))
+	r.Delete("/interactions/{interactionID}/{token}/messages/@original", httpx.HandleDiscord(c.deleteOriginal))
 }
 
 // ChannelCommand is a command as the composer lists it.
@@ -172,7 +187,7 @@ func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Comma
 	return json.Marshal(map[string]any{
 		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
 		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
-		"member": map[string]any{"user": map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL}},
+		"member": memberPayload(user),
 	})
 }
 
@@ -220,7 +235,7 @@ func (c *Commands) checkInvokeRate(w http.ResponseWriter, userID string) error {
 
 func (c *Commands) registerInteraction(cmd *Command, botUser uuid.UUID, name string, avatar *string, ch, invoker uuid.UUID) (uuid.UUID, string, error) {
 	id := uuid.New()
-	token, ok := c.store.add(id, &interaction{botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: invoker})
+	token, ok := c.store.add(id, &interaction{kind: InteractionApplicationCommand, botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: invoker})
 	if !ok {
 		return uuid.Nil, "", httpx.ErrRateLimited()
 	}
@@ -298,4 +313,33 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, Invoked{InteractionID: id})
 	return nil
+}
+
+// ForgetBot drops the bot's pending interactions, notes and modals. The
+// management API calls it (through its OnRevoke hook) whenever it closes the
+// bot's connections: disabling or deleting the bot, regenerating or revoking
+// a token, changing its allowed intents.
+func (c *Commands) ForgetBot(botID uuid.UUID) { c.store.forgetBot(botID) }
+
+// ForgettingOnRevoke wraps the gateway's revoke for Handler.OnRevoke: closing
+// a bot's connections also ends what it could still answer.
+func (c *Commands) ForgettingOnRevoke(revoke func(botID uuid.UUID, tokenID *uuid.UUID)) func(uuid.UUID, *uuid.UUID) {
+	return func(botID uuid.UUID, tokenID *uuid.UUID) {
+		revoke(botID, tokenID)
+		c.ForgetBot(botID)
+	}
+}
+
+// withinSendLimit takes one post of the interaction's bot in its channel
+// when an update or edit asks for allowed_mentions, and answers 429 itself
+// when there is none.
+func (c *Commands) withinSendLimit(w http.ResponseWriter, in *interaction, am *botapi.BotAllowedMentions) bool {
+	if am == nil || c.AllowSend == nil {
+		return true
+	}
+	ok, retry := c.AllowSend(in.botID, in.channel)
+	if !ok {
+		httpx.WriteDiscordRateLimit(w, retry, false)
+	}
+	return ok
 }

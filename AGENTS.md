@@ -104,6 +104,7 @@ mnema-talk/
 ├── doc/                     # Architecture, operations, upgrade, glossary, roles, webhooks, desktop docs; doc/images has the README screenshots
 ├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
+├── sdk/                     # Official bot SDKs: typescript/ (npm package mnema-talk-sdk, attached to each release) and go/ (own module), with examples and contract tests (doc/bots.md, SDKs)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), chat and voice capacity test for the server host (`make load-test-host`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind CSS 4 SPA (shared UI classes in web/src/styles); web.go embeds web/dist
 │   └── src/                 # One folder per feature (chat, talk, dm, forum, events, wiki, admin, settings), each with components/, composables/ and lib/;
@@ -163,7 +164,7 @@ mnema-talk/
 
    **Size and complexity limits (Go)**: production `.go` files max 400 lines, `_test.go` files max 800, functions max 80 lines and cognitive complexity 15 (gocognit). Generated files (`Code generated ... DO NOT EDIT`) are exempt. File and function length are enforced by `internal/repo/limits_test.go`, complexity by `make complexity-check` (part of `make lint` and CI). Both keep a shrinking allowlist of old offenders: never add entries or raise a limit, refactor instead.
 
-   **staticcheck (Go)**: `make staticcheck` (part of `make lint` and CI) runs staticcheck with its default checks over both Go modules, the main one with and without the `integration` tag. `scripts/staticcheck-allowlist.txt` is the only place that excuses a finding (a `//lint:ignore` directive needs an entry there, a `staticcheck.conf` fails the check) and it only shrinks: fix the code instead.
+   **staticcheck (Go)**: `make staticcheck` (part of `make lint` and CI) runs staticcheck with its default checks over every Go module: the main one with and without the `integration` tag, `loadtest/viewer`, and `sdk/go` with and without the `contract` tag. `scripts/staticcheck-allowlist.txt` is the only place that excuses a finding (a `//lint:ignore` directive needs an entry there, a `staticcheck.conf` fails the check) and it only shrinks: fix the code instead.
 
    **Package size and layers (Go)**: a package has at most 30 production `.go` files (`TestPackagesStayWithinFileCount` in `internal/repo/limits_test.go`; its allowlist only shrinks). When a package outgrows that, split it by domain, not by file type: one sub-package per sub-domain with its own small `API` struct (see `internal/chat/blocks`), shared types in a low `core` package, and consumer-defined interfaces instead of importing a sibling. `internal/chat` and `internal/auth` are layered (`internal/repo/boundaries_test.go` holds the allowed-import table: a lower layer never imports a higher one and siblings never import each other). A new sub-package must be added to that table in the same PR.
 

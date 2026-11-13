@@ -2,8 +2,9 @@
 // One bot: avatar, name, on/off, allowed intents and roles are one draft with one
 // Save (doc/settings-ux.md); delete, tokens and commands are actions in their own
 // sections after it, and the access preview only reads.
-import { ref } from 'vue'
-import { ImagePlus, Trash2 } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { ExternalLink, ImagePlus, Trash2 } from '@lucide/vue'
+import { safeHomepage } from '../lib/manifest'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
 import { decodeBotBot } from '../../types/rest'
 import type { BotBot } from '../../types/rest'
@@ -29,6 +30,8 @@ const toasts = useToastStore()
 // Bumped when roles change so the access preview reloads.
 const accessVersion = ref(0)
 const base = `/api/admin/bots/${props.bot.id}`
+// Description and homepage come from the manifest the bot was added from.
+const homepage = computed(() => safeHomepage(props.bot.homepage))
 
 function fail(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -104,6 +107,13 @@ async function remove() {
       </label>
     </div>
     <p v-if="draft.avatar" class="-mt-4 text-xs text-mnema-accent" data-testid="bot-avatar-pending">{{ $t('draft.imagePending') }}</p>
+    <div v-if="bot.description || homepage" class="-mt-2 stack-1" data-testid="bot-about">
+      <p v-if="bot.description" class="text-sm whitespace-pre-wrap wrap-break-word text-mnema-muted">{{ bot.description }}</p>
+      <a v-if="homepage" :href="homepage" target="_blank" rel="noopener noreferrer nofollow" class="flex min-w-0 items-center gap-1 text-xs text-mnema-accent hover:underline" data-testid="bot-homepage">
+        <ExternalLink class="h-3 w-3 shrink-0" aria-hidden="true" />
+        <span class="truncate" :title="homepage">{{ homepage }}</span>
+      </a>
+    </div>
 
     <label class="flex items-center gap-2 text-sm text-mnema-text">
       <input v-model="draft.enabled" type="checkbox" data-testid="bot-enabled" />

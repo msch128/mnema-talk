@@ -34,6 +34,9 @@ audit.
 | [789](2026-11/789.md) | #789 | timer panics, fail-closed permission enforcement, live storage health; two rounds: the should-fix findings S1 to S4 of the first were fixed in the same pull request and checked in the second |
 | [790-sweep](2026-11/790-sweep.md) | the nightly simulator sweep | the settle table of the 43 failing seeds, the sweep of seeds 1..400 with a failure budget, a test for the key package renewal rule; its two should-fix findings were fixed in the same pull request |
 | [798](2026-11/798.md) | #798 | the data export after a desktop download: one more hour after the first complete download, the length sent, a single download claim that holds under parallel requests; two rounds: the should-fix findings of the first were fixed in the same pull request and checked in the second |
+| [bot-platform](2026-11/bot-platform.md) | the bot platform | manifest install, message components and modals, interactions, both SDKs and the release packaging; seven rounds, every finding fixed in the same branch and checked by reverting its fix |
+| [bot-platform-web](2026-11/bot-platform-web.md) | the bot platform | the web UI: the add-bot flow, components, selects, forms and their states, at six viewports in two browsers; two rounds |
+| [webhook-call-chat](2026-11/webhook-call-chat.md) | #803 | an outgoing webhook of a conversation's call Talk heard its call chat (releases up to 3.0.13; fixed in 3.1.0): the routes, the queue insert and the delivery each refuse a private channel |
 
 ## 2026-11: defect hunt on 3.0.8
 

@@ -145,7 +145,13 @@ func (h *Handler) talks() *talks.API {
 // MountBot registers the bot API routes (the bot authentication middleware must
 // already apply); see botapi.API.MountBot.
 func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
-	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
+	h.BotMessages().MountBot(r, send)
+}
+
+// BotMessages is the bot API of this handler, for the services that edit and
+// delete a bot's messages outside its routes (the responses to interactions).
+func (h *Handler) BotMessages() *botapi.API {
+	return &botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Messages: h.messages(), Channels: h.channels()}
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).

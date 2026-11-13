@@ -66,14 +66,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # --- Stage 3: runtime files, prepared on the build machine ---
 # CA bundle, time zone data and /etc/passwd are the same on every
 # architecture, so they are assembled here and copied into the target image.
-FROM --platform=$BUILDPLATFORM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4 AS rootfs
+FROM --platform=$BUILDPLATFORM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS rootfs
 RUN apk add --no-cache ca-certificates tzdata
 # Least-privilege runtime user. The binary writes nothing to disk except
 # multipart upload temp files in /tmp; media lives in S3, data in PostgreSQL.
 RUN adduser -D -H -u 10001 app
 
 # --- Stage 4: runtime ---
-FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 COPY --from=rootfs /etc/passwd /etc/group /etc/shadow /etc/
 COPY --from=rootfs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=rootfs /usr/share/zoneinfo /usr/share/zoneinfo

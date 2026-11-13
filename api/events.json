@@ -494,6 +494,96 @@
         }
       }
     ],
+    "interaction_deferred": [
+      {
+        "go": "wire.InteractionDeferred",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "bot_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "interaction_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "interaction_modal": [
+      {
+        "go": "bot.InteractionModal",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "bot_avatar_url",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "bot_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "bot_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "components",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "ref",
+                  "ref": "chat.ActionRow"
+                }
+              }
+            },
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "title",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
     "interaction_response": [
       {
         "go": "bot.InteractionResponse",
@@ -527,6 +617,17 @@
               }
             },
             {
+              "name": "components",
+              "optional": true,
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "ref",
+                  "ref": "chat.ActionRow"
+                }
+              }
+            },
+            {
               "name": "content",
               "type": {
                 "kind": "string"
@@ -540,6 +641,13 @@
               }
             },
             {
+              "name": "deleted",
+              "optional": true,
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
               "name": "embeds",
               "type": {
                 "kind": "array",
@@ -548,6 +656,13 @@
                   "kind": "ref",
                   "ref": "chat.Embed"
                 }
+              }
+            },
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
               }
             }
           ]

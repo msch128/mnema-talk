@@ -263,3 +263,14 @@ func TestChatSubPackageSchemasKeepTheChatPrefix(t *testing.T) {
 		t.Error("two schemas of one name were merged")
 	}
 }
+
+func TestRenameAtMeSpellsTheOriginalResponse(t *testing.T) {
+	paths := obj{"/api/bot/v1/interactions/{id}/{token}/messages/at_original": obj{}, "/api/plain": obj{}}
+	renameAtMe(paths)
+	if _, ok := paths["/api/bot/v1/interactions/{id}/{token}/messages/@original"]; !ok {
+		t.Fatalf("at_original not renamed: %v", paths)
+	}
+	if _, ok := paths["/api/plain"]; !ok || len(paths) != 2 {
+		t.Fatalf("other paths changed: %v", paths)
+	}
+}

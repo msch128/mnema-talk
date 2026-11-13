@@ -8,7 +8,8 @@ import { createKeyedThrottle } from '../../shared/lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
 import type { PendingMessage } from './outboxTypes'
-import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
+import type { BotAnswer, BotDeferral } from './botAnswers'
+import { MARK_READ_INTERVAL_MS, type BotModal, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
 /** No stored settings: every channel follows the server default, which is "all messages". */
 export function emptyNotificationSettings(): NotificationSettings {
@@ -61,6 +62,12 @@ function memberState() {
     // Replies to slash commands that only this member sees; kept in memory, never stored.
     ephemeral: ref<EphemeralNote[]>([]),
     ephemeralSeq: 0,
+    // The form a bot opened (interaction_modal); a newer one replaces it.
+    botModal: ref<BotModal | null>(null),
+    // The latest answer of a bot in a channel (botAnswers.ts), for components waiting on one.
+    botAnswer: ref<BotAnswer | null>(null),
+    // The latest click a bot deferred (interaction_deferred), by its interaction id.
+    botDeferral: ref<BotDeferral | null>(null),
     membersFetchSeq: 0,
     memberRevision: 0,
     // A disable event wins over requests already in flight. A later active-only

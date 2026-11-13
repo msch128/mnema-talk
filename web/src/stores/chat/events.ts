@@ -15,6 +15,7 @@ import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../shared/lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../shared/lib/presence'
 import { MAX_EPHEMERAL } from './types'
+import { messageAnswer, noteBotAnswer, noteBotDeferral } from './botAnswers'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
@@ -36,6 +37,24 @@ import { clearTypingForUser, handleTypingEvent } from './typing'
 
 type Payload<K extends ServerEventType> = ServerEventPayloads[K]
 type Handlers = { [K in ServerEventType]: (cx: Cx, p: Payload<K>) => void }
+
+// A private reply: a new note, the replacement of the note with its id, or its removal.
+function onInteractionResponse({ cs }: Cx, p: Payload<'interaction_response'>) {
+  if (!p?.channel_id) return
+  const { id: noteId, deleted, ...rest } = p
+  noteBotAnswer(cs, { channelId: p.channel_id, botName: p.bot_name, ...(noteId ? { messageId: noteId } : {}) })
+  const notes = cs.ephemeral.value
+  if (deleted && noteId) {
+    cs.ephemeral.value = notes.filter(n => n.note_id !== noteId)
+    return
+  }
+  // An older server sends no id: every response is a note of its own.
+  const at = noteId ? notes.findIndex(n => n.note_id === noteId) : -1
+  // components is left out when the response has none: a replacement drops the old ones.
+  const note = { ...rest, components: rest.components ?? [], note_id: noteId ?? '' }
+  if (at >= 0) cs.ephemeral.value = notes.map((n, i) => (i === at ? { ...note, id: n.id } : n))
+  else cs.ephemeral.value = [...notes, { ...note, id: ++cs.ephemeralSeq }].slice(-MAX_EPHEMERAL)
+}
 
 function onPresenceSnapshot({ cs }: Cx, p: Payload<'presence_snapshot'>) {
   const snapshot = snapshotToMap(p)
@@ -140,6 +159,8 @@ function signalForumPosts({ cs }: Cx, channelId: string | undefined) {
 function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   if (!p) return
   const { cs, authStore } = cx
+  const answer = messageAnswer(p, false)
+  if (answer) noteBotAnswer(cs, answer)
   signalForumPosts(cx, p.channel_id)
   // The author's own send coming back: it replaces the pending copy in place.
   noteEcho(cx, p)
@@ -272,7 +293,10 @@ const HANDLERS: Handlers = {
   },
   message_update: (cx, p) => {
     if (!p) return
-    applyToMessage(cx, p.id, m => Object.assign(m, p))
+    // Absent components mean none (a bot removed them): the old ones must not stay.
+    applyToMessage(cx, p.id, m => { if (!p.components) delete m.components; Object.assign(m, p) })
+    const answer = messageAnswer(p, true)
+    if (answer) noteBotAnswer(cx.cs, answer)
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
     noteDmMessageChanged(cx, p.channel_id)
@@ -288,8 +312,14 @@ const HANDLERS: Handlers = {
     if (p?.message_id) applyToMessage(cx, p.message_id, m => { m.reactions = p.reactions })
   },
   poll_update: (cx, p) => { if (p?.message_id) applyPoll(cx, p.message_id, p.poll) },
-  interaction_response: ({ cs }, p) => {
-    if (p?.channel_id) cs.ephemeral.value = [...cs.ephemeral.value, { ...p, id: ++cs.ephemeralSeq }].slice(-MAX_EPHEMERAL)
+  interaction_response: onInteractionResponse,
+  interaction_modal: ({ cs }, p) => {
+    if (!p?.channel_id) return
+    cs.botModal.value = p
+    noteBotAnswer(cs, { channelId: p.channel_id, botName: p.bot_name })
+  },
+  interaction_deferred: ({ cs }, p) => {
+    if (p?.interaction_id) noteBotDeferral(cs, { interactionId: p.interaction_id, channelId: p.channel_id })
   },
   webrtc_offer: ({ cs }, p) => { cs.webrtcOfferHandler?.(p) },
   webrtc_candidate: ({ cs }, p) => { cs.webrtcCandidateHandler?.(p) },
