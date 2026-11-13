@@ -741,6 +741,11 @@ leaves the modal open. Closing it sends nothing to the bot.
 | `7` | update the message the component is on (`data`: `content`, `embeds`, `components`; absent fields stay) | 3 |
 | `9` | open a modal | 2, 3 |
 
+Callback `5` or `6` also tells the member that the bot is on it: the
+`interaction_deferred` WebSocket event (`bot_id`, `channel_id`,
+`interaction_id`, the id their run or click was answered with), so the web
+app says the bot is taking longer instead of inviting another click.
+
 Callback `6` or `7` on a modal submit that came from a component work like on
 the component. The first answer must come within 15 minutes; follow-ups and
 `@original` edits work for the same 15 minutes. The original response is

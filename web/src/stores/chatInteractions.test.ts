@@ -48,3 +48,13 @@ describe('components of a bot message', () => {
     expect(chat.messages[0]!.components).toEqual([button])
   })
 })
+
+describe('a click the bot deferred', () => {
+  it('is kept by its interaction id until the community is left', () => {
+    const chat = useChatStore()
+    chat.handleWSEvent({ type: 'interaction_deferred', payload: { interaction_id: fixtureId(40), channel_id: fixtureId(2), bot_id: fixtureId(3) } })
+    expect(chat.botDeferral).toMatchObject({ interactionId: fixtureId(40), channelId: fixtureId(2) })
+    chat.resetCommunityState()
+    expect(chat.botDeferral).toBeNull()
+  })
+})

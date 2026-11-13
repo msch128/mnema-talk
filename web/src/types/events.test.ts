@@ -64,6 +64,7 @@ const examples: Record<ServerEventType, unknown[]> = {
     { id, channel_id: id, bot_id: id, bot_name: 'helper', content: 'Sure?', embeds: null, components: [{ type: 1, components: [{ type: 2, style: 1, label: 'Yes', custom_id: 'yes' }] }], created_at: FIXTURE_TIMESTAMP },
     { id, channel_id: id, bot_id: id, bot_name: 'helper', content: '', embeds: null, deleted: true, created_at: FIXTURE_TIMESTAMP }
   ],
+  interaction_deferred: [{ interaction_id: id, channel_id: id, bot_id: id }],
   interaction_modal: [
     { id, channel_id: id, bot_id: id, bot_name: 'helper', bot_avatar_url: '', title: 'Feedback', components: [{ type: 1, components: [{ type: 4, custom_id: 'subject', label: 'Subject', style: 1 }] }] }
   ],

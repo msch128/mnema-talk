@@ -44,6 +44,8 @@ func TestWireFormatOfBotComponentEvents(t *testing.T) {
 	w.step("ephemeral response deleted", answer(in, http.MethodDelete, "/messages/@original", nil))
 	in = run()
 	w.step("modal opened", answer(in, http.MethodPost, "/callback", map[string]any{"type": 9, "data": feedbackModal()}))
+	in = run()
+	w.step("answer deferred", answer(in, http.MethodPost, "/callback", map[string]any{"type": 5}))
 }
 
 // wireBot is a bot of the wire world, connected to the gateway.

@@ -112,6 +112,72 @@ describe('buttons of a bot message', () => {
     expect(apiMock).toHaveBeenCalledTimes(2)
   })
 
+  it('clears "did not answer" when the answer comes after all', async () => {
+    vi.useFakeTimers()
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    vi.advanceTimersByTime(15_000)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer did not answer. Try again in a moment.')
+    useChatStore().handleWSEvent({ type: 'message_update', payload: messageFixture({ id: 'm', channel_id: 'c', is_bot: true, display_name: 'Deployer', content: 'Late but here' }) })
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('')
+  })
+
+  it('says the bot is taking longer once it deferred this click, and keeps waiting past 15 s', async () => {
+    vi.useFakeTimers()
+    const INTERACTION = fixtureId(40)
+    apiMock.mockResolvedValue({ interaction_id: INTERACTION })
+    const w = mountRows([row(deploy, cancel)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    const chat = useChatStore()
+    // Another member's (or another click's) deferral changes nothing here.
+    chat.handleWSEvent({ type: 'interaction_deferred', payload: { interaction_id: fixtureId(41), channel_id: 'c', bot_id: fixtureId(3) } })
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is working…')
+    chat.handleWSEvent({ type: 'interaction_deferred', payload: { interaction_id: INTERACTION, channel_id: 'c', bot_id: fixtureId(3) } })
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is taking longer…')
+    vi.advanceTimersByTime(60_000)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is taking longer…')
+    expect(button(w, 'Deploy').attributes('aria-busy')).toBe('true')
+    expect(button(w, 'Cancel').attributes('disabled')).toBeDefined()
+    chat.handleWSEvent({ type: 'message_update', payload: messageFixture({ id: 'm', channel_id: 'c', is_bot: true, display_name: 'Deployer', content: 'Done' }) })
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('')
+    expect(button(w, 'Cancel').attributes('disabled')).toBeUndefined()
+  })
+
+  it('gives up on a deferred click only when the interaction itself has expired', async () => {
+    vi.useFakeTimers()
+    apiMock.mockResolvedValue({ interaction_id: fixtureId(40) })
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    useChatStore().handleWSEvent({ type: 'interaction_deferred', payload: { interaction_id: fixtureId(40), channel_id: 'c', bot_id: fixtureId(3) } })
+    await flushPromises()
+    vi.advanceTimersByTime(15 * 60_000 - 1)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is taking longer…')
+    vi.advanceTimersByTime(1)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer did not answer. Try again in a moment.')
+  })
+
+  it('takes a deferral that came before the server’s 202', async () => {
+    let reply: (value: unknown) => void = () => undefined
+    apiMock.mockImplementation(() => new Promise(resolve => { reply = resolve }))
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    useChatStore().handleWSEvent({ type: 'interaction_deferred', payload: { interaction_id: fixtureId(40), channel_id: 'c', bot_id: fixtureId(3) } })
+    reply({ interaction_id: fixtureId(40) })
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is taking longer…')
+  })
+
   it('does not wait when the bot answered before the server did', async () => {
     let answer: () => void = () => undefined
     apiMock.mockImplementation(() => new Promise(resolve => { answer = () => resolve(undefined) }))

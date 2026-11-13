@@ -30,6 +30,19 @@ export function noteBotAnswer(cs: BotAnswerState, answer: Omit<BotAnswer, 'seq'>
   cs.botAnswer.value = { ...answer, seq: (cs.botAnswer.value?.seq ?? 0) + 1 }
 }
 
+/**
+ * A bot acknowledged a click and will answer later (callback 5 or 6, the
+ * interaction_deferred event). It names the interaction exactly: the id the
+ * click's 202 answered with.
+ */
+export interface BotDeferral { seq: number; interactionId: string; channelId: string }
+
+export interface BotDeferralState { botDeferral: Ref<BotDeferral | null> }
+
+export function noteBotDeferral(cs: BotDeferralState, deferral: Omit<BotDeferral, 'seq'>): void {
+  cs.botDeferral.value = { ...deferral, seq: (cs.botDeferral.value?.seq ?? 0) + 1 }
+}
+
 /** The bot answer of a message event, or null for a member's message. */
 export function messageAnswer(m: { is_bot?: boolean; is_webhook?: boolean; channel_id: string; id: string; display_name?: string; username?: string }, changed: boolean): Omit<BotAnswer, 'seq'> | null {
   if (!m.is_bot || m.is_webhook) return null

@@ -3989,7 +3989,6 @@
   "bots": {
     "title": "Bots",
     "intro": "Bots are accounts for programs: they post messages, answer slash commands and react to events through the bot API (see the bot documentation). A new bot can do nothing until you give it a role, allow its intents and issue a token. Every change here lands in the audit log.",
-    "badge": "Bot",
     "new": "New bot",
     "namePlaceholder": "Name of the new bot",
     "nameRequired": "A bot needs a name.",
@@ -5245,7 +5244,8 @@
     "opensLink": "{label}, opens {host}",
     "unsupported": "This bot sent something this app cannot show.",
     "working": "{bot} is working…",
-    "noAnswer": "{bot} did not answer. Try again in a moment."
+    "noAnswer": "{bot} did not answer. Try again in a moment.",
+    "takingLonger": "{bot} is taking longer…"
   },
   "modals": {
     "from": "A form from {bot}",

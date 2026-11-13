@@ -15,6 +15,7 @@ import { t, locale } from '../../i18n'
 import BotDetailPanel from './BotDetailPanel.vue'
 import BotManifestInstall from './BotManifestInstall.vue'
 import BotSecretDialog from './BotSecretDialog.vue'
+import BotBadge from '../../shared/components/BotBadge.vue'
 import { takePendingBotManifest } from '../../shared/lib/botAddLink'
 import EmptyState from '../../shared/components/EmptyState.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
@@ -133,7 +134,8 @@ onMounted(async () => {
 
     <!-- Adding a bot needs the width: the list sits beside the flow only where the pane is wide
          (a container query, since the console's own sidebar takes part of the viewport), else above it. -->
-    <div :class="['grid gap-4', adding ? '@2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]' : 'md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]']">
+    <!-- One column is minmax(0, 1fr) as well: an auto column grows to its widest content (WebKit did). -->
+    <div :class="['grid grid-cols-[minmax(0,1fr)] gap-4', adding ? '@2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]' : 'md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]']">
       <div class="space-y-3">
         <form class="flex gap-2" @submit.prevent="create">
           <input v-model="newName" type="text" v-max-chars="24" class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.namePlaceholder')" :aria-label="$t('common.name')" data-testid="bot-new-name" />
@@ -156,7 +158,7 @@ onMounted(async () => {
               <span class="min-w-0 flex-1 space-y-0.5">
                 <span class="flex items-center gap-1.5">
                   <span class="truncate text-sm font-medium text-mnema-text">{{ bot.name }}</span>
-                  <span class="rounded-sm bg-mnema-band px-1 text-[10px] font-bold uppercase tracking-wide text-mnema-mint">{{ $t('bots.badge') }}</span>
+                  <BotBadge />
                 </span>
                 <span class="block text-xs" :class="bot.disabled ? 'text-mnema-danger' : 'text-mnema-tertiary'" data-testid="bot-state">{{ bot.disabled ? $t('bots.disabled') : $t('bots.enabled') }} - {{ bot.last_active_at ? $t('bots.lastActive', { when: relativeTime(bot.last_active_at, locale) }) : $t('bots.neverActive') }}</span>
                 <span v-if="roleNames(bot).length" class="flex flex-wrap gap-1 pt-0.5">

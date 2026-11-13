@@ -15,7 +15,7 @@ import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../shared/lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../shared/lib/presence'
 import { MAX_EPHEMERAL } from './types'
-import { messageAnswer, noteBotAnswer } from './botAnswers'
+import { messageAnswer, noteBotAnswer, noteBotDeferral } from './botAnswers'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
@@ -317,6 +317,9 @@ const HANDLERS: Handlers = {
     if (!p?.channel_id) return
     cs.botModal.value = p
     noteBotAnswer(cs, { channelId: p.channel_id, botName: p.bot_name })
+  },
+  interaction_deferred: ({ cs }, p) => {
+    if (p?.interaction_id) noteBotDeferral(cs, { interactionId: p.interaction_id, channelId: p.channel_id })
   },
   webrtc_offer: ({ cs }, p) => { cs.webrtcOfferHandler?.(p) },
   webrtc_candidate: ({ cs }, p) => { cs.webrtcCandidateHandler?.(p) },

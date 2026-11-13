@@ -8,7 +8,7 @@ import { createKeyedThrottle } from '../../shared/lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
 import type { PendingMessage } from './outboxTypes'
-import type { BotAnswer } from './botAnswers'
+import type { BotAnswer, BotDeferral } from './botAnswers'
 import { MARK_READ_INTERVAL_MS, type BotModal, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
 /** No stored settings: every channel follows the server default, which is "all messages". */
@@ -66,6 +66,8 @@ function memberState() {
     botModal: ref<BotModal | null>(null),
     // The latest answer of a bot in a channel (botAnswers.ts), for components waiting on one.
     botAnswer: ref<BotAnswer | null>(null),
+    // The latest click a bot deferred (interaction_deferred), by its interaction id.
+    botDeferral: ref<BotDeferral | null>(null),
     membersFetchSeq: 0,
     memberRevision: 0,
     // A disable event wins over requests already in flight. A later active-only

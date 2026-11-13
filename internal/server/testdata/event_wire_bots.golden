@@ -22,3 +22,7 @@
 @ internal/bot.(*Commands).answerModal
 {"type":"interaction_modal","payload":{"bot_avatar_url":"","bot_id":"<id-1>","bot_name":"helper","channel_id":"<id-2>","components":[{"type":1,"components":[{"type":4,"custom_id":"subject","style":1,"label":"Subject","min_length":2,"max_length":10}]},{"type":1,"components":[{"type":4,"custom_id":"body","style":2,"label":"What happened?","required":false}]}],"id":"<id-3>","title":"Feedback"}}
 
+# answer deferred
+@ internal/bot.(*Commands).deferAnswer
+{"type":"interaction_deferred","payload":{"bot_id":"<id-1>","channel_id":"<id-2>","interaction_id":"<id-3>"}}
+

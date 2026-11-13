@@ -9,6 +9,7 @@ import type { BotCheckedManifest } from '../../types/rest'
 import { botInitial } from '../lib/bots'
 import { INTENT_KEYS, OFF_AT_FIRST, safeHomepage, sharesBuiltinName } from '../lib/manifest'
 import BotManifestChannels from './BotManifestChannels.vue'
+import BotBadge from '../../shared/components/BotBadge.vue'
 
 const props = defineProps({
   manifest: { type: Object as PropType<BotCheckedManifest>, required: true },
@@ -38,7 +39,7 @@ function toggle(list: string[], value: string, on: boolean): string[] {
         <div class="min-w-0 flex-1 stack-1">
           <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-mnema-text">
             <q class="min-w-0 wrap-anywhere" data-testid="manifest-name">{{ manifest.name }}</q>
-            <span class="shrink-0 rounded-sm bg-mnema-band px-1 text-[10px] font-bold uppercase tracking-wide text-mnema-mint">{{ $t('bots.badge') }}</span>
+            <BotBadge />
           </p>
           <blockquote v-if="manifest.description" class="border-l-2 border-mnema-border pl-2 text-sm whitespace-pre-wrap wrap-break-word text-mnema-muted">
             <q data-testid="manifest-description">{{ manifest.description }}</q>

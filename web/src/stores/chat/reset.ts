@@ -47,6 +47,7 @@ export function resetCommunityState(cx: Cx) {
   cs.ephemeral.value = []
   cs.botModal.value = null
   cs.botAnswer.value = null
+  cs.botDeferral.value = null
   cs.pinNotices.value = []
   cs.pinsSignal.value = null
   ++cs.communityGeneration

@@ -3989,7 +3989,6 @@
   "bots": {
     "title": "Bots",
     "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe Bot-Dokumentation). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
-    "badge": "Bot",
     "new": "Neuer Bot",
     "namePlaceholder": "Name des neuen Bots",
     "nameRequired": "Ein Bot braucht einen Namen.",
@@ -5245,7 +5244,8 @@
     "opensLink": "{label}, öffnet {host}",
     "unsupported": "Dieser Bot hat etwas geschickt, das diese App nicht anzeigen kann.",
     "working": "{bot} arbeitet daran …",
-    "noAnswer": "{bot} hat nicht geantwortet. Versuch es gleich noch einmal."
+    "noAnswer": "{bot} hat nicht geantwortet. Versuch es gleich noch einmal.",
+    "takingLonger": "{bot} braucht etwas länger …"
   },
   "modals": {
     "from": "Ein Formular von {bot}",

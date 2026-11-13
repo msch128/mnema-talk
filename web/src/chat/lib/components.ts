@@ -27,6 +27,15 @@ export const LINK_STYLE = 5
  */
 export const ANSWER_WAIT_MS = 15_000
 
+/**
+ * How long a click the bot deferred (callback 5 or 6) waits for its answer:
+ * the interaction's lifetime on the server, 15 minutes. The bot said it will
+ * answer and may do so until then; after it the server refuses the answer, so
+ * waiting longer would be waiting for nothing, and giving up sooner would call
+ * a bot that keeps its word silent.
+ */
+export const DEFERRED_WAIT_MS = 15 * 60_000
+
 const SELECTS: readonly unknown[] = [STRING_SELECT, USER_SELECT, ROLE_SELECT, CHANNEL_SELECT]
 const BUTTON_STYLES: readonly unknown[] = [1, 2, 3, 4, LINK_STYLE]
 

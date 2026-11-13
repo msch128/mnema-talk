@@ -57,6 +57,9 @@ export type CommunityeventsEventUpdate = CommunityeventsCommunityEvent
 /** forum_tags_changed, as the server's wire.ForumTagsChanged writes it. */
 export type WireForumTagsChanged = { channel_id: string }
 
+/** interaction_deferred, as the server's bot.InteractionDeferred writes it. */
+export type BotInteractionDeferred = { bot_id: string; channel_id: string; interaction_id: string }
+
 /** interaction_modal, as the server's bot.InteractionModal writes it. */
 export type BotInteractionModal = { bot_avatar_url: string; bot_id: string; bot_name: string; channel_id: string; components: Array<ChatActionRow>; id: string; title: string }
 
@@ -251,6 +254,7 @@ export interface ServerEventShapes {
   event_signup_notice: CommunityeventsSignupNoticePayload
   event_update: CommunityeventsEventUpdate
   forum_tags_changed: WireForumTagsChanged
+  interaction_deferred: BotInteractionDeferred
   interaction_modal: BotInteractionModal
   interaction_response: BotInteractionResponse
   kicked: WireKicked

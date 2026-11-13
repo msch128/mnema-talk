@@ -93,11 +93,9 @@ func (c *Commands) parseCallback(req CallbackRequest) (answerFunc, error) {
 		return func(r *http.Request, in *interaction) error { return c.answerMessage(r, in, *m) }, nil
 	case CallbackDeferred:
 		later := req.Data != nil && req.Data.Flags&flagEphemeral != 0
-		return func(_ *http.Request, in *interaction) error { return c.store.takeAnswer(in, CallbackDeferred, later) }, nil
+		return func(_ *http.Request, in *interaction) error { return c.deferAnswer(in, CallbackDeferred, later) }, nil
 	case CallbackDeferredUpdate:
-		return func(_ *http.Request, in *interaction) error {
-			return c.store.takeAnswer(in, CallbackDeferredUpdate, false)
-		}, nil
+		return func(_ *http.Request, in *interaction) error { return c.deferAnswer(in, CallbackDeferredUpdate, false) }, nil
 	case CallbackUpdate:
 		e, err := parseUpdate(req.Data)
 		if err != nil {

@@ -494,6 +494,37 @@
         }
       }
     ],
+    "interaction_deferred": [
+      {
+        "go": "bot.InteractionDeferred",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "bot_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "interaction_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
     "interaction_modal": [
       {
         "go": "bot.InteractionModal",

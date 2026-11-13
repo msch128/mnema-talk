@@ -3,6 +3,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -57,4 +58,41 @@ func TestANoteOrAModalNeedsAMemberWhoStillSeesTheChannel(t *testing.T) {
 		t.Fatal("max got the modal")
 	}
 	wantStatus(t, "defer instead", cf.callback(modal, 5, nil), http.StatusNoContent)
+}
+
+// A deferral (callback 5, or 6 on a click) tells the member the bot is on it,
+// with the interaction id their run or click was answered with.
+func TestADeferralTellsTheMemberTheBotIsOnIt(t *testing.T) {
+	cf := newComponentsFixture(t)
+	in := cf.command(t)
+	wantStatus(t, "defer", cf.callback(in, 5, nil), http.StatusNoContent)
+	p, ok := cf.maxWS.expect("interaction_deferred", soon)
+	var got struct {
+		InteractionID uuid.UUID `json:"interaction_id"`
+		ChannelID     uuid.UUID `json:"channel_id"`
+		BotID         uuid.UUID `json:"bot_id"`
+	}
+	if !ok || json.Unmarshal(p, &got) != nil || got.InteractionID != in.ID || got.ChannelID != cf.open || got.BotID != cf.bot.ID {
+		t.Fatalf("interaction_deferred: %s", p)
+	}
+
+	m := cf.postWithComponents(t, cf.open, "Deploy?", deployRows())
+	res := click(cf.max, cf.open, m.ID, "cancel")
+	wantStatus(t, "click", res, http.StatusAccepted)
+	var clicked struct {
+		InteractionID uuid.UUID `json:"interaction_id"`
+	}
+	res.decode(t, &clicked)
+	in = cf.interaction(t)
+	wantStatus(t, "defer update", cf.callback(in, 6, nil), http.StatusNoContent)
+	p, ok = cf.maxWS.expect("interaction_deferred", soon)
+	if !ok || json.Unmarshal(p, &got) != nil || got.InteractionID != clicked.InteractionID {
+		t.Fatalf("interaction_deferred after a click: %s", p)
+	}
+	// A direct answer is no deferral.
+	in = cf.command(t)
+	wantStatus(t, "reply", cf.callback(in, 4, map[string]any{"content": "done"}), http.StatusNoContent)
+	if p, ok := cf.maxWS.expect("interaction_deferred", quiet); ok {
+		t.Fatalf("a reply announced a deferral: %s", p)
+	}
 }
