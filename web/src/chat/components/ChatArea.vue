@@ -229,7 +229,7 @@ const groupedIds = computed(() => {
     <ChannelAutoDeleteNote v-if="!panel" />
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
-    <div class="relative flex-1 min-h-0 flex flex-col overflow-clip">
+    <div class="msg-column relative flex-1 min-h-0 flex flex-col overflow-clip">
     <div ref="messageContainer" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
       <div v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex items-center justify-center text-mnema-tertiary">

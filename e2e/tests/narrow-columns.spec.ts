@@ -67,3 +67,35 @@ test('the member button tells whether the list is shown and shows it over the ch
   await expect(memberButton(page)).toHaveAttribute('aria-pressed', 'false')
   await expect(page.getByTestId('thread-close')).toBeVisible()
 })
+
+// Two lines of messages with the list's padding (pt-2, pb-6, 22px lines).
+const TWO_LINES = 76
+
+test('on a short window the notification hint keeps to one line and the messages never show as a sliver', async ({ page }) => {
+  // The hint shows to an account past its welcome until it is answered; this
+  // account may be anywhere in that, depending on the specs before.
+  await page.route('**/api/onboarding', async (route) => {
+    const response = await route.fetch()
+    const json = (await response.json()) as { dismissed_tips?: string[] }
+    const dismissed = (json.dismissed_tips ?? []).filter(tip => tip !== 'notif-hint')
+    await route.fulfill({ response, json: { ...json, welcome_done: true, dismissed_tips: dismissed } })
+  })
+  // ...and only while the browser has not been asked yet (headless browsers answer "denied").
+  await page.addInitScript(() => Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' }))
+  // The desktop client's minimum window (572x480) zoomed to 125 %.
+  await page.setViewportSize({ width: 458, height: 384 })
+  const thread = await channelWithThread(page)
+  await page.goto(thread.replace(/\/t\/.*$/, ''))
+  const hint = page.getByRole('region', { name: translate('de', 'notifications.hintTitle') })
+  await expect(hint).toBeVisible()
+  expect((await bounds(hint)).height, 'the hint on one line').toBeLessThanOrEqual(52)
+
+  const list = page.locator('.msg-list')
+  await expect(list.locator('[data-msg-id]').first()).toBeAttached()
+  for (const height of [384, 340, 300, 260, 230, 200]) {
+    await page.setViewportSize({ width: 458, height })
+    const drawn = await list.evaluate(el => getComputedStyle(el).visibility !== 'hidden')
+    const tall = (await bounds(list)).height
+    expect(!drawn || tall >= TWO_LINES, `at ${height}px the list is drawn ${Math.round(tall)}px tall`).toBe(true)
+  }
+})

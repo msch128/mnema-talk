@@ -32,7 +32,7 @@ const summary = computed(() => {
     v-if="items.length"
     data-testid="attachment-tray"
     :aria-label="$t('chat.attachTray')"
-    class="max-h-[30dvh] overflow-y-auto border border-b-0 border-mnema-border bg-mnema-raised rounded-t-lg"
+    class="max-h-[30dvh] [@media(max-height:40rem)]:max-h-[20dvh] overflow-y-auto border border-b-0 border-mnema-border bg-mnema-raised rounded-t-lg"
   >
     <div class="flex items-center justify-between gap-2 px-3 pt-2 text-xs text-mnema-tertiary">
       <span>{{ $t('chat.attachCount', { count: items.length, max: MAX_ATTACHMENTS }) }}</span>

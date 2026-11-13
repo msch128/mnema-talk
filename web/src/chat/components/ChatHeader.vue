@@ -263,7 +263,8 @@ function openNotificationMenu(e: MouseEvent) {
 
   <DmInfoDialog v-if="showInfo && dm" :dm="dm" @close="showInfo = false" />
 
-  <!-- Desktop notification opt-in: shown until answered or dismissed -->
+  <!-- Desktop notification opt-in: shown until answered or dismissed. A short
+       window keeps it to one line, its title, so the messages keep their room. -->
   <div
     v-if="showNotifHint"
     class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm shrink-0"
@@ -273,7 +274,7 @@ function openNotificationMenu(e: MouseEvent) {
     <Bell class="w-4 h-4 text-mnema-accent shrink-0" />
     <p class="min-w-0 flex-1 text-mnema-muted">
       <span class="font-medium text-mnema-text">{{ $t('notifications.hintTitle') }}</span>
-      <span class="ml-2">{{ $t('notifications.hintBody') }}</span>
+      <span class="ml-2 [@media(max-height:40rem)]:hidden">{{ $t('notifications.hintBody') }}</span>
     </p>
     <button
       type="button"

@@ -321,6 +321,16 @@
   background-color: rgba(224, 162, 58, 0.06);
 }
 
+/* The message list's column. Where a short window leaves it room for less than
+   two lines (its padding included), the list is not drawn at all rather than
+   as a sliver of half a line; it comes back as soon as the column grows. */
+.msg-column {
+  container-type: size;
+}
+@container (max-height: 4.75rem) {
+  .msg-list { visibility: hidden; }
+}
+
 /* One toolbar at a time: while the pointer rests on a message, the action bar
    of a different message that only holds keyboard focus stays hidden. */
 .msg-list:has([data-msg-id]:hover) [data-msg-id]:not(:hover) [data-msg-toolbar]:not([data-open]) {
