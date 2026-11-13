@@ -154,9 +154,14 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 				return
 			}
 			var heartbeats atomic.Int32
+			// The pong is best effort, as in gorilla's default handler: the
+			// writer may send a ping, then the revocation close, and shut the
+			// socket before this side answers the ping. Returning that write
+			// error would end ReadMessage before it reaches the close frame.
 			remote.SetPingHandler(func(data string) error {
 				heartbeats.Add(1)
-				return remote.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
+				_ = remote.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
+				return nil
 			})
 			remote.SetReadDeadline(time.Now().Add(h.RevalidateInterval + 10*time.Second))
 			if mode == "valid" {
