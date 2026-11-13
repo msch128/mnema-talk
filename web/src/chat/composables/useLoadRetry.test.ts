@@ -24,7 +24,7 @@ afterEach(() => {
 describe('trying the message load again', () => {
   it('does nothing without an open channel', async () => {
     const chat = useChatStore()
-    const fetch = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(undefined)
+    const fetch = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(true)
     await useLoadRetry(() => column())()
     expect(fetch).not.toHaveBeenCalled()
   })
@@ -32,7 +32,7 @@ describe('trying the message load again', () => {
   it('moves focus to the chat once the messages load', async () => {
     const chat = useChatStore()
     chat.activeChannel = channel
-    const fetch = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(undefined)
+    const fetch = vi.spyOn(chat, 'fetchMessages').mockResolvedValue(true)
     const el = column()
     await useLoadRetry(() => el)()
     expect(fetch).toHaveBeenCalledWith(channel.id)
@@ -44,6 +44,7 @@ describe('trying the message load again', () => {
     chat.activeChannel = channel
     vi.spyOn(chat, 'fetchMessages').mockImplementation(async () => {
       document.body.insertAdjacentHTML('beforeend', '<div data-testid="chat-load-failed"><button data-testid="state-retry">Try again</button></div>')
+      return false
     })
     await useLoadRetry(() => column())()
     expect((document.activeElement as HTMLElement | null)?.dataset.testid).toBe('state-retry')
@@ -52,7 +53,7 @@ describe('trying the message load again', () => {
   it('leaves focus alone when the chat has gone', async () => {
     const chat = useChatStore()
     chat.activeChannel = channel
-    vi.spyOn(chat, 'fetchMessages').mockResolvedValue(undefined)
+    vi.spyOn(chat, 'fetchMessages').mockResolvedValue(true)
     await expect(useLoadRetry(() => null)()).resolves.toBeUndefined()
     expect(document.activeElement).toBe(document.body)
   })
