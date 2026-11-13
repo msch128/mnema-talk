@@ -28,8 +28,8 @@ const MessageSelect = `
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
 	       rm.content,
-	       CASE WHEN rm.id IS NULL THEN FALSE
-	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE NOT EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id AND NOT md.is_deleted) END,
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
 	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key,
 	       m.forwarded, m.expires_at
@@ -51,7 +51,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 		var fwd rawForward
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
+			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &r.allRemoved, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
 			&m.PinnedAt, &pin.id, &pin.username, &pin.displayName, &pin.avatar,
 			&fwd.forwarded, &m.ExpiresAt); err != nil {
 			return nil, err

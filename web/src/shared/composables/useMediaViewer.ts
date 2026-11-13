@@ -57,6 +57,11 @@ export function closeViewer(): void {
   state.message = null
 }
 
+/** Closes the viewer when it shows the pictures of a message that is gone (deleted, ended) or of a reply under it. */
+export function closeViewerFor(messageId: string): void {
+  if (state.open && state.message && (state.message.id === messageId || state.message.parentId === messageId)) closeViewer()
+}
+
 export function setViewerIndex(index: number): void {
   if (index >= 0 && index < state.items.length) state.index = index
 }

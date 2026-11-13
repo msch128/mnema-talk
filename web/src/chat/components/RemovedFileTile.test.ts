@@ -31,22 +31,23 @@ describe('the removed-file tile', () => {
     expect(tile.text()).toBe('File removed')
     const style = tile.attributes('style') ?? ''
     expect(style).toContain('width: 448px')
-    expect(style).toContain('height: 112px')
+    expect(style).toContain('aspect-ratio: 1600 / 400')
   })
 
-  it('stands in for a removed video and a removed file, without a link to them', () => {
+  it('stands in for a removed video, and keeps a removed file’s row, without a link to either', () => {
     const w = mount(MessageAttachments, {
       props: { attachments: [file({ id: fixtureId(41), original_filename: 'clip.mp4', mime_type: 'video/mp4' }), file({ id: fixtureId(42) })] }
     })
     const tiles = w.findAll('[data-media-placeholder="gone"]')
-    expect(tiles.map(tile => tile.attributes('aria-label'))).toEqual(['File removed: clip.mp4', 'File removed: plan.pdf'])
+    expect(tiles.map(tile => tile.attributes('aria-label'))).toEqual(['File removed: clip.mp4'])
+    expect(w.get('[data-attachment="file"]').text()).toContain('plan.pdf')
     expect(w.find('video').exists()).toBe(false)
     expect(w.find('a[href]').exists()).toBe(false)
   })
 
   it('speaks German', () => {
     setLocale('de')
-    const w = mount(MessageAttachments, { props: { attachments: [file({})] } })
+    const w = mount(MessageAttachments, { props: { attachments: [file({ mime_type: 'image/png', original_filename: 'a.png' })] } })
     const text = w.get('[data-media-placeholder="gone"]').text()
     expect(text).toBe(t('media.fileRemoved'))
     expect(text).not.toBe('File removed')

@@ -38,7 +38,7 @@ describe('MessageAttachments', () => {
     const parent = defineComponent({ render: () => h(MessageAttachments, runtimeProps) })
     const w = mount(parent)
     expect(w.find('img').classes()).toContain('max-h-80')
-    expect(w.find('[data-attachment="image"]').classes()).toContain('max-w-md')
+    expect(w.find('[data-attachment="image"]').classes()).toContain('max-w-[min(100%,28rem)]')
   })
 
   it('renders nothing without attachments', () => {

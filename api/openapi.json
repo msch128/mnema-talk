@@ -4061,6 +4061,10 @@
       },
       "chat.ReplyPreview": {
         "properties": {
+          "attachments_removed": {
+            "description": "AttachmentsRemoved says every file of the quoted message was removed\n(by a moderator, auto-delete or retention): the preview says so.",
+            "type": "boolean"
+          },
           "avatar_url": {
             "type": "string"
           },
@@ -17114,7 +17118,7 @@
     },
     "/api/admin/media/{id}": {
       "delete": {
-        "description": "Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Owner only (403 otherwise).",
+        "description": "Removes the object from storage and marks it deleted; chat shows a placeholder. Broadcasts message_update for the message the file was attached to. Idempotent. Owner only (403 otherwise).",
         "operationId": "deleteMedia",
         "parameters": [
           {

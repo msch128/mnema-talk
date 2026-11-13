@@ -126,13 +126,17 @@ every ten minutes.
 A file that is gone (removed by a moderator or the Owner, by auto-delete with
 *Files only*, by media retention, or missing in storage) shows a tile in the
 theme's surface colour with a small icon and the words "File removed", in the
-place and at the size the file had, for pictures, videos, audio and other files
-alike. The server measures the width and height of a picture at upload
-(`width`, `height` on the attachment) and keeps them when the file is removed,
-so the tile takes the picture's size and nothing jumps; files uploaded before
-3.1, videos and other files use the standard tile size of their kind. Reply
-previews and the image viewer show the same state. The tile is drawn in code,
-not an image, and is announced to screen readers as "File removed: name".
+place and at the size the file had. The server measures the width and height
+of a picture at upload (`width`, `height` on the attachment) and keeps them
+when the file is removed, so the tile takes the picture's size (never wider
+than the column) and nothing jumps; pictures uploaded before 3.1 and videos use
+the standard tile size of their kind. Any other file (a text, a PDF, audio)
+keeps its row: its name, struck through, and "File removed" in place of its
+size. A removal by the Owner or by auto-delete reaches open clients at once
+(`message_update`); media retention shows on the next load. A reply preview of a
+message whose files are all removed says "File removed", and the image viewer
+closes when its message is deleted or ends. The tile is drawn in code, not an
+image, and is announced to screen readers as "File removed: name".
 
 ## API
 
@@ -156,6 +160,8 @@ All changes are additive ([API stability](api-stability.md)).
 | `POST /api/admin/channels/{id}/auto-delete/preview` | *Manage channels* (the editor of the setting; the counts are of a channel they can read anyway): the same body; the messages and files it would delete of what exists now, over its next runs, and when the next run is. |
 | Channel payload | New: `auto_delete_hours` (the effective period, 0 = off), `auto_delete_scope`, `auto_delete_follows_default`. `auto_delete_days` keeps its meaning for whole days and otherwise answers the effective period rounded down to whole days, held within 1 to 90 while it is on (the range older clients and the 3.0 OpenAPI document accept: a period of a year answers 90); with the scope *Files only*, and when off, it answers 0, as no message is deleted. `auto_delete_follows_default` is never set for a conversation or its call Talk. |
 | Attachment payload | New: `width`, `height` for pictures the server measured. |
+| Reply preview (`reply_to` of a message) | New: `attachments_removed`, set when the quoted message had files and every one of them was removed. |
+| `DELETE /api/admin/media/{id}` | Now also sends `message_update` for the message the file was attached to. |
 
 ## Limits
 

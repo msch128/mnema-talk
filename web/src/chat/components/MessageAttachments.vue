@@ -7,7 +7,7 @@ import type { MediaAttachment, Message } from '../../types/domain'
 // Order: images, then videos, then files, each in server order. Videos and
 // files keep the card with the file name and size.
 import { computed } from 'vue'
-import { FileText, Maximize2 } from '@lucide/vue'
+import { FileText, FileX, Maximize2 } from '@lucide/vue'
 import AttachmentImage from './AttachmentImage.vue'
 import MediaPlaceholder from '../../shared/components/MediaPlaceholder.vue'
 import { formatFileSize } from '../../shared/lib/fileSize'
@@ -29,7 +29,7 @@ const STYLES = {
     list: 'mt-2 space-y-2',
     gallery: 'w-full max-w-md',
     card: 'max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-xs',
-    bareImage: 'w-fit max-w-md',
+    bareImage: 'w-fit max-w-[min(100%,28rem)]',
     imageButton: 'block max-w-full rounded-lg overflow-hidden',
     image: 'block h-auto max-h-80 min-h-24 w-auto max-w-full object-cover cursor-pointer hover:opacity-95 transition',
     gone: 'h-40 w-72 max-w-full',
@@ -136,17 +136,20 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
       >
         <span :class="GALLERY_CELL.chip" aria-hidden="true"><Maximize2 class="h-3.5 w-3.5" /></span>
       </AttachmentImage>
-      <MediaPlaceholder v-else-if="att.is_deleted" state="gone" :kind="kind(att) === 'video' ? 'video' : 'file'" :name="att.original_filename" :class="[s.gone, 'rounded-none border-0']" />
+      <MediaPlaceholder v-else-if="att.is_deleted && kind(att) === 'video'" state="gone" kind="video" :name="att.original_filename" :class="[s.gone, 'rounded-none border-0']" />
       <video v-else-if="kind(att) === 'video'" :src="att.url" controls :class="s.video"></video>
-      <div v-if="!bare(att) && !(att.is_deleted && kind(att) !== 'image')" :class="s.footer">
+      <!-- A removed file keeps its row and its name, marked as removed. -->
+      <div v-if="!bare(att) && !(att.is_deleted && kind(att) === 'video')" :class="s.footer" :data-removed="att.is_deleted || undefined">
         <div :class="s.name">
-          <FileText :class="s.icon" />
-          <a :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">
+          <FileX v-if="att.is_deleted" :class="s.icon" aria-hidden="true" />
+          <FileText v-else :class="s.icon" />
+          <span v-if="att.is_deleted" class="truncate text-mnema-tertiary line-through" :title="att.original_filename">{{ att.original_filename }}</span>
+          <a v-else :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">
             {{ att.original_filename }}
           </a>
         </div>
         <span :class="s.size">
-          {{ sizeText(att) }}
+          {{ att.is_deleted ? $t('media.fileRemoved') : sizeText(att) }}
         </span>
       </div>
     </div>

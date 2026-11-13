@@ -22,12 +22,13 @@ const emit = defineEmits<{ open: [] }>()
 
 const { state, attempt, onError, retry } = useMediaImage(() => props.attachment.url, () => props.attachment.is_deleted)
 // A removed picture keeps its place: the size the server measured, scaled
-// like the picture (at most 448 by 320 px), so nothing moves.
+// like the picture (at most 448 by 320 px), never wider than the column, the
+// height following from the ratio, so nothing moves.
 const keptSize = computed(() => {
   const { width: w, height: h } = props.attachment
   if (props.compact || !w || !h) return undefined
   const scale = Math.min(1, 448 / w, 320 / h)
-  return { width: `${Math.round(w * scale)}px`, height: `${Math.round(h * scale)}px`, maxWidth: '100%', aspectRatio: `${w} / ${h}` }
+  return { width: `${Math.round(w * scale)}px`, maxWidth: '100%', height: 'auto', aspectRatio: `${w} / ${h}` }
 })
 </script>
 

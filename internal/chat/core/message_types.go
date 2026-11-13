@@ -190,6 +190,9 @@ type ReplyPreview struct {
 	// (a backslash before symbols) makes it at most 996 characters long.
 	Content        string `json:"content,omitempty" binding:"optional"`
 	HasAttachments bool   `json:"has_attachments,omitempty" binding:"optional"`
+	// AttachmentsRemoved says every file of the quoted message was removed
+	// (by a moderator, auto-delete or retention): the preview says so.
+	AttachmentsRemoved bool `json:"attachments_removed,omitempty" binding:"optional"`
 	// IsBot and IsWebhook describe the quoted author like Message does.
 	IsBot     bool `json:"is_bot,omitempty" binding:"optional"`
 	IsWebhook bool `json:"is_webhook,omitempty" binding:"optional"`

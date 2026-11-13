@@ -2394,6 +2394,7 @@ export function isChatReorderForumTagsRequest(value: unknown): value is ChatReor
 export const decodeChatReorderForumTagsRequest = decoder("chat.ReorderForumTagsRequest", isChatReorderForumTagsRequest)
 
 export type ChatReplyPreview = {
+  attachments_removed?: boolean
   avatar_url?: string
   content?: string
   deleted: boolean
@@ -2408,6 +2409,7 @@ export type ChatReplyPreview = {
 
 export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
   return isRecord(value)
+    && (!hasOwn(value, "attachments_removed") || typeof value["attachments_removed"] === 'boolean')
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (!hasOwn(value, "content") || isString(value["content"]))
     && (hasOwn(value, "deleted") && typeof value["deleted"] === 'boolean')

@@ -1,3 +1,4 @@
+import { closeViewerFor } from '../../shared/composables/useMediaViewer'
 import { useLifetimeStore } from '../lifetime'
 import type { ServerEvent, ServerEventPayloads, ServerEventType } from '../../types/events'
 import { useToastStore } from '../toast'
@@ -192,6 +193,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   useForwardQuotesStore().invalidate()
   const { cs } = cx
   if (!p?.id) return
+  closeViewerFor(p.id)
   removeFromWindow(cx, p.id)
   onPinnedMaybeDeleted(cx, p.channel_id)
   refreshMemberStats(cx)
