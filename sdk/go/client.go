@@ -3,6 +3,7 @@ package mnema
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
@@ -160,10 +161,12 @@ type dispatcher struct {
 	c   *Client
 	ctx context.Context
 	sem chan struct{}
-	// queued bounds the events that wait for a slot. When it is full the read
-	// loop waits too: the server then holds the events back (its buffer and
-	// resume cover a slow bot) instead of the bot's memory filling up.
+	// queued bounds the events that wait for a slot; beyond it events are
+	// shed (see dispatch).
 	queued chan struct{}
+	// unshed bounds the events of neverShed in flight; beyond it the
+	// connection is closed and resumed instead (see dispatch).
+	unshed chan struct{}
 	// dropped counts the events shed because the queue was full.
 	dropped atomic.Int64
 	wg      sync.WaitGroup
@@ -171,7 +174,8 @@ type dispatcher struct {
 
 func (c *Client) newDispatcher(ctx context.Context) *dispatcher {
 	n := c.opts.HandlerConcurrency
-	return &dispatcher{c: c, ctx: ctx, sem: make(chan struct{}, n), queued: make(chan struct{}, n*dispatchQueueFactor)}
+	return &dispatcher{c: c, ctx: ctx, sem: make(chan struct{}, n), queued: make(chan struct{}, n*dispatchQueueFactor),
+		unshed: make(chan struct{}, maxUnshedInFlight)}
 }
 
 // dispatchQueueFactor times HandlerConcurrency events may wait for a slot.
@@ -184,6 +188,16 @@ const dispatchQueueFactor = 16
 // minute, at most 2000 pending per bot).
 var neverShed = map[string]bool{"READY": true, "RESUMED": true, "INTERACTION_CREATE": true}
 
+// maxUnshedInFlight bounds the events of neverShed whose handlers have not
+// returned: a little above the server's 2000 pending interactions per bot,
+// so only a server that floods the bot reaches it.
+const maxUnshedInFlight = 2048
+
+// errUnshedOverflow ends a connection whose server sent more interactions
+// than the bot's handlers hold: the client resumes before the event, so it is
+// sent again rather than lost.
+var errUnshedOverflow = errors.New("mnema: more interactions in flight than the server allows; reconnecting")
+
 // dispatch starts the handlers of one event in a goroutine and returns at
 // once, so the read loop, and with it the heartbeat ACKs, never waits for a
 // handler. When the queue in front of the handler slots is full (handlers
@@ -191,22 +205,33 @@ var neverShed = map[string]bool{"READY": true, "RESUMED": true, "INTERACTION_CRE
 // warning instead (never one of neverShed): blocking the read loop would
 // leave ACKs unread, turn the connection into a zombie and replay the same
 // flood after the resume.
-func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
+//
+// The events of neverShed are bounded on their own (maxUnshedInFlight); one
+// beyond it is not dropped either: dispatch answers errUnshedOverflow, the
+// connection closes, and the resume sends it again.
+func (d *dispatcher) dispatch(name string, raw json.RawMessage) error {
 	run := d.c.handlerFunc(name, raw)
 	if run == nil {
-		return
+		return nil
 	}
-	queued := !neverShed[name]
-	if queued && !d.enqueue() {
+	lane := d.queued
+	if neverShed[name] {
+		lane = d.unshed
+	}
+	select {
+	case lane <- struct{}{}:
+	default:
+		if lane == d.unshed {
+			d.c.logger.Error(errUnshedOverflow.Error(), "event", name, "in_flight", cap(d.unshed))
+			return errUnshedOverflow
+		}
 		d.shed(name)
-		return
+		return nil
 	}
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
-		if queued {
-			defer func() { <-d.queued }()
-		}
+		defer func() { <-lane }()
 		select {
 		case d.sem <- struct{}{}:
 		case <-d.ctx.Done():
@@ -220,19 +245,10 @@ func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 		}()
 		run(d.ctx)
 	}()
+	return nil
 }
 
 func (d *dispatcher) wait() { d.wg.Wait() }
-
-// enqueue takes a place in the queue in front of the handler slots, if one is free.
-func (d *dispatcher) enqueue() bool {
-	select {
-	case d.queued <- struct{}{}:
-		return true
-	default:
-		return false
-	}
-}
 
 // shed logs a dropped event: the first one, then every 1000th, with the total.
 func (d *dispatcher) shed(name string) {

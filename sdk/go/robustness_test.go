@@ -141,6 +141,46 @@ func TestAnInteractionIsNeverShedEvenWhenTheQueueIsFull(t *testing.T) {
 	}
 }
 
+func TestAnInteractionFloodBeyondTheBoundIsResumedNotDroppedOrGrown(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	c.OnInteraction(func(ctx context.Context, _ *Interaction) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	before := runtime.NumGoroutine()
+	go func() {
+		for i := int64(0); i < 20000; i++ {
+			if fc.ws.WriteJSON(map[string]any{"op": 0, "t": "INTERACTION_CREATE", "s": i + 2, "d": map[string]any{"id": "i", "token": "t", "type": 2,
+				"member": map[string]any{"user": map[string]any{"id": "u1", "username": "max"}}, "data": map[string]any{"name": "ping"}}}) != nil {
+				return
+			}
+		}
+	}()
+	// The client closes the connection at the first interaction it cannot
+	// hold and resumes before it, so the server sends it again.
+	fc2 := g.next(t)
+	f := fc2.expect(t, opResume)
+	var r struct {
+		Seq int64 `json:"seq"`
+	}
+	_ = json.Unmarshal(f.D, &r)
+	if want := int64(maxUnshedInFlight + 1); r.Seq != want {
+		t.Fatalf("resumed at seq %d, want %d (the last interaction handed on)", r.Seq, want)
+	}
+	if grown := runtime.NumGoroutine() - before; grown > maxUnshedInFlight+20 {
+		t.Fatalf("goroutines grew by %d", grown)
+	}
+}
+
 func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing.T) {
 	g := newFakeGateway(t, 200)
 	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})

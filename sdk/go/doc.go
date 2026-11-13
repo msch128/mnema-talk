@@ -33,7 +33,8 @@
 // ones wait for a free slot (in their goroutine, not in the read loop), up
 // to 16 times that many; beyond that events are dropped with a logged
 // warning, so the read loop keeps reading heartbeat ACKs. READY, RESUMED and
-// interactions are never dropped.
+// interactions are never dropped; more than 2048 of them in flight close the
+// connection, and the resume sends the next one again.
 // Handlers of different events may therefore run concurrently and in any
 // order. A panic in a handler is recovered and logged; it does not end Run.
 // Run waits for running handlers before it returns, and their context is

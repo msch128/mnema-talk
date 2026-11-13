@@ -173,9 +173,6 @@ func (cn *conn) handle(ctx context.Context, f frame, d *dispatcher) error {
 const opReconnectCode = 4901
 
 func (cn *conn) handleDispatch(ctx context.Context, f frame, d *dispatcher) error {
-	if f.S != nil {
-		cn.c.updateSession(func(s *session) { s.seq = *f.S })
-	}
 	switch f.T {
 	case "READY":
 		var r Ready
@@ -193,7 +190,15 @@ func (cn *conn) handleDispatch(ctx context.Context, f frame, d *dispatcher) erro
 			}
 		}
 	}
-	d.dispatch(f.T, f.D)
+	// The sequence number is kept only for an event that was handed on: one
+	// the dispatcher could not take ends the connection, and the resume asks
+	// for it again.
+	if err := d.dispatch(f.T, f.D); err != nil {
+		return err
+	}
+	if f.S != nil {
+		cn.c.updateSession(func(s *session) { s.seq = *f.S })
+	}
 	return nil
 }
 
