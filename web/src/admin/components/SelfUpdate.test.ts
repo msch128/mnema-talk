@@ -29,7 +29,7 @@ function withUpdate(self: Partial<import('../../types/domain').SelfUpdateStatus>
   st.version.current = '0.3.0'
   st.update = {
     ...st.update, current_version: '0.3.0', latest_version: '0.4.0', update_available: true,
-    release_url: 'https://github.com/msch128/mnema-talk/releases/tag/v0.4.0'
+    release_url: 'https://github.com/mnema-xyz/talk/releases/tag/v0.4.0'
   }
   st.self_update = { configured: true, image: 'ghcr.io/msch128/mnema-talk:0.4', reach: 'yes', moved_to: '', reach_reason: 'follows', available: true, next_allowed_at: null, ...self }
   return st

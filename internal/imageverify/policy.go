@@ -60,8 +60,11 @@ const (
 	// DefaultIdentity is the release workflow of DefaultSource.
 	DefaultIdentity = `^https://github\.com/mnema-xyz/talk/\.github/workflows/release\.yml@refs/heads/main$`
 	// LegacySource and LegacyIdentity are the same before the move.
-	LegacySource   = "https://github.com/msch128/mnema-talk"
-	LegacyIdentity = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	LegacySource = "https://github.com/msch128/mnema-talk"
+	// LegacyMaxVersion is the last release built under msch128 (the switch
+	// release before the move): the old owner never vouches for a newer one.
+	LegacyMaxVersion = "3.2.0"
+	LegacyIdentity   = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
 )
 
 // Origin is one trusted producer of images: the signing identity of its
@@ -102,7 +105,7 @@ type Policy struct {
 func DefaultOrigins() []Origin {
 	return []Origin{
 		{IdentityRegexp: DefaultIdentity, Source: DefaultSource},
-		{IdentityRegexp: LegacyIdentity, Source: LegacySource},
+		{IdentityRegexp: LegacyIdentity, Source: LegacySource, MaxVersion: LegacyMaxVersion},
 	}
 }
 
