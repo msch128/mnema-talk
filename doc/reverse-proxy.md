@@ -40,6 +40,28 @@ chat.example.com {
 `X-Forwarded-For` header by default. Ports 80 and 443 must be open to the
 internet (`sudo ufw allow 80,443/tcp`).
 
+**One more step with Docker.** Caddy runs on the host and talks to the app
+through the published port on `127.0.0.1`, but Docker hands that connection to
+the app from the Docker network's **gateway address**, not from loopback (for
+example `172.19.0.1`). The app then does not trust the `X-Forwarded-For` header
+Caddy sets, and Admin > Status shows *Reverse proxy* in amber: every member
+looks like one address to the rate limits and the login lockout. Read the
+address and trust exactly that one:
+
+```sh
+docker network inspect mnema-network -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}'
+echo 'TRUSTED_PROXY_CIDRS=172.19.0.1/32' >> .env     # use the address printed above
+docker compose up -d
+```
+
+(`docker compose logs app` names the same address as `peer` in the warning.) Use
+a single address with `/32`, never a whole private range. Caddy replaces any
+`X-Forwarded-For` the client sent, so a client cannot spoof its address through
+it. After the restart the warning is gone and the `ip` of the request log lines
+is the real client. The gateway address belongs to the network: it stays while
+the network exists and can change if you remove and recreate it, so look at
+Status again after such a change.
+
 ## Synology (DSM reverse proxy)
 
 1. Control Panel > Login Portal > Advanced > Reverse Proxy > Create.
