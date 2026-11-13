@@ -25,6 +25,7 @@ const intentGuildMembers = 1 << 1
 // checks are the same ones, decided for the bot's roles and overwrites.
 // send wraps the routes that post messages (the per-channel send limit).
 func (a *API) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
+	a.send = send
 	r.Get("/channels", httpx.HandleDiscord(a.botListChannels))
 	r.Get("/channels/{channelID}/messages", httpx.HandleDiscord(a.botListMessages))
 	r.Get("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(a.botGetMessage))

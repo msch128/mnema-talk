@@ -1234,7 +1234,7 @@ export type BotSelf = {
   avatar_url?: string
   bot: true
   bot_id: string
-  handle: string
+  handle?: string
   id: string
   username: string
 }
@@ -1245,7 +1245,7 @@ export function isBotSelf(value: unknown): value is BotSelf {
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "bot") && (value["bot"] === true))
     && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
-    && (hasOwn(value, "handle") && isString(value["handle"]))
+    && (!hasOwn(value, "handle") || isString(value["handle"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
 }
@@ -1377,12 +1377,14 @@ export function isChatBotCreateMessageRequest(value: unknown): value is ChatBotC
 export const decodeChatBotCreateMessageRequest = decoder("chat.BotCreateMessageRequest", isChatBotCreateMessageRequest)
 
 export type ChatBotEditMessageRequest = {
+  allowed_mentions?: ChatBotAllowedMentions
   components?: Array<ChatActionRow>
   content?: string | null
 }
 
 export function isChatBotEditMessageRequest(value: unknown): value is ChatBotEditMessageRequest {
   return isRecord(value)
+    && (!hasOwn(value, "allowed_mentions") || isChatBotAllowedMentions(value["allowed_mentions"]))
     && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (!hasOwn(value, "content") || (isString(value["content"], 4000) || value["content"] === null))
 }

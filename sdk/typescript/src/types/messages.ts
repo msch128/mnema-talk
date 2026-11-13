@@ -176,8 +176,12 @@ export interface BotSelf {
   bot_id: string
   /** The bot's name as members see it (its display name). */
   username: string
-  /** The account's unique name, the one members mention (@bot-...); Discord calls this the username. */
-  handle: string
+  /**
+   * The account's unique name, the one members mention (@bot-...); Discord
+   * calls this the username. Servers before 3.1 do not send it: recognise a
+   * mention of the bot by its id in a message's `mentions` instead.
+   */
+  handle?: string
   bot: true
   avatar_url?: string
   allowed_intents: number
@@ -216,6 +220,8 @@ export interface EditMessageData {
   content?: string
   /** `[]` removes the components. */
   components?: MessageComponents
+  /** Whom the new text notifies, as on a post; an edit with it counts as a post for the channel's limit. */
+  allowed_mentions?: AllowedMentions
 }
 
 export interface ListMessagesQuery {

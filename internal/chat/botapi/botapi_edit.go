@@ -24,14 +24,19 @@ type BotEditMessageRequest struct {
 	Content *string `json:"content" maxLength:"4000" binding:"optional" extensions:"x-nullable"`
 	// Components replace the message's buttons and select menus; [] removes them.
 	Components []core.ActionRow `json:"components" binding:"optional"`
+	// AllowedMentions narrows whom the new text notifies, as on a post (and on
+	// callback 7 and @original). An edit that sends it counts towards the
+	// per-channel limit of posts.
+	AllowedMentions *BotAllowedMentions `json:"allowed_mentions" binding:"optional"`
 }
 
 // rawBotEdit is BotEditMessageRequest as it is read: the components are
 // decoded on their own, so a field of Discord's that Mnema Talk does not use
 // is ignored there like in a new message.
 type rawBotEdit struct {
-	Content    *string         `json:"content"`
-	Components json.RawMessage `json:"components"`
+	Content         *string             `json:"content"`
+	Components      json.RawMessage     `json:"components"`
+	AllowedMentions *BotAllowedMentions `json:"allowed_mentions"`
 }
 
 // BotMessageEdit is an edit of a bot's own message. A nil field keeps what
@@ -88,15 +93,17 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	ctx, err := a.editContext(r.Context(), user, ref.ChannelID, nil)
-	if err != nil {
+	if _, err := a.editContext(r.Context(), user, ref.ChannelID, nil); err != nil {
 		return err
 	}
 	var req rawBotEdit
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	var e BotMessageEdit
+	if req.AllowedMentions != nil && !a.withinSendLimit(w, r) {
+		return nil // the limit answered 429
+	}
+	e := BotMessageEdit{AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions)}
 	if req.Content != nil {
 		content, err := core.ValidateContent(*req.Content, true)
 		if err != nil {
@@ -105,6 +112,10 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 		e.Content = &content
 	}
 	if e.Components, err = DecodeComponents(req.Components); err != nil {
+		return err
+	}
+	ctx, err := a.editContext(r.Context(), user, ref.ChannelID, e.AllowedMentions)
+	if err != nil {
 		return err
 	}
 	msg, err := a.applyEdit(ctx, msgID, user.ID, e)
@@ -225,4 +236,17 @@ func requireShows(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 		return err
 	}
 	return nil
+}
+
+// withinSendLimit takes one post from the bot's per-channel limit, as the
+// send middleware does for a post, and reports whether there was one; when
+// not, the middleware has answered 429. An edit that may notify (it carries
+// allowed_mentions) counts like a post, so edits are no way around the limit.
+func (a *API) withinSendLimit(w http.ResponseWriter, r *http.Request) bool {
+	if a.send == nil {
+		return true
+	}
+	passed := false
+	a.send(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { passed = true })).ServeHTTP(w, r)
+	return passed
 }

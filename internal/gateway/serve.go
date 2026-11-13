@@ -60,7 +60,7 @@ type ReadyUser struct {
 	Username string `json:"username"`
 	// Handle is the account's unique name, the one members mention
 	// (@bot-...); Discord calls this the username.
-	Handle    string `json:"handle"`
+	Handle    string `json:"handle,omitempty"`
 	Bot       bool   `json:"bot"`
 	AvatarURL string `json:"avatar_url,omitempty"`
 }

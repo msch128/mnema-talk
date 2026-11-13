@@ -319,7 +319,7 @@ security scheme `botAuth`).
 | `GET /channels/{id}/messages` (`limit`, `before`, `after`, `around`) | View channels |
 | `GET /channels/{id}/messages/{id}` | View channels |
 | `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id` |
-| `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only; `content` and `components` (each optional, absent ones stay; `"components": []` removes them) |
+| `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only; `content`, `components` (each optional, absent ones stay; `"components": []` removes them) and `allowed_mentions` (as on a post; an edit that sends it counts towards the 5 posts per 5 seconds of the channel, one without it notifies the members it names and never `@all`, `@here` or a role) |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
 | `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`, `allowed_mentions`, `parent_id`, `reply_to_id`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |

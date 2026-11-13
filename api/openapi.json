@@ -2138,7 +2138,6 @@
           "allowed_intents",
           "bot",
           "bot_id",
-          "handle",
           "id",
           "username"
         ],
@@ -2355,6 +2354,10 @@
       },
       "chat.BotEditMessageRequest": {
         "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions narrows whom the new text notifies, as on a post (and on\ncallback 7 and @original). An edit that sends it counts towards the\nper-channel limit of posts."
+          },
           "components": {
             "description": "Components replace the message's buttons and select menus; [] removes them.",
             "items": {

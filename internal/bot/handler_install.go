@@ -147,24 +147,36 @@ func (h *Handler) install(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return run.explain(err)
 	}
-	b, err := Get(ctx, h.DB, run.botID)
-	if err != nil {
-		return err
-	}
+	// Nothing after the commit may fail: the answer is the only place the
+	// token's secret is ever shown, so it was read in the transaction.
 	h.Perms.Changed(nil)
 	h.membersChanged()
-	snap, err := h.Perms.Snapshot(ctx)
-	if err != nil {
-		return err
-	}
-	b.RoleIDs = snap.RoleIDs(b.UserID)
-	httpx.WriteJSON(w, http.StatusCreated, InstallResponse{Bot: *b, Token: NewTokenResponse{Token: run.token, Secret: run.secret}})
+	httpx.WriteJSON(w, http.StatusCreated, InstallResponse{Bot: *run.bot, Token: NewTokenResponse{Token: run.token, Secret: run.secret}})
 	return nil
+}
+
+// readBack loads the new bot with its roles in the install's transaction, for
+// the answer.
+func readBack(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Bot, error) {
+	b, err := Get(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT role_id FROM user_roles WHERE user_id = $1 ORDER BY role_id`, b.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("load bot roles: %w", err)
+	}
+	if b.RoleIDs, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID]); err != nil {
+		return nil, fmt.Errorf("load bot roles: %w", err)
+	}
+	return b, nil
 }
 
 // installRun is what one install did, and what it needs to explain a refusal.
 type installRun struct {
-	botID  uuid.UUID
+	botID uuid.UUID
+	// bot is the installed bot as the answer shows it, read in the transaction.
+	bot    *Bot
 	token  Token
 	secret string
 	// written is set once every write is done: a refusal after it is the bot
@@ -223,6 +235,9 @@ func (h *Handler) installIn(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 	}
 	if err := h.Audit.RecordTx(ctx, tx, installEntry(id, plan)); err != nil {
 		return fmt.Errorf("audit install: %w", err)
+	}
+	if run.bot, err = readBack(ctx, tx, id); err != nil {
+		return err
 	}
 	run.written = true
 	return nil

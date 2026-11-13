@@ -43,7 +43,7 @@ type Self struct {
 	Name string `json:"username"`
 	// Handle is the account's unique name, the one members mention
 	// (@bot-...); Discord calls this the username.
-	Handle string `json:"handle"`
+	Handle string `json:"handle,omitempty" binding:"optional"`
 	Bot    bool   `json:"bot" enums:"true"`
 	Avatar string `json:"avatar_url,omitempty" binding:"optional"`
 	// AllowedIntents are the gateway intents the admin allowed.

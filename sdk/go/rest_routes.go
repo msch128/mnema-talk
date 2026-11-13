@@ -53,6 +53,9 @@ type MessageCreate struct {
 type MessageEdit struct {
 	Content    *string      `json:"content,omitempty"`
 	Components *[]Component `json:"components,omitempty"`
+	// AllowedMentions is whom the new text notifies, as on a post; an edit
+	// with it counts as a post for the channel's limit.
+	AllowedMentions *AllowedMentions `json:"allowed_mentions,omitempty"`
 }
 
 // Upload is a file to post. Reader is read completely before the request (so
