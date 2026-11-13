@@ -81,6 +81,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
         <button
           type="button"
           data-testid="author-name"
+          v-full-text
           @click="chatStore.openUserProfile(root)"
           class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate block max-w-full text-left focus-visible:text-mnema-accent"
         >

@@ -137,14 +137,16 @@ function openNotificationMenu(e: MouseEvent) {
       <component :is="channelIcon" v-if="!richDm" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
       <div v-if="!richDm" class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
         <span
+          v-full-text
           data-testid="chat-channel-name"
-          :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
+          :class="['max-md:max-w-full font-semibold text-base text-mnema-text truncate', titleClass]"
         >
           {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>
         <button
           v-if="showTopic"
           type="button"
+          v-full-text
           data-testid="channel-topic"
           :aria-expanded="topicOpen ? 'true' : 'false'"
           class="min-w-0 max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"

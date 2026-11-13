@@ -193,6 +193,7 @@ defineExpose({ el: row })
         <button
           type="button"
           data-testid="author-name"
+          v-full-text
           @click="emit('open-profile')"
           :style="permissions.nameColor(msg.user_id) ? { color: permissions.nameColor(msg.user_id) } : undefined"
           class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate text-left focus-visible:underline focus-visible:text-mnema-accent"
