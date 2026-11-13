@@ -62,7 +62,7 @@ closed.
 ```sh
 cosign verify ghcr.io/mnema-xyz/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@'
+  --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@refs/heads/main$'
 ```
 
 The same command works for the Docker Hub references.
