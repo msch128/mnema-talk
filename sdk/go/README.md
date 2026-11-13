@@ -17,7 +17,7 @@ go get github.com/msch128/mnema-talk/sdk/go@main
 
 This resolves to a pseudo-version of the latest commit. Tags of the form
 `sdk/go/vX.Y.Z` may follow; then `@latest` works too. The package name is
-`mnema`. It needs Go 1.27 or newer.
+`mnema`. It needs Go 1.26 or newer.
 
 ## Quick start
 

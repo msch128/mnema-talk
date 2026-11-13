@@ -113,7 +113,14 @@ func TestAbuseCapEndsTheMembersVoice(t *testing.T) {
 	rt := newRenewTalk(t)
 	rt.member.peer().TripCap(false)
 	waitHub(t, "the member's seat freed", func() bool { return !inRoom(rt.h, rt.talk.ID, rt.member.User.ID) })
-	if got := kickReasons(t, rt.member); len(got) != 1 || got[0] != "connection_lost" {
+	// The seat is freed before the member is told, so wait for the message
+	// rather than reading the queue once.
+	var got []string
+	waitHub(t, "the member told why", func() bool {
+		got = append(got, kickReasons(t, rt.member)...)
+		return len(got) > 0
+	})
+	if len(got) != 1 || got[0] != "connection_lost" {
 		t.Fatalf("voice_kicked reasons %v, want [connection_lost]", got)
 	}
 	if rt.member.closed.Load() {
