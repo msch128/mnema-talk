@@ -71,7 +71,7 @@ func TestBufferStoreHelpers(t *testing.T) {
 	stuck := NewDispatcher(f.p, nil, "test")
 	stuck.started.Store(true)
 	stuck.Wait(10 * time.Millisecond)
-	NewDispatcher(dbFaulty{f, "FROM outgoing_webhooks WHERE enabled"}.pool(), nil, "test").afterFinal(ctx, hook.ID, false)
+	NewDispatcher(dbFaulty{f, "SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w"}.pool(), nil, "test").afterFinal(ctx, hook.ID, false)
 	// Purging after a switch-off may fail: only logged.
 	NewDispatcher(dbFaulty{f, "DELETE FROM outgoing_queue WHERE webhook_id"}.pool(), nil, "test").afterFinal(ctx, hook.ID, true)
 }
