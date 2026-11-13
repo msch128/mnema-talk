@@ -117,7 +117,8 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 max-md:px-2 pb-1 shrink-0" data-testid="chat-composer">
+  <!-- A container: on a narrow screen the field takes the first row and the tools the second -->
+  <div class="@container px-4 max-md:px-2 pb-1 shrink-0" data-testid="chat-composer">
     <SlashCommandBar
       v-if="slash.picked.value && canSend"
       :command="slash.picked.value"
@@ -131,7 +132,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <AttachmentTray :items="tray.items.value" @remove="tray.remove" @retry="tray.retry" @view="tray.view" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex gap-1 sm:gap-2 shadow-xs field-focus-within transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex @max-[26rem]:flex-wrap gap-1 sm:gap-2 shadow-xs field-focus-within transition',
         multiline ? 'items-end' : 'items-center',
         replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
@@ -214,7 +215,7 @@ function handleKeyDown(e: KeyboardEvent) {
         :disabled="!canSend"
         :aria-label="placeholder"
         rows="1"
-        class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
+        class="bg-transparent flex-1 min-w-0 @max-[26rem]:basis-full @max-[26rem]:order-first @max-[26rem]:px-1 @max-[26rem]:pt-2 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
       <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
@@ -227,7 +228,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <button
         @click="emit('send')"
         :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending || !!limit?.blocks"
-        class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
+        class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 @max-[26rem]:ml-auto flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />
