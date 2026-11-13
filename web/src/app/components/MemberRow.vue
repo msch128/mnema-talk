@@ -75,6 +75,7 @@ const timedOutText = computed(() => {
     <div class="flex min-w-0 flex-1 flex-col">
       <div class="flex min-w-0 items-center gap-1">
         <span
+          v-full-text
           :class="[
             'truncate text-nav transition-colors group-hover:text-mnema-accent',
             offline ? 'text-mnema-muted' : 'font-medium text-mnema-text',
@@ -89,9 +90,9 @@ const timedOutText = computed(() => {
 
       <div v-if="voiceChannel" class="flex min-w-0 items-center gap-1 text-xs font-medium text-mnema-mint">
         <Volume2 class="h-3.5 w-3.5 shrink-0" />
-        <span class="truncate">{{ voiceChannel }}</span>
+        <span v-full-text class="truncate">{{ voiceChannel }}</span>
       </div>
-      <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>
+      <span v-else-if="subline" v-full-text class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>
     </div>
 
     <!-- Bots do not sit in Talks or chat like members: no totals for them. -->
