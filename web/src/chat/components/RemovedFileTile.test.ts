@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MessageAttachments from './MessageAttachments.vue'
-import { setLocale } from '../../i18n'
+import { setLocale, t } from '../../i18n'
 import { fixtureId } from '../../test-fixtures.fixture'
 import type { MediaAttachment } from '../../types/domain'
 
@@ -39,7 +39,7 @@ describe('the removed-file tile', () => {
       props: { attachments: [file({ id: fixtureId(41), original_filename: 'clip.mp4', mime_type: 'video/mp4' }), file({ id: fixtureId(42) })] }
     })
     const tiles = w.findAll('[data-media-placeholder="gone"]')
-    expect(tiles.map(t => t.attributes('aria-label'))).toEqual(['File removed: clip.mp4', 'File removed: plan.pdf'])
+    expect(tiles.map(tile => tile.attributes('aria-label'))).toEqual(['File removed: clip.mp4', 'File removed: plan.pdf'])
     expect(w.find('video').exists()).toBe(false)
     expect(w.find('a[href]').exists()).toBe(false)
   })
@@ -47,6 +47,8 @@ describe('the removed-file tile', () => {
   it('speaks German', () => {
     setLocale('de')
     const w = mount(MessageAttachments, { props: { attachments: [file({})] } })
-    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('Datei entfernt')
+    const text = w.get('[data-media-placeholder="gone"]').text()
+    expect(text).toBe(t('media.fileRemoved'))
+    expect(text).not.toBe('File removed')
   })
 })
