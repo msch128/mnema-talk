@@ -181,6 +181,8 @@ async function seedEmbed(admin: Page, channelId: string) {
 
 async function seedElsewhere(admin: Page, member: Page, other: string, adminId: string, suffix: string) {
   const longName = await channel(admin, `a-channel-with-the-longest-name-the-server-allows-${suffix}`.slice(0, 64), 'text')
+  // The auto-delete chip beside the longest name in the header.
+  await ok(admin, 'PUT', `/api/admin/channels/${longName.id}/auto-delete`, { days: 90 })
   const talk = await channel(admin, `A Talk with a long name for the sweep ${suffix}`.slice(0, 64), 'voice')
   const forum = await channel(admin, `clip-forum-${suffix}`, 'forum')
   for (let i = 0; i < 3; i++) await ok(admin, 'POST', `/api/channels/${forum.id}/posts`, { title: `Forum post ${i} with a title long enough to need two lines ${'or more '.repeat(4)}`, content: `Body ${i}. ${LONG_WORD}` })

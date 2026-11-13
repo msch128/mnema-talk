@@ -177,7 +177,7 @@ defineExpose({ el: row })
 
     <!-- User Avatar (first message of a group only), in the gutter. The avatar's
          own root is position: relative, so a wrapper places it. -->
-    <div v-else :class="['absolute left-4 max-md:left-2', msg.reply_to ? 'top-6' : 'top-1']">
+    <div v-else data-testid="msg-avatar" :class="['absolute left-4 max-md:left-2', msg.reply_to ? 'top-6' : 'top-1']">
       <UserAvatar
         :user="msg"
         size="md"

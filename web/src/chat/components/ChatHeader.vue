@@ -94,7 +94,7 @@ watch(() => chatStore.activeChannel?.id, () => { topicOpen.value = false })
 // topic stays visible too.
 const titleClass = computed(() => {
   if (!showTopic.value) return ''
-  return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-none'
+  return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-full'
 })
 
 const hasSaved = computed(() => serverFeatures.has('saved'))
@@ -136,7 +136,7 @@ function openNotificationMenu(e: MouseEvent) {
       <NavDrawerButton v-if="!panel" />
       <DmHeaderTitle v-if="richDm && dm" :dm="dm" @members="showInfo = true" />
       <component :is="channelIcon" v-if="!richDm" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
-      <div v-if="!richDm" class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
+      <div v-if="!richDm" class="flex min-w-[3rem] items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
         <span
           v-full-text
           data-testid="chat-channel-name"
@@ -160,12 +160,13 @@ function openNotificationMenu(e: MouseEvent) {
         class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
+      <!-- On a phone the chip is its icon only: the note under the header says it in full. -->
       <span
         v-if="autoDeleteDays"
         data-testid="auto-delete-chip"
         class="inline-flex shrink-0 items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('autoDelete.tooltip', { period: $t(`autoDelete.periods.${autoDeleteDays}`) })"
-      ><Timer class="h-3 w-3" aria-hidden="true" />{{ $t(`autoDelete.periods.${autoDeleteDays}`) }}</span>
+      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="max-md:sr-only">{{ $t(`autoDelete.periods.${autoDeleteDays}`) }}</span></span>
     </div>
 
     <!-- Right: Badges & member list toggle -->
