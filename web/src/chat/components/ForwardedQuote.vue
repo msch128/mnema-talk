@@ -49,7 +49,7 @@ function open() {
     <BlockedFold v-if="quote?.available && quote.author" :msg="{ id: quote.message_id ?? msg.id, user_id: quote.author.id }">
       <div class="mb-0.5 flex items-center gap-2">
         <UserAvatar :user="{ username: quote.author.username, display_name: quote.author.display_name, avatar_url: quote.author.avatar_url }" size="xxs" />
-        <span class="truncate text-sm font-medium text-mnema-muted">{{ quote.author.display_name || quote.author.username }}</span>
+        <span v-full-text class="truncate text-sm font-medium text-mnema-muted">{{ quote.author.display_name || quote.author.username }}</span>
         <span class="text-xs text-mnema-tertiary">{{ when }}</span>
       </div>
       <button v-if="target" type="button" data-testid="forwarded-open" class="block w-full text-left" @click.stop="open">

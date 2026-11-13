@@ -136,7 +136,7 @@ onMounted(() => { void store.load() })
           class="btn btn-secondary shrink-0"
           @click="fileInput?.click()"
         >{{ $t('emoji.admin.choose') }}</button>
-        <span class="min-w-0 truncate text-sm text-mnema-muted" data-testid="emoji-file-name">{{ file?.name ?? $t('emoji.admin.noFile') }}</span>
+        <span v-full-text class="min-w-0 truncate text-sm text-mnema-muted" data-testid="emoji-file-name">{{ file?.name ?? $t('emoji.admin.noFile') }}</span>
       </div>
       <input
         v-model="name"

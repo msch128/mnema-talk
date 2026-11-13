@@ -27,7 +27,7 @@ const authStore = useAuthStore()
     class="flex items-center gap-3 min-w-0 max-w-full rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
   >
     <Monitor class="w-4 h-4 text-mnema-accent shrink-0" />
-    <span class="text-sm text-mnema-text truncate">
+    <span v-full-text class="text-sm text-mnema-text truncate">
       {{ card.kind === 'own' ? $t('talk.ownScreen') : $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
     </span>
     <ScreenViewers

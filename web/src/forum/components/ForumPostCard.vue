@@ -53,6 +53,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
         <span v-if="unread" data-testid="forum-post-unread" class="mt-2 h-2 w-2 shrink-0 rounded-full bg-mnema-accent" :title="$t('forum.unread')"></span>
         <BlockedFold :msg="post" class="mt-0.5 min-w-0 flex-1">
           <h3
+            v-full-text
             :class="[
               'line-clamp-2 min-w-0 flex-1 text-base text-mnema-text transition group-hover:text-mnema-accent',
               unread ? 'font-bold' : 'font-semibold'
@@ -76,7 +77,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
         </div>
       </div>
 
-      <p v-if="snippet" class="line-clamp-2 break-words text-sm text-mnema-secondary">{{ snippet }}</p>
+      <p v-if="snippet" v-full-text class="line-clamp-2 break-words text-sm text-mnema-secondary">{{ snippet }}</p>
 
       <div v-if="post.tags?.length" class="flex flex-wrap items-center gap-1.5">
         <ForumTagChip v-for="tag in post.tags" :key="tag.id" data-testid="forum-post-tag" :tag="tag" />
@@ -84,7 +85,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
 
       <div class="mt-auto flex min-w-0 items-center gap-2 text-xs text-mnema-tertiary">
         <UserAvatar :user="{ username: post.username, display_name: post.display_name, avatar_url: post.avatar_url }" size="sm" class="shrink-0" />
-        <span class="truncate font-medium text-mnema-secondary">{{ authorName }}</span>
+        <span v-full-text class="truncate font-medium text-mnema-secondary">{{ authorName }}</span>
         <span class="shrink-0">{{ created }}</span>
         <span class="ml-auto flex shrink-0 items-center gap-3">
           <span v-if="replyCount > 0 && active" class="hidden sm:inline">{{ $t('forum.lastActivity', { when: active }) }}</span>

@@ -36,6 +36,8 @@ import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../../shared/lib/chatLogic'
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
+import StatePanel from '../../shared/components/StatePanel.vue'
+import { useLoadRetry } from '../composables/useLoadRetry'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
 // header with a close button, Discord's welcome texts, no member toggle.
@@ -62,6 +64,7 @@ const { canSend, canAttach, canReact, placeholder } = useChannelWrite(dmChat, ()
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
+const retryLoad = useLoadRetry(() => messageContainer.value?.closest<HTMLElement>('main, section') ?? null)
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
@@ -220,14 +223,14 @@ const groupedIds = computed(() => {
     :id="panel ? undefined : 'main-content'"
     :tabindex="panel ? undefined : -1"
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
-    class="relative flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden focus:outline-hidden"
+    class="relative flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-clip focus:outline-hidden"
   >
     <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
     <ChannelAutoDeleteNote v-if="!panel" />
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
-    <div class="relative flex-1 min-h-0 flex flex-col">
-    <div ref="messageContainer" class="msg-list flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
+    <div class="msg-column relative flex-1 min-h-0 flex flex-col overflow-clip">
+    <div ref="messageContainer" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
       <div v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex items-center justify-center text-mnema-tertiary">
         <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
@@ -242,16 +245,19 @@ const groupedIds = computed(() => {
         <div class="w-14 h-14 rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text">
           <Volume2 class="w-7 h-7" />
         </div>
-        <p class="font-bold text-2xl text-mnema-text">{{ welcomeText }}</p>
+        <p class="font-bold text-2xl text-mnema-text wrap-anywhere">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-muted mt-1">{{ beginningText }}</p>
       </div>
+
+      <!-- The channel's messages failed to load: never "no messages yet" -->
+      <StatePanel v-else-if="!chatStore.messages?.length && chatStore.windowLoadFailed" state="error" retryable data-testid="chat-load-failed" class="h-full justify-center" @retry="retryLoad">{{ $t('chat.windowLoadFailed') }}</StatePanel>
 
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
           <component :is="channelIcon" class="w-5 h-5 opacity-80" />
         </div>
-        <p class="font-semibold text-lg text-mnema-text">{{ welcomeText }}</p>
+        <p class="font-semibold text-lg text-mnema-text wrap-anywhere">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">
           {{ $t('chat.emptyBody') }}
         </p>
@@ -266,7 +272,7 @@ const groupedIds = computed(() => {
           <div :class="['rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text', panel ? 'w-14 h-14' : 'w-16 h-16']">
             <component :is="channelIcon" :class="panel ? 'w-7 h-7' : 'w-9 h-9'" />
           </div>
-          <p :class="['font-bold text-mnema-text', panel ? 'text-2xl' : 'text-3xl']">{{ welcomeText }}</p>
+          <p :class="['font-bold text-mnema-text wrap-anywhere', panel ? 'text-2xl' : 'text-3xl']">{{ welcomeText }}</p>
           <p :class="['text-mnema-muted mt-1', panel ? 'text-sm' : 'text-base']">{{ beginningText }}</p>
         </div>
       </template>

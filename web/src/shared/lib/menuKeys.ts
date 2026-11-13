@@ -27,3 +27,16 @@ export function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
     }
   }
 }
+
+/**
+ * Where focus goes back to when the menu closes: what had focus when it
+ * opened, else (a touch or right click focuses nothing) the anchor, else the
+ * control under the point the menu was opened at.
+ */
+export function menuOpener(anchor: unknown, x: number, y: number): HTMLElement | null {
+  const active = document.activeElement
+  if (active instanceof HTMLElement && active !== document.body) return active
+  if (anchor instanceof HTMLElement) return anchor
+  const hit = typeof document.elementFromPoint === 'function' ? document.elementFromPoint(x, y) : null
+  return hit?.closest<HTMLElement>('a[href], button, [tabindex], [role="button"], [role="link"]') ?? null
+}

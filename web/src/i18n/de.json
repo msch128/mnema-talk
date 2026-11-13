@@ -62,6 +62,7 @@
   "user": {
     "avatar": "Profilbild",
     "openProfile": "Eigenes Profil öffnen",
+    "openProfileFull": "Eigenes Profil öffnen ({name} · {status})",
     "deleted": "Gelöschtes Mitglied"
   },
   "viewer": {
@@ -1136,6 +1137,7 @@
     "messageNotFound": "Nachricht nicht gefunden",
     "replyTargetGone": "Die Nachricht, auf die du antworten wolltest, gibt es nicht mehr. Deine Nachricht wurde ohne Antwort gesendet.",
     "messageLoadFailed": "Die Nachricht konnte nicht geladen werden. Versuche es noch einmal.",
+    "windowLoadFailed": "Die Nachrichten konnten nicht geladen werden.",
     "editFailed": "Die Änderung konnte nicht gespeichert werden. Versuche es noch einmal.",
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden. Versuche es noch einmal.",
     "sendFailed": "Die Nachricht konnte nicht gesendet werden. Versuche es noch einmal.",
@@ -1284,6 +1286,7 @@
   },
   "thread": {
     "title": "Thread",
+    "back": "Zurück zum Chat",
     "close": "Thread schließen",
     "follow": "Thread folgen",
     "unfollow": "Thread nicht mehr folgen",
@@ -1321,8 +1324,10 @@
     "joinToTalk": "Klick auf Beitreten, um das Gespräch zu beginnen.",
     "panel": {
       "label": "Sprachverbindung",
+      "status": "Verbunden",
       "connected": "Verbunden · {channel}",
       "open": "Talk öffnen",
+      "openNamed": "Talk „{channel}“ öffnen",
       "details": "Verbindungsdetails"
     },
     "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser.",

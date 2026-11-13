@@ -107,7 +107,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
     <ul v-else class="grid gap-3 sm:grid-cols-2">
       <li v-for="role in roles" :key="role.id" data-testid="event-role" :data-role="role.name" class="flex min-w-0 flex-col gap-2 rounded-lg border border-mnema-hairline bg-mnema-canvas/60 p-3">
         <div class="flex items-baseline justify-between gap-2">
-          <span class="min-w-0 truncate text-sm font-semibold text-mnema-text"><span v-if="role.emoji" class="mr-1">{{ role.emoji }}</span>{{ role.name }}</span>
+          <span v-full-text class="min-w-0 truncate text-sm font-semibold text-mnema-text"><span v-if="role.emoji" class="mr-1">{{ role.emoji }}</span>{{ role.name }}</span>
           <span class="shrink-0 text-xs tabular-nums text-mnema-tertiary" data-testid="event-role-fill">{{ fill(role) }}</span>
         </div>
         <div v-if="role.capacity" class="h-1 overflow-hidden rounded-full bg-mnema-hairline" aria-hidden="true">
@@ -118,7 +118,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
           <li v-for="item in members(role, 'confirmed')" :key="item.user.id" class="flex items-center justify-between gap-2 text-sm">
             <span class="flex min-w-0 items-center gap-2">
               <UserAvatar :user="eventAvatar(item.user)" size="sm" />
-              <span class="truncate" :class="isMe(item) ? 'font-semibold text-mnema-text' : 'text-mnema-secondary'">{{ item.user.display_name || item.user.username }}</span>
+              <span v-full-text class="truncate" :class="isMe(item) ? 'font-semibold text-mnema-text' : 'text-mnema-secondary'">{{ item.user.display_name || item.user.username }}</span>
             </span>
             <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
               <X class="h-4 w-4" />
@@ -130,7 +130,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
           <p class="mb-1 text-xs font-medium uppercase tracking-wide text-mnema-tertiary">{{ $t('events.roles.waitlistTitle', { count: role.waitlist }) }}</p>
           <ol class="flex flex-col gap-1">
             <li v-for="(item, i) in members(role, 'waitlist')" :key="item.user.id" class="flex items-center justify-between gap-2 text-sm text-mnema-tertiary">
-              <span class="truncate"><span class="mr-1.5 tabular-nums">{{ i + 1 }}.</span>{{ item.user.display_name || item.user.username }}</span>
+              <span v-full-text class="truncate"><span class="mr-1.5 tabular-nums">{{ i + 1 }}.</span>{{ item.user.display_name || item.user.username }}</span>
               <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
                 <X class="h-4 w-4" />
               </button>

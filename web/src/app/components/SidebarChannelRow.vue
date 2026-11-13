@@ -184,7 +184,7 @@ const rowClass = computed(() => [
                 : 'text-mnema-tertiary group-hover:text-mnema-text'
           ]"
         />
-        <span class="truncate">{{ channel.name }}</span>
+        <span v-full-text class="truncate">{{ channel.name }}</span>
         <span v-if="draft" class="shrink-0 rounded-sm bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="channel-draft">{{ $t('sidebar.draft') }}</span>
         <BellOff v-if="muted" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.bellNothing')" />
         <AtSign v-else-if="mentionsOnly" class="w-3.5 h-3.5 shrink-0 text-mnema-tertiary" data-testid="channel-mentions-only" :aria-label="$t('notifications.bellMentions')" />
@@ -259,7 +259,7 @@ const rowClass = computed(() => [
       >
         <UserAvatar :user="user" size="xs" :is-speaking="voiceStore.isSpeaking(user.id)" />
         <span class="flex min-w-0 flex-col leading-4">
-          <span class="flex min-w-0 items-center gap-1"><span class="truncate text-sm">{{ user.display_name || user.username }}</span><TalkLeaderMark v-if="channel.leader_id === user.id" /></span>
+          <span class="flex min-w-0 items-center gap-1"><span v-full-text class="truncate text-sm">{{ user.display_name || user.username }}</span><TalkLeaderMark v-if="channel.leader_id === user.id" /></span>
           <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
         </span>
         <span class="ml-auto flex shrink-0 items-center gap-1.5">

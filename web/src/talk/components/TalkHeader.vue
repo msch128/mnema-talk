@@ -14,6 +14,7 @@ import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import { headerButton, focusRing } from './talkButtons'
 import NavDrawerButton from '../../shared/components/NavDrawerButton.vue'
+import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
 // The Talk's header: its name, who is there and for how long, and the
 // buttons for the Talk's chat, "only participants with video" and the member list.
@@ -39,7 +40,7 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
 </script>
 
 <template>
-  <header class="h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10">
+  <header class="@container h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10">
     <div class="flex items-center gap-3 min-w-0">
       <NavDrawerButton />
       <div
@@ -50,10 +51,11 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
         <Volume2 class="w-4 h-4" />
       </div>
       <div class="flex items-center gap-2 min-w-0">
-        <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
+        <h2 v-full-text class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
           {{ channelName || $t('voice.channelFallback') }}
         </h2>
-        <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />
+        <!-- Under 22rem (a phone at 125 % zoom) the count steps aside for the buttons; the stage shows everyone. -->
+        <TalkParticipants class="shrink-0 @max-[22rem]:hidden" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />
         <VoiceTimer
           v-if="startedAt && !narrow"
           :since="startedAt"
@@ -126,10 +128,10 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
       <!-- Toggle Member List Sidebar -->
       <button
         type="button"
-        @click="chatStore.showMemberList = !chatStore.showMemberList"
-        :class="headerButton(chatStore.showMemberList)"
+        @click="toggleMemberList(chatStore)"
+        :class="headerButton(memberListShown(chatStore.showMemberList))"
         v-tooltip="$t('members.toggle')"
-        :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
+        :aria-pressed="memberListShown(chatStore.showMemberList) ? 'true' : 'false'"
       >
         <Users class="w-4 h-4" />
       </button>

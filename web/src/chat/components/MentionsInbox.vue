@@ -77,17 +77,17 @@ const when = (iso: string) => dateTime(iso, locale.value)
         <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
         <span class="min-w-0 flex-1">
           <span class="mb-0.5 flex items-center gap-2">
-            <span class="min-w-8 truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+            <span v-full-text class="min-w-[3em] truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
             <span v-if="channelNames.get(msg.channel_id)" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
               <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
               <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-              <span class="truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
+              <span v-full-text class="min-w-[3em] truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
             </span>
             <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
             <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
             <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-visible/row:opacity-100" aria-hidden="true" />
           </span>
-          <span class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
+          <span v-full-text class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
         </span>
       </button>
       <p v-if="inbox.loadMoreFailed.value" role="alert" data-testid="mentions-inbox-more-failed" class="px-3 py-2 text-sm text-mnema-muted">{{ $t('mentions.moreFailed') }}</p>

@@ -48,3 +48,9 @@ export function fitAspect(width: number, height: number, aspect = 16 / 9): { wid
 // Below this width (px) of the Talk area the control bar shows icons only and
 // moves its secondary buttons into a "more" menu.
 export const COMPACT_BAR_WIDTH = 600
+
+// The bar floating over a shared screen lives inside the stage box, which a
+// 16:9 picture can make narrower than the area: below this box width the full
+// bar (with the stream audio button and the German labels, about 650px) would
+// run past the box's edges, so it shows icons only there too.
+export const STAGE_COMPACT_BAR_WIDTH = 700

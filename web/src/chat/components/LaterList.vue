@@ -89,7 +89,7 @@ async function snooze(entry: LaterReminder, preset: typeof SNOOZES[number]['pres
               <span class="mb-0.5 flex items-center gap-1.5 text-xs text-mnema-tertiary">
                 <MessageCircle v-if="entry.message.dm" class="h-3 w-3" aria-hidden="true" />
                 <Hash v-else class="h-3 w-3" aria-hidden="true" />
-                <span class="truncate">{{ entry.message.dm ? entry.message.author : entry.message.channel_name }}</span>
+                <span v-full-text class="truncate">{{ entry.message.dm ? entry.message.author : entry.message.channel_name }}</span>
                 <span class="ml-auto flex shrink-0 items-center gap-1" :class="entry.delivered_at ? 'text-mnema-accent' : ''">
                   <BellRing v-if="entry.delivered_at" class="h-3 w-3" aria-hidden="true" />
                   {{ entry.delivered_at ? $t('later.due') : when(entry.remind_at) }}
