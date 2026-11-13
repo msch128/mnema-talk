@@ -26,6 +26,7 @@ const ttl = time.Minute
 type Names struct {
 	q        db.Querier
 	fallback string
+	public   string
 
 	mu     sync.Mutex
 	name   string
@@ -36,7 +37,16 @@ type Names struct {
 // New returns a Names reading from q. publicURL supplies the host used while
 // no name is set.
 func New(q db.Querier, publicURL string) *Names {
-	return &Names{q: q, fallback: Fallback(publicURL)}
+	return &Names{q: q, fallback: Fallback(publicURL), public: strings.TrimRight(strings.TrimSpace(publicURL), "/")}
+}
+
+// PublicURL is the address this server is reached at (PUBLIC_URL, without a
+// trailing slash). A nil *Names has none.
+func (n *Names) PublicURL() string {
+	if n == nil {
+		return ""
+	}
+	return n.public
 }
 
 // Fallback is the host of publicURL, or the product name when there is none.

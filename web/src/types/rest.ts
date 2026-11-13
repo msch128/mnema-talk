@@ -5244,6 +5244,7 @@ export type ServerHealth = {
   community_icon?: string
   community_name?: string
   features?: Array<string>
+  public_url?: string
   status: "ok"
   version: string
   web_client_api: number
@@ -5254,6 +5255,7 @@ export function isServerHealth(value: unknown): value is ServerHealth {
     && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
@@ -5266,6 +5268,7 @@ export type ServerHealthUnavailable = {
   community_name?: string
   error: HttpxAPIError
   features?: Array<string>
+  public_url?: string
   status: "unavailable"
   unavailable: Array<string>
   version: string
@@ -5278,6 +5281,7 @@ export function isServerHealthUnavailable(value: unknown): value is ServerHealth
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "unavailable"))
     && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => isString(item)))
     && (hasOwn(value, "version") && isString(value["version"]))
