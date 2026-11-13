@@ -7,9 +7,10 @@ import { auditClipping } from './clipping/auditor'
 
 const ellipsis = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
 
-async function findings(page: import('@playwright/test').Page, html: string) {
+async function findings(page: import('@playwright/test').Page, html: string, prepare?: () => void) {
   await page.setViewportSize({ width: 600, height: 400 })
   await page.setContent(`<!doctype html><body style="margin:0;font:16px sans-serif">${html}</body>`)
+  if (prepare) await page.evaluate(prepare)
   return page.evaluate(auditClipping, { tolerance: 1 })
 }
 
@@ -35,19 +36,26 @@ test('text under aria-hidden is still drawn, so its box may not cut it', async (
   expect(rules(list, '#whole')).toEqual([])
 })
 
-test('a control under a sticky bar is covered unless its list scrolls it out', async ({ page }) => {
-  const list = await findings(page, `
-    <div style="height:200px;overflow:auto">
-      <div style="position:sticky;top:0;height:40px;background:#222">Bar</div>
-      <button id="under" style="display:block;margin-top:-30px;height:40px">Press</button>
+test('a control under a sticky bar is covered unless scrolling brings it out', async ({ page }) => {
+  const bar = (edge: string) => `<div style="position:sticky;${edge}:0;height:40px;background:#222">Bar</div>`
+  const list = await findings(page, `<div style="display:flex;gap:8px">
+    <div style="width:140px;height:200px;overflow:auto">
+      ${bar('top')}<button id="under" style="display:block;margin-top:-30px;height:40px">Press</button>
     </div>
-    <div style="height:120px;overflow:auto">
-      <div style="position:sticky;top:0;height:40px;background:#222">Bar</div>
-      <button id="scrolls" style="display:block;margin-top:-30px;height:40px">Press</button>
-      <div style="height:400px"></div>
-    </div>`)
+    <div style="width:140px;height:120px;overflow:auto">
+      ${bar('top')}<button id="at-top" style="display:block;margin-top:-30px;height:40px">Press</button><div style="height:400px"></div>
+    </div>
+    <div class="scrolled" style="width:140px;height:120px;overflow:auto">
+      ${bar('top')}<div style="height:50px"></div><button id="scrolled-under" style="display:block;height:40px">Press</button><div style="height:400px"></div>
+    </div>
+    <div style="width:140px;height:120px;overflow:auto">
+      <div style="height:65px"></div><button id="above-footer" style="display:block;height:40px">Press</button><div style="height:400px"></div>${bar('bottom')}
+    </div></div>`, () => { for (const el of document.querySelectorAll('.scrolled')) el.scrollTop = 40 })
   expect(rules(list, '#under')).toEqual(['covered'])
-  expect(rules(list, '#scrolls')).toEqual([])
+  // At the top of its list, scrolling up has nothing left to reveal.
+  expect(rules(list, '#at-top')).toEqual(['covered'])
+  expect(rules(list, '#scrolled-under')).toEqual([])
+  expect(rules(list, '#above-footer')).toEqual([])
 })
 
 test('the full-text marker counts only with the title it promises', async ({ page }) => {

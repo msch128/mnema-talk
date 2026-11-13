@@ -243,10 +243,21 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     return true
   }
 
-  /** The element sits in a list that scrolls, so scrolling brings it out from under a sticky bar. */
-  function scrollsFree(el: Element): boolean {
+  /**
+   * Scrolling the element's list brings it out from under a sticky bar: the
+   * list can still scroll towards the bar's edge (up for a bar stuck to the
+   * top, down for one stuck to the bottom), and there the element lies clear
+   * of the bar's own place at that end of the list.
+   */
+  function scrollsFree(el: Element, bar: Element, s: CSSStyleDeclaration): boolean {
     const box = clipAncestors(el).find(a => scrolls(a.y))?.el
-    return !!box && box.scrollHeight > box.clientHeight + tol
+    if (!box) return false
+    const r = el.getBoundingClientRect()
+    const height = bar.getBoundingClientRect().height
+    const top = r.top - box.getBoundingClientRect().top + box.scrollTop
+    if (s.top !== 'auto') return box.scrollTop > tol && top >= height - tol
+    if (s.bottom !== 'auto') return box.scrollTop < box.scrollHeight - box.clientHeight - tol && top + r.height <= box.scrollHeight - height + tol
+    return false
   }
 
   /**
@@ -258,8 +269,8 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     for (let node: Element | null = hit; node && !node.contains(el); node = node.parentElement) {
       const s = styleOf(node)
       if (s.position === 'fixed') return true
-      // A sticky bar is part of the page: what lies under it is covered unless its list can scroll it out.
-      if (s.position === 'sticky') return scrollsFree(el)
+      // A sticky bar is part of the page: what lies under it is covered unless scrolling brings it out.
+      if (s.position === 'sticky') return scrollsFree(el, node, s)
       if (node.matches('[role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"], [role="tooltip"], [data-toast]')) return true
       if (s.position === 'absolute' && Number(s.zIndex) >= 10) return true
     }
