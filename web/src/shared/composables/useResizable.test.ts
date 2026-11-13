@@ -145,6 +145,29 @@ describe('useResizable', () => {
     scope.stop()
   })
 
+  it('sizes a rem panel by the root font and keeps a width the member set within the rem bounds', async () => {
+    window.innerWidth = 1600
+    const storage = memoryStorage({ [storageKey('dragged')]: '340' })
+    const rem = { side: 'left', defaultWidth: 15, min: 12.5, max: 22.5, unit: 'rem' } as const
+    const scope = effectScope()
+    const panels = required(scope.run(() => useResizable([{ name: 'list', ...rem }, { name: 'dragged', ...rem }], { centerMin: 400, storage })))
+    const rootFont = async (size: string) => {
+      document.documentElement.style.fontSize = size
+      await new Promise(resolve => setTimeout(resolve, 0))
+    }
+    expect([panels.list.width, panels.dragged.width]).toEqual([240, 340])
+    await rootFont('24px')
+    expect([panels.list.width, panels.list.min, panels.dragged.width]).toEqual([360, 300, 340])
+    await rootFont('32px')
+    expect(panels.dragged.width).toBe(400)
+    panels.dragged.reset()
+    expect(panels.dragged.width).toBe(480)
+    expect(storage.data[storageKey('dragged')]).toBeUndefined()
+    document.documentElement.style.removeProperty('font-size')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    scope.stop()
+  })
+
   it('resizes with arrow keys and persists', () => {
     const storage = memoryStorage()
     const { scope, panels } = setup(storage)

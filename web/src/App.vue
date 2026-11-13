@@ -89,7 +89,8 @@ const membersFit = computed(() => roomForAllColumns.value || !chatStore.activeTh
 // Column widths. Order = shrink priority on narrow windows
 // (thread first, then member list, then the left sidebar).
 const panels = useResizable([
-  { name: 'left', side: 'left', defaultWidth: 240, min: 200, max: 360 },
+  // In rem (240, 200 and 360 px at the usual 16px): a larger font gets a wider channel list.
+  { name: 'left', side: 'left', defaultWidth: 15, min: 12.5, max: 22.5, unit: 'rem' },
   { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => chatStore.showMemberList && membersFit.value },
   { name: 'thread', side: 'right', defaultWidth: 400, min: 320, max: 640, visible: () => !!chatStore.activeThread }
 ], { centerMin: 400 })
