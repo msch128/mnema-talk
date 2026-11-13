@@ -227,7 +227,7 @@ func (c *components) newBots() {
 	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Posts: c.chatH.Posts(), Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
-	c.botH.OnRevoke = gw.Revoke
+	c.botH.OnRevoke = c.cmds.ForgettingOnRevoke(gw.Revoke)
 	gw.OnPresence = hub.SetBotPresence
 	gw.OnStatus = func(id uuid.UUID, status string, a *gateway.Activity) {
 		var act *ws.BotActivity

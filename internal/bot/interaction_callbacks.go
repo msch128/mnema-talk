@@ -93,6 +93,9 @@ func (c *Commands) updateTarget(r *http.Request, in *interaction, target source,
 	if _, _, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, bot, in.channel); err != nil {
 		return nil, err
 	}
+	if err := c.invokerSees(ctx, in.channel, n.invoker); err != nil {
+		return nil, err
+	}
 	n = n.with(e)
 	if n.content == "" && len(n.embeds) == 0 && len(n.components) == 0 {
 		return nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
@@ -138,6 +141,9 @@ func (c *Commands) answerModal(r *http.Request, in *interaction, form core.Modal
 	_, p, err := botapi.ChannelPermsOf(r.Context(), c.Perms, auth.UserFrom(r.Context()), in.channel)
 	if err == nil && !p.Has(perm.ViewChannel) {
 		err = perm.ErrChannelHidden
+	}
+	if err == nil {
+		err = c.invokerSees(r.Context(), in.channel, in.invoker)
 	}
 	if err != nil {
 		c.store.undoAnswer(in)

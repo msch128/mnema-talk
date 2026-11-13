@@ -1,10 +1,13 @@
 package bot
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // Ephemeral notes and open modals live in the interaction store, in memory,
@@ -129,4 +132,45 @@ func (s *interactionStore) closeModal(id uuid.UUID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.modals, id)
+}
+
+// forgetBot drops every interaction, note and modal of a bot: what it could
+// still answer, edit or receive must not outlive its being disabled, deleted
+// or its tokens being reset, not even when it is enabled again within the 15
+// minutes.
+func (s *interactionStore) forgetBot(botID uuid.UUID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for k, v := range s.m {
+		if v.botID == botID {
+			delete(s.m, k)
+		}
+	}
+	for k, v := range s.notes {
+		if v.botID == botID {
+			delete(s.notes, k)
+		}
+	}
+	for k, v := range s.modals {
+		if v.botID == botID {
+			delete(s.modals, k)
+		}
+	}
+}
+
+// errInvokerLeft refuses a note or a modal for a member who can no longer see
+// the channel: like a click, it is only for someone who may read there.
+var errInvokerLeft = httpx.ErrForbidden("the member can no longer see this channel")
+
+// invokerSees requires that the member who caused an interaction can still
+// view its channel, at the moment a note or a modal is shown to them.
+func (c *Commands) invokerSees(ctx context.Context, ch, invoker uuid.UUID) error {
+	snap, err := c.Perms.ForChannel(ctx, ch)
+	if err != nil {
+		return err
+	}
+	if !snap.Channel(perm.Subject{ID: invoker}, ch).Has(perm.ViewChannel) {
+		return errInvokerLeft
+	}
+	return nil
 }

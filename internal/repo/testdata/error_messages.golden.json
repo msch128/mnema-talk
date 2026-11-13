@@ -482,6 +482,7 @@
   "the limit of %d custom emoji is reached",
   "the link name may only hold lowercase letters, digits and single hyphens between them",
   "the link name must be %d to %d characters",
+  "the member can no longer see this channel",
   "the offer must contain one data channel and no audio or video",
   "the page changed since you opened it; open it again and apply your change to the new version",
   "the page cursor no longer exists; reload the list",

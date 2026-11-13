@@ -597,6 +597,14 @@ answer is ephemeral. Every interaction carries the member who caused it in
 within the 15 minutes makes the token unknown (`404`). Components are not
 affected: their `custom_id` is stored with the message and every click is a
 new interaction (see [Message components](#message-components)).
+Whatever closes a bot's connections also ends its pending interactions,
+notes and modals: disabling or deleting it, regenerating or revoking a
+token, changing its allowed intents. A bot enabled again within the 15
+minutes cannot answer what it was sent before (`404`). An ephemeral answer
+or a modal is shown only while the member can still view the channel; one
+who lost access meanwhile is not shown it, and the answer is refused
+(`403`, "the member can no longer see this channel"), like their own clicks
+would be.
 
 ## Message components
 

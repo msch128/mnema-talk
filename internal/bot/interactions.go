@@ -309,3 +309,18 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	httpx.WriteJSON(w, http.StatusAccepted, Invoked{InteractionID: id})
 	return nil
 }
+
+// ForgetBot drops the bot's pending interactions, notes and modals. The
+// management API calls it (through its OnRevoke hook) whenever it closes the
+// bot's connections: disabling or deleting the bot, regenerating or revoking
+// a token, changing its allowed intents.
+func (c *Commands) ForgetBot(botID uuid.UUID) { c.store.forgetBot(botID) }
+
+// ForgettingOnRevoke wraps the gateway's revoke for Handler.OnRevoke: closing
+// a bot's connections also ends what it could still answer.
+func (c *Commands) ForgettingOnRevoke(revoke func(botID uuid.UUID, tokenID *uuid.UUID)) func(uuid.UUID, *uuid.UUID) {
+	return func(botID uuid.UUID, tokenID *uuid.UUID) {
+		revoke(botID, tokenID)
+		c.ForgetBot(botID)
+	}
+}

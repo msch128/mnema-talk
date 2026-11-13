@@ -256,6 +256,9 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 		return nil, source{}, err
 	}
 	if m.ephemeral {
+		if err := c.invokerSees(ctx, in.channel, in.invoker); err != nil {
+			return nil, source{}, err
+		}
 		n := note{id: uuid.New(), botID: in.botID, botUser: in.botUser, channel: in.channel, invoker: in.invoker,
 			created: in.created, content: m.content, embeds: m.embeds, components: m.components}
 		c.store.keepNote(n)

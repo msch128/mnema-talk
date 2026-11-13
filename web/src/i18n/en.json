@@ -688,7 +688,8 @@
       "srvValuesCount": "This menu takes {min} to {max} values.",
       "srvValuesUnknownInput": "The form has no field “{input}”.",
       "srvYouAreTimedOut": "You are in a timeout.",
-      "srvTypeMustBeCallback": "The type must be 4, 5, 6, 7 or 9."
+      "srvTypeMustBeCallback": "The type must be 4, 5, 6, 7 or 9.",
+      "srvMemberCannotSeeChannel": "The member can no longer see this channel."
     },
     "field": {
       "content": "Message",

@@ -688,7 +688,8 @@
       "srvValuesCount": "Dieses Menü nimmt {min} bis {max} Werte.",
       "srvValuesUnknownInput": "Das Formular hat kein Feld „{input}“.",
       "srvYouAreTimedOut": "Du bist in einer Auszeit.",
-      "srvTypeMustBeCallback": "Der Typ muss 4, 5, 6, 7 oder 9 sein."
+      "srvTypeMustBeCallback": "Der Typ muss 4, 5, 6, 7 oder 9 sein.",
+      "srvMemberCannotSeeChannel": "Das Mitglied kann diesen Kanal nicht mehr sehen."
     },
     "field": {
       "content": "Nachricht",
