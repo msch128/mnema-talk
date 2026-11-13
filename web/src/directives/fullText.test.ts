@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, ref } from 'vue'
 import { fullText } from './fullText'
@@ -51,6 +51,32 @@ describe('v-full-text', () => {
     sized(span, 60, 120)
     await button.trigger('pointerenter')
     expect(span.hasAttribute('title')).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows a cut name in the tooltip on a long press, for touch', async () => {
+    vi.useFakeTimers()
+    const { span, wrapper } = row('a-channel-with-a-very-long-name')
+    sized(span, 300, 120)
+    const press = new Event('pointerdown', { bubbles: true })
+    Object.assign(press, { pointerType: 'touch', clientX: 5, clientY: 5 })
+    span.dispatchEvent(press)
+    vi.advanceTimersByTime(500)
+    const tip = document.getElementById('mnema-tooltip')
+    expect(tip?.hidden).toBe(false)
+    expect(tip?.textContent).toBe('a-channel-with-a-very-long-name')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('shows a cut name in the tooltip when the keyboard reaches it, and hides it on leaving', async () => {
+    const { span, button, wrapper } = row('a-channel-with-a-very-long-name')
+    sized(span, 300, 120)
+    await button.trigger('focusin')
+    const tip = document.getElementById('mnema-tooltip')
+    expect(tip?.textContent).toBe('a-channel-with-a-very-long-name')
+    await button.trigger('focusout')
+    expect(tip?.hidden).toBe(true)
     wrapper.unmount()
   })
 })
