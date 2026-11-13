@@ -10,8 +10,77 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
+
+// privateHook is a webhook moved onto a conversation's call Talk past the
+// API, with the dispatcher's routes reloaded.
+func privateHook(t *testing.T) (*callFixture, uuid.UUID, uuid.UUID, *receiver) {
+	t.Helper()
+	f := newCallFixtureWith(t, allowLoopback)
+	f.a.router.Webhooks.Outgoing.SetBackoff([]time.Duration{5 * time.Millisecond})
+	talk := f.start(t)
+	open := f.a.createChannel(f.admin, "alerts", "text")
+	rc := newReceiver(t, nil)
+	hook := makeOutgoing(t, f.admin, open, rc.srv.URL+"/hook", "MESSAGE_CREATE")
+	ctx := context.Background()
+	if _, err := f.a.db.Exec(ctx, `UPDATE outgoing_webhooks SET channel_id = $1 WHERE id = $2`, talk, hook.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.a.router.Webhooks.Outgoing.Reload(ctx); err != nil {
+		t.Fatal(err)
+	}
+	return f, talk, hook.ID, rc
+}
+
+// Each guard on its own: the routes say nobody listens on a private channel
+// (Wants), and the queue's insert writes no row for one (Record), even when
+// it is called for it.
+func TestTheWebhookGuardsEachRefuseAPrivateChannel(t *testing.T) {
+	f, talk, hook, _ := privateHook(t)
+	d := f.a.router.Webhooks.Outgoing
+	if d.Wants(talk, events.MessageCreate) {
+		t.Fatal("Wants: a webhook listens on a call chat")
+	}
+	ctx := context.Background()
+	tx, err := f.a.db.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	ev := (*core.MessageCreate)(&core.Message{ID: uuid.New(), ChannelID: talk, Content: "private words"})
+	if err := d.Record(ctx, tx, talk, ev); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM outgoing_queue WHERE webhook_id = $1`, hook).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("Record: %d queue rows for a call chat", n)
+	}
+}
+
+// A queued event of a private channel (only an edited database holds one) is
+// dropped at delivery, never sent.
+func TestAQueuedEventOfAPrivateChannelIsDroppedNotSent(t *testing.T) {
+	f, talk, hook, rc := privateHook(t)
+	ctx := context.Background()
+	if _, err := f.a.db.Exec(ctx, `INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
+		VALUES ($1, $2, gen_random_uuid(), 'MESSAGE_CREATE', NOW(), convert_to('{"content":"private words"}', 'UTF8'))`, hook, talk); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for f.a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE webhook_id = $1`, hook) != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the row was neither sent nor dropped")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	rc.none(t)
+}
 
 // A webhook pointed at a conversation's call chat past the API queues
 // nothing for what is said there: the queue row would be written in the

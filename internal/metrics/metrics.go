@@ -236,7 +236,8 @@ var (
 	// WebhookDropped counts outgoing webhook events that were not delivered
 	// because of a bound, by reason: buffer_full, channel_share, store_error
 	// (the in-memory buffer of events without a transaction), webhook_cap,
-	// global_cap, expired.
+	// global_cap, expired; and private_channel, a queued event of a
+	// conversation or its call Talk, dropped and never sent.
 	WebhookDropped = newVec("mnema_webhook_events_dropped_total", "Outgoing webhook events dropped or expired unsent, by reason", "reason")
 
 	// PushDeliveries counts Web Push deliveries by outcome: ok, gone (the

@@ -175,7 +175,21 @@ func (d *Dispatcher) Reload(ctx context.Context) error {
 		return err
 	}
 	d.routes.Store(&list)
+	d.warnPrivateWebhooks(ctx, len(list))
 	return nil
+}
+
+// warnPrivateWebhooks logs when enabled webhooks were left out of the routes
+// because their channel is private: only an edited database (or a Talk whose
+// removal keeps failing) holds one, and an operator should know.
+func (d *Dispatcher) warnPrivateWebhooks(ctx context.Context, routed int) {
+	var all int
+	if err := d.DB.QueryRow(ctx, `SELECT COUNT(*) FROM outgoing_webhooks WHERE enabled`).Scan(&all); err != nil {
+		return // the routes are right either way; this is only a hint
+	}
+	if all > routed {
+		slog.Warn("outgoing webhooks: webhooks of private channels are ignored", "ignored", all-routed)
+	}
 }
 
 func (d *Dispatcher) startWorkers(ctx context.Context, rateTicker <-chan time.Time) {
