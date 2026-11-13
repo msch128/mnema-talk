@@ -177,9 +177,10 @@
 
 /* Mnema Forest Identity Base */
 @layer base {
-  /* No root font size of our own: rem follows the size the person set in the
-     browser (16px by default), so a larger setting enlarges the whole app,
-     the channel list's width included. */
+  /* 16px root so rem-based Tailwind sizes stay predictable */
+  html {
+    font-size: 16px;
+  }
 
   body {
     font-size: 1rem;

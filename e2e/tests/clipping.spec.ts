@@ -25,15 +25,6 @@ import { fakeDisplayMedia, routeSocket } from './clipping/talk'
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const FULL = process.env.CLIP_SWEEP === 'full'
-// CLIP_BROWSER_FONT=20: the browser's default font size (Chromium's setting), as a person who reads larger text sets it.
-const BROWSER_FONT = Number(process.env.CLIP_BROWSER_FONT ?? 0)
-
-/** Sets the browser's default font size for the page (Chromium only; other engines keep their default). */
-async function browserFont(page: Page) {
-  if (!BROWSER_FONT || page.context().browser()?.browserType().name() !== 'chromium') return
-  const cdp = await page.context().newCDPSession(page)
-  await cdp.send('Page.setFontSizes', { fontSizes: { standard: BROWSER_FONT, fixed: Math.round(BROWSER_FONT * 0.8) } })
-}
 // Each size is a test of its own, so --shard deals the sizes out over the jobs.
 test.describe.configure({ mode: 'parallel' })
 
@@ -99,7 +90,6 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   const options = { viewport: cssViewport(combo), deviceScaleFactor: combo.zoom, locale: combo.locale === 'en' ? 'en-US' : 'de-DE' }
   const ctx = await browser.newContext(options)
   const page = await ctx.newPage()
-  await browserFont(page)
   await page.goto('/')
   await expect(page.getByTestId('login-heading')).toBeVisible()
   await audit(page, info, 'sign-in screen', report)
@@ -108,7 +98,6 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   const member = await browser.newContext(options)
   await showWelcomeFlow(member)
   const mp = await member.newPage()
-  await browserFont(mp)
   await signInApi(mp, world.member.username, world.member.password)
   await apiFetch(mp, 'PUT', '/api/users/me/locale', { locale: combo.locale })
   await mp.goto('/')
@@ -135,7 +124,6 @@ async function signedIn(browser: Browser, combo: Combo): Promise<{ ctx: BrowserC
   await ctx.addInitScript(trackPeerConnections)
   await ctx.addInitScript(fakeDisplayMedia)
   const page = await ctx.newPage()
-  await browserFont(page)
   await signInApi(page)
   expect((await apiFetch(page, 'PUT', '/api/users/me/locale', { locale: combo.locale })).status).toBe(200)
   return { ctx, page }
