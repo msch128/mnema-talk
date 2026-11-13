@@ -37,10 +37,12 @@ no accounts on someone else's platform.
   (hardware encoding in the browser, so the result depends on your machine and
   network). Each viewer picks a quality layer or leaves it on Auto, and
   watching is opt-in. Our tests use synthetic capture, not real 4K/60 hardware.
-- **Privacy you can check.** No telemetry (the optional release check is the
-  only call home and can be turned off), no third-party STUN unless you
-  configure it, nothing deleted or recorded unless you turn it on, and members
-  can export and delete their own data themselves.
+- **Privacy you can check.** No telemetry. The server's own outgoing calls
+  are a STUN lookup of its public address, a clock check and the optional
+  release check, and each can be turned off ([outgoing connections](doc/ports.md)).
+  Browsers use no third-party STUN unless you configure it. Nothing is deleted
+  or recorded unless you turn it on, and members can export and delete their
+  own data themselves.
 - **Honest about its limits.** The browser app is the primary client; the
   desktop client is Beta and unsigned; 1.0 had an internal security review,
   not an external audit. The status of every area is in
@@ -262,9 +264,10 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   origin check, strict CSP, upload content sniffing, rate limits and login
   lockout, an SSRF guard for outgoing webhooks, and an app port that only
   listens on loopback until you say otherwise (see the [FAQ](doc/faq.md#why-cant-i-reach-port-8080-from-another-computer)).
-- **Privacy-minded**: no third-party STUN unless configured, no automatic data
-  deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
-  turned off).
+- **Privacy-minded**: no telemetry; the server's own outgoing calls (a STUN
+  lookup of its public address, a clock check, the optional release check) can
+  each be turned off; browsers use no third-party STUN unless configured; no
+  automatic data deletion unless enabled (`MEDIA_RETENTION_DAYS=0`).
 - Release images are signed with cosign and ship provenance and an SBOM. They are
   published on GHCR and mirrored on Docker Hub (`docker.io/msch128/mnema-talk`).
 
