@@ -135,6 +135,12 @@ onMounted(() => {
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
 const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
+// On a window too short for the menu above the user bar (the desktop client's
+// minimum zoomed in), it opens as a sheet along the bottom edge that scrolls,
+// like the context menus, and the language list opens in place.
+// (Written out in full: Tailwind finds classes by reading the source.)
+const shortWindowSheet = '[@media(max-height:40rem)]:fixed [@media(max-height:40rem)]:inset-x-0 [@media(max-height:40rem)]:bottom-0 [@media(max-height:40rem)]:mb-0 [@media(max-height:40rem)]:w-auto [@media(max-height:40rem)]:max-w-none [@media(max-height:40rem)]:max-h-[85dvh] [@media(max-height:40rem)]:overflow-y-auto [@media(max-height:40rem)]:rounded-b-none'
+const shortWindowInPlace = '[@media(max-height:40rem)]:static [@media(max-height:40rem)]:ml-4 [@media(max-height:40rem)]:w-auto [@media(max-height:40rem)]:shadow-none [@media(max-height:40rem)]:border-l [@media(max-height:40rem)]:border-mnema-border [@media(max-height:40rem)]:rounded-none'
 </script>
 
 <template>
@@ -142,7 +148,7 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
     ref="root"
     role="menu"
     :aria-label="$t('account.menu')"
-    class="absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+    :class="['absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowSheet]"
     @keydown="onKeydown"
   >
     <div class="flex items-center gap-2.5 px-2 pb-2.5 pt-1.5">
@@ -204,7 +210,7 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
         data-submenu
         role="menu"
         :aria-label="$t('account.language')"
-        class="absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+        :class="['absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowInPlace]"
       >
         <button
           v-for="l in SUPPORTED"

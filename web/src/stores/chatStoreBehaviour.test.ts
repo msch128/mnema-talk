@@ -308,6 +308,20 @@ describe('history and races', () => {
     chat.activeChannel = null
     expect(await chat[method]()).toBe(false)
   })
+  it('marks an empty chat whose messages failed to load, and clears it when a retry works', async () => {
+    const chat = setup(), toast = vi.spyOn(useToastStore(), 'info')
+    http.handle = () => Promise.reject(new Error('offline'))
+    expect(await chat.fetchMessages(ch.id)).toBe(false)
+    expect(chat.windowLoadFailed).toBe(true)
+    expect(toast).not.toHaveBeenCalled()
+    http.handle = () => [message()]
+    expect(await chat.fetchMessages(ch.id)).toBe(true)
+    expect(chat.windowLoadFailed).toBe(false)
+    // With messages on screen a failed reload keeps them and says so in a toast.
+    http.handle = () => Promise.reject(new Error('offline'))
+    await chat.jumpToLatest()
+    expect(toast).toHaveBeenCalledOnce()
+  })
   it('distinguishes missing anchor/network failure, drops stale failure and jumps locally', async () => {
     const chat = setup(), toast = vi.spyOn(useToastStore(), 'info')
     http.handle = () => Promise.reject({ status: 404 })

@@ -52,6 +52,10 @@ jobs:
             specs: smoke.spec.ts roles.spec.ts
           - name: audio
             specs: audio-stall.spec.ts late-join.spec.ts
+          # The layout specs that seat a member in a Talk: the voice panel and
+          # the clipping sweep's smoke subset (its Talk scenes).
+          - name: layout
+            specs: voice-panel-layout.spec.ts clipping.spec.ts
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

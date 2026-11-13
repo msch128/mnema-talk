@@ -24,6 +24,7 @@ import DmMuteButton from '../../dm/components/DmMuteButton.vue'
 import { useDmChat } from '../../dm/composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
+import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
 // The channel header (48px, aligned with the side columns; 40px in the Talk's
 // chat) and the desktop notification opt-in under it, shown until answered or dismissed.
@@ -93,8 +94,8 @@ watch(() => chatStore.activeChannel?.id, () => { topicOpen.value = false })
 // The name keeps the room it needs; only beside a topic is it capped so the
 // topic stays visible too.
 const titleClass = computed(() => {
-  if (!showTopic.value) return 'min-w-0'
-  return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-none'
+  if (!showTopic.value) return ''
+  return 'shrink-0 max-w-[60%] max-md:shrink max-md:max-w-full'
 })
 
 const hasSaved = computed(() => serverFeatures.has('saved'))
@@ -127,7 +128,7 @@ function openNotificationMenu(e: MouseEvent) {
   <header
     ref="headerEl"
     :class="[
-      'px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
+      '@container px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10',
       panel ? 'h-10' : 'h-12'
     ]"
   >
@@ -136,19 +137,21 @@ function openNotificationMenu(e: MouseEvent) {
       <NavDrawerButton v-if="!panel" />
       <DmHeaderTitle v-if="richDm && dm" :dm="dm" @members="showInfo = true" />
       <component :is="channelIcon" v-if="!richDm" class="w-5 h-5 max-md:hidden text-mnema-tertiary shrink-0" />
-      <div v-if="!richDm" class="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
+      <div v-if="!richDm" class="flex min-w-[3rem] items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-0">
         <span
+          v-full-text
           data-testid="chat-channel-name"
-          :class="['font-semibold text-base text-mnema-text truncate', titleClass]"
+          :class="['min-w-[3em] max-md:max-w-full font-semibold text-base text-mnema-text truncate', titleClass]"
         >
           {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>
         <button
           v-if="showTopic"
           type="button"
+          v-full-text
           data-testid="channel-topic"
           :aria-expanded="topicOpen ? 'true' : 'false'"
-          class="min-w-0 max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
+          class="min-w-[3em] md:@max-[32rem]:hidden max-md:max-w-full truncate text-left text-sm text-mnema-muted hover:text-mnema-text md:ml-1 md:border-l md:border-mnema-border md:pl-3 max-md:text-xs"
           @click="topicOpen = !topicOpen"
         >{{ chatStore.activeChannel?.topic }}</button>
       </div>
@@ -158,12 +161,13 @@ function openNotificationMenu(e: MouseEvent) {
         class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
+      <!-- On a phone the chip is its icon only: the note under the header says it in full. -->
       <span
         v-if="autoDelete"
         data-testid="auto-delete-chip"
         class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="effectLine(autoDelete)"
-      ><Timer class="h-3 w-3" aria-hidden="true" />{{ periodLabel(autoDelete.hours) }}</span>
+      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="max-md:sr-only">{{ periodLabel(autoDelete.hours) }}</span></span>
     </div>
 
     <!-- Right: Badges & member list toggle -->
@@ -242,10 +246,10 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
       <button
         v-else
-        @click="chatStore.showMemberList = !chatStore.showMemberList"
+        @click="toggleMemberList(chatStore)"
         class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('members.toggle')"
-        :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
+        :aria-pressed="memberListShown(chatStore.showMemberList) ? 'true' : 'false'"
       >
         <Users class="w-5 h-5" />
       </button>
@@ -261,7 +265,8 @@ function openNotificationMenu(e: MouseEvent) {
 
   <DmInfoDialog v-if="showInfo && dm" :dm="dm" @close="showInfo = false" />
 
-  <!-- Desktop notification opt-in: shown until answered or dismissed -->
+  <!-- Desktop notification opt-in: shown until answered or dismissed. A short
+       window keeps it to one line, its title, so the messages keep their room. -->
   <div
     v-if="showNotifHint"
     class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm shrink-0"
@@ -271,7 +276,7 @@ function openNotificationMenu(e: MouseEvent) {
     <Bell class="w-4 h-4 text-mnema-accent shrink-0" />
     <p class="min-w-0 flex-1 text-mnema-muted">
       <span class="font-medium text-mnema-text">{{ $t('notifications.hintTitle') }}</span>
-      <span class="ml-2">{{ $t('notifications.hintBody') }}</span>
+      <span class="ml-2 [@media(max-height:40rem)]:hidden">{{ $t('notifications.hintBody') }}</span>
     </p>
     <button
       type="button"

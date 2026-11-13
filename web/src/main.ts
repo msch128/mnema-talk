@@ -19,6 +19,7 @@ import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'
+import { fullText } from './directives/fullText'
 
 // Before login the browser decides; the account's language takes over after login.
 setLocale(browserLocale())
@@ -35,6 +36,7 @@ createApp(root)
   .use(createPinia())
   .use(i18nPlugin)
   .directive('tooltip', tooltip)
+  .directive('fullText', fullText)
   .directive('maxChars', maxChars)
   .mount('#app')
 

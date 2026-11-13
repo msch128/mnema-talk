@@ -119,16 +119,17 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
   >
     <p class="sr-only" role="status" aria-live="polite" data-testid="viewer-live">{{ announcement }}</p>
 
-    <header class="flex items-start justify-between gap-3 px-4 py-3">
-      <div class="flex min-w-0 items-center gap-3">
+    <!-- The file's name and sender keep at least 12em; on a narrow screen the buttons wrap below them. -->
+    <header class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+      <div class="flex min-w-[12em] flex-1 items-center gap-3">
         <UserAvatar v-if="message" :user="{ display_name: message.senderName, avatar_url: message.senderAvatarUrl }" size="sm" />
         <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-mnema-text" data-testid="viewer-name">{{ item.name }}</p>
-          <p v-if="message" class="truncate text-xs text-mnema-secondary" data-testid="viewer-sender">
+          <p v-full-text class="truncate text-sm font-medium text-mnema-text" data-testid="viewer-name">{{ item.name }}</p>
+          <p v-full-text v-if="message" class="truncate text-xs text-mnema-secondary" data-testid="viewer-sender">
             <span class="text-mnema-text">{{ message.senderName }}</span>
             · {{ sentAt }}<template v-if="message.channelName"> · {{ $t('viewer.inChannel', { channel: message.channelName }) }}</template>
           </p>
-          <p v-if="details" class="truncate font-mono text-xs text-mnema-tertiary" data-testid="viewer-details">{{ details }}</p>
+          <p v-full-text v-if="details" class="truncate font-mono text-xs text-mnema-tertiary" data-testid="viewer-details">{{ details }}</p>
         </div>
       </div>
       <div class="flex shrink-0 items-center gap-1">

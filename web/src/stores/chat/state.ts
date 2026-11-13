@@ -32,6 +32,8 @@ function channelState() {
     isLoadingBefore: ref(false),
     isLoadingAfter: ref(false),
     isLoadingWindow: ref(false),
+    // The newest page of the open channel could not be loaded: the chat says so instead of "no messages yet".
+    windowLoadFailed: ref(false),
     // Live messages that could not join the window (it doesn't reach the newest end).
     missedLiveCount: ref(0),
     // Change signals for the view: what caused the last window update.

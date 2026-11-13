@@ -103,7 +103,7 @@ onMounted(refresh)
           <Monitor class="h-4 w-4 shrink-0 text-mnema-tertiary" aria-hidden="true" />
           <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-center gap-x-2 text-sm text-mnema-text">
-              <span class="truncate">{{ name(s) }}</span>
+              <span v-full-text class="truncate">{{ name(s) }}</span>
               <span v-if="s.current" class="rounded-full bg-mnema-accent-subtle px-2 py-0.5 text-xs text-mnema-accent" data-testid="session-current">{{ $t('security.sessions.thisDevice') }}</span>
               <span v-if="s.push" class="inline-flex items-center gap-1 text-xs text-mnema-tertiary" data-testid="session-push"><Bell class="h-3 w-3" aria-hidden="true" />{{ $t('security.sessions.push') }}</span>
             </p>

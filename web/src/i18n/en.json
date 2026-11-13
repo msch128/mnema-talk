@@ -62,6 +62,7 @@
   "user": {
     "avatar": "Profile picture",
     "openProfile": "Open your profile",
+    "openProfileFull": "Open your profile ({name} · {status})",
     "deleted": "Deleted member"
   },
   "viewer": {
@@ -1149,6 +1150,7 @@
     "messageNotFound": "Message not found",
     "replyTargetGone": "The message you were replying to is gone. Your message was sent without the reply.",
     "messageLoadFailed": "Couldn’t load the message. Try again.",
+    "windowLoadFailed": "Couldn’t load the messages.",
     "editFailed": "Couldn’t save your change. Try again.",
     "deleteFailed": "Couldn’t delete the message. Try again.",
     "sendFailed": "Couldn’t send the message. Try again.",
@@ -1297,6 +1299,7 @@
   },
   "thread": {
     "title": "Thread",
+    "back": "Back to the chat",
     "close": "Close thread",
     "follow": "Follow thread",
     "unfollow": "Unfollow thread",
@@ -1334,8 +1337,10 @@
     "joinToTalk": "Click Join to start the conversation.",
     "panel": {
       "label": "Voice connection",
+      "status": "Connected",
       "connected": "Connected · {channel}",
       "open": "Open the Talk",
+      "openNamed": "Open the Talk “{channel}”",
       "details": "Connection details"
     },
     "cameraFailed": "Camera unavailable. Check the permission in your browser.",

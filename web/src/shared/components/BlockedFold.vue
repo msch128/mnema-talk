@@ -45,7 +45,7 @@ async function show(event: Event) {
     :class="['inline-flex min-w-0 items-center text-mnema-tertiary', small ? 'gap-1' : 'gap-2 text-sm']"
   >
     <EyeOff :class="['shrink-0', small ? 'h-3.5 w-3.5' : 'h-4 w-4']" aria-hidden="true" />
-    <span class="truncate italic">{{ $t('blocks.collapsed') }}</span>
+    <span v-full-text class="truncate italic">{{ $t('blocks.collapsed') }}</span>
     <template v-if="passive">
       <span aria-hidden="true">· <span class="text-mnema-accent">{{ $t('blocks.show') }}</span></span>
       <span class="sr-only">{{ $t('blocks.showWithEnter') }}</span>

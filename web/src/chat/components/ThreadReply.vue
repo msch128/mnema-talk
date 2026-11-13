@@ -122,6 +122,7 @@ const { pickerId, editingId, editText } = props.actions
           <button
             type="button"
             data-testid="author-name"
+            v-full-text
             @click="chatStore.openUserProfile(reply)"
             class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate text-left focus-visible:text-mnema-accent"
           >

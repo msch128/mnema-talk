@@ -196,12 +196,12 @@ onMounted(() => load(false))
           <span class="min-w-0 flex-1 flex flex-col gap-0.5 md:flex-row md:items-baseline md:gap-x-3">
             <span class="flex min-w-0 flex-wrap items-baseline gap-x-3 md:shrink-0">
               <span class="text-mnema-tertiary whitespace-nowrap font-mono text-xs">{{ when(e.created_at) }}</span>
-              <span class="text-mnema-text font-medium wrap-break-word">{{ e.actor_name || $t('audit.system') }}</span>
+              <span class="min-w-0 text-mnema-text font-medium wrap-anywhere">{{ e.actor_name || $t('audit.system') }}</span>
               <BotBadge v-if="e.actor_id && botIds.has(e.actor_id)" />
             </span>
             <span class="flex min-w-0 flex-wrap items-baseline gap-x-2">
-              <span class="text-mnema-accent wrap-break-word">{{ actionLabel(e.action) }}</span>
-              <span v-if="targetLabel(e)" class="text-mnema-muted wrap-break-word">{{ targetLabel(e) }}</span>
+              <span class="min-w-0 text-mnema-accent wrap-anywhere">{{ actionLabel(e.action) }}</span>
+              <span v-if="targetLabel(e)" class="min-w-0 text-mnema-muted wrap-anywhere">{{ targetLabel(e) }}</span>
               <BotBadge v-if="e.target_id && botIds.has(e.target_id)" />
             </span>
           </span>

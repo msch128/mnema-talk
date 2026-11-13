@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { boxOf, placeNear, pointBox } from './floatingPosition'
+import { describe, expect, it, vi } from 'vitest'
+import { boxOf, needsSheet, placeNear, pointBox, submenuOffsets, visibleArea } from './floatingPosition'
 
 const view = { width: 1000, height: 800 }
 const menu = { width: 200, height: 300 }
@@ -45,5 +45,40 @@ describe('placeNear', () => {
 describe('boxOf', () => {
   it('copies the four edges and nothing else', () => {
     expect(boxOf({ left: 1, top: 2, right: 3, bottom: 4, width: 2, height: 2 } as DOMRect)).toEqual({ left: 1, top: 2, right: 3, bottom: 4 })
+  })
+})
+
+describe('submenuOffsets', () => {
+  const panel = (left: number, top: number, width = 180, height = 200) => ({ left, top, right: left + width, bottom: top + height, width })
+  it('leaves a submenu that fits beside its row', () => {
+    expect(submenuOffsets(panel(300, 100), boxOf({ left: 100, top: 100, right: 290, bottom: 136 }), view)).toEqual({ flip: false, shift: 0, shiftX: 0 })
+  })
+  it('flips to the left of its row at the right edge, and moves up at the bottom', () => {
+    expect(submenuOffsets(panel(900, 700), boxOf({ left: 700, top: 700, right: 890, bottom: 736 }), view)).toEqual({ flip: true, shift: -108, shiftX: 0 })
+  })
+  it('shifts back into a window too narrow for either side', () => {
+    expect(submenuOffsets(panel(200, 100), boxOf({ left: 10, top: 100, right: 190, bottom: 136 }), { width: 300, height: 800 }).shiftX).toBe(-88)
+  })
+})
+
+describe('needsSheet', () => {
+  it('asks for a sheet only when the menu is taller than the window less its margins', () => {
+    expect(needsSheet(780, 800)).toBe(false)
+    expect(needsSheet(790, 800)).toBe(true)
+  })
+})
+
+describe('visibleArea', () => {
+  it('is the visual viewport less the safe-area insets #app keeps clear', () => {
+    const app = document.createElement('div')
+    app.id = 'app'
+    app.style.paddingTop = '47px'
+    app.style.paddingBottom = '34px'
+    document.body.appendChild(app)
+    vi.stubGlobal('visualViewport', { offsetTop: 0, height: 844, width: 390 })
+    expect(visibleArea()).toEqual({ top: 47, bottom: 810, width: 390 })
+    vi.unstubAllGlobals()
+    app.remove()
+    expect(visibleArea().top).toBe(0)
   })
 })

@@ -144,7 +144,7 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
           <FileX v-if="att.is_deleted" :class="s.icon" aria-hidden="true" />
           <FileText v-else :class="s.icon" />
           <span v-if="att.is_deleted" class="truncate text-mnema-tertiary line-through" :title="att.original_filename">{{ att.original_filename }}</span>
-          <a v-else :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">
+          <a v-else v-full-text :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">
             {{ att.original_filename }}
           </a>
         </div>

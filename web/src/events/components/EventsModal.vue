@@ -221,8 +221,9 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
             <!-- Header: Title & Badges -->
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <h3 class="truncate text-base font-semibold text-mnema-text">
+                <h3 v-full-text class="truncate text-base font-semibold text-mnema-text">
                   <button
+                    v-full-text
                     type="button"
                     class="max-w-full truncate hover:text-mnema-accent cursor-pointer"
                     @click="selectedEvent = event"
@@ -243,7 +244,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                   </div>
                   <div v-else-if="event.location" class="flex items-center gap-1">
                     <MapPin class="w-3.5 h-3.5 text-mnema-tertiary" />
-                    <span class="truncate max-w-40">{{ event.location }}</span>
+                    <span v-full-text class="truncate max-w-40">{{ event.location }}</span>
                   </div>
                 </div>
               </div>
@@ -273,7 +274,8 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
             <!-- Description Preview -->
             <p
               v-if="event.description"
-              class="line-clamp-2 text-xs text-mnema-secondary cursor-pointer"
+              v-full-text
+              class="line-clamp-2 wrap-anywhere text-xs text-mnema-secondary cursor-pointer"
               @click="selectedEvent = event"
             >
               {{ event.description }}
