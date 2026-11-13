@@ -66,19 +66,20 @@ func envOr(get func(string) string, key, def string) string {
 }
 
 // origins are the default release workflows (after and before the move to
-// mnema-xyz), or exactly one origin when UPDATER_CERT_IDENTITY_REGEXP or
-// UPDATER_SOURCE_URL is set (a fork's own workflow); an unset one of the two
-// then takes the default of the current repository.
-func origins(get func(string) string) []imageverify.Origin {
+// mnema-xyz), or exactly one origin when UPDATER_CERT_IDENTITY_REGEXP and
+// UPDATER_SOURCE_URL are set (a fork's own workflow). Setting only one of the
+// two is refused: filling the other from a default would pair one owner's
+// signature with another owner's provenance.
+func origins(get func(string) string) ([]imageverify.Origin, error) {
 	identity := envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", "")
 	source := envOr(get, "UPDATER_SOURCE_URL", "")
-	if identity == "" && source == "" {
-		return imageverify.DefaultOrigins()
+	switch {
+	case identity == "" && source == "":
+		return imageverify.DefaultOrigins(), nil
+	case identity == "" || source == "":
+		return nil, errors.New("set UPDATER_CERT_IDENTITY_REGEXP and UPDATER_SOURCE_URL together (the workflow that signs and the repository it builds from)")
 	}
-	return []imageverify.Origin{{
-		IdentityRegexp: envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", imageverify.DefaultIdentity),
-		Source:         envOr(get, "UPDATER_SOURCE_URL", imageverify.DefaultSource),
-	}}
+	return []imageverify.Origin{{IdentityRegexp: identity, Source: source}}, nil
 }
 
 // ParseConfig reads and validates the environment.
@@ -103,9 +104,13 @@ func ParseConfig(get func(string) string) (Config, error) {
 			Repository: repository,
 			Mirrors:    mirrors,
 			Issuer:     envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
-			Origins:    origins(get),
 		},
 	}
+	o, err := origins(get)
+	if err != nil {
+		return c, err
+	}
+	c.Policy.Origins = o
 	if len(c.Token) < 32 {
 		return c, errors.New("UPDATER_TOKEN must be set (at least 32 characters)")
 	}

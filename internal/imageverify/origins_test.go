@@ -1,9 +1,13 @@
 package imageverify_test
 
 import (
+	"context"
+	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/msch128/mnema-talk/internal/imageverify"
 )
 
@@ -98,5 +102,70 @@ func TestRefusalNamesEveryOriginOnOneLine(t *testing.T) {
 	if strings.Count(msg, "carries no signature") != 2 || strings.Contains(msg, "\n") ||
 		strings.Count(msg, imageverify.ErrUntrusted.Error()) != 1 {
 		t.Fatalf("refusal = %q, want both origins once each, one prefix, one line", msg)
+	}
+}
+
+func TestMaxVersionCapsWhatAnOriginMayVouchFor(t *testing.T) {
+	for label, tc := range map[string]struct {
+		max  string
+		want bool
+	}{
+		"no ceiling":                {"", true},
+		"release at the ceiling":    {"1.1.0", true},
+		"release above the ceiling": {"1.0.9", false},
+	} {
+		t.Run(label, func(t *testing.T) {
+			f := newFixture(t)
+			rel := pushBuiltBy(f, "1.0", legacy) // records version 1.1.0
+			f.Sign(rel, LegacyIdentity, rel.Digest)
+			p := f.Policy()
+			p.Origins[1].MaxVersion = tc.max
+			_, err := f.VerifierFor(p, f.Trust()).Verify(context.Background(), f.Repo+":1.0")
+			if tc.want && err != nil {
+				t.Fatalf("refused: %v", err)
+			}
+			if !tc.want && (!errors.Is(err, imageverify.ErrUntrusted) || !strings.Contains(err.Error(), "newer than the last release 1.0.9")) {
+				t.Fatalf("err = %v, want a refusal above the ceiling", err)
+			}
+		})
+	}
+}
+
+// failDigests fails every registry request that names one of the digests,
+// like an outage while one particular manifest is read.
+type failDigests struct {
+	next    http.RoundTripper
+	digests []string
+}
+
+func (f failDigests) RoundTrip(r *http.Request) (*http.Response, error) {
+	for _, d := range f.digests {
+		if strings.Contains(r.URL.Path, d) {
+			return nil, errors.New("connection reset")
+		}
+	}
+	return f.next.RoundTrip(r)
+}
+
+// The first origin refuses (another owner signed); the second could verify
+// but its provenance cannot be read: that is no verdict, not "untrusted".
+func TestARegistryFailureOnTheSecondOriginIsNoVerdict(t *testing.T) {
+	f := newFixture(t)
+	rel := pushBuiltBy(f, "1.0", legacy)
+	f.Sign(rel, LegacyIdentity, rel.Digest)
+	m, err := rel.Index.IndexManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var attestations []string
+	for _, d := range m.Manifests {
+		if d.Annotations["vnd.docker.reference.type"] == "attestation-manifest" {
+			attestations = append(attestations, d.Digest.String())
+		}
+	}
+	v := f.VerifierFor(f.Policy(), f.Trust(), imageverify.WithRemoteOptions(remote.WithTransport(failDigests{http.DefaultTransport, attestations})))
+	_, err = v.Verify(context.Background(), f.Repo+":1.0")
+	if err == nil || errors.Is(err, imageverify.ErrUntrusted) {
+		t.Fatalf("err = %v, want a failure that is not a verdict on the image", err)
 	}
 }
