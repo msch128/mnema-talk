@@ -92,7 +92,8 @@ up, pull, recreate the app, check health. Save this as
 set -uo pipefail
 exec 9>/run/mnema-auto-update.lock; flock -n 9 || exit 0   # never two runs at once
 cd /opt/mnema-talk || exit 1                               # your deployment folder
-HEALTH_WAIT=${HEALTH_WAIT:-180}      # seconds; raise it if a release runs long migrations
+HEALTH_WAIT=${HEALTH_WAIT:-180}      # seconds, at least 5; raise it for long migrations
+[[ $HEALTH_WAIT =~ ^[0-9]+$ ]] && [ "$HEALTH_WAIT" -ge 5 ] || { echo "HEALTH_WAIT must be a number >= 5" >&2; exit 1; }
 bad=/var/lib/mnema-bad-image         # id of a release that failed its health check
 
 img=$(sed -n 's/^MNEMA_IMAGE=//p' .env)
@@ -106,7 +107,7 @@ rollback() { [ -n "$old" ] && docker tag "$old" "$img"; }              # the tag
 if [ "$(cat "$bad" 2>/dev/null)" = "$new" ]; then rollback; exit 0; fi # failed before: do not retry
 
 health() { for _ in $(seq 1 $((HEALTH_WAIT / 5))); do
-  [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk)" = healthy ] && return 0; sleep 5; done; return 1; }
+  [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk 2>/dev/null)" = healthy ] && return 0; sleep 5; done; return 1; }
 
 if ! BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
   echo "backup failed, not updating" >&2; rollback; exit 1           # retried at the next run
@@ -126,7 +127,7 @@ is the only report, so read it now and then (or add a mail or webhook call at th
 `echo` lines). A release that failed its health check is remembered in
 `/var/lib/mnema-bad-image` and not retried until a newer image appears; a failed
 backup is retried at the next run. If `old` is empty (the app container was
-missing) there is nothing to go back to and the script only reports. Things
+missing) the script cannot roll back and only reports it. Things
 to know:
 
 - Members are disconnected for 30 to 60 seconds during an update, so pick the
