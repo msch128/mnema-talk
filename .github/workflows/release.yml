@@ -161,9 +161,15 @@ jobs:
             exit 1
           fi
           work=$(mktemp -d)
+          # Every run of the last 49 hours, of every event, all pages: the
+          # deciding night is at most 48 hours old to pass, and the check for
+          # deleted runs needs every run number after it. One page would let
+          # pull request runs (clip-sweep.yml has them) push the night off it.
+          since=$(date -u -d '-49 hours' +%Y-%m-%dT%H:%M:%SZ)
           for wf in $(python3 scripts/nightly-gate.py --list); do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" > "$work/$wf.workflow.json"
-            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100" > "$work/$wf.runs.json"
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100&created=>=$since" \
+              | jq '{workflow_runs: map(.workflow_runs[])}' > "$work/$wf.runs.json"
             reruns=$(jq -r '.workflow_runs[] | select(.event == "schedule" and .head_branch == "main" and .status == "completed" and .run_attempt > 1) | .id' "$work/$wf.runs.json")
             for id in $reruns; do
               # A first attempt that cannot be read is left out: the gate then blocks and says so.
