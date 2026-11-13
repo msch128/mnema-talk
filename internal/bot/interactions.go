@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -28,6 +29,10 @@ type Commands struct {
 	Online mentions.OnlineSource
 	// Deliver sends interactions to bots; required.
 	Deliver Deliverer
+	// AllowSend takes a post from the bot's limit in a channel (the
+	// authenticator's): an update or @original edit that may notify counts
+	// like a post, as the REST edit does. nil does not limit.
+	AllowSend func(botID, ch uuid.UUID) (bool, time.Duration)
 	// Builtins are the server's own commands (internal/slash), listed and run
 	// next to the bots'; nil means none.
 	Builtins *slash.Registry
@@ -323,4 +328,18 @@ func (c *Commands) ForgettingOnRevoke(revoke func(botID uuid.UUID, tokenID *uuid
 		revoke(botID, tokenID)
 		c.ForgetBot(botID)
 	}
+}
+
+// withinSendLimit takes one post of the interaction's bot in its channel
+// when an update or edit asks for allowed_mentions, and answers 429 itself
+// when there is none.
+func (c *Commands) withinSendLimit(w http.ResponseWriter, in *interaction, am *botapi.BotAllowedMentions) bool {
+	if am == nil || c.AllowSend == nil {
+		return true
+	}
+	ok, retry := c.AllowSend(in.botID, in.channel)
+	if !ok {
+		httpx.WriteDiscordRateLimit(w, retry, false)
+	}
+	return ok
 }

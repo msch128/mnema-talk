@@ -589,7 +589,10 @@ response posts (callback `4`, a follow-up, the first `PATCH @original` after
 callback `5`) and the new text of an update or an `@original` edit take
 `allowed_mentions` exactly like a post: without it they notify the members
 they name and never `@all`, `@here` or a role; with it they notify what it
-asks for and the bot may. `flags` (`64`, ephemeral) is taken by callback `4`,
+asks for and the bot may. An update (callback `7`) or an `@original` edit
+that sends `allowed_mentions` takes a post from the channel's limit of 5 per
+5 seconds, like the REST edit (`429` leaves the interaction to be answered
+otherwise). `flags` (`64`, ephemeral) is taken by callback `4`,
 callback `5` and follow-ups; an `@original` edit refuses it (`400`, "flags
 cannot be set on @original"), because the first response decides whether an
 answer is ephemeral. Every interaction carries the member who caused it in

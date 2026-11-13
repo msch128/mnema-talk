@@ -142,6 +142,9 @@ func (c *Commands) callback(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if req.Type == CallbackUpdate && req.Data != nil && !c.withinSendLimit(w, in, req.Data.AllowedMentions) {
+		return nil // answered 429
+	}
 	in.op.Lock()
 	defer in.op.Unlock()
 	if err := answer(r, in); err != nil {

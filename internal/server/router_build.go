@@ -238,6 +238,7 @@ func (c *components) newBots() {
 	}
 	c.authH.OnAccountEnded = gw.RevokeUser
 	c.cmds.Deliver = gw
+	c.cmds.AllowSend = c.botAuthn.AllowSend
 	c.cmds.Messages = c.chatH.BotMessages()
 	safego.Go("bot_gateway", safego.Crash, func() { gw.Run(c.ctx) })
 	// Both the hub and the gateway learn about permission changes, and the

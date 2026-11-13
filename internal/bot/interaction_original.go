@@ -92,6 +92,9 @@ func (c *Commands) editOriginal(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if !post && !c.withinSendLimit(w, in, req.AllowedMentions) {
+		return nil // answered 429
+	}
 	var msg *core.Message
 	if post {
 		msg, err = c.postOriginal(r, in, req)
