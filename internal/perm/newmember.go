@@ -19,7 +19,7 @@ type NewMemberWaits struct{ Write, React, Speak time.Duration }
 // The permissions each gate takes while it holds. Direct messages are exempt
 // (they do not pass through the gate), and so are Talks of conversations.
 const (
-	writeMask = SendMessages | AttachFiles | MentionEveryone | EditWiki
+	writeMask = SendMessages | AttachFiles | MentionEveryone | EditWiki | CreateMemberInvites
 	reactMask = AddReactions
 	speakMask = Speak | Video // camera and screen share count as speaking
 	// dmCallMask is what the speak wait takes in the call of a conversation.

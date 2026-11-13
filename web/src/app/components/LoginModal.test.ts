@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import LoginModal from './LoginModal.vue'
 import { setLocale, locale } from '../../i18n'
 import { useAuthStore } from '../../stores/auth'
+import { inviteLandingRoute } from '../../shared/lib/inviteLanding'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../../shared/lib/api', async (importOriginal) => ({
@@ -88,6 +89,24 @@ describe('LoginModal', () => {
       method: 'POST',
       json: { username: 'max', display_name: 'max', password: 'member-password-123', invite_code: 'team-code' }
     })
+  })
+
+  it('remembers the channel of the invite for the landing, and forgets it when the sign-up fails', async () => {
+    const invite = { code: 'abc234xyz789', valid: true, communityName: 'Home', expiresAt: '', channelId: 'chan-1' }
+    const channels = [{ id: 'chan-1', type: 'text', slug: 'general' }]
+    const register = async (w: VueWrapper) => {
+      await w.find<HTMLInputElement>('#login-username')!.setValue('max')
+      await w.find('#login-password')!.setValue('member-password-123')
+      await submit(w)
+      await flushPromises()
+    }
+    apiMock.mockImplementation(url => Promise.resolve(url === '/api/auth/register' ? { user } : user))
+    await register(mount(LoginModal, { props: { invite }, global: { stubs: { LegalModal: true } } }))
+    expect(inviteLandingRoute(channels)).toBe('/c/general')
+
+    apiMock.mockRejectedValue(new Error('That username is already taken.'))
+    await register(mount(LoginModal, { props: { invite }, global: { stubs: { LegalModal: true } } }))
+    expect(inviteLandingRoute(channels)).toBeNull()
   })
 
   it('names the minimum password length while registering and refuses a short one before asking the server', async () => {

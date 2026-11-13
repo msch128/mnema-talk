@@ -7,6 +7,9 @@ import { setActivePinia, createPinia } from 'pinia'
 import AdminInvitesTab from './AdminInvitesTab.vue'
 import { setLocale } from '../../i18n'
 import { useToastStore } from '../../stores/toast'
+import { useChatStore } from '../../stores/chat'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { channelFixture } from '../../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../../shared/lib/api', async (importOriginal) => ({
@@ -280,5 +283,27 @@ describe('AdminInvitesTab', () => {
     expect(r.find('button[aria-label="Copy link for invite open-code"]').exists()).toBe(true)
     expect(r.get('[data-testid="invite-edit"]').attributes('aria-label')).toBe('Edit invite open-code')
     expect(r.find('button[aria-label="Delete invite open-code"]').exists()).toBe(true)
+  })
+
+  it('says who created an invite and which channel it lands in', async () => {
+    useChatStore().uncategorized = [channelFixture({ id: 'chan-1', name: 'general' })]
+    apiMock.mockResolvedValue([{ ...invites()[3]!, created_by_name: 'maya', created_by_id: 'u1', channel_id: 'chan-1' }, { ...invites()[2]!, created_by_name: 'otto', created_by_id: 'u2', channel_id: 'unseen' }])
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    expect(row(w, 'soon-code').find('[data-testid="invite-creator"]').text()).toBe('by maya')
+    expect(row(w, 'soon-code').find('[data-testid="invite-channel"]').text()).toBe('into #general')
+    await showAll(w)
+    expect(row(w, 'full-code').find('[data-testid="invite-creator"]').text()).toBe('by otto')
+    expect(row(w, 'full-code').find('[data-testid="invite-channel"]').exists()).toBe(false)
+  })
+
+  it('shows the limits of member invites only on a server that has them', async () => {
+    apiMock.mockResolvedValue(invites())
+    expect(mount(AdminInvitesTab).find('[data-testid="member-invite-limits"]').exists()).toBe(false)
+    useServerFeaturesStore().list = ['invites.member']
+    apiMock.mockImplementation(async path => (path === '/api/admin/invites/limits' ? { max_expires_in_hours: 168, max_uses: 25, max_active: 10, max_per_hour: 10 } : invites()))
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    expect(w.find('[data-testid="member-invite-limits"]').exists()).toBe(true)
   })
 })

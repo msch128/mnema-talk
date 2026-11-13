@@ -120,8 +120,8 @@ after it came in; this part keeps the wave out or holds it back.
 
 **Lockdown.** One click shuts the door: while it is on nobody new can sign
 up, not even with a valid invite (`503 UNAVAILABLE`, "sign-ups are paused for
-now"). *Also pause creating invites* stops `POST /api/admin/invites` as well
-(`409`). It ends by itself after 1, 6 or 24 hours if you choose, otherwise
+now"). *Also pause creating invites* stops `POST /api/admin/invites` and
+`POST /api/me/invites` ([member invites](invites.md)) as well (`409`). It ends by itself after 1, 6 or 24 hours if you choose, otherwise
 when you switch it off. Existing members, their sessions and the Owner are
 untouched. While it is on, administrators see a banner under the header with
 an *End lockdown* button.

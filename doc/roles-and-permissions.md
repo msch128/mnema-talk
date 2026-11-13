@@ -124,7 +124,8 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Disconnect members | Remove members from a Talk | yes |
 | Manage channels | Create, edit, order, delete channels and categories; edit their overwrites | no |
 | Manage roles | Create, edit, order, delete and assign roles below your own highest role | no |
-| Manage invites | Create, list, revoke invite codes; also needed for a ban to revoke the banned member's invite | no |
+| Manage invites | Create (with custom codes, no limits), list, edit and revoke every invite code; set the limits of member invites; also needed for a ban to revoke the banned member's invite | no |
+| Create invites | Create invites within the admin's limits and see and revoke your own, from a channel's menu; never anyone else's ([invites](invites.md), bit `1 << 30`). On for @everyone on a fresh install; an existing install keeps it for the roles that manage invites only, the Owner turns it on elsewhere. A timeout, pending rules and the new-member wait take it | yes |
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 | Manage bots | Create bots, give them roles and tokens, set their intents (see [bots](bots.md)). Only the Owner can grant it | no |
@@ -287,6 +288,7 @@ it is probed with a private channel or exempted with a reason.
 | Pins | *Manage messages*; the pin records who pinned and when |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
 | Mentions | `@all`/`@here` need *Mention @all and @here*; nobody who cannot view the channel is notified |
+| Member invites (`/api/me/invites`) | Creating: *Create invites*, in the channel when one is named (a channel the member cannot see answers 404; a conversation is never one). Listing and revoking: your own only, no permission beyond the session. Limits, the active cap and the per-hour limit are enforced by the server; *Manage invites* holders skip the two caps |
 | `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running. The Talk of a conversation is for the conversation's members only (not the Owner, not Administrators) and needs no *View channels*: overwrites do not apply there, the server-wide permissions do ([talks](talks.md#start-a-talk-from-a-direct-message)) |

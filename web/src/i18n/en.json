@@ -167,6 +167,13 @@
       "srvAWikiPageHoldsAtMost": "A wiki page holds at most 50 KB of text.",
       "srvBaseRevTheRevisionYouEdited": "The revision you edited is missing. Open the page again.",
       "srvHoursMustBeBetween0": "Hours must be between 0 and {a}.",
+      "srvMaxActiveMustBeBetween": "The limit of active invites must be between 1 and 100.",
+      "srvMaxExpiresInHoursMust": "The longest expiry must be between 1 and 8760 hours.",
+      "srvMaxPerHourMustBe": "The limit of invites per hour must be between 1 and 100.",
+      "srvYouAlreadyHaveActive": "You already have {a} active invites. Revoke one first.",
+      "srvYouCanCreateInvites": "You can create {a} invites per hour.",
+      "srvAnInviteCanHaveAtMost": "An invite can have at most {a} uses.",
+      "srvAnInviteCanLastAtMost": "An invite can last at most {a} hours.",
       "invitesPausedLockdown": "Creating invites is paused during a lockdown.",
       "srvJoinLimitMustBeBetween0": "The sign-up limit must be between 0 and {a}.",
       "srvJoinWindowMinutesMustBe": "The sign-up window must be between {a} and {b} minutes.",
@@ -372,7 +379,6 @@
       "srvExpiresAtIsTooFar2": "“expires_at” is too far in the future.",
       "srvExpiresAtMustBeIn": "“expires_at” must be in the future.",
       "srvExpiresAtMustBeWithin": "“expires_at” must be within 8760 hours from now.",
-      "srvExpiresInHoursMustBe": "“expires_in_hours” must be between 1 and 8760.",
       "srvFileIsEmpty": "The file is empty.",
       "srvFileStorageIsAlmostFull": "File storage is almost full. Uploads are paused.",
       "srvFileStorageIsFullUploads": "File storage is full. Uploads are paused.",
@@ -413,7 +419,6 @@
       "srvMaxMentionsMustBeBetween": "“max_mentions” must be between 1 and {a}.",
       "srvMaxUploadMbMustBe": "The upload limit must be between 1 and {a} MB.",
       "srvMaxUsesMustBeAt": "“max_uses” must be at least the {a} uses already consumed.",
-      "srvMaxUsesMustBeBetween": "“max_uses” must be between 1 and 1000.",
       "srvMediaFileIsMissingFrom": "The media file is missing from storage.",
       "srvMediaHasExpiredOrWas": "The media has expired or was deleted.",
       "srvMediaNotFound": "That media file wasn’t found.",
@@ -3263,6 +3268,47 @@
     "view_wiki": {
       "name": "View the wiki",
       "desc": "Read the wiki. On for @everyone; switch it off there to close the wiki to members without a role that has it."
+    },
+    "create_member_invites": {
+      "name": "Create invites",
+      "desc": "Create invites within the limits the admins set, and see and revoke your own, for example from a channel’s menu. Can be allowed or denied per channel. A timeout and the new-member wait take it away."
+    }
+  },
+  "memberInvites": {
+    "menu": "Invite people",
+    "title": "Invite people to {name}",
+    "intro": "Anyone with this link can sign up and join {name}. Share it only with people you want here.",
+    "link": "Invite link",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "expiry": "The link works for",
+    "making": "Making your link…",
+    "failed": "Couldn’t make an invite. Try again.",
+    "uses": "Up to {count} people can sign up with it.",
+    "yours": "Your invites",
+    "yoursHint": "Revoke an invite to take its link back. Accounts that already signed up stay.",
+    "none": "You have no invites yet.",
+    "used": "{used} of {max} used",
+    "expires": "Expires {date}",
+    "expired": "Expired",
+    "usedUp": "Used up",
+    "revoke": "Revoke",
+    "revokeNamed": "Revoke invite {code}",
+    "revoked": "Invite revoked",
+    "revokeFailed": "Couldn’t revoke the invite. Try again.",
+    "done": "Done",
+    "by": "by {name}",
+    "into": "into #{name}",
+    "limits": {
+      "title": "Invites from members",
+      "hint": "Members who hold the Create invites permission make invites within these limits. Holders of Manage invites are not held to the last two.",
+      "hours": "Longest validity (hours)",
+      "uses": "Most uses of one invite",
+      "active": "Active invites per member",
+      "perHour": "New invites per member per hour",
+      "invalid": "Use whole numbers: validity 1 to 8760 hours, uses 1 to 1000, active invites and invites per hour 1 to 100.",
+      "saved": "Limits saved",
+      "loadFailed": "Couldn’t load the limits."
     }
   },
   "audit": {
@@ -3351,7 +3397,10 @@
         "create": "Invite created",
         "update": "Invite edited",
         "revoke": "Invite revoked",
-        "vanity_link": "Vanity link changed"
+        "vanity_link": "Vanity link changed",
+        "limits": "Member invite limits changed",
+        "member_create": "Member invite created",
+        "member_revoke": "Member invite revoked"
       },
       "webhook": {
         "create": "Webhook created",

@@ -22,12 +22,20 @@ describe('permission bits', () => {
     expect(ADMIN_AREA_KEYS).not.toContain('administrator')
   })
 
+  it('holds the last bit the helpers can handle: create_member_invites is bit 30, positive and testable', () => {
+    expect(PERMISSION_BITS.create_member_invites).toBe(2 ** 30)
+    expect(hasPermission(PERMISSION_BITS.create_member_invites, 'create_member_invites')).toBe(true)
+    expect(setPermission(0, 'create_member_invites', true)).toBe(2 ** 30)
+    expect(setPermission(DEFAULT_EVERYONE, 'create_member_invites', false)).toBe(DEFAULT_EVERYONE - 2 ** 30)
+  })
+
   it('default @everyone to what members could always do', () => {
-    expect(DEFAULT_EVERYONE).toBe(990 + 4194304 + 536870912) // plus send_direct_messages and view_wiki
+    expect(DEFAULT_EVERYONE).toBe(990 + 4194304 + 536870912 + 1073741824) // plus send_direct_messages, view_wiki and create_member_invites
     for (const key of ['view_channel', 'send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'connect', 'speak', 'video'] as const) {
       expect(hasPermission(DEFAULT_EVERYONE, key)).toBe(true)
     }
     expect(hasPermission(DEFAULT_EVERYONE, 'view_wiki')).toBe(true)
+    expect(hasPermission(DEFAULT_EVERYONE, 'create_member_invites')).toBe(true)
     for (const key of ['administrator', 'manage_messages', 'manage_channels', 'manage_roles', 'create_invites', 'manage_members', 'edit_wiki', 'manage_wiki'] as const) {
       expect(hasPermission(DEFAULT_EVERYONE, key)).toBe(false)
     }

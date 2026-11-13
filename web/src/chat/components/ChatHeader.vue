@@ -22,6 +22,7 @@ import DmHeaderTitle from '../../dm/components/DmHeaderTitle.vue'
 import DmMuteButton from '../../dm/components/DmMuteButton.vue'
 import { useDmChat } from '../../dm/composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
+import { inviteMenuItems } from '../lib/channelInvite'
 import { quoteValue } from '../lib/searchQuery'
 import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
@@ -119,7 +120,8 @@ function openNotificationMenu(e: MouseEvent) {
   if (!channel) return
   if (!(e.currentTarget instanceof Element)) return
   const rect = e.currentTarget.getBoundingClientRect()
-  emit('menu', Math.max(8, rect.right - 200), rect.bottom + 4, notificationMenuItems(channel.id))
+  const invite = inviteMenuItems(channel.id)
+  emit('menu', Math.max(8, rect.right - 200), rect.bottom + 4, invite.length ? [...notificationMenuItems(channel.id), { type: 'separator' }, ...invite] : notificationMenuItems(channel.id))
 }
 </script>
 
@@ -211,6 +213,7 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
       <button
         v-if="chatStore.activeChannel && !isDm"
+        data-testid="channel-menu-button"
         @click="openNotificationMenu"
         class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('notifications.channelSettings')"

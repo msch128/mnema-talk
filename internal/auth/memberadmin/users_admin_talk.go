@@ -180,4 +180,5 @@ func (h *API) canModerateVoiceChannel(r *http.Request, actor perm.Subject, ch uu
 // checked per Talk.
 func (h *API) MountAuthenticated(r chi.Router) {
 	r.Post("/channels/{id}/voice/{userID}/disconnect", httpx.Handle(h.disconnectFromTalk))
+	h.mountMemberInvites(r)
 }

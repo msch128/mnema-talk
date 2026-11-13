@@ -21,6 +21,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"auth.email_set": VisPrivileged, "auth.email_remove": VisPrivileged, "auth.email_verified": VisPrivileged, "auth.password_reset_mail": VisPrivileged,
 		// Admin routes.
 		"invite.create": VisAuditors, "invite.vanity_link": VisAuditors, "invite.update": VisAuditors, "invite.revoke": VisAuditors,
+		"invite.limits": VisAuditors, "invite.member_create": VisAuditors, "invite.member_revoke": VisAuditors,
 		"user.disable": VisAuditors, "user.enable": VisAuditors, "user.sessions_revoke": VisAuditors,
 		"user.status": VisAuditors, "user.talk_kick": VisAuditors, "user.roles_set": VisAuditors,
 		"user.password_set": VisPrivileged, "user.password_reset": VisPrivileged, "user.lockout_clear": VisPrivileged,

@@ -22,7 +22,7 @@ func TestMemberAdminHandlersPropagateDatabaseCancellation(t *testing.T) {
 		handler           func(*API) httpx.HandlerFunc
 		id                uuid.UUID
 	}{
-		{"invitation list", "FROM invites ORDER BY", "", func(h *API) httpx.HandlerFunc { return h.listInvites }, member.ID},
+		{"invitation list", "ORDER BY i.created_at", "", func(h *API) httpx.HandlerFunc { return h.listInvites }, member.ID},
 		{"admin list", "ORDER BY role = 'admin' DESC", "", func(h *API) httpx.HandlerFunc { return h.listUsers }, member.ID},
 		{"disable", "UPDATE users SET disabled_at", "", func(h *API) httpx.HandlerFunc { return h.disableUser }, member.ID},
 		{"enable", "UPDATE users SET disabled_at", "", func(h *API) httpx.HandlerFunc { return h.enableUser }, member.ID},
