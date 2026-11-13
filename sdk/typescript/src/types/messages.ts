@@ -119,6 +119,8 @@ export interface Message {
   poll?: Poll
   pinned_at?: string
   pinned_by?: UserRef
+  /** When the server deletes the message, the end of its lifetime (doc/timed-messages.md); absent on a message without one. */
+  expires_at?: string
   last_activity_at?: string
   title?: string
   tags?: unknown[]
@@ -213,6 +215,12 @@ export interface CreateMessageData {
   allowed_mentions?: AllowedMentions
   message_reference?: MessageReference
   parent_id?: string
+  /**
+   * Seconds after which the server deletes the message, as for a member: 60 to
+   * 2,592,000 and at most the community's ceiling (doc/timed-messages.md).
+   * Refused with 400 when lifetimes are off or out of bounds.
+   */
+  lifetime_seconds?: number
 }
 
 /** Body of PATCH /channels/{id}/messages/{id}: absent fields stay. */

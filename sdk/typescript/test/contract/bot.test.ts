@@ -91,6 +91,17 @@ describe('contract with a running server', { skip }, () => {
     assert.equal((await client.rest.getMessage(env.channel, posted.id)).content, content)
   })
 
+  test('a message with a lifetime carries its end, in the answer, the event and a read', async () => {
+    const content = `contract ${run}: gone in an hour`
+    const seen = next(client, 'messageCreate', (m) => m.content === content)
+    const posted = await client.rest.createMessage(env.channel, { content, lifetime_seconds: 3600 })
+    assert.ok(posted.expires_at, 'expires_at is set')
+    assert.equal(Date.parse(posted.expires_at) - Date.parse(posted.created_at), 3_600_000)
+    const [event] = await seen
+    assert.equal(event.expires_at, posted.expires_at)
+    assert.equal((await client.rest.getMessage(env.channel, posted.id)).expires_at, posted.expires_at)
+  })
+
   let commandId = ''
   test('a command is registered and listed', async () => {
     const cmd = await client.commands.create({

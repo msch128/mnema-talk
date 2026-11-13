@@ -97,6 +97,9 @@ type Message struct {
 	Forward     *Forward     `json:"forward,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
+	// ExpiresAt is when the server deletes the message, the end of its
+	// lifetime; nil on a message without one.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
 // MentionsUser reports whether the message mentions the user with the given id
