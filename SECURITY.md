@@ -506,13 +506,19 @@ details and the limits.
   removes only an archive no export row names), limited to one per account
   per 24 hours by a database lock, is
   streamed into storage while it is made (memory stays at one page of rows; the
-  bounds are enforced while writing), can be downloaded once within 24 hours
-  (the file is spent and deleted only after it was sent completely; an
-  interrupted download can be repeated, and only one download holds it at a
-  time), is swept when expired, and is removed with the account. Because the
-  download changes state, it refuses requests the browser marks as coming from
-  another site (`Sec-Fetch-Site`), so a link or image on another page cannot
-  burn it.
+  bounds are enforced while writing), can be downloaded within 24 hours
+  (an interrupted download leaves it as it was, and only one download holds it
+  at a time; after the first complete download the file stays one more hour,
+  never past its expiry, and is then swept: the server only knows that it sent
+  the last byte, not that a browser, a proxy or a desktop host saved it, and
+  without that hour a copy lost after it left the server would cost the member
+  the day's export), is swept when expired, and is removed with the account.
+  The hour gives a stolen session no file it could not already take in the 24
+  hours before the member's own download; every complete download is audited
+  (`auth.export_download`), and making an export needs the password. Because
+  the download changes state, it refuses requests the browser marks as coming
+  from another site (`Sec-Fetch-Site`) and prefetches (`Sec-Purpose: prefetch`),
+  so a link or image on another page, or a speculative load, cannot start it.
   It holds the member's own profile, settings, roles, messages (channel names
   only for channels they can still view), reactions, upload list, blocks,
   reports they sent, saved message ids and notes, thread follows, a security

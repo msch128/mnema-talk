@@ -85,7 +85,8 @@ const deleteAccount = () => run(async () => {
   window.location.assign('/')
 })
 
-// The file is taken by the first request; look again shortly after.
+// A complete download leaves the file for an hour; look again shortly after,
+// so the button shows how long it stays.
 function afterDownload() {
   clearTimeout(timer)
   timer = setTimeout(refresh, 1500)

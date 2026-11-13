@@ -408,8 +408,13 @@
       },
       "auth.ExportStatus": {
         "properties": {
+          "downloaded_at": {
+            "description": "DownloadedAt is when the export was first downloaded completely.",
+            "format": "date-time",
+            "type": "string"
+          },
           "expires_at": {
-            "description": "ExpiresAt is when a ready export stops being downloadable.",
+            "description": "ExpiresAt is when a ready export stops being downloadable (after a download, the end of the hour in which it can be downloaded again).",
             "format": "date-time",
             "type": "string"
           },
@@ -38950,7 +38955,7 @@
     },
     "/api/users/me/export": {
       "get": {
-        "description": "The caller's newest export: none, pending, ready (with the time it expires), failed, downloaded or expired, and when a new one may be requested.",
+        "description": "The caller's newest export: none, pending, ready (with the time it stops being downloadable), failed, downloaded or expired, and when a new one may be requested. After a complete download the export stays ready for one more hour (never past its expiry) with downloaded_at set, then reads downloaded.",
         "operationId": "getDataExport",
         "responses": {
           "200": {
@@ -39021,7 +39026,7 @@
         ]
       },
       "post": {
-        "description": "GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded once within 24 hours and is then deleted. Needs object storage. Size-bounded; nothing of other members' personal data is included.",
+        "description": "GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded within 24 hours and is deleted one hour after the first complete download. Needs object storage. Size-bounded; nothing of other members' personal data is included.",
         "operationId": "requestDataExport",
         "requestBody": {
           "content": {
@@ -39127,7 +39132,7 @@
     },
     "/api/users/me/export/download": {
       "get": {
-        "description": "The finished ZIP, once: the file is spent and deleted only after it was sent completely, so an interrupted download can be repeated. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site). 404 when there is no ready export, it expired or it was downloaded already.",
+        "description": "The finished ZIP with its Content-Length. An interrupted download leaves the export as it was; after the first complete download the file can be downloaded again for one hour (never past its expiry) and is then deleted, so a copy the client lost after the server sent it is not gone. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site) and prefetches (Sec-Purpose or Purpose: prefetch). 404 when there is no ready export, it expired or its hour after the download is over.",
         "operationId": "downloadDataExport",
         "responses": {
           "200": {
@@ -39151,6 +39156,12 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "Content-Length": {
+                "description": "Size of the archive in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
               }
             }
           },
@@ -39172,7 +39183,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none)."
+            "description": "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none), or it is a prefetch."
           },
           "404": {
             "content": {
@@ -39182,7 +39193,7 @@
                 }
               }
             },
-            "description": "NOT_FOUND: no export is ready, it expired or was downloaded already."
+            "description": "NOT_FOUND: no export is ready, it expired, or the hour after its download is over."
           },
           "429": {
             "content": {
