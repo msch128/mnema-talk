@@ -15,6 +15,7 @@ import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../shared/lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../shared/lib/presence'
 import { MAX_EPHEMERAL } from './types'
+import { messageAnswer, noteBotAnswer } from './botAnswers'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
@@ -41,6 +42,7 @@ type Handlers = { [K in ServerEventType]: (cx: Cx, p: Payload<K>) => void }
 function onInteractionResponse({ cs }: Cx, p: Payload<'interaction_response'>) {
   if (!p?.channel_id) return
   const { id: noteId, deleted, ...rest } = p
+  noteBotAnswer(cs, { channelId: p.channel_id, botName: p.bot_name, ...(noteId ? { messageId: noteId } : {}) })
   const notes = cs.ephemeral.value
   if (deleted && noteId) {
     cs.ephemeral.value = notes.filter(n => n.note_id !== noteId)
@@ -157,6 +159,8 @@ function signalForumPosts({ cs }: Cx, channelId: string | undefined) {
 function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   if (!p) return
   const { cs, authStore } = cx
+  const answer = messageAnswer(p, false)
+  if (answer) noteBotAnswer(cs, answer)
   signalForumPosts(cx, p.channel_id)
   // The author's own send coming back: it replaces the pending copy in place.
   noteEcho(cx, p)
@@ -291,6 +295,8 @@ const HANDLERS: Handlers = {
     if (!p) return
     // Absent components mean none (a bot removed them): the old ones must not stay.
     applyToMessage(cx, p.id, m => { if (!p.components) delete m.components; Object.assign(m, p) })
+    const answer = messageAnswer(p, true)
+    if (answer) noteBotAnswer(cx.cs, answer)
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
     noteDmMessageChanged(cx, p.channel_id)
@@ -307,7 +313,11 @@ const HANDLERS: Handlers = {
   },
   poll_update: (cx, p) => { if (p?.message_id) applyPoll(cx, p.message_id, p.poll) },
   interaction_response: onInteractionResponse,
-  interaction_modal: ({ cs }, p) => { if (p?.channel_id) cs.botModal.value = p },
+  interaction_modal: ({ cs }, p) => {
+    if (!p?.channel_id) return
+    cs.botModal.value = p
+    noteBotAnswer(cs, { channelId: p.channel_id, botName: p.bot_name })
+  },
   webrtc_offer: ({ cs }, p) => { cs.webrtcOfferHandler?.(p) },
   webrtc_candidate: ({ cs }, p) => { cs.webrtcCandidateHandler?.(p) },
   media_handshake: ({ cs }, p) => { cs.mediaHandshakeHandler?.(p) },

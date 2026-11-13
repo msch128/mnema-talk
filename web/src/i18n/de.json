@@ -4142,7 +4142,6 @@
       "needsManageBots": "Zum Hinzufügen eines Bots brauchst du die Berechtigung „Bots verwalten“. Bitte den Owner oder ein Mitglied, das sie hat, den Link zu öffnen.",
       "fromManifest": "Aus dem Manifest des Bots",
       "homepage": "Homepage:",
-      "homepageLink": "Homepage des Bots, eine externe Website: {host}",
       "externalSite": "(externe Website)",
       "offAtFirst": "Zuerst aus: Hake es nur an, wenn der Bot es wirklich braucht.",
       "botCommand": "Vom Bot",
@@ -5244,7 +5243,9 @@
     },
     "pickRange": "Wähle {min} bis {max}",
     "opensLink": "{label}, öffnet {host}",
-    "unsupported": "Dieser Bot hat etwas geschickt, das diese App nicht anzeigen kann."
+    "unsupported": "Dieser Bot hat etwas geschickt, das diese App nicht anzeigen kann.",
+    "working": "{bot} arbeitet daran …",
+    "noAnswer": "{bot} hat nicht geantwortet. Versuch es gleich noch einmal."
   },
   "modals": {
     "from": "Ein Formular von {bot}",

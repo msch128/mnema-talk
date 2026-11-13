@@ -17,6 +17,8 @@ defineProps({
     v-if="msg.components?.length && msg.channel_id"
     :components="msg.components"
     :endpoint="messageComponentsPath(msg.channel_id, msg.id)"
+    :channel-id="msg.channel_id"
+    :message-id="msg.id"
     :bot-name="shownName(msg)"
   />
 </template>

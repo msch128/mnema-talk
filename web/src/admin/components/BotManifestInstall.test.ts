@@ -195,7 +195,9 @@ describe('what the confirm screen makes clear', () => {
     expect(identity.find('h4').exists()).toBe(false)
     const link = identity.get('[data-testid="manifest-homepage"]')
     expect(link.attributes('target')).toBe('_blank')
-    expect(link.attributes('aria-label')).toBe('Homepage of the bot, an external site: example.org')
+    // Named by what it shows (WCAG 2.5.3): the address itself; "(external site)" follows it.
+    expect(link.attributes('aria-label')).toBeUndefined()
+    expect(link.text()).toBe(manifest.homepage)
     expect(identity.get('[data-testid="manifest-homepage-external"]').text()).toBe('(external site)')
   })
 
@@ -238,6 +240,19 @@ describe('adding a bot from an add link', () => {
     expect(w.find('[data-testid="bot-detail"]').exists()).toBe(true)
     expect(document.querySelector('[data-testid="bot-secret-value"]')?.textContent).toBe('mnb_secret')
     expect(w.get('[data-testid="bot-about"]').text()).toContain(manifest.description)
+    document.querySelector<HTMLButtonElement>('[data-testid="bot-secret-done"]')!.click()
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get(`[data-bot-id="${newBot.id}"]`).element)
+    w.unmount()
+  })
+
+  it('brings the confirm screen into view and gives its heading the focus', async () => {
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    const w = mount(BotManifestInstall, { props: { linked: base64url(JSON.stringify(manifest)) }, attachTo: document.body })
+    await flushPromises()
+    expect(scrolled).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+    expect(document.activeElement?.id).toBe('manifest-title')
     w.unmount()
   })
 })

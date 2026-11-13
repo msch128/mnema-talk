@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { ApiOptions } from '../../shared/lib/api'
+import { ApiError } from '../../shared/lib/api'
 import ComponentSelect from './ComponentSelect.vue'
 import MessageComponents from './MessageComponents.vue'
 import { useChatStore } from '../../stores/chat'
@@ -27,9 +28,11 @@ beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
   apiMock.mockReset().mockResolvedValue(undefined)
+  sendMock.mockReset().mockResolvedValue(true)
 })
 
-const mountSelect = (component: ChatComponent) => mount(ComponentSelect, { props: { component }, attachTo: document.body })
+const sendMock = vi.fn<(values: string[]) => Promise<boolean>>()
+const mountSelect = (component: ChatComponent) => mount(ComponentSelect, { props: { component, send: sendMock }, attachTo: document.body })
 const options = (w: ReturnType<typeof mountSelect>) => w.findAll('[role="option"]')
 const key = async (w: ReturnType<typeof mountSelect>, k: string) => w.get('[data-testid="component-select-panel"]').trigger('keydown', { key: k })
 
@@ -48,7 +51,7 @@ describe('a string select', () => {
     expect(w.get('[role="listbox"]').attributes('aria-activedescendant')).toBe(options(w)[2]!.attributes('id'))
     await key(w, 'Enter')
     await flushPromises()
-    expect(w.emitted('choose')).toEqual([[['local']]])
+    expect(sendMock.mock.calls).toEqual([[['local']]])
     expect(w.find('[role="listbox"]').exists()).toBe(false)
     expect(document.activeElement).toBe(trigger.element)
     expect(trigger.text()).toContain('Local')
@@ -68,13 +71,13 @@ describe('a string select', () => {
     expect(w.get('[role="listbox"]').attributes('aria-activedescendant')).toBe(options(w)[2]!.attributes('id'))
     await w.get('[role="listbox"]').trigger('focusout', { relatedTarget: outside })
     expect(w.find('[role="listbox"]').exists()).toBe(false)
-    expect(w.emitted('choose')).toBeUndefined()
+    expect(sendMock).not.toHaveBeenCalled()
     w.unmount()
     outside.remove()
   })
 
   it('stays shut while disabled or while its pick is on the way', async () => {
-    const w = mount(ComponentSelect, { props: { component: env, pending: true } })
+    const w = mount(ComponentSelect, { props: { component: env, pending: true, send: sendMock } })
     await w.get('button[aria-haspopup="listbox"]').trigger('click')
     expect(w.find('[role="listbox"]').exists()).toBe(false)
     expect(w.get('button[aria-haspopup="listbox"]').attributes('aria-busy')).toBe('true')
@@ -85,7 +88,7 @@ describe('a string select', () => {
     await w.get('button[aria-haspopup="listbox"]').trigger('click')
     await key(w, 'Escape')
     expect(w.find('[role="listbox"]').exists()).toBe(false)
-    expect(w.emitted('choose')).toBeUndefined()
+    expect(sendMock).not.toHaveBeenCalled()
     w.unmount()
   })
 
@@ -102,7 +105,7 @@ describe('a string select', () => {
     await options(w)[2]!.trigger('click')
     expect(options(w)[2]!.attributes('aria-selected')).toBe('false')
     await confirm().trigger('click')
-    expect(w.emitted('choose')).toEqual([[['staging', 'prod']]])
+    expect(sendMock.mock.calls).toEqual([[['staging', 'prod']]])
     w.unmount()
   })
 
@@ -127,11 +130,11 @@ describe('user, role and channel selects', () => {
     expect(w.text()).toContain('Nothing matches.')
     await search.trigger('keydown', { key: 'ArrowDown' })
     await search.trigger('keydown', { key: 'Enter' })
-    expect(w.emitted('choose')).toBeUndefined()
+    expect(sendMock).not.toHaveBeenCalled()
     await search.setValue('mi')
     expect(options(w).map(o => o.attributes('data-value'))).toEqual([fixtureId(2)])
     await search.trigger('keydown', { key: 'Enter' })
-    expect(w.emitted('choose')).toEqual([[[fixtureId(2)]]])
+    expect(sendMock.mock.calls).toEqual([[[fixtureId(2)]]])
     w.unmount()
   })
 
@@ -154,9 +157,21 @@ describe('user, role and channel selects', () => {
 
   it('send what was picked to the server, through the message', async () => {
     useChatStore().members = [userFixture({ id: fixtureId(1), username: 'max' })]
-    const w = mount(MessageComponents, { props: { components: [{ type: 1, components: [{ type: 5, custom_id: 'who' }] }], endpoint: '/x', botName: 'B' } })
+    const w = mount(MessageComponents, { props: { components: [{ type: 1, components: [{ type: 5, custom_id: 'who' }] }], endpoint: '/x', channelId: 'c', messageId: 'm', botName: 'B' } })
     await w.get('button[aria-haspopup="listbox"]').trigger('click')
     await w.get('[role="option"]').trigger('click')
     expect(apiMock).toHaveBeenCalledWith('/x', expect.objectContaining({ json: { custom_id: 'who', values: [fixtureId(1)] } }))
+  })
+
+  it('go back to the earlier choice when the server refuses the pick, and say why', async () => {
+    apiMock.mockRejectedValue(new ApiError(409, 'conflict', 'not connected'))
+    const w = mount(MessageComponents, { props: { components: [{ type: 1, components: [env] }], endpoint: '/x', channelId: 'c', messageId: 'm', botName: 'Deployer' } })
+    const trigger = () => w.get('button[aria-haspopup="listbox"]')
+    await trigger().trigger('click')
+    await w.findAll('[role="option"]')[0]!.trigger('click')
+    await flushPromises()
+    expect(trigger().text()).toContain('Production')
+    expect(trigger().text()).not.toContain('Staging')
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is not connected right now. Try again later.')
   })
 })

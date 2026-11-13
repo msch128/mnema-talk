@@ -71,7 +71,7 @@ async function submit() {
 </script>
 
 <template>
-  <BaseDialog :title="modal.title" panel-class="max-w-lg" :close-on-scrim="false" :guard="guard" @close="emit('close')">
+  <BaseDialog :title="modal.title" wrap-title panel-class="max-w-lg" :close-on-scrim="false" :guard="guard" @close="emit('close')">
     <template #default="{ close }">
       <form ref="form" class="space-y-5 overflow-y-auto p-6 max-md:p-5" data-testid="bot-modal" novalidate @submit.prevent="submit">
         <p class="flex min-w-0 items-center gap-2 text-xs text-mnema-tertiary">

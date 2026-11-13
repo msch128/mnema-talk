@@ -148,3 +148,60 @@ test('the Owner adds a bot from its add link; its button updates the message and
     if (botId) await apiFetch(owner, 'DELETE', `/api/admin/bots/${botId}`)
   }
 })
+
+test('on a phone a bot’s rows of buttons stay apart as rows, and its form title is shown whole', async ({ browser, baseURL }) => {
+  test.setTimeout(120_000)
+  const origin = baseURL ?? ''
+  const owner = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage()
+  await signIn(owner)
+  const channelId = responseString(await apiFetch(owner, 'POST', '/api/admin/channels', { name: `bot-phone-${suffix}`, type: 'text' }), 'id')
+  const NAME = `Grid ${suffix}`.slice(0, 24)
+  const manifest = { manifest_version: 1, name: NAME, permissions: ['view_channel', 'send_messages'], intents: ['GUILDS'] }
+  const installed = await apiFetch(owner, 'POST', '/api/admin/bots/install', { manifest, permissions: manifest.permissions, intents: manifest.intents, channel_ids: [channelId] })
+  expect(installed.status).toBe(201)
+  const { bot: created, token: issued } = installed.json as { bot: { id: string }; token: { secret: string } }
+  const gateway = connectGateway(origin, issued.secret)
+  const bot = await request.newContext({ baseURL: origin, extraHTTPHeaders: { Authorization: `Bot ${issued.secret}` } })
+  try {
+    await expect.poll(() => gateway.events.map(e => e.t)).toContain('READY')
+    const rows = Array.from({ length: 5 }, (_, r) => ({ type: 1, components: Array.from({ length: 5 }, (_, c) => ({ type: 2, style: 2, label: `Option ${r}-${c}`, custom_id: `b${r}${c}` })) }))
+    const posted = await bot.post(`/api/bot/v1/channels/${channelId}/messages`, { data: { content: `Grid ${suffix}`, components: rows } })
+    expect(posted.status()).toBe(201)
+    await owner.goto(`/c/${channelId}`)
+    const message = owner.locator(`[data-msg-id="${((await posted.json()) as { id: string }).id}"]`)
+    await expect(message.getByTestId('component-row')).toHaveCount(5)
+
+    // Each row wraps onto two lines here; the space between rows must be clearly larger than inside one.
+    const gaps = await message.getByTestId('component-row').evaluateAll(els => els.map(el => {
+      const buttons = [...el.querySelectorAll('button')]
+      const tops = [...new Set(buttons.map(b => Math.round(b.getBoundingClientRect().top)))].sort((a, b) => a - b)
+      const height = buttons[0]?.getBoundingClientRect().height ?? 0
+      const box = el.getBoundingClientRect()
+      return { lines: tops.length, inside: tops.length > 1 ? (tops[1] ?? 0) - ((tops[0] ?? 0) + height) : 0, top: box.top, bottom: box.bottom }
+    }))
+    expect(gaps.every(g => g.lines > 1), 'the rows wrap on a phone').toBe(true)
+    for (let i = 1; i < gaps.length; i++) {
+      const before = gaps[i - 1]!
+      expect(gaps[i]!.top - before.bottom, `gap between rows ${i - 1} and ${i}`).toBeGreaterThan(before.inside + 2)
+    }
+
+    // A 45-character form title wraps instead of being cut.
+    const TITLE = 'Tell the bot about your deployment window now'
+    expect(TITLE.length).toBe(45)
+    await message.getByTestId('component-button').filter({ hasText: 'Option 0-0' }).click()
+    await expect.poll(() => gateway.interactions().map(i => i.data.custom_id)).toContain('b00')
+    const click = gateway.interactions().find(i => i.data.custom_id === 'b00')!
+    const opened = await bot.post(`/api/bot/v1/interactions/${click.id}/${click.token}/callback`, { data: { type: 9, data: {
+      custom_id: 'window', title: TITLE, components: [{ type: 1, components: [{ type: 4, custom_id: 'when', label: 'When', style: 1 }] }]
+    } } })
+    expect(opened.status()).toBeLessThan(300)
+    const heading = owner.getByRole('dialog').getByRole('heading', { name: TITLE })
+    await expect(heading).toBeVisible()
+    const cut = await heading.evaluate(el => el.scrollWidth > el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis')
+    expect(cut, 'the form title is cut').toBe(false)
+  } finally {
+    gateway.close()
+    await bot.dispose()
+    await apiFetch(owner, 'DELETE', `/api/admin/bots/${created.id}`)
+  }
+})

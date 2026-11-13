@@ -3,6 +3,8 @@
 // (in the flow of the message, so it is never cut off by the viewport). Arrow
 // keys move, Enter or Space picks, Esc closes. A single choice is sent when it
 // is picked; several are sent with Confirm once their number fits the menu.
+// The button shows the pick while it is on its way; a pick the server refuses
+// goes back to the one before (the refusal itself is said under the components).
 import type { PropType } from 'vue'
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { Check, ChevronDown } from '@lucide/vue'
@@ -13,9 +15,10 @@ import { usePermissionsStore } from '../../stores/permissions'
 const props = defineProps({
   component: { type: Object as PropType<Component>, required: true },
   pending: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  /** Sends a pick; true when the server took it. */
+  send: { type: Function as PropType<(values: string[]) => Promise<boolean>>, required: true }
 })
-const emit = defineEmits<{ choose: [values: string[]] }>()
 
 const { choices, searchable, defaults, filtered } = useSelectOptions(() => props.component)
 const bounds = computed(() => selectBounds(props.component))
@@ -58,15 +61,16 @@ function close(focusTrigger = true) {
   if (focusTrigger) void nextTick(() => trigger.value?.focus())
 }
 
-function send(values: string[]) {
+async function submit(values: string[]) {
+  const before = chosen.value
   chosen.value = [...values]
-  emit('choose', values)
   close()
+  if (!(await props.send(values))) chosen.value = before
 }
 
 function pick(value: string) {
   if (!multi.value) {
-    send([value])
+    void submit([value])
     return
   }
   if (selected.value.includes(value)) selected.value = selected.value.filter(v => v !== value)
@@ -174,7 +178,7 @@ watch(query, () => { active.value = 0 })
       <p v-if="!shown.length" class="px-2 py-1.5 text-sm text-mnema-tertiary">{{ $t('components.noMatches') }}</p>
       <div v-if="multi" class="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-mnema-hairline px-1 pt-1.5">
         <span class="text-xs text-mnema-tertiary" data-testid="component-select-bounds">{{ bounds.min === bounds.max ? $t('components.pickExactly', { count: bounds.max }) : $t('components.pickRange', { min: bounds.min, max: bounds.max }) }}</span>
-        <button type="button" class="btn btn-primary btn-sm" :disabled="!valid" data-testid="component-select-confirm" @click="send(selected)">{{ $t('components.confirm') }}</button>
+        <button type="button" class="btn btn-primary btn-sm" :disabled="!valid" data-testid="component-select-confirm" @click="submit(selected)">{{ $t('components.confirm') }}</button>
       </div>
     </div>
   </div>

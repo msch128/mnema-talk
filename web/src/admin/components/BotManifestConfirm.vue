@@ -7,7 +7,7 @@ import type { PropType } from 'vue'
 import { ExternalLink, TriangleAlert } from '@lucide/vue'
 import type { BotCheckedManifest } from '../../types/rest'
 import { botInitial } from '../lib/bots'
-import { homepageHost, INTENT_KEYS, OFF_AT_FIRST, safeHomepage, sharesBuiltinName } from '../lib/manifest'
+import { INTENT_KEYS, OFF_AT_FIRST, safeHomepage, sharesBuiltinName } from '../lib/manifest'
 import BotManifestChannels from './BotManifestChannels.vue'
 
 const props = defineProps({
@@ -36,17 +36,17 @@ function toggle(list: string[], value: string, on: boolean): string[] {
         <img v-if="avatarUrl" :src="avatarUrl" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" data-testid="manifest-avatar" />
         <span v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(manifest.name) }}</span>
         <div class="min-w-0 flex-1 stack-1">
-          <p class="flex min-w-0 items-center gap-1.5 text-sm text-mnema-text">
-            <q class="min-w-0 truncate" :title="manifest.name" data-testid="manifest-name">{{ manifest.name }}</q>
-            <span class="shrink-0 rounded-sm bg-mnema-accent/15 px-1 text-[10px] font-semibold uppercase text-mnema-accent">{{ $t('bots.badge') }}</span>
+          <p class="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-mnema-text">
+            <q class="min-w-0 wrap-anywhere" data-testid="manifest-name">{{ manifest.name }}</q>
+            <span class="shrink-0 rounded-sm bg-mnema-band px-1 text-[10px] font-bold uppercase tracking-wide text-mnema-mint">{{ $t('bots.badge') }}</span>
           </p>
           <blockquote v-if="manifest.description" class="border-l-2 border-mnema-border pl-2 text-sm whitespace-pre-wrap wrap-break-word text-mnema-muted">
             <q data-testid="manifest-description">{{ manifest.description }}</q>
           </blockquote>
           <p v-if="homepage()" class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-mnema-tertiary">
             <span>{{ $t('bots.manifest.homepage') }}</span>
-            <a :href="homepage()" target="_blank" rel="noopener noreferrer nofollow" class="inline-flex min-w-0 max-w-full items-center gap-1 text-mnema-accent underline underline-offset-2" :aria-label="$t('bots.manifest.homepageLink', { host: homepageHost(homepage()) })" data-testid="manifest-homepage">
-              <span class="truncate" :title="homepage()">{{ homepage() }}</span>
+            <a :href="homepage()" target="_blank" rel="noopener noreferrer nofollow" class="inline-flex min-w-0 max-w-full items-center gap-1 text-mnema-accent underline underline-offset-2" data-testid="manifest-homepage">
+              <span class="min-w-0 wrap-anywhere">{{ homepage() }}</span>
               <ExternalLink class="h-3 w-3 shrink-0" aria-hidden="true" />
             </a>
             <span data-testid="manifest-homepage-external">{{ $t('bots.manifest.externalSite') }}</span>
@@ -89,7 +89,7 @@ function toggle(list: string[], value: string, on: boolean): string[] {
       <p v-if="!manifest.commands.length" class="text-sm text-mnema-tertiary">{{ $t('bots.manifest.noCommands') }}</p>
       <ul v-else class="overflow-hidden rounded-lg border border-mnema-hairline" data-testid="manifest-commands">
         <li v-for="command in manifest.commands" :key="command.name" class="border-b border-mnema-hairline px-3 py-2 text-sm last:border-b-0">
-          <span class="font-mono text-mnema-text">/{{ command.name }}</span>
+          <span class="font-mono break-all text-mnema-text">/{{ command.name }}</span>
           <span v-if="sharesBuiltinName(command.name)" class="ml-1.5 rounded-sm bg-mnema-raised px-1 text-[10px] font-semibold uppercase text-mnema-muted" :data-builtin-clash="command.name">{{ $t('bots.manifest.botCommand') }}</span>
           <span v-if="sharesBuiltinName(command.name)" class="block text-xs text-mnema-tertiary">{{ $t('bots.manifest.besideBuiltin', { name: command.name }) }}</span>
           <span v-if="command.description" class="block wrap-break-word text-xs text-mnema-tertiary">{{ command.description }}</span>

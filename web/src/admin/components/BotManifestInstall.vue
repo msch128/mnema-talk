@@ -4,7 +4,7 @@
 // "Add bot" creates it. Afterwards the avatar from the manifest is uploaded and
 // the token is shown once by the Bots tab. A wizard: it does something once, so
 // it has one primary action per step and asks before typed input is dropped.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { FileJson } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
 import { decodeBotBot, decodeBotCheckedManifest, decodeBotInstallResponse } from '../../types/rest'
@@ -59,6 +59,16 @@ function readFailure(reason: 'json' | 'object'): string {
   return t(reason === 'json' ? 'bots.manifest.notJson' : 'bots.manifest.notObject')
 }
 
+const heading = ref<HTMLElement | null>(null)
+
+// Arriving by an add link, the confirm screen may start below the list of bots (a phone, a
+// narrow pane): it is scrolled into view and its heading takes the focus.
+async function showConfirm() {
+  await nextTick()
+  heading.value?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  heading.value?.focus({ preventScroll: true })
+}
+
 async function check() {
   if (busy.value) return
   const read = readManifest(text.value.trim())
@@ -72,6 +82,7 @@ async function check() {
     const result = await api('/api/admin/bots/manifests/check', { method: 'POST', json: read.manifest, decode: decodeBotCheckedManifest })
     manifest.value = read.manifest
     checked.value = result
+    if (props.linked) void showConfirm()
     intents.value = result.intents.map(i => i.name)
     permissions.value = initialPermissions(result.permissions)
     channels.value = []
@@ -137,7 +148,7 @@ onMounted(() => {
 
 <template>
   <section class="min-w-0 stack-4" :aria-labelledby="'manifest-title'" data-testid="manifest-install-flow">
-    <h4 id="manifest-title" class="flex items-center gap-2 text-sm font-semibold text-mnema-text">
+    <h4 id="manifest-title" ref="heading" tabindex="-1" class="flex items-center gap-2 text-sm font-semibold text-mnema-text outline-hidden">
       <FileJson class="h-4 w-4 shrink-0 text-mnema-accent" aria-hidden="true" />
       <span class="min-w-0">{{ checked ? $t('bots.manifest.confirmTitle') : $t('bots.manifest.title') }}</span>
     </h4>

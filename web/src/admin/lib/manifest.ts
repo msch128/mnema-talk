@@ -106,15 +106,6 @@ export function sharesBuiltinName(name: string): boolean {
   return BUILTIN_COMMANDS.has(name.toLowerCase())
 }
 
-/** The host of a homepage, shown next to the link so it reads as another site. */
-export function homepageHost(url: string): string {
-  try {
-    return new URL(url).host
-  } catch {
-    return ''
-  }
-}
-
 /** An https homepage that can be shown as a link, or ''. */
 export function safeHomepage(url: string | undefined): string {
   if (!url) return ''

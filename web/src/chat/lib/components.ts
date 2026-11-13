@@ -16,8 +16,16 @@ export const ROLE_SELECT = 6
 export const CHANNEL_SELECT = 8
 export const LINK_STYLE = 5
 
-/** How long a used button shows that its click is on the way (the server answers 202 at once). */
-export const PENDING_MS = 2500
+/**
+ * How long a click waits for the bot's answer before the member is told it did
+ * not come. A bot has 15 minutes to answer a deferred click, but it is expected
+ * to answer or acknowledge within 3 seconds (Discord's rule, which the SDKs
+ * follow: reply, update or defer at once). 15 seconds covers a slow bot and a slow
+ * link several times over, and is still short enough that a member who clicked
+ * learns in the same moment that nothing came, and may click again. A bot that
+ * deferred (callback 5 or 6) and answers later still shows its answer whenever it comes.
+ */
+export const ANSWER_WAIT_MS = 15_000
 
 const SELECTS: readonly unknown[] = [STRING_SELECT, USER_SELECT, ROLE_SELECT, CHANNEL_SELECT]
 const BUTTON_STYLES: readonly unknown[] = [1, 2, 3, 4, LINK_STYLE]

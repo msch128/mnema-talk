@@ -50,7 +50,7 @@ async function dismiss(id: number) {
             <div v-if="e.title" class="font-semibold text-mnema-text">{{ e.title }}</div>
             <div v-if="e.description" class="whitespace-pre-wrap wrap-break-word text-mnema-muted">{{ e.description }}</div>
           </div>
-          <MessageComponents v-if="n.note_id" :components="n.components ?? null" :endpoint="noteComponentsPath(n.channel_id, n.note_id)" :bot-name="n.bot_name" />
+          <MessageComponents v-if="n.note_id" :components="n.components ?? null" :endpoint="noteComponentsPath(n.channel_id, n.note_id)" :channel-id="n.channel_id" :message-id="n.note_id" :bot-name="n.bot_name" />
         </div>
         <button
           type="button"

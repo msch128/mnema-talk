@@ -35,7 +35,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-const mountRows = (components: ChatActionRow[]) => mount(MessageComponents, { props: { components, endpoint: ENDPOINT, botName: 'Deployer' } })
+const mountRows = (components: ChatActionRow[]) => mount(MessageComponents, { props: { components, endpoint: ENDPOINT, channelId: 'c', messageId: 'm', botName: 'Deployer' } })
 const button = (w: ReturnType<typeof mountRows>, label: string) => w.findAll('[data-testid="component-button"]').find(b => b.text().includes(label))!
 
 describe('buttons of a bot message', () => {
@@ -51,20 +51,77 @@ describe('buttons of a bot message', () => {
     expect(button(w, 'Changelog').attributes('aria-label')).toBe('Changelog, opens example.org')
   })
 
-  it('sends a click with its custom id and refuses a second one while it is on its way', async () => {
-    vi.useFakeTimers()
-    const w = mountRows([row(deploy, cancel)])
+  it('sends a click, keeps it busy with the others off, and says the bot is working until it answers', async () => {
+    const w = mountRows([row(deploy, cancel), row({ type: 3, custom_id: 'env', options: [{ label: 'A', value: 'a' }] }), row(changelog)])
     await button(w, 'Deploy').trigger('click')
-    await button(w, 'Cancel').trigger('click')
     await flushPromises()
-    expect(apiMock).toHaveBeenCalledTimes(1)
     expect(apiMock).toHaveBeenCalledWith(ENDPOINT, expect.objectContaining({ method: 'POST', json: { custom_id: 'deploy:v2.4' } }))
     expect(button(w, 'Deploy').attributes('aria-busy')).toBe('true')
-    vi.advanceTimersByTime(3000)
+    expect(button(w, 'Cancel').attributes('disabled')).toBeDefined()
+    expect(w.get('button[aria-haspopup="listbox"]').attributes('disabled')).toBeDefined()
+    expect(button(w, 'Changelog').attributes('disabled')).toBeUndefined()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is working…')
+    await button(w, 'Cancel').trigger('click')
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    // The bot updates the message the button is on.
+    useChatStore().handleWSEvent({ type: 'message_update', payload: messageFixture({ id: 'm', channel_id: 'c', is_bot: true, display_name: 'Deployer', content: 'Deploying' }) })
     await flushPromises()
     expect(button(w, 'Deploy').attributes('aria-busy')).toBeUndefined()
-    await button(w, 'Cancel').trigger('click')
+    expect(button(w, 'Cancel').attributes('disabled')).toBeUndefined()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('')
+  })
+
+  it.each([
+    ['a new message of the bot', { type: 'message_create', payload: messageFixture({ id: 'n', channel_id: 'c', is_bot: true, display_name: 'Deployer' }) }],
+    ['a private note of the bot', { type: 'interaction_response', payload: { id: fixtureId(9), channel_id: 'c', bot_id: fixtureId(3), bot_name: 'Deployer', content: 'ok', embeds: null, created_at: '2026-01-01T00:00:00Z' } }],
+    ['a form of the bot', { type: 'interaction_modal', payload: { id: fixtureId(9), channel_id: 'c', bot_id: fixtureId(3), bot_name: 'Deployer', bot_avatar_url: '', title: 'T', components: [] } }]
+  ])('ends the wait on %s', async (_what, event) => {
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    useChatStore().handleWSEvent(event as never)
+    await flushPromises()
+    expect(button(w, 'Deploy').attributes('aria-busy')).toBeUndefined()
+  })
+
+  it('keeps waiting through another bot\u2019s answer or one in another channel', async () => {
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    const chat = useChatStore()
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: 'x', channel_id: 'c', is_bot: true, display_name: 'Other' }) })
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: 'y', channel_id: 'elsewhere', is_bot: true, display_name: 'Deployer' }) })
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: 'z', channel_id: 'c', display_name: 'Deployer' }) })
+    await flushPromises()
+    expect(button(w, 'Deploy').attributes('aria-busy')).toBe('true')
+  })
+
+  it('says the bot did not answer after a while, and lets the member click again', async () => {
+    vi.useFakeTimers()
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    await flushPromises()
+    vi.advanceTimersByTime(14_000)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer is working…')
+    vi.advanceTimersByTime(1_000)
+    await flushPromises()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('Deployer did not answer. Try again in a moment.')
+    expect(button(w, 'Deploy').attributes('aria-busy')).toBeUndefined()
+    await button(w, 'Deploy').trigger('click')
     expect(apiMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not wait when the bot answered before the server did', async () => {
+    let answer: () => void = () => undefined
+    apiMock.mockImplementation(() => new Promise(resolve => { answer = () => resolve(undefined) }))
+    const w = mountRows([row(deploy)])
+    await button(w, 'Deploy').trigger('click')
+    useChatStore().handleWSEvent({ type: 'message_update', payload: messageFixture({ id: 'm', channel_id: 'c', is_bot: true, display_name: 'Deployer' }) })
+    answer()
+    await flushPromises()
+    expect(button(w, 'Deploy').attributes('aria-busy')).toBeUndefined()
+    expect(w.get('[data-testid="component-error"]').text()).toBe('')
   })
 
   it.each([

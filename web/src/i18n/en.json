@@ -4142,7 +4142,6 @@
       "needsManageBots": "Adding a bot needs the Manage bots permission. Ask the Owner or a member who has it to open the link.",
       "fromManifest": "From the bot’s manifest",
       "homepage": "Homepage:",
-      "homepageLink": "Homepage of the bot, an external site: {host}",
       "externalSite": "(external site)",
       "offAtFirst": "Off at first: tick it only if the bot really needs it.",
       "botCommand": "The bot’s",
@@ -5244,7 +5243,9 @@
     },
     "pickRange": "Pick {min} to {max}",
     "opensLink": "{label}, opens {host}",
-    "unsupported": "This bot sent something this app cannot show."
+    "unsupported": "This bot sent something this app cannot show.",
+    "working": "{bot} is working…",
+    "noAnswer": "{bot} did not answer. Try again in a moment."
   },
   "modals": {
     "from": "A form from {bot}",
