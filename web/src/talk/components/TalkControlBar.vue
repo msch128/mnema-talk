@@ -136,6 +136,8 @@ function onClickCapture(e: MouseEvent) {
   e.stopPropagation()
 }
 
+// The bar wraps instead of running past a box narrower than itself (a shared
+// screen on a phone); its 28px radius is a pill on one row and a rounded card on two.
 const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
@@ -153,7 +155,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     :data-visible="visible ? 'true' : 'false'"
     :aria-label="t('talk.controls')"
     :class="[
-      'flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated/95 border border-mnema-border shadow-xl shadow-black/40 backdrop-blur-xs',
+      'flex max-w-full flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-[28px] bg-mnema-elevated/95 border border-mnema-border shadow-xl shadow-black/40 backdrop-blur-xs',
       'transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
     ]"
