@@ -19,25 +19,33 @@ export function validLifetime(seconds: number, max = MAX_LIFETIME_SECONDS): bool
 
 /** A lifetime in its largest whole unit, for the chip and the menu ("5 min", "8 h", "1 week"). */
 export function lifetimeLabel(seconds: number): string {
-  if (seconds >= 7 * 24 * 3600 && seconds % (7 * 24 * 3600) === 0) return t('lifetime.weeks', { n: seconds / (7 * 24 * 3600) })
-  if (seconds >= 24 * 3600 && seconds % (24 * 3600) === 0) return t('lifetime.days', { n: seconds / (24 * 3600) })
-  if (seconds >= 3600 && seconds % 3600 === 0) return t('lifetime.hours', { n: seconds / 3600 })
-  return t('lifetime.minutes', { n: Math.max(1, Math.round(seconds / 60)) })
+  const unit = (key: string, n: number) => t(key, { n, count: n })
+  if (seconds >= 7 * 24 * 3600 && seconds % (7 * 24 * 3600) === 0) return unit('lifetime.weeks', seconds / (7 * 24 * 3600))
+  if (seconds >= 24 * 3600 && seconds % (24 * 3600) === 0) return unit('lifetime.days', seconds / (24 * 3600))
+  if (seconds >= 3600 && seconds % 3600 === 0) return unit('lifetime.hours', seconds / 3600)
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  if (minutes > 60) return t('lifetime.hoursMinutes', { h: Math.floor(minutes / 60), m: minutes % 60 })
+  return unit('lifetime.minutes', minutes)
 }
 
-/** What is left of a lifetime, rounded up to its unit: "45 s", "5 min", "3 h", "2 d". */
+/**
+ * What is left of a lifetime: "65 s", "61 min", "25 h", "3 d". A unit takes
+ * over only at twice its size (seconds up to 2 minutes, minutes up to 2
+ * hours, hours up to 2 days), so the rounding up overstates by little.
+ */
 export function remainingLabel(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000))
-  if (s < 60) return t('lifetime.leftSeconds', { n: s })
-  if (s < 3600) return t('lifetime.leftMinutes', { n: Math.ceil(s / 60) })
-  if (s < 24 * 3600) return t('lifetime.leftHours', { n: Math.ceil(s / 3600) })
-  return t('lifetime.leftDays', { n: Math.ceil(s / (24 * 3600)) })
+  const left = (key: string, n: number) => t(key, { n, count: n })
+  if (s < 120) return left('lifetime.leftSeconds', s)
+  if (s < 2 * 3600) return left('lifetime.leftMinutes', Math.ceil(s / 60))
+  if (s < 48 * 3600) return left('lifetime.leftHours', Math.ceil(s / 3600))
+  return left('lifetime.leftDays', Math.ceil(s / (24 * 3600)))
 }
 
-/** How often a remaining-time mark needs to change: every second under a minute, every minute under an hour, and so on. */
+/** How often a remaining-time mark needs to change: every second under 2 minutes, every minute under 2 hours, and so on. */
 export function remainingStep(ms: number): number {
-  if (ms < 60_000) return 1000
-  if (ms < 3_600_000) return 60_000
+  if (ms < 120_000) return 1000
+  if (ms < 7_200_000) return 60_000
   return 3_600_000
 }
 

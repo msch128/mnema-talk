@@ -4724,9 +4724,18 @@
     "offSummary": "Nothing is deleted automatically in this channel.",
     "lineFiles": "Files in this channel are removed automatically once they are older than {period}. The messages stay.",
     "nextRun": "The next check is at {time}.",
-    "confirmCounts": "This removes {messages} messages and {files} files in {name} now, and keeps removing what gets older.",
-    "confirmDefaultBody": "Every channel without a setting of its own follows the default. This removes {messages} messages and {files} files across those channels now, and keeps removing what gets older.",
-    "confirmNoUndo": "This can’t be undone."
+    "confirmCounts": "This removes {what} in {name} now, and keeps removing what gets older.",
+    "confirmDefaultBody": "Every channel without a setting of its own follows the default. This removes {what} across those channels now, and keeps removing what gets older.",
+    "confirmNoUndo": "This can’t be undone.",
+    "messagesCount": {
+      "one": "{n} message",
+      "other": "{n} messages"
+    },
+    "filesCount": {
+      "one": "{n} file",
+      "other": "{n} files"
+    },
+    "and": " and "
   },
   "discordImport": {
     "title": "Import a Discord server structure",
@@ -5230,7 +5239,6 @@
     },
     "limits": "Between 1 minute and {max}.",
     "use": "Use",
-    "notProtection": "Others can still copy or screenshot it.",
     "help": "Disappears for everyone after {time}. Copies, screenshots and notifications can keep it.",
     "minutes": "{n} min",
     "hours": "{n} h",
@@ -5245,8 +5253,13 @@
     "leftSeconds": "{n} s",
     "leftMinutes": "{n} min",
     "leftHours": "{n} h",
-    "leftDays": "{n} d",
+    "leftDays": {
+      "one": "{n} d",
+      "other": "{n} d"
+    },
     "markLabel": "Disappears in {time}",
-    "noPin": "A message with a lifetime can’t be pinned."
+    "noPin": "A message with a lifetime can’t be pinned.",
+    "markPrefix": "Disappears in",
+    "hoursMinutes": "{h} h {m} min"
   }
 }

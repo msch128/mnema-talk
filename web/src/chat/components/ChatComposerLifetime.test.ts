@@ -101,16 +101,16 @@ describe('the remaining-time mark', () => {
     vi.setSystemTime(Date.parse('2026-11-13T10:00:00Z'))
     try {
       const w = mount(LifetimeMark, { props: { expiresAt: '2026-11-13T12:30:00Z' }, global: { directives: { tooltip: () => undefined } } })
-      expect(w.text()).toBe('3 h')
-      expect(w.attributes('aria-label')).toBe('Disappears in 3 h')
+      expect(w.get('[data-testid="lifetime-left"]').text()).toBe('3 h')
+      expect(w.text()).toBe('Disappears in 3 h')
       vi.setSystemTime(Date.parse('2026-11-13T12:28:30Z'))
       now.value = Date.now()
       await flushPromises()
-      expect(w.text()).toBe('2 min')
+      expect(w.get('[data-testid="lifetime-left"]').text()).toBe('90 s')
       vi.setSystemTime(Date.parse('2026-11-13T12:29:50Z'))
       now.value = Date.now()
       await flushPromises()
-      expect(w.text()).toBe('10 s')
+      expect(w.get('[data-testid="lifetime-left"]').text()).toBe('10 s')
     } finally {
       vi.useRealTimers()
     }

@@ -117,7 +117,7 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 max-md:px-2 pb-1 shrink-0">
+  <div class="px-4 max-md:px-2 pb-1 shrink-0" data-testid="chat-composer">
     <SlashCommandBar
       v-if="slash.picked.value && canSend"
       :command="slash.picked.value"
@@ -260,10 +260,11 @@ function handleKeyDown(e: KeyboardEvent) {
       @close="pollOpen = false; textAreaEl?.focus()"
     />
 
+    <!-- What a lifetime does and does not do: the whole line, wrapping on a narrow screen -->
+    <p v-if="lifetime" class="px-1 pt-1 text-xs text-mnema-tertiary" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</p>
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
     <div class="h-5 px-1 pt-0.5 flex items-center justify-between gap-3 text-xs text-mnema-tertiary">
       <span class="truncate" role="status" aria-live="polite" data-testid="typing-indicator">{{ typingText }}</span>
-      <span v-if="lifetime && !typingText" class="min-w-0 truncate" v-tooltip="$t('lifetime.help', { time: lifetimeLabel(lifetime) })" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</span>
       <span
         v-if="limit"
         :class="['shrink-0 tabular-nums', limit.tone === 'warn' ? 'text-mnema-danger' : 'text-mnema-muted']"

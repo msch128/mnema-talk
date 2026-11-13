@@ -37,9 +37,10 @@ export function settingOf(ch: Pick<Channel, 'auto_delete_days' | 'auto_delete_ho
 
 /** A period in its largest whole unit: "6 hours", "2 days", "3 weeks". */
 export function periodLabel(hours: number): string {
-  if (hours >= 168 && hours % 168 === 0) return t('autoDelete.units.weeks', { n: hours / 168 })
-  if (hours >= 24 && hours % 24 === 0) return t('autoDelete.units.days', { n: hours / 24 })
-  return t('autoDelete.units.hours', { n: hours })
+  const unit = (key: string, n: number) => t(key, { n, count: n })
+  if (hours >= 168 && hours % 168 === 0) return unit('autoDelete.units.weeks', hours / 168)
+  if (hours >= 24 && hours % 24 === 0) return unit('autoDelete.units.days', hours / 24)
+  return unit('autoDelete.units.hours', hours)
 }
 
 /** The line a channel shows while auto-delete is on, or '' when it is off. */
@@ -73,13 +74,22 @@ export function decodeSetting(value: string): AutoDeleteSetting {
 /** What a dry run found: confirm when it would remove anything. */
 export interface AutoDeleteCounts { messages: number; attachments: number }
 
+/** "450 messages and 3 files", "1 file": the counts in words, a zero left out. */
+export function countsText(c: AutoDeleteCounts): string {
+  const parts = [
+    ...(c.messages > 0 ? [t('autoDelete.messagesCount', { n: c.messages, count: c.messages })] : []),
+    ...(c.attachments > 0 ? [t('autoDelete.filesCount', { n: c.attachments, count: c.attachments })] : [])
+  ]
+  return parts.join(t('autoDelete.and'))
+}
+
 /** Asks before content goes: only when the dry run found something to remove. */
 export function confirmAutoDelete(where: string, counts: AutoDeleteCounts, followers = false): Promise<boolean> {
   if (counts.messages <= 0 && counts.attachments <= 0) return Promise.resolve(true)
   return confirm({
     title: t('autoDelete.confirmTitle'),
     body: [
-      t(followers ? 'autoDelete.confirmDefaultBody' : 'autoDelete.confirmCounts', { name: where, messages: counts.messages, files: counts.attachments }),
+      t(followers ? 'autoDelete.confirmDefaultBody' : 'autoDelete.confirmCounts', { name: where, what: countsText(counts) }),
       t('autoDelete.confirmNoUndo')
     ].join(' '),
     confirmLabel: t('autoDelete.confirmAction'),

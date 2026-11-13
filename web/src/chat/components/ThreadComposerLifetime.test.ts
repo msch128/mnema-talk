@@ -47,8 +47,22 @@ describe('the thread composer timer', () => {
     const lifetimes = useLifetimeStore()
     expect(lifetimes.forChannel(threadLifetimeKey(fixtureId(9)))).toBe(3600)
     expect(lifetimes.forChannel(fixtureId(5))).toBe(0)
-    expect(w.get('[data-testid="lifetime-chip"]').text()).toBe('1 h')
+    // The narrow panel keeps its field: the timer stays an icon, named by the choice.
+    expect(w.find('[data-testid="lifetime-chip"]').exists()).toBe(false)
+    expect(w.get('[data-testid="lifetime-button"]').attributes('aria-label')).toBe('Messages disappear after 1 h')
     expect(w.get('[data-testid="lifetime-help"]').text()).toContain('Disappears for everyone after 1 h')
+  })
+
+  it('keeps at most 200 choices, forgetting the least recently made', () => {
+    const lifetimes = useLifetimeStore()
+    lifetimes.enabled = true
+    for (let i = 0; i < 205; i++) lifetimes.choose(threadLifetimeKey(`t${i}`), 60)
+    lifetimes.choose(threadLifetimeKey('t3'), 300)
+    const kept = Object.keys(JSON.parse(localStorage.getItem('mnema.lifetimes.v1') ?? '{}'))
+    expect(kept).toHaveLength(200)
+    expect(kept).not.toContain(threadLifetimeKey('t0'))
+    expect(kept.at(-1)).toBe(threadLifetimeKey('t3'))
+    expect(lifetimes.forChannel(threadLifetimeKey('t204'))).toBe(60)
   })
 
   it('sends a reply with its lifetime', async () => {

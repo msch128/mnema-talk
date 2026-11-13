@@ -10,6 +10,8 @@ import { useServerFeaturesStore } from './serverFeatures'
 // conversation. The choice stays on this device (a convenience, not a
 // setting): an unreadable store just starts with none.
 const STORAGE_KEY = 'mnema.lifetimes.v1'
+// The most choices kept: the least recently chosen go first (threads add up).
+const MAX_CHOICES = 200
 
 function readChoices(): Record<string, number> {
   try {
@@ -77,8 +79,9 @@ export const useLifetimeStore = defineStore('lifetime', () => {
   /** Remembers a lifetime for a conversation; 0 takes it off. */
   function choose(channelId: string, seconds: number) {
     const next = { ...choices.value }
+    delete next[channelId] // a new choice moves to the end: the order is the use
     if (seconds > 0 && validLifetime(seconds, maxSeconds.value)) next[channelId] = seconds
-    else delete next[channelId]
+    for (const key of Object.keys(next).slice(0, Math.max(0, Object.keys(next).length - MAX_CHOICES))) delete next[key]
     choices.value = next
     writeChoices(next)
   }

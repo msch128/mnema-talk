@@ -4724,9 +4724,18 @@
     "offSummary": "In diesem Kanal wird nichts automatisch gelöscht.",
     "lineFiles": "Dateien in diesem Kanal werden automatisch entfernt, sobald sie älter als {period} sind. Die Nachrichten bleiben.",
     "nextRun": "Die nächste Prüfung ist um {time}.",
-    "confirmCounts": "Das entfernt jetzt {messages} Nachrichten und {files} Dateien in {name} und danach laufend, was älter wird.",
-    "confirmDefaultBody": "Jeder Kanal ohne eigene Einstellung folgt der Vorgabe. Das entfernt jetzt {messages} Nachrichten und {files} Dateien in diesen Kanälen und danach laufend, was älter wird.",
-    "confirmNoUndo": "Das lässt sich nicht rückgängig machen."
+    "confirmCounts": "Das entfernt jetzt {what} in {name} und danach laufend, was älter wird.",
+    "confirmDefaultBody": "Jeder Kanal ohne eigene Einstellung folgt der Vorgabe. Das entfernt jetzt {what} in diesen Kanälen und danach laufend, was älter wird.",
+    "confirmNoUndo": "Das lässt sich nicht rückgängig machen.",
+    "messagesCount": {
+      "one": "{n} Nachricht",
+      "other": "{n} Nachrichten"
+    },
+    "filesCount": {
+      "one": "{n} Datei",
+      "other": "{n} Dateien"
+    },
+    "and": " und "
   },
   "discordImport": {
     "title": "Struktur eines Discord-Servers importieren",
@@ -5230,10 +5239,9 @@
     },
     "limits": "Zwischen 1 Minute und {max}.",
     "use": "Übernehmen",
-    "notProtection": "Andere können sie trotzdem kopieren oder einen Screenshot machen.",
     "help": "Verschwindet für alle nach {time}. Kopien, Screenshots und Benachrichtigungen können sie behalten.",
-    "minutes": "{n} Min.",
-    "hours": "{n} Std.",
+    "minutes": "{n} Min",
+    "hours": "{n} Std",
     "days": {
       "one": "{n} Tag",
       "other": "{n} Tage"
@@ -5243,10 +5251,15 @@
       "other": "{n} Wochen"
     },
     "leftSeconds": "{n} s",
-    "leftMinutes": "{n} Min.",
-    "leftHours": "{n} Std.",
-    "leftDays": "{n} T.",
+    "leftMinutes": "{n} Min",
+    "leftHours": "{n} Std",
+    "leftDays": {
+      "one": "{n} Tag",
+      "other": "{n} Tage"
+    },
     "markLabel": "Verschwindet in {time}",
-    "noPin": "Eine Nachricht mit Lebensdauer kann nicht angeheftet werden."
+    "noPin": "Eine Nachricht mit Lebensdauer kann nicht angeheftet werden.",
+    "markPrefix": "Verschwindet in",
+    "hoursMinutes": "{h} Std {m} Min"
   }
 }
