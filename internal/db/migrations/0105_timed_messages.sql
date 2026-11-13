@@ -68,6 +68,17 @@ ALTER TABLE channels
 UPDATE channels SET auto_delete_hours = auto_delete_days * 24
 WHERE auto_delete_days > 0 AND type <> 'dm' AND dm_id IS NULL;
 
+-- auto_delete_days = 0 meant off, and from now on a channel without a setting
+-- follows the community default. A channel whose last change of the setting
+-- (the audit entry channel.auto_delete_set, which records the state after it)
+-- turned it off keeps it off: 0, the opt-out. Every other channel follows the
+-- default, which is off until the Owner or an Administrator sets one.
+UPDATE channels c SET auto_delete_hours = 0
+WHERE c.auto_delete_days = 0 AND c.type <> 'dm' AND c.dm_id IS NULL
+  AND (SELECT a.details->'after'->>'auto_delete_days' FROM audit_log a
+       WHERE a.action = 'channel.auto_delete_set' AND a.target_id = c.id::text
+       ORDER BY a.id DESC LIMIT 1) = '0';
+
 -- Conversations and the Talks started from them are private: never swept.
 ALTER TABLE channels ADD CONSTRAINT channels_auto_delete_not_private
     CHECK (COALESCE(auto_delete_hours, 0) = 0 OR (type <> 'dm' AND dm_id IS NULL));
