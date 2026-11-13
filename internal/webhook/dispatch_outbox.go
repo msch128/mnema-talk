@@ -91,6 +91,7 @@ func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, e
 		SELECT w.id, $1, e.id, e.name, e.at, e.data, clock_timestamp()
 		FROM unnest($2::uuid[], $3::text[], $4::timestamptz[], $5::bytea[]) WITH ORDINALITY AS e(id, name, at, data, ord)
 		JOIN outgoing_webhooks w ON w.channel_id = $1 AND w.enabled AND e.name = ANY(w.events)
+		JOIN channels c ON c.id = w.channel_id AND `+publicChannel+`
 		ORDER BY e.ord, w.id FOR KEY SHARE OF w`,
 		channel, b.ids, b.names, b.times, b.data); err != nil {
 		return fmt.Errorf("record outgoing event: %w", err)
@@ -126,3 +127,9 @@ func (d *Dispatcher) applyCaps(ctx context.Context) {
 	d.count("webhook_cap", perWebhook)
 	d.count("global_cap", global)
 }
+
+// publicChannel is the condition on channels c that outgoing webhooks may
+// hear: not a direct message conversation and not the call Talk of one. The
+// cached routes (Reload) and the queue's own insert (Record) both apply it,
+// so a webhook pointed at a private channel past the API gets nothing.
+const publicChannel = `c.type <> 'dm' AND c.dm_id IS NULL`

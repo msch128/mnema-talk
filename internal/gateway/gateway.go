@@ -157,6 +157,13 @@ func (g *Gateway) SetTimings(t Timings) {
 	g.tmu.Unlock()
 }
 
+// SetLimits replaces the upgrades per minute of one address and the IDENTIFY
+// and RESUME per minute of one bot. For tests that reconnect a bot many times.
+func (g *Gateway) SetLimits(perIP, identifyPerBot int) {
+	g.ips = httpx.NewRateLimiter(perIP, time.Minute).Named("bot_gateway_ip")
+	g.idents = httpx.NewRateLimiter(identifyPerBot, time.Minute).Named("bot_gateway_identify")
+}
+
 func (g *Gateway) timings() Timings {
 	g.tmu.RLock()
 	defer g.tmu.RUnlock()

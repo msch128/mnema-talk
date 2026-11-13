@@ -1,6 +1,8 @@
 package botapi
 
 import (
+	"net/http"
+
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
@@ -21,4 +23,8 @@ type API struct {
 	// is posted by Messages.Posts.
 	Messages *messages.API
 	Channels *channels.API
+
+	// send is the per-channel post limit MountBot was given; an edit that may
+	// notify counts against it.
+	send func(http.Handler) http.Handler
 }

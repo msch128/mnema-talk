@@ -1,0 +1,66 @@
+//go:build integration
+
+package server
+
+import (
+	"net/http"
+	"testing"
+
+	"github.com/google/uuid"
+)
+
+// Callback 7 and @original edits that carry allowed_mentions take a post from
+// the channel's limit, as the REST edit does; plain ones do not, and a refused
+// one leaves the interaction to be answered.
+func TestAnUpdateOrOriginalEditThatMayNotifyCountsAsAPost(t *testing.T) {
+	cf := newComponentsFixture(t)
+	m := cf.postWithComponents(t, cf.open, "Deploy?", deployRows())
+	cf.a.router.Bots.SetLimits(1000, 1)
+	notify := map[string]any{"parse": []string{"users"}}
+
+	wantStatus(t, "click", click(cf.max, cf.open, m.ID, "cancel"), http.StatusAccepted)
+	in := cf.interaction(t)
+	wantStatus(t, "update that may notify", cf.callback(in, 7, map[string]any{"content": "a", "allowed_mentions": notify}), http.StatusNoContent)
+
+	wantStatus(t, "click", click(cf.max, cf.open, m.ID, "cancel"), http.StatusAccepted)
+	in = cf.interaction(t)
+	wantStatus(t, "update that may notify, over the limit", cf.callback(in, 7, map[string]any{"content": "b", "allowed_mentions": notify}), http.StatusTooManyRequests)
+	wantStatus(t, "plain update", cf.callback(in, 7, map[string]any{"content": "c"}), http.StatusNoContent)
+	wantStatus(t, "@original that may notify, over the limit",
+		cf.answer(in, http.MethodPatch, "/messages/@original", map[string]any{"content": "d", "allowed_mentions": notify}), http.StatusTooManyRequests)
+	wantStatus(t, "plain @original", cf.answer(in, http.MethodPatch, "/messages/@original", map[string]any{"content": "e"}), http.StatusOK)
+}
+
+// A bot's REST edit takes allowed_mentions like callback 7 and @original do,
+// and an edit that sends it counts towards the per-channel post limit.
+func TestABotEditTakesAllowedMentionsAndCountsAsAPostWhenItDoes(t *testing.T) {
+	f := newBotFixture(t, false)
+	f.a.register(f.owner, "max")
+	var maxID uuid.UUID
+	if err := f.a.db.QueryRow(t.Context(), `SELECT id FROM users WHERE username = 'max'`).Scan(&maxID); err != nil {
+		t.Fatal(err)
+	}
+	res := f.client.post(botPath(f.open, "/messages"), map[string]any{"content": "draft"})
+	wantStatus(t, "post", res, http.StatusCreated)
+	msg := messageOf(t, res.body)
+	edit := botPath(f.open, "/messages/"+msg.ID.String())
+
+	res = f.client.patch(edit, map[string]any{"content": "hi @max", "allowed_mentions": map[string]any{"parse": []string{}}})
+	wantStatus(t, "edit with parse []", res, http.StatusOK)
+	if mentioned(t, res.body, maxID) {
+		t.Fatalf("parse [] notified max: %s", res.body)
+	}
+	res = f.client.patch(edit, map[string]any{"content": "hi again @max"})
+	wantStatus(t, "edit without", res, http.StatusOK)
+	if !mentioned(t, res.body, maxID) {
+		t.Fatalf("an edit without allowed_mentions notifies the members it names: %s", res.body)
+	}
+
+	// The post above and the edit with allowed_mentions took 2 of the 5 posts
+	// per 5 seconds; three more posts fill the window.
+	for i := 0; i < 3; i++ {
+		wantStatus(t, "post", f.client.say(f.open, "fill"), http.StatusCreated)
+	}
+	wantStatus(t, "an edit that may notify, over the limit", f.client.patch(edit, map[string]any{"content": "x", "allowed_mentions": map[string]any{"parse": []string{"users"}}}), http.StatusTooManyRequests)
+	wantStatus(t, "a plain edit is not a post", f.client.patch(edit, map[string]any{"content": "y"}), http.StatusOK)
+}

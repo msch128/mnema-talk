@@ -4,8 +4,12 @@ import { EyeOff, X } from '@lucide/vue'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
 import MarkdownContent from '../../shared/components/MarkdownContent.vue'
 import { useChatStore } from '../../stores/chat'
+import { noteComponentsPath } from '../lib/components'
+import MessageComponents from './MessageComponents.vue'
 
-// Replies of bots to slash commands that only this member sees ("ephemeral").
+// Replies of bots to slash commands and clicks that only this member sees ("ephemeral").
+// A later reply with the same note id replaces a note (or removes it); its
+// buttons and menus work while the interaction lives (15 minutes).
 // The role=status wrapper stays in the page, so a new private reply is announced.
 // They live in memory, below the messages of their channel, until dismissed.
 const props = defineProps({ channelId: { type: String, required: true } })
@@ -36,8 +40,8 @@ async function dismiss(id: number) {
       >
         <UserAvatar :user="{ display_name: n.bot_name, username: n.bot_name, avatar_url: n.bot_avatar_url }" size="sm" />
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold text-mnema-text">{{ n.bot_name }}</span>
+          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span class="min-w-0 truncate font-semibold text-mnema-text" :title="n.bot_name">{{ n.bot_name }}</span>
             <span class="rounded-sm bg-mnema-band px-1 text-[10px] font-bold uppercase tracking-wide text-mnema-mint">{{ $t('slash.bot') }}</span>
             <span class="flex items-center gap-1 text-xs text-mnema-tertiary"><EyeOff class="h-3.5 w-3.5" />{{ $t('slash.onlyYou') }}</span>
           </div>
@@ -46,6 +50,7 @@ async function dismiss(id: number) {
             <div v-if="e.title" class="font-semibold text-mnema-text">{{ e.title }}</div>
             <div v-if="e.description" class="whitespace-pre-wrap wrap-break-word text-mnema-muted">{{ e.description }}</div>
           </div>
+          <MessageComponents v-if="n.note_id" :components="n.components ?? null" :endpoint="noteComponentsPath(n.channel_id, n.note_id)" :channel-id="n.channel_id" :message-id="n.note_id" :bot-name="n.bot_name" />
         </div>
         <button
           type="button"

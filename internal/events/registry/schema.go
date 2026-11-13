@@ -60,7 +60,7 @@ func Schema(known func(name string) bool) Document {
 			"Regenerate: UPDATE_EVENT_SCHEMA=1 go test ./internal/events/registry",
 		Events: map[string][]Shape{},
 	}
-	d := describer{known: known}
+	d := describer{known: known, open: map[reflect.Type]bool{}}
 	for _, e := range All() {
 		name := e.Event.EventName()
 		doc.Events[name] = append(doc.Events[name], Shape{GoType: goName(reflect.TypeOf(e.Event)), Type: d.node(e.shape(), "")})
@@ -81,6 +81,9 @@ func goName(t reflect.Type) string {
 
 type describer struct {
 	known func(string) bool
+	// open are the named structs being described further up: a type that
+	// contains itself (a message component's rows) refers back to its name.
+	open map[reflect.Type]bool
 }
 
 // restName is the name api/openapi.json gives a named struct: its package and
@@ -150,12 +153,23 @@ func (d describer) byKind(t reflect.Type, tag reflect.StructTag) Node {
 		items := d.node(t.Elem(), "")
 		return Node{Kind: "map", Items: &items}
 	case reflect.Struct:
-		if name := restName(t); t.Name() != "" && d.known(name) {
-			return Node{Kind: "ref", Ref: name}
-		}
-		return Node{Kind: "object", Fields: d.fields(t)}
+		return d.object(t)
 	}
 	return Node{Kind: "any"}
+}
+
+// object describes a struct, or refers to it by name when api/openapi.json
+// has it or it is being described already.
+func (d describer) object(t reflect.Type) Node {
+	if t.Name() == "" {
+		return Node{Kind: "object", Fields: d.fields(t)}
+	}
+	if name := restName(t); d.known(name) || d.open[t] {
+		return Node{Kind: "ref", Ref: name}
+	}
+	d.open[t] = true
+	defer delete(d.open, t)
+	return Node{Kind: "object", Fields: d.fields(t)}
 }
 
 // fields lists the keys of a struct as encoding/json writes them: in

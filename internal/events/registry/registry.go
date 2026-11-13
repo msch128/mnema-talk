@@ -80,6 +80,8 @@ func messageEvents() []Entry {
 		{Event: wire.ReadStateRefresh{}},
 		{Event: saved.SavedUpdated{}},
 		{Event: bot.InteractionResponse{}},
+		{Event: bot.InteractionModal{}},
+		{Event: wire.InteractionDeferred{}},
 	}
 }
 

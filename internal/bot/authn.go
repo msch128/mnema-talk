@@ -211,6 +211,17 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 
 // LimitSends applies the send limit per bot and channel (the channelID path
 // parameter) to the routes it wraps.
+// AllowSend takes one post of the bot from its limit in the channel, as
+// LimitSends does for a route, and answers how long to wait when there is
+// none (the global request it came with is given back then).
+func (a *Authenticator) AllowSend(botID, ch uuid.UUID) (bool, time.Duration) {
+	allowed, retry := a.sends.Allow(botID.String() + ":" + ch.String())
+	if !allowed {
+		a.global.Refund(botID.String())
+	}
+	return allowed, retry
+}
+
 func (a *Authenticator) LimitSends(channelParam func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

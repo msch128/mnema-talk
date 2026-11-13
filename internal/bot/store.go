@@ -57,6 +57,10 @@ type Bot struct {
 	ID     uuid.UUID `json:"id" format:"uuid"`
 	UserID uuid.UUID `json:"user_id" format:"uuid"`
 	Name   string    `json:"name" minLength:"1" maxLength:"24"`
+	// Description and Homepage come from the manifest the bot was added
+	// from; omitted for a bot created by hand.
+	Description string `json:"description,omitempty" binding:"optional" maxLength:"200"`
+	Homepage    string `json:"homepage,omitempty" binding:"optional" maxLength:"512"`
 	// AvatarURL is the API URL of the avatar; omitted when none.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
 	// AllowedIntents are the gateway intents the bot may ask for.
@@ -106,12 +110,12 @@ func HashToken(token string) []byte {
 	return sum[:]
 }
 
-const botColumns = `b.id, b.user_id, b.name, u.avatar_s3_key, b.allowed_intents, b.disabled, b.created_by, b.created_at, b.last_active_at`
+const botColumns = `b.id, b.user_id, b.name, b.description, b.homepage, u.avatar_s3_key, b.allowed_intents, b.disabled, b.created_by, b.created_at, b.last_active_at`
 
 func scanBot(row pgx.Row) (*Bot, error) {
 	var b Bot
 	var avatar *string
-	if err := row.Scan(&b.ID, &b.UserID, &b.Name, &avatar, &b.AllowedIntents, &b.Disabled, &b.CreatedBy, &b.CreatedAt, &b.LastActiveAt); err != nil {
+	if err := row.Scan(&b.ID, &b.UserID, &b.Name, &b.Description, &b.Homepage, &avatar, &b.AllowedIntents, &b.Disabled, &b.CreatedBy, &b.CreatedAt, &b.LastActiveAt); err != nil {
 		return nil, err
 	}
 	b.AvatarURL = auth.AvatarURL(avatar)
@@ -209,6 +213,16 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 	}
 	_, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, user, role)
 	return id, err
+}
+
+// setProfile stores the description and homepage of a bot added from a
+// manifest and returns the id of the bot's own role.
+func setProfile(ctx context.Context, tx pgx.Tx, id uuid.UUID, description, homepage string) (uuid.UUID, error) {
+	var role uuid.UUID
+	err := tx.QueryRow(ctx, `
+		WITH b AS (UPDATE bots SET description = $2, homepage = $3 WHERE id = $1 RETURNING user_id)
+		SELECT r.id FROM roles r JOIN b ON r.bot_user_id = b.user_id`, id, description, homepage).Scan(&role)
+	return role, err
 }
 
 // roleName is the name of a bot's own role: the bot's name, except where role

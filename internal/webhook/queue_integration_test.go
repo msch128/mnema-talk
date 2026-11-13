@@ -656,7 +656,7 @@ func TestRunWorksTheQueueAndReloads(t *testing.T) {
 
 	// A pool whose list query fails shows the load and reload errors; the
 	// queue is still worked, and the prune and poll ticks run.
-	d := NewDispatcher((&dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}).pool(), loopbackClient(), "test")
+	d := NewDispatcher((&dbFaulty{f, "SELECT w.id, w.channel_id, w.events FROM outgoing_webhooks w"}).pool(), loopbackClient(), "test")
 	d.ReloadEvery = 10 * time.Millisecond
 	d.PollEvery = 10 * time.Millisecond
 	d.PruneEvery = 10 * time.Millisecond

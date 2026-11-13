@@ -37,11 +37,15 @@ func ChannelParam(r *http.Request) string {
 // Self is the bot as it sees itself.
 type Self struct {
 	// ID is the bot's user ID: the author of its messages (user_id).
-	ID     uuid.UUID `json:"id" format:"uuid"`
-	BotID  uuid.UUID `json:"bot_id" format:"uuid"`
-	Name   string    `json:"username"`
-	Bot    bool      `json:"bot" enums:"true"`
-	Avatar string    `json:"avatar_url,omitempty" binding:"optional"`
+	ID    uuid.UUID `json:"id" format:"uuid"`
+	BotID uuid.UUID `json:"bot_id" format:"uuid"`
+	// Name is the bot's name as members see it (its display name).
+	Name string `json:"username"`
+	// Handle is the account's unique name, the one members mention
+	// (@bot-...); Discord calls this the username.
+	Handle string `json:"handle,omitempty" binding:"optional"`
+	Bot    bool   `json:"bot" enums:"true"`
+	Avatar string `json:"avatar_url,omitempty" binding:"optional"`
 	// AllowedIntents are the gateway intents the admin allowed.
 	AllowedIntents int64 `json:"allowed_intents"`
 }
@@ -60,7 +64,7 @@ type Self struct {
 // @Router /api/bot/v1/users/at_me [get]
 func Me(w http.ResponseWriter, r *http.Request) {
 	u, b := auth.UserFrom(r.Context()), auth.BotFrom(r.Context())
-	httpx.WriteJSON(w, http.StatusOK, Self{ID: u.ID, BotID: b.BotID, Name: u.DisplayName, Bot: true, Avatar: u.AvatarURL, AllowedIntents: b.Intents})
+	httpx.WriteJSON(w, http.StatusOK, Self{ID: u.ID, BotID: b.BotID, Name: u.DisplayName, Handle: u.Username, Bot: true, Avatar: u.AvatarURL, AllowedIntents: b.Intents})
 }
 
 // NotFound and MethodNotAllowed answer in the bot API's error shape.

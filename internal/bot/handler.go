@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -28,6 +29,9 @@ type Handler struct {
 	// Events tells connected members to reload the member list, where bots
 	// appear. nil does nothing.
 	Events events.Publisher
+	// Audit records an install in its own transaction (bot.installed); the
+	// other routes are recorded by the audit middleware. nil records nothing.
+	Audit *audit.Log
 }
 
 // NewHandler returns h ready to mount. It panics without Perms.
@@ -58,6 +62,8 @@ func (h *Handler) MountAdminUploads(r chi.Router) {
 func (h *Handler) routes(r chi.Router) {
 	r.Get("/bots", httpx.Handle(h.list))
 	r.Post("/bots", httpx.Handle(h.create))
+	r.Post("/bots/manifests/check", httpx.Handle(h.checkManifest))
+	r.Post("/bots/install", httpx.Handle(h.install))
 	r.Get("/bots/{id}", httpx.Handle(h.get))
 	r.Patch("/bots/{id}", httpx.Handle(h.update))
 	r.Delete("/bots/{id}", httpx.Handle(h.delete))

@@ -2,12 +2,16 @@ package messages
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -199,7 +203,7 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	}
 	userID := auth.UserFrom(r.Context()).ID
 	audited := func(tx pgx.Tx) error { return a.auditEdit(r.Context(), tx, msgID) }
-	msg, mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, userID, content, audited)
+	msg, mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, userID, textEdit{content: &content}, audited)
 	if err != nil {
 		return err
 	}
@@ -208,6 +212,76 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	a.Recount.Tell(msg.ChannelID, &msg.CreatedAt, append(mentioned, msg.Mentions...))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
+}
+
+// BotEdit is a bot's edit of its own message (EditBotMessage).
+type BotEdit struct {
+	// Content is the new text, checked with core.ValidateContent (it may be
+	// empty); nil keeps the text, which is then not marked edited.
+	Content *string
+	// InTx stores the rest of the edit (embeds, components) in the edit's
+	// transaction, after the text and before message_update is recorded. It
+	// refuses a message that would show nothing.
+	InTx func(tx pgx.Tx, messageID uuid.UUID) error
+}
+
+// EditBotMessage is the edit of the bot botUser's own message msgID, for the
+// bot API's edits that carry more than text (components, the responses to
+// interactions). ctx carries the bot's mention policy; the caller checked
+// Send messages. It broadcasts message_update.
+func (a *API) EditBotMessage(ctx context.Context, msgID, botUser uuid.UUID, e BotEdit) (*core.Message, error) {
+	also := func(tx pgx.Tx) error {
+		if e.InTx != nil {
+			if err := e.InTx(tx, msgID); err != nil {
+				return err
+			}
+		}
+		if e.Content == nil {
+			return nil // no new version of the text: nothing for the edit log
+		}
+		return a.auditEdit(ctx, tx, msgID)
+	}
+	msg, mentioned, err := editMessage(ctx, a.DB, a.Online, msgID, botUser, textEdit{content: e.Content, mayBeEmpty: true}, also)
+	if err != nil {
+		return nil, err
+	}
+	a.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
+	a.Recount.Tell(msg.ChannelID, &msg.CreatedAt, append(mentioned, msg.Mentions...))
+	return msg, nil
+}
+
+// textEdit is what an edit does to the text of a message.
+type textEdit struct {
+	// content is the new text; nil keeps it (a bot changing only its components).
+	content *string
+	// mayBeEmpty lets the text be emptied without an attachment: a bot's
+	// message may be its embeds or components, which its own step checks.
+	mayBeEmpty bool
+}
+
+// text is the new text, or "" when the edit keeps it.
+func (e textEdit) text() string {
+	if e.content == nil {
+		return ""
+	}
+	return *e.content
+}
+
+// checkEditAutomod applies the automod rules to the new text of an edit. Only
+// the author's own edit is checked; whoever else tries gets the refusal of the
+// edit itself.
+func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, content string) (*automod.Pending, error) {
+	ref, err := core.LoadMessageRef(ctx, p, messageID)
+	if errors.Is(err, core.ErrMessageNotFound) {
+		return nil, nil // the edit itself answers 404
+	}
+	if err != nil {
+		return nil, err
+	}
+	if ref.AuthorID != userID || content == "" {
+		return nil, nil
+	}
+	return automod.Of(p).Check(ctx, automod.Post{ChannelID: ref.ChannelID, UserID: userID, Content: content, MessageID: messageID})
 }
 
 // DeleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
@@ -247,20 +321,48 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var snap *auditSnapshot
-	keys, newest, err := deleteMessageAs(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages), func(tx pgx.Tx) (err error) {
-		snap, err = a.auditDelete(r.Context(), tx, user, msgID, reason)
-		return err
-	})
+	newest, err := a.deleteAs(r.Context(), user, msgID, p.Has(perm.ManageMessages), reason)
 	if err != nil {
 		return err
 	}
-	a.tellAuthor(snap, user, reason)
-	core.DeleteObjects(r.Context(), a.Objects, keys)
 	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})
 	a.Recount.Tell(ref.ChannelID, &newest, nil)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// DeleteOwnMessage deletes a message of user's outside its route (a bot
+// deleting its response to an interaction), with the same audit entry and
+// events. The caller checked that user can view the channel.
+func (a *API) DeleteOwnMessage(ctx context.Context, user *auth.User, msgID uuid.UUID) error {
+	ref, err := core.LoadMessageRef(ctx, a.DB, msgID)
+	if err != nil {
+		return err
+	}
+	newest, err := a.deleteAs(ctx, user, msgID, false, "")
+	if err != nil {
+		return err
+	}
+	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})
+	a.Recount.Tell(ref.ChannelID, &newest, nil)
+	return nil
+}
+
+// deleteAs deletes the message, records the audit entry, tells the author
+// and removes the message's files. It returns when the newest removed
+// message was written.
+func (a *API) deleteAs(ctx context.Context, user *auth.User, msgID uuid.UUID, canManage bool, reason string) (time.Time, error) {
+	var snap *auditSnapshot
+	keys, newest, err := deleteMessageAs(ctx, a.DB, msgID, user, canManage, func(tx pgx.Tx) (err error) {
+		snap, err = a.auditDelete(ctx, tx, user, msgID, reason)
+		return err
+	})
+	if err != nil {
+		return newest, err
+	}
+	a.tellAuthor(snap, user, reason)
+	core.DeleteObjects(ctx, a.Objects, keys)
+	return newest, nil
 }
 
 // CreateMessageRequest is the body of POST /api/channels/{channelID}/messages.

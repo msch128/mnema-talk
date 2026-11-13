@@ -138,7 +138,13 @@
       "scheduled": "geplant",
       "active": "live",
       "completed": "beendet",
-      "cancelled": "abgesagt"
+      "cancelled": "abgesagt",
+      "permViewChannels": "Kanäle ansehen",
+      "permSendMessages": "Nachrichten senden",
+      "permAttachFiles": "Dateien anhängen",
+      "permAddReactions": "Reaktionen hinzufügen",
+      "permManageMessages": "Nachrichten verwalten",
+      "permMentionEveryone": "@all und @here erwähnen"
     },
     "detail": {
       "invalidInvite": "Ungültiger Einladungscode.",
@@ -549,7 +555,6 @@
       "srvTooManySearchesAtOnce": "Zu viele Suchen gleichzeitig. Warte, bis die laufenden fertig sind.",
       "srvTooManyUnsentFilesAt": "Zu viele ungesendete Dateien (höchstens {a}). Sende oder entferne zuerst einige.",
       "srvTypeMustBeTextVoice": "Der Typ muss „text“, „voice“ oder „forum“ sein.",
-      "srvTypeMustBe4Or": "Der Typ muss 4 oder 5 sein.",
       "srvTypeMustBeRoleOr": "Der Typ muss „role“ oder „member“ sein.",
       "srvTypeTheServerNameOr": "Gib zur Bestätigung den Namen der Community oder IMPORT ein.",
       "srvUnknownEventForThisWebhook": "Unbekanntes Ereignis für diesen Webhook: {a}.",
@@ -651,7 +656,41 @@
       "srvSeriesNotFound": "Diese Serie wurde nicht gefunden.",
       "srvThisEventIsNotPartOf": "Diese Veranstaltung gehört zu keiner Serie.",
       "srvTimezoneMustBeAnIana": "Die Zeitzone muss ein IANA-Name wie Europe/Berlin sein.",
-      "srvUntilMustBeAfterStart": "Das Enddatum muss nach dem Start liegen."
+      "srvUntilMustBeAfterStart": "Das Enddatum muss nach dem Start liegen.",
+      "srvManifestCannotAskFor": "Ein Manifest kann die Berechtigung „{permission}“ nicht verlangen. Die vergibt nur der Owner, von Hand.",
+      "srvAtMostChannels": "Hake höchstens {a} Kanäle an.",
+      "srvHomepageMustBeHttps": "Die Homepage muss eine https-Adresse sein.",
+      "srvIntentNotInManifest": "„{intent}“ gehört nicht zu den Ereignissen, die das Manifest verlangt.",
+      "srvManifestVersionMustBe": "Dieses Manifest ist für eine andere Version: „manifest_version“ muss {a} sein.",
+      "srvPermissionNotInManifest": "„{permission}“ gehört nicht zu den Berechtigungen, die das Manifest verlangt.",
+      "srvUnknownIntent": "Unbekanntes Ereignis im Manifest: „{intent}“.",
+      "srvUnknownPermission": "Unbekannte Berechtigung im Manifest: „{permission}“.",
+      "srvBotInstallLacking": "Du hast „{permission}“ in #{channel} nicht, daher kann der Bot es dort nicht bekommen. Nimm den Haken beim Kanal oder bei der Berechtigung weg.",
+      "srvButtonTakesNoValues": "Ein Button nimmt keine Werte.",
+      "srvModalSubmitNoModal": "Auf ein gesendetes Formular kann nicht mit einem weiteren Formular geantwortet werden.",
+      "srvAnswerInvalidChars": "Eine Antwort enthält Zeichen, die nicht erlaubt sind.",
+      "srvAnswerLength": "Eine Antwort muss {min} bis {max} Zeichen lang sein.",
+      "srvCallbackComponentOnly": "Callback-Typ {a} beantwortet nur einen Button oder ein Auswahlmenü.",
+      "srvComponentNotFound": "Diesen Button oder dieses Menü gibt es nicht mehr.",
+      "srvComponentsActionRows": "Components müssen eine Liste von Action Rows sein.",
+      "srvDataRequiredType7": "Callback-Typ 7 braucht data.",
+      "srvDataRequiredType9": "Callback-Typ 9 braucht data mit custom_id, title und components.",
+      "srvFillRequiredFields": "Füll alle Pflichtfelder aus.",
+      "srvFlagsOnOriginal": "Beim Bearbeiten der ursprünglichen Antwort lassen sich keine Flags setzen: Ob die Antwort nur für dich sichtbar ist, legt die erste Antwort fest.",
+      "srvInvalidModalId": "Ungültiges Formular.",
+      "srvModalNotFound": "Dieses Formular ist abgelaufen. Fang beim Bot noch einmal an.",
+      "srvInteractionAnsweredModal": "Die Interaktion wurde mit einem Formular beantwortet: Antworte stattdessen auf dessen Absendung.",
+      "srvNoOriginalResponse": "Die Interaktion hat noch keine ursprüngliche Antwort.",
+      "srvValuesChannels": "Wähle nur Kanäle, die du und der Bot sehen könnt.",
+      "srvValuesOnce": "Wähle jeden Wert nur einmal.",
+      "srvValuesMembers": "Wähle nur Mitglieder dieses Kanals.",
+      "srvValuesNotAChoice": "Das ist keine Auswahl dieses Menüs.",
+      "srvValuesRoles": "Wähle nur Rollen dieser Community.",
+      "srvValuesCount": "Dieses Menü nimmt {min} bis {max} Werte.",
+      "srvValuesUnknownInput": "Das Formular hat kein Feld „{input}“.",
+      "srvYouAreTimedOut": "Du bist in einer Auszeit.",
+      "srvTypeMustBeCallback": "Der Typ muss 4, 5, 6, 7 oder 9 sein.",
+      "srvMemberCannotSeeChannel": "Das Mitglied kann diesen Kanal nicht mehr sehen."
     },
     "field": {
       "content": "Nachricht",
@@ -688,7 +727,8 @@
       "thread": "Thread",
       "token": "Token",
       "user": "Mitglied",
-      "summary": "Zusammenfassung"
+      "summary": "Zusammenfassung",
+      "homepage": "Homepage"
     }
   },
   "connection": {
@@ -3404,7 +3444,8 @@
         "token_regenerate": "Bot-Token neu erzeugt",
         "token_revoke": "Bot-Token widerrufen",
         "command_update": "Bot-Befehl bearbeitet",
-        "command_delete": "Bot-Befehl gelöscht"
+        "command_delete": "Bot-Befehl gelöscht",
+        "installed": "Bot aus einem Manifest hinzugefügt"
       },
       "automod": {
         "rule_create": "Automod-Regel erstellt",
@@ -3949,7 +3990,6 @@
   "bots": {
     "title": "Bots",
     "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe Bot-Dokumentation). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
-    "badge": "Bot",
     "new": "Neuer Bot",
     "namePlaceholder": "Name des neuen Bots",
     "nameRequired": "Ein Bot braucht einen Namen.",
@@ -4068,7 +4108,46 @@
       "deleted": "/{name} gelöscht."
     },
     "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
-    "loadFailed": "Die Bots konnten nicht geladen werden. Versuche es noch einmal."
+    "loadFailed": "Die Bots konnten nicht geladen werden. Versuche es noch einmal.",
+    "manifest": {
+      "add": "Aus Manifest hinzufügen",
+      "title": "Bot aus seinem Manifest hinzufügen",
+      "intro": "Ein Bot, den jemand anderes geschrieben hat, beschreibt sich in einem Manifest, meist in seiner README. Füge es hier ein, um zu sehen, was der Bot verlangt. Erst wenn du bestätigst, wird etwas angelegt.",
+      "pasteLabel": "Manifest (JSON)",
+      "check": "Manifest prüfen",
+      "notJson": "Das ist kein gültiges JSON. Kopiere das ganze Manifest, von der ersten { bis zur letzten }.",
+      "notObject": "Ein Manifest ist ein JSON-Objekt: Es beginnt mit { und endet mit }.",
+      "badLink": "Dieser Link zum Hinzufügen ist beschädigt. Füge stattdessen das Manifest aus der README des Bots ein.",
+      "confirmTitle": "Diesen Bot hinzufügen?",
+      "avatarProblem": {
+        "type": "Das Profilbild ist kein PNG-, JPEG- oder WebP-Bild, daher startet der Bot ohne.",
+        "size": "Das Profilbild ist größer als 256 KB, daher startet der Bot ohne.",
+        "data": "Das Profilbild ist kein eingebettetes Bild, daher startet der Bot ohne. Bilder von anderen Servern werden nie geladen."
+      },
+      "intentsTitle": "Ereignisse, die er verlangt",
+      "untickHint": "Nimm den Haken weg bei allem, was der Bot nicht bekommen soll.",
+      "noIntents": "Er verlangt keine Ereignisse.",
+      "permissionsTitle": "Berechtigungen, die er verlangt",
+      "noPermissions": "Er verlangt keine Berechtigungen.",
+      "commandsTitle": "Slash-Befehle",
+      "noCommands": "Er registriert keine Slash-Befehle.",
+      "channelsTitle": "Kanäle, in denen er arbeiten darf",
+      "channelsHint": "Die Berechtigungen oben gelten nur in den Kanälen, die du hier anhakst, nie in der ganzen Community. Keiner ist angehakt: Ohne Kanal sieht der Bot noch nichts.",
+      "noCategory": "Ohne Kategorie",
+      "noChannels": "Es gibt keine Text- oder Forumkanäle, die du sehen kannst.",
+      "back": "Zurück",
+      "install": "Bot hinzufügen",
+      "installed": "{name} hinzugefügt. Kopiere jetzt seinen Token.",
+      "avatarFailed": "Der Bot wurde hinzugefügt, aber sein Profilbild konnte nicht hochgeladen werden. Setze eines in den Einstellungen des Bots.",
+      "needsManageBots": "Zum Hinzufügen eines Bots brauchst du die Berechtigung „Bots verwalten“. Bitte den Owner oder ein Mitglied, das sie hat, den Link zu öffnen.",
+      "fromManifest": "Aus dem Manifest des Bots",
+      "homepage": "Homepage:",
+      "externalSite": "(externe Website)",
+      "offAtFirst": "Zuerst aus: Hake es nur an, wenn der Bot es wirklich braucht.",
+      "botCommand": "Vom Bot",
+      "besideBuiltin": "Heißt wie der eingebaute Befehl /{name}. Er ersetzt ihn nicht: Mitglieder sehen beide.",
+      "overridesBotRole": "Was du hier erlaubst, gilt auch dort, wo die gemeinsame Bot-Rolle in einem angehakten Kanal verweigert ist."
+    }
   },
   "appSettings": {
     "installTitle": "Installieren",
@@ -5149,5 +5228,37 @@
     "retryAnywayFor": "Die Nachricht erneut senden, obwohl sie schon angekommen sein kann: {excerpt}",
     "expired": "sie ist möglicherweise schon angekommen und wurde deshalb nicht von selbst erneut gesendet",
     "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
+  },
+  "components": {
+    "notConnected": "{bot} ist gerade nicht verbunden. Versuch es später noch einmal.",
+    "gone": "Dieser Button funktioniert nicht mehr.",
+    "slowDown": "Etwas langsamer, dann versuch es noch einmal.",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "choose": "Auswählen",
+    "search": "Suchen",
+    "noMatches": "Nichts passt.",
+    "confirm": "Bestätigen",
+    "pickExactly": {
+      "one": "Wähle {count}",
+      "other": "Wähle {count}"
+    },
+    "pickRange": "Wähle {min} bis {max}",
+    "opensLink": "{label}, öffnet {host}",
+    "unsupported": "Dieser Bot hat etwas geschickt, das diese App nicht anzeigen kann.",
+    "working": "{bot} arbeitet daran …",
+    "noAnswer": "{bot} hat nicht geantwortet. Versuch es gleich noch einmal.",
+    "takingLonger": "{bot} braucht etwas länger …"
+  },
+  "modals": {
+    "from": "Ein Formular von {bot}",
+    "optional": "(optional)",
+    "required": "Füll das bitte aus.",
+    "tooShort": {
+      "one": "Mindestens {count} Zeichen.",
+      "other": "Mindestens {count} Zeichen."
+    },
+    "send": "Senden",
+    "expired": "Dieses Formular ist abgelaufen. Fang beim Bot noch einmal an.",
+    "failed": "Das Formular konnte nicht gesendet werden. Versuch es noch einmal."
   }
 }
