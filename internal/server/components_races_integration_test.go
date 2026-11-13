@@ -17,13 +17,22 @@ import (
 // a clean refusal or a delivered interaction, never a 500.
 
 // clickers are members who share the clicks of a sweep: each may click 30
-// times a minute.
+// times a minute, and a round clicks up to twice. They are created with SQL,
+// since the sign-up route's per-address limit refuses a deep sweep's worth.
 func clickers(cf *componentsFixture, rounds int) []*client {
 	out := []*client{cf.max}
-	for i := 1; i <= rounds/25; i++ {
-		out = append(out, cf.a.register(cf.owner, fmt.Sprintf("clicker%d", i)))
+	for i := 1; i <= rounds/10; i++ {
+		out = append(out, cf.a.sqlMember(fmt.Sprintf("clicker%d", i)))
 	}
 	return out
+}
+
+// reconnect dials the gateway again and identifies. The races that close the
+// bot's connection every round need more upgrades and IDENTIFYs a minute than
+// the gateway allows, so they raise its limits first (Gateway.SetLimits).
+func (cf *componentsFixture) reconnect(secret string) {
+	cf.g = cf.dialGW("Bot " + secret)
+	cf.g.identify("", 0)
 }
 
 // A click against the deletion of its message: a click that was accepted
@@ -87,13 +96,13 @@ func answerAfterDeletion(cf *componentsFixture, round int, d []byte, msg core.Me
 func TestAClickRacingTheDisablingOfItsBot(t *testing.T) {
 	cf := newComponentsFixture(t)
 	rounds := racetest.Rounds(8, 60)
+	cf.a.router.Gateway.SetLimits(1000, 1000)
 	members := clickers(cf, rounds)
 	msg := cf.postWithComponents(t, cf.open, "Deploy?", deployRows())
 	racetest.Sweep(t, rounds, 2,
 		func(round int) {
 			wantStatus(t, "enable", cf.owner.patch(cf.botPath, map[string]any{"disabled": false}), http.StatusOK)
-			cf.g = cf.dialGW("Bot " + cf.token.Secret)
-			cf.g.identify("", 0)
+			cf.reconnect(cf.token.Secret)
 		},
 		func(round, i int) error {
 			if i == 0 {
@@ -113,11 +122,13 @@ func TestAClickRacingTheDisablingOfItsBot(t *testing.T) {
 }
 
 // A click against regenerating the bot's token: the old token's connection
-// closes, so the click is delivered or answers 409; an interaction that was
-// delivered is still the bot's and is answered with the new token.
+// closes, so the click is delivered or answers 409. Closing the connection
+// also drops the bot's pending interactions, so a click delivered before the
+// regeneration cannot be answered with the new token either (404).
 func TestAClickRacingTheRegenerationOfTheBotsToken(t *testing.T) {
 	cf := newComponentsFixture(t)
 	rounds := racetest.Rounds(8, 60)
+	cf.a.router.Gateway.SetLimits(1000, 1000)
 	members := clickers(cf, rounds)
 	msg := cf.postWithComponents(t, cf.open, "Deploy?", deployRows())
 	var fresh bot.NewTokenResponse
@@ -144,12 +155,11 @@ func TestAClickRacingTheRegenerationOfTheBotsToken(t *testing.T) {
 				if err := json.Unmarshal(d, &in); err != nil {
 					return err.Error()
 				}
-				if res := cf.callback(in, 6, nil); res.status != http.StatusNoContent {
-					return fmt.Sprintf("round %d: a delivered click could not be answered with the new token: %d %s", round, res.status, res.body)
+				if res := cf.callback(in, 6, nil); res.status != http.StatusNotFound {
+					return fmt.Sprintf("round %d: a click delivered before the regeneration was answered: %d %s", round, res.status, res.body)
 				}
 			}
-			cf.g = cf.dialGW("Bot " + fresh.Secret)
-			cf.g.identify("", 0)
+			cf.reconnect(fresh.Secret)
 			return ""
 		}).FailOnViolation(t)
 }
@@ -161,7 +171,7 @@ func TestAClickRacingTheBanOfTheMemberWhoClicks(t *testing.T) {
 	rounds := racetest.Rounds(6, 30)
 	members := make([]*client, rounds)
 	for i := range members {
-		members[i] = cf.a.register(cf.owner, fmt.Sprintf("banned%d", i))
+		members[i] = cf.a.sqlMember(fmt.Sprintf("banned%d", i))
 	}
 	msg := cf.postWithComponents(t, cf.open, "Deploy?", deployRows())
 	racetest.Sweep(t, rounds, 2,
