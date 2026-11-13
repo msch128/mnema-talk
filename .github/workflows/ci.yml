@@ -1011,11 +1011,12 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/apt-archives
-          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
 
+      # The sweep runs Chromium only, so only its system libraries.
       - name: Install browser system dependencies
         timeout-minutes: 10
-        run: e2e/ci-install-deps.sh chromium webkit
+        run: e2e/ci-install-deps.sh chromium
 
       - name: Run the full clipping sweep
         env:
