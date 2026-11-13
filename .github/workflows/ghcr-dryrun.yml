@@ -43,7 +43,11 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null
           docker buildx imagetools create --tag "$TARGET:dryrun-$VERSION" "$SOURCE@$digest"
-          cosign copy --force --only=sig,att "$SOURCE@$digest" "$TARGET@$digest" || cosign copy --force "$SOURCE@$digest" "$TARGET:dryrun-$VERSION"
+          # GHCR has no referrers API: cosign keeps the signature bundles in the
+          # referrers tag schema, an index tagged sha256-<hex>. Copy that index too.
+          hex=${digest#sha256:}
+          docker buildx imagetools inspect --raw "$SOURCE:sha256-$hex" | jq -r '.manifests[] | .artifactType + " " + .digest'
+          docker buildx imagetools create --tag "$TARGET:sha256-$hex" "$SOURCE:sha256-$hex"
           got=$(docker buildx imagetools inspect "$TARGET:dryrun-$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
           [ "$got" = "$digest" ] || { echo "::error::digest $got, expected $digest"; exit 1; }
           cosign verify "$TARGET@$digest" \
