@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, getDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
+import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, getDraft, hasAnyDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -8,6 +8,14 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('drafts', () => {
+  it('knows whether any channel, thread or conversation holds unsent text', () => {
+    expect(hasAnyDraft()).toBe(false)
+    setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })
+    expect(hasAnyDraft()).toBe(true)
+    setDraft('u1', threadDraftKey('t1'), null)
+    expect(hasAnyDraft()).toBe(false)
+  })
+
   it('keeps text and reply target per channel and thread', () => {
     setDraft('u1', channelDraftKey('c1'), { text: 'hello', reply: { id: 'm1', display_name: 'Max' } })
     setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })

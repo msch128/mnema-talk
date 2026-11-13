@@ -1,7 +1,7 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { isWebDesktopSelector } from './desktopRuntime'
 import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
-import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type OsNotification, type UnreadCounts } from './osNotify'
+import { browserNotify, hostNotify, type NotifyAdapter, type NotifyPermission, type BusyFlags, type OsNotification, type UnreadCounts } from './osNotify'
 import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
@@ -50,6 +50,16 @@ export interface Platform {
   reportUnread(counts: UnreadCounts): void
   /** The host takes `reportUnread` (it then also sums the badge over its instances). */
   supportsUnreadReport(): boolean
+  /**
+   * Whether this instance is busy (unsent text, a running upload, a Talk), so
+   * the multi-instance desktop client does not close the page of a hidden
+   * server to save memory. Feature-detected like `reportUnread`: only a host
+   * that announces the `busy` capability gets it, `supportsBusyReport` says
+   * whether that is the case. Additive, no `web_client_api` bump.
+   */
+  reportBusy(flags: BusyFlags): void
+  /** The host takes `reportBusy`. */
+  supportsBusyReport(): boolean
 }
 
 function windowString(name: string): string | null {
@@ -85,6 +95,11 @@ function unreadReporter(): NotifyAdapter | null {
   return app?.role === 'instance' && app.capabilities.includes('unread') ? hostNotify : null
 }
 
+function busyReporter(): NotifyAdapter | null {
+  const app = trustedApp()
+  return app?.role === 'instance' && app.capabilities.includes('busy') ? hostNotify : null
+}
+
 /** A browser tab, including the trusted bundle served from the client's own origin. */
 export const browserPlatform: Platform = {
   isWebDesktopSelector,
@@ -102,6 +117,8 @@ export const browserPlatform: Platform = {
   setBadge: count => notifier().setBadge(count),
   reportUnread: counts => unreadReporter()?.reportUnread?.(counts),
   supportsUnreadReport: () => unreadReporter()?.reportUnread !== undefined,
+  reportBusy: flags => busyReporter()?.reportBusy?.(flags),
+  supportsBusyReport: () => busyReporter()?.reportBusy !== undefined,
 }
 
 /** The platform of this page. */

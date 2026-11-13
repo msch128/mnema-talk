@@ -192,6 +192,11 @@ export function hasDraft(uid: string | null | undefined, key: string): boolean {
   return !!uid && snapshot.uid === uid && key in snapshot.items
 }
 
+/** Reactive: true while the account has an unsent draft under any key (a channel, a thread, a conversation). */
+export function hasAnyDraft(): boolean {
+  return Object.keys(state.value.items).length > 0
+}
+
 /** Stores the draft, or forgets it when it holds no text and no reply. */
 export function setDraft(uid: string, key: string, draft: Draft | null) {
   if (!sessionAlive()) return

@@ -572,6 +572,16 @@ host:
   capability keeps getting `desktop_set_badge`, and a browser gets neither. No
   `web_client_api` bump. Allowed only in the instance window, like the other
   notification commands.
+* **Busy report** (host capability `busy`; the multi-instance client). The
+  client closes the page of a server that stayed hidden for a while to save
+  memory (110 to 260 MB per page), and asks first whether the page is busy. A
+  host that announces `busy` in the instance window's `capabilities` gets
+  `desktop_report_busy` (`draft`: some composer holds unsent text, `upload`: a
+  file is waiting for or in its upload, `talk`: the member is connected to a
+  Talk; all booleans) right after the page started and on every change.
+  `Platform.reportBusy` / `supportsBusyReport` do the feature detection, so a
+  client without the capability gets nothing. No `web_client_api` bump. Allowed
+  only in the instance window.
 * **Mark all as read** (from the rail's menu, desktop 1.3). The host cannot
   reach the chat store, so it runs
   `window.dispatchEvent(new CustomEvent('mnema-desktop:mark-all-read'))` in the

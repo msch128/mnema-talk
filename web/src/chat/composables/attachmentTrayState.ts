@@ -13,6 +13,14 @@ export const itemsOf = (slot: string): TrayItem[] => {
   return trays.get(slot) as TrayItem[]
 }
 
+/** Reactive: true while any tray has a file waiting for or in its upload. Reads without creating a tray. */
+export function anyUploadPending(): boolean {
+  for (const items of trays.values()) {
+    if (items.some(item => item.status === 'queued' || item.status === 'uploading')) return true
+  }
+  return false
+}
+
 /** Lets go of an item's preview and cancels its upload. */
 export function release(item: TrayItem) {
   if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
