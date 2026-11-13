@@ -82,10 +82,15 @@ func TestDistinctCandidatesAreStillCapped(t *testing.T) {
 	}
 }
 
-// Trickled and answer candidates share one set.
+// Trickled and answer candidates share one set. The answer answers the
+// SFU's real offer: Join makes that offer on a goroutine of its own, and once
+// it is pending the vetting refuses an answer whose media sections are not
+// the offer's (a made-up one-section answer failed whenever the offer won).
 func TestTrickleAndAnswerShareTheSet(t *testing.T) {
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
+	c := newClient(t)
+	offers := make(chan webrtc.SessionDescription, 4)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +98,14 @@ func TestTrickleAndAnswerShareTheSet(t *testing.T) {
 	if err := peer.AddRemoteCandidate(trickled); err != nil {
 		t.Fatal(err)
 	}
-	mustVet(t, peer, sdpHead+hostLines(1, 2))
+	if err := c.pc.SetRemoteDescription(<-offers); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := c.pc.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustVet(t, peer, strings.TrimRight(answer.SDP, "\r\n")+"\r\n"+hostLines(1, 2))
 	if len(peer.cands.seen) != 1 {
 		t.Fatalf("distinct = %d, want 1", len(peer.cands.seen))
 	}
