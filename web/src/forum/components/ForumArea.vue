@@ -93,7 +93,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
 <template>
   <main
     data-testid="forum-area"
-    class="flex-1 flex flex-col h-full min-w-0 bg-mnema-canvas overflow-hidden"
+    class="flex-1 flex flex-col h-full min-w-0 bg-mnema-canvas overflow-clip"
   >
     <header class="h-14 px-4 max-md:pl-1.5 max-md:pr-3 border-b border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3 shrink-0">
       <div class="flex items-center gap-2.5 max-md:gap-1.5 min-w-0">

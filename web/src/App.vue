@@ -212,7 +212,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="h-full flex overflow-hidden bg-mnema-canvas text-mnema-text">
+  <div class="h-full flex overflow-clip bg-mnema-canvas text-mnema-text">
     <RecoveryPage v-if="recovery" :link="recovery" @done="leaveRecovery" />
 
     <!-- Session check still running: minimal loading state, no data fetching -->
