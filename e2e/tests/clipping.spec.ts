@@ -82,6 +82,7 @@ async function reachAndAuditOnce(page: Page, info: TestInfo, scene: Scene, ctx: 
     return
   }
   await audit(page, info, scene.name, report)
+  await scene.leave?.(ctx).catch((err: unknown) => console.log(`[clip] ${scene.name}: could not tidy up: ${String(err)}`))
 }
 
 /** The sign-in screen and, for a new member, the welcome flow: before anyone is signed in here. */

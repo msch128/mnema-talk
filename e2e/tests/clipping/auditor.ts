@@ -162,6 +162,13 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
       if (!clips(overflow)) continue
       const scrollSize = axis === 'x' ? el.scrollWidth : el.scrollHeight
       const clientSize = axis === 'x' ? el.clientWidth : el.clientHeight
+      // A box that hides overflow but was scrolled anyway (focus, scrollIntoView):
+      // what is above or left of it is cut off and no scrollbar brings it back.
+      const scrolled = axis === 'x' ? el.scrollLeft : el.scrollTop
+      if (scrolled > tol && !deliberateTruncation(el, s, axis)) {
+        findings.push({ rule: 'overflow-hidden', selector: selectorOf(el), text: textOf(el).slice(0, 80), measured: { axis, scrolledBy: round(scrolled), scrollSize, clientSize }, rect: rectOf(el) })
+        continue
+      }
       if (scrollSize - clientSize <= tol) continue
       if (deliberateTruncation(el, s, axis)) {
         if (!hasFullText(el)) findings.push({ rule: 'truncated-without-full-text', selector: selectorOf(el), text: textOf(el).slice(0, 80), measured: { axis, scrollSize, clientSize }, rect: rectOf(el) })
@@ -210,12 +217,17 @@ export function auditClipping(options: AuditOptions): ClipFinding[] {
     }
   }
 
-  /** The point is inside every ancestor that clips or scrolls, so a hit test there is meaningful. */
+  /**
+   * The point is well inside the window and every ancestor that clips or
+   * scrolls, so a hit test there is meaningful. A row whose middle sits on the
+   * edge of its scroll container is half scrolled out, not covered.
+   */
   function pointShown(el: Element, x: number, y: number): boolean {
-    if (x < 0 || y < 0 || x >= vw || y >= vh) return false
+    const m = 2
+    if (x < m || y < m || x > vw - m || y > vh - m) return false
     for (const a of clipAncestors(el)) {
       const box = a.el.getBoundingClientRect()
-      if (x < box.left || x > box.right || y < box.top || y > box.bottom) return false
+      if (x < box.left + m || x > box.right - m || y < box.top + m || y > box.bottom - m) return false
     }
     return true
   }

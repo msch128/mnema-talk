@@ -23,11 +23,15 @@ export interface Scene {
   name: string
   smoke?: boolean
   reach: (s: SceneContext) => Promise<void>
+  /** Undoes what the scene left on the server (drafts, staged uploads), so the next size starts clean. */
+  leave?: (s: SceneContext) => Promise<void>
 }
 
 // Settings and admin tabs, in the order the app lists them (shared/lib/settingsDialog.ts, admin/lib/adminNav.ts).
 const SETTINGS_TABS = ['audio', 'app', 'signin', 'sessions', 'privacy', 'data']
 const ADMIN_TABS = ['users', 'roles', 'channels', 'invites', 'onboarding', 'access', 'emoji', 'reports', 'automod', 'bans', 'audit', 'bots', 'import', 'media', 'system', 'status']
+
+const STAGED = [1, 2, 3].map(n => `a-picture-with-a-long-file-name-number-${n}.png`)
 
 /** Matches a name that starts with the text (menu items end with their shortcut key). */
 const startsWith = (text: string) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
@@ -63,9 +67,17 @@ async function scrollMessages(s: SceneContext, to: 'top' | 'middle') {
   }
 }
 
+// The header buttons that fold into its "more" menu on a narrow window, with that menu item's label.
+const FOLDED: Record<string, string> = { 'mentions-inbox-button': 'mentions.inbox', 'saved-button': 'panel.title' }
+
 async function headerButton(s: SceneContext, testid: string) {
   const button = s.page.getByTestId(testid)
-  if (!(await button.isVisible())) await s.page.getByTestId('header-more').click()
+  const label = FOLDED[testid]
+  if (label && !(await button.isVisible())) {
+    await s.page.getByTestId('header-more').click()
+    await s.page.getByRole('menuitem', { name: s.t(label) }).click()
+    return
+  }
   await button.click()
 }
 
@@ -91,9 +103,13 @@ const chatScenes: Scene[] = [
       await messageMenu(s, s.world.lastMessageText)
       // The item's name ends with its shortcut key.
       await s.page.getByRole('menuitem', { name: startsWith(s.t('chat.replyInChannel')) }).click()
-      const files = [1, 2, 3].map(n => ({ name: `a-picture-with-a-long-file-name-number-${n}.png`, mimeType: 'image/png', buffer: IMAGE }))
-      await s.page.locator('input[type="file"]').first().setInputFiles(files)
+      await s.page.locator('input[type="file"]').first().setInputFiles(STAGED.map(name => ({ name, mimeType: 'image/png', buffer: IMAGE })))
       await expect(s.page.getByTestId('attachment-tray')).toBeVisible()
+    },
+    // Staged uploads count against the member's limit of unsent files, and the reply is a draft.
+    leave: async (s) => {
+      for (const name of STAGED) await s.page.getByRole('button', { name: s.t('chat.attachRemove', { name }) }).click()
+      await s.page.getByRole('button', { name: s.t('chat.cancelReply') }).first().click()
     },
   },
   {
@@ -144,6 +160,7 @@ const chatScenes: Scene[] = [
       const toggle = s.page.getByRole('button', { name: s.t('members.toggle') })
       if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click()
       const row = s.page.locator('[data-member]').last()
+      await row.scrollIntoViewIfNeeded()
       const box = await row.boundingBox()
       if (!box) throw new Error('member row not on screen')
       await s.page.mouse.click(box.x + box.width - 4, box.y + box.height / 2, { button: 'right' })
@@ -155,10 +172,8 @@ const chatScenes: Scene[] = [
     reach: async (s) => {
       await openChat(s)
       await headerButton(s, 'search-in-channel')
-      const dialog = s.page.getByRole('dialog')
-      await dialog.getByRole('combobox').pressSequentially('message')
-      await dialog.getByRole('combobox').press('Enter')
-      await expect(dialog.locator('[data-msg-id], [data-testid="search-no-results"]').first()).toBeVisible()
+      // The channel's messages are listed at once; Enter would open the first one.
+      await expect(s.page.getByTestId('search-results-header')).toBeVisible()
     },
   },
   {
@@ -187,7 +202,7 @@ const chatScenes: Scene[] = [
     reach: async (s) => {
       await openChat(s)
       await scrollMessages(s, 'top')
-      await s.page.getByTestId('msg-open-thread').first().click()
+      await s.page.getByRole('button', { name: new RegExp(s.t('chat.openThread')) }).first().click()
       await expect(s.page.getByTestId('thread-close')).toBeVisible()
     },
   },
@@ -196,12 +211,13 @@ const chatScenes: Scene[] = [
     reach: async (s) => { await open(s.page, `/c/${s.world.longName.id}`); await expect(s.page.getByTestId('chat-channel-name')).toBeVisible() },
   },
   {
-    name: 'channel that fails to load',
+    name: 'a list that fails to load',
     reach: async (s) => {
-      await s.page.route(`**/api/channels/${s.world.longName.id}/messages**`, route => route.fulfill({ status: 500, body: '{}' }))
-      await open(s.page, `/c/${s.world.longName.id}`)
-      await expect(s.page.getByTestId('state-retry').or(s.page.getByTestId('try-again'))).toBeVisible()
-      await s.page.unroute(`**/api/channels/${s.world.longName.id}/messages**`)
+      await s.page.route('**/api/mentions?**', route => route.fulfill({ status: 500, body: '{}' }))
+      await openChat(s)
+      await headerButton(s, 'mentions-inbox-button')
+      await expect(s.page.getByTestId('state-retry')).toBeVisible()
+      await s.page.unroute('**/api/mentions?**')
     },
   },
   {
@@ -217,8 +233,8 @@ const chatScenes: Scene[] = [
 ]
 
 const otherScenes: Scene[] = [
-  { name: 'direct message', reach: async (s) => { await open(s.page, `/dm/${s.world.dmId}`); await expect(s.page.getByTestId('dm-header-title')).toBeVisible() } },
-  { name: 'group conversation', reach: async (s) => { await open(s.page, `/dm/g/${s.world.groupDmId}`); await expect(s.page.getByTestId('dm-header-title')).toBeVisible() } },
+  { name: 'direct message', reach: async (s) => { await open(s.page, `/dm/${s.world.dmId}`); await expect(s.page.getByTestId('dm-header-title').or(s.page.getByTestId('chat-channel-name')).first()).toBeVisible() } },
+  { name: 'group conversation', reach: async (s) => { await open(s.page, `/dm/g/${s.world.groupDmId}`); await expect(s.page.getByTestId('dm-header-title').or(s.page.getByTestId('chat-channel-name')).first()).toBeVisible() } },
   { name: 'forum', smoke: true, reach: async (s) => { await open(s.page, `/c/${s.world.forum.id}`); await expect(s.page.getByTestId('forum-post-card').first()).toBeVisible() } },
   {
     name: 'forum post',
