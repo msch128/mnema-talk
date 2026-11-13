@@ -1416,10 +1416,13 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
     RFC 3161 timestamp, checked offline against the Sigstore trusted root,
     fetched through TUF) was made by this repository's release workflow:
     issuer `https://token.actions.githubusercontent.com`, subject exactly
-    `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
+    `https://github.com/mnema-xyz/mnema-talk/.github/workflows/release.yml@refs/heads/main`
+    or, for releases from before the repository moved to the mnema-xyz
+    organization, `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
   - the BuildKit SLSA v1 provenance exists for every platform image, names that
     image as its subject, and records a GitHub Actions run and source
-    repository of this project. BuildKit does not sign it; it is covered by
+    repository of this project, **of the same owner as the signature** (an
+    msch128 signature never vouches for mnema-xyz provenance, nor the reverse). BuildKit does not sign it; it is covered by
     the signature because the signed index lists it by digest;
   - **the release is the one that was asked for, and a newer one.** A valid
     signature says who built an image, not which release it is, so a tag that

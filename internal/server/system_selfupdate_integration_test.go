@@ -59,12 +59,12 @@ func updateBody(password string) map[string]string {
 
 func TestSelfUpdateSuccess(t *testing.T) {
 	sidecar := newFakeSidecar(t)
-	a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:0.4")
+	a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:0.4")
 	admin := a.seedAdmin()
 
 	var st SystemStatus
 	admin.get("/api/admin/system").decode(t, &st)
-	if !st.SelfUpdate.Configured || !st.SelfUpdate.Available || st.SelfUpdate.Reach != "yes" || st.SelfUpdate.Image != "ghcr.io/msch128/mnema-talk:0.4" {
+	if !st.SelfUpdate.Configured || !st.SelfUpdate.Available || st.SelfUpdate.Reach != "yes" || st.SelfUpdate.Image != "ghcr.io/mnema-xyz/mnema-talk:0.4" {
 		t.Fatalf("self_update = %+v", st.SelfUpdate)
 	}
 	if strings.Contains(string(admin.get("/api/admin/system").body), updaterToken) {
@@ -109,7 +109,7 @@ func TestSelfUpdateSuccess(t *testing.T) {
 
 func TestSelfUpdateRequiresAdminSameOriginAndPassword(t *testing.T) {
 	sidecar := newFakeSidecar(t)
-	a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+	a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 	admin := a.seedAdmin()
 	max := a.register(admin, "max")
 
@@ -145,7 +145,7 @@ func TestSelfUpdateRequiresAdminSameOriginAndPassword(t *testing.T) {
 
 func TestSelfUpdateRefusals(t *testing.T) {
 	t.Run("not configured", func(t *testing.T) {
-		a := selfUpdateApp(t, nil, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, nil, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		var st SystemStatus
 		admin.get("/api/admin/system").decode(t, &st)
@@ -158,16 +158,30 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	})
 	t.Run("stale target version", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		res := admin.post("/api/admin/system/update", map[string]string{"password": "admin-password-123", "target_version": "0.3.9"})
 		if res.status != http.StatusConflict || sidecar.calls.Load() != 0 {
 			t.Fatalf("update: %d %s calls=%d", res.status, res.body, sidecar.calls.Load())
 		}
 	})
+	t.Run("image on the moved repository", func(t *testing.T) {
+		sidecar := newFakeSidecar(t)
+		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:0.4")
+		admin := a.seedAdmin()
+		var st SystemStatus
+		admin.get("/api/admin/system").decode(t, &st)
+		if st.SelfUpdate.Available || st.SelfUpdate.MovedTo != "ghcr.io/mnema-xyz/mnema-talk" || st.SelfUpdate.Reach != "yes" {
+			t.Fatalf("self_update = %+v", st.SelfUpdate)
+		}
+		res := admin.post("/api/admin/system/update", updateBody("admin-password-123"))
+		if res.status != http.StatusConflict || sidecar.calls.Load() != 0 || !strings.Contains(string(res.body), "moved") {
+			t.Fatalf("update: %d %s calls=%d", res.status, res.body, sidecar.calls.Load())
+		}
+	})
 	t.Run("pinned image", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:0.3.0")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:0.3.0")
 		admin := a.seedAdmin()
 		var st SystemStatus
 		admin.get("/api/admin/system").decode(t, &st)
@@ -194,7 +208,7 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	t.Run("sidecar error", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusUnauthorized)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		res := admin.post("/api/admin/system/update", updateBody("admin-password-123"))
 		if res.status != http.StatusServiceUnavailable || !strings.Contains(string(res.body), "UPDATER_TOKEN") || strings.Contains(string(res.body), updaterToken) {
@@ -204,7 +218,7 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	t.Run("a failed trigger keeps no cooldown", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusUnauthorized)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		wantStatus(t, "failed trigger", admin.post("/api/admin/system/update", updateBody("admin-password-123")), http.StatusServiceUnavailable)
 		var st SystemStatus
@@ -218,14 +232,14 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	t.Run("sidecar refuses an unverified image", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusUnprocessableEntity)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		res := admin.post("/api/admin/system/update", updateBody("admin-password-123"))
 		if res.status != http.StatusServiceUnavailable || !strings.Contains(string(res.body), "signature or build provenance did not verify") || !strings.Contains(string(res.body), "nothing was changed") {
 			t.Fatalf("update: %d %s", res.status, res.body)
 		}
 		sidecar.status.Store(http.StatusBadGateway)
-		a2 := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a2 := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		res = a2.seedAdmin().post("/api/admin/system/update", updateBody("admin-password-123"))
 		if res.status != http.StatusServiceUnavailable || !strings.Contains(string(res.body), "could not verify") {
 			t.Fatalf("unverifiable: %d %s", res.status, res.body)
@@ -234,7 +248,7 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	t.Run("sidecar busy", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
 		sidecar.status.Store(http.StatusTooManyRequests)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		admin := a.seedAdmin()
 		if res := admin.post("/api/admin/system/update", updateBody("admin-password-123")); res.status != http.StatusConflict {
 			t.Fatalf("update: %d %s", res.status, res.body)
@@ -242,7 +256,7 @@ func TestSelfUpdateRefusals(t *testing.T) {
 	})
 	t.Run("sidecar down", func(t *testing.T) {
 		sidecar := newFakeSidecar(t)
-		a := selfUpdateApp(t, sidecar, "ghcr.io/msch128/mnema-talk:latest")
+		a := selfUpdateApp(t, sidecar, "ghcr.io/mnema-xyz/mnema-talk:latest")
 		sidecar.srv.Close()
 		admin := a.seedAdmin()
 		start := time.Now()

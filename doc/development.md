@@ -248,7 +248,7 @@ branch) was waived when it landed there and is not reported again.
    cheaply, but not every edit: no commit trailer, variable or label skips
    it, and the script and the workflow are code-owned paths.
 3. The same workflow then builds the image and pushes it to GHCR:
-   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
+   `ghcr.io/mnema-xyz/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
    provenance and SBOM, and signs every tag keylessly with cosign (verify with
    [operations.md](operations.md#verifying-a-release-image)). When the
