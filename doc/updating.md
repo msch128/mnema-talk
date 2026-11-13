@@ -93,26 +93,34 @@ set -uo pipefail
 exec 9>/run/mnema-auto-update.lock; flock -n 9 || exit 0   # never two runs at once
 cd /opt/mnema-talk || exit 1                               # your deployment folder
 img=$(sed -n 's/^MNEMA_IMAGE=//p' .env)
+case $img in *:[0-9]*.[0-9]*) ;; *) echo "MNEMA_IMAGE must be a pinned X.Y tag, got '$img'" >&2; exit 1 ;; esac
 old=$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null || true)
-docker pull -q "$img" >/dev/null || exit 0
+docker pull -q "$img" >/dev/null || { echo "pull of $img failed" >&2; exit 1; }
 new=$(docker image inspect -f '{{.Id}}' "$img")
 [ "$new" != "$old" ] || exit 0                              # nothing new
+[ "$(cat /var/lib/mnema-bad-image 2>/dev/null)" != "$new" ] || exit 0   # failed before: do not retry
+health() { for _ in $(seq 1 36); do
+  [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk)" = healthy ] && return 0; sleep 5; done; return 1; }
+rollback() { echo "$new" > /var/lib/mnema-bad-image; [ -n "$old" ] && docker tag "$old" "$img"; }
 if BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
-  docker compose up -d --no-deps app
-  for _ in $(seq 1 36); do
-    [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk)" = healthy ] && exit 0
-    sleep 5
-  done
-  echo "new version not healthy, going back" >&2           # roll back to the previous image
-  [ -n "$old" ] && docker tag "$old" "$img" && docker compose up -d --no-deps app
+  docker compose up -d        # recreates the services whose image changed (app and updater)
+  health && exit 0
+  echo "new version not healthy, going back" >&2
+  rollback; docker compose up -d
+  health || echo "ROLLBACK ALSO UNHEALTHY: manual action needed" >&2
   exit 1
 fi
-docker tag "$old" "$img"                                    # backup failed: do not update
+echo "backup failed, not updating" >&2
+rollback; exit 1
 ```
 
 Run it hourly from `/etc/cron.d/mnema-auto-update`
 (`10 * * * * root /usr/local/sbin/mnema-auto-update >> /var/log/mnema-auto-update.log 2>&1`)
-and keep it clear of the nightly backup slot. Things to know:
+and keep it clear of the nightly backup slot. Nothing alerts you: the log file
+is the only report, so read it now and then (or add a mail or webhook call at the
+`echo` lines). A release that failed its health check is remembered in
+`/var/lib/mnema-bad-image` and not retried until a newer image appears. Things
+to know:
 
 - Members are disconnected for 30 to 60 seconds during an update, so pick the
   hours that suit your community (change the cron hour field).

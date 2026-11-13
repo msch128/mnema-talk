@@ -108,10 +108,12 @@ Debian or Ubuntu with Docker.
    `sudo ufw allow 22/tcp && sudo ufw allow 80,443/tcp && sudo ufw allow 50000:50050/udp && sudo ufw allow 3479 && sudo ufw default deny incoming && sudo ufw enable`
    (`3479` without a protocol opens UDP and TCP). Docker publishes its ports
    around `ufw`, so `ufw` does **not** restrict them: what keeps a service
-   private is that Compose binds it to `127.0.0.1` (the app on 8080) or does not
-   publish it at all (PostgreSQL, SeaweedFS). Do not add `ports:` lines for
+   private is that Compose binds the app port (8080, or your `PORT`) to
+   `127.0.0.1` by default (`PUBLISH_ADDR` in `.env`, which the assistant sets
+   to `0.0.0.0` only when you chose a plain `http://` address) and does not
+   publish PostgreSQL and SeaweedFS at all. Do not add `ports:` lines for
    them. To check from outside, run `nc -vz <your IP> 8080` from another
-   machine: it must not connect. If a port that should be open stays closed,
+   machine: it must not connect; if it does, look at `PUBLISH_ADDR`. If a port that should be open stays closed,
    check `sudo iptables -L DOCKER-USER`.
 3. **The provider's firewall** (security group) is a second, separate firewall
    with the same ports.
