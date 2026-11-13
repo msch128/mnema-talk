@@ -39,9 +39,22 @@ type Channel struct {
 	// in this channel; 0 = off. Members who may manage messages here are
 	// exempt.
 	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"86400"`
-	// AutoDeleteDays removes messages older than this many days (1, 7, 30 or
-	// 90; pinned messages stay); 0 = off. Never set on direct messages.
-	AutoDeleteDays int `json:"auto_delete_days" minimum:"0" maximum:"90" binding:"optional"`
+	// AutoDeleteDays is the effective auto-delete period in days: exact for
+	// whole days, otherwise rounded down and at least 1 while it is on; 0 when
+	// it is off or deletes only files (auto_delete_scope "attachments").
+	// Never set on direct messages. Kept for older clients: auto_delete_hours
+	// is the precise value (doc/timed-messages.md).
+	AutoDeleteDays int `json:"auto_delete_days" minimum:"0" maximum:"365" binding:"optional"`
+	// AutoDeleteHours is the effective period after which messages (or, with
+	// the scope "attachments", their files) are removed; 0 = off. Pinned
+	// messages stay.
+	AutoDeleteHours int `json:"auto_delete_hours" minimum:"0" maximum:"8760" binding:"optional"`
+	// AutoDeleteScope is what the period removes: "all" the messages with
+	// their files, "attachments" only the files.
+	AutoDeleteScope string `json:"auto_delete_scope" enums:"all,attachments" binding:"optional"`
+	// AutoDeleteFollowsDefault says the channel has no setting of its own and
+	// follows the community default (which may be off).
+	AutoDeleteFollowsDefault bool `json:"auto_delete_follows_default" binding:"optional"`
 	// IsLobby marks a Talk as a "Create a Talk" lobby: joining it opens a
 	// temporary Talk instead of taking a seat (doc/talks.md).
 	IsLobby bool `json:"is_lobby" binding:"optional"`
@@ -70,4 +83,35 @@ type Channel struct {
 // use this one wherever a conversation is told from a community channel in SQL.
 func PrivateChannelSQL(alias string) string {
 	return "(" + alias + ".type = '" + ChannelKindDM + "' OR " + alias + ".dm_id IS NOT NULL)"
+}
+
+// Auto-delete scopes: what a channel's period removes.
+const (
+	AutoDeleteScopeAll         = "all"
+	AutoDeleteScopeAttachments = "attachments"
+)
+
+// AutoDeleteSQL selects, for the channels row called alias, the effective
+// auto-delete hours, scope and whether they come from the community default,
+// in that order. A conversation and its call Talk answer 0: never swept.
+func AutoDeleteSQL(alias string) string {
+	return `CASE WHEN ` + PrivateChannelSQL(alias) + ` THEN 0
+	             ELSE COALESCE(` + alias + `.auto_delete_hours, (SELECT auto_delete_default_hours FROM instance_settings)) END,
+	        CASE WHEN ` + alias + `.auto_delete_hours IS NULL THEN (SELECT auto_delete_default_scope FROM instance_settings)
+	             ELSE ` + alias + `.auto_delete_scope END,
+	        ` + alias + `.auto_delete_hours IS NULL`
+}
+
+// FillAutoDeleteDays works out the older days field from the effective hours
+// and scope (see Channel.AutoDeleteDays).
+func (c *Channel) FillAutoDeleteDays() {
+	c.AutoDeleteDays = AutoDeleteDays(c.AutoDeleteHours, c.AutoDeleteScope)
+}
+
+// AutoDeleteDays is the days field for an effective period and scope.
+func AutoDeleteDays(hours int, scope string) int {
+	if hours <= 0 || scope == AutoDeleteScopeAttachments {
+		return 0
+	}
+	return max(1, hours/24)
 }

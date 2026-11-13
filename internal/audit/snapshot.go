@@ -23,7 +23,7 @@ var snapshotSQL = map[Resource]string{
 		'self_assignable', self_assignable, 'description', description), name
 		FROM roles WHERE id = $1`,
 	ResChannel: `SELECT jsonb_build_object('name', name, 'type', type, 'topic', topic,
-		'category_id', category_id, 'user_limit', user_limit, 'slow_mode_seconds', slow_mode_seconds, 'auto_delete_days', auto_delete_days, 'sort_order', sort_order, 'is_lobby', is_lobby, 'is_stage', is_stage), name
+		'category_id', category_id, 'user_limit', user_limit, 'slow_mode_seconds', slow_mode_seconds, 'auto_delete_hours', auto_delete_hours, 'auto_delete_scope', auto_delete_scope, 'sort_order', sort_order, 'is_lobby', is_lobby, 'is_stage', is_stage), name
 		FROM channels WHERE id = $1`,
 	ResCategory: `SELECT jsonb_build_object('name', name, 'sort_order', sort_order), name
 		FROM categories WHERE id = $1`,
@@ -43,6 +43,8 @@ var snapshotSQL = map[Resource]string{
 		'rules_text', rules_text, 'rules_version', rules_version, 'start_channel_id', start_channel_id,
 		'community_icon', community_icon_version IS NOT NULL),
 		'onboarding' FROM instance_settings`,
+	ResMessages: `SELECT jsonb_build_object('message_lifetimes_enabled', message_lifetimes_enabled, 'message_lifetime_max_seconds', message_lifetime_max_seconds,
+		'auto_delete_default_hours', auto_delete_default_hours, 'auto_delete_default_scope', auto_delete_default_scope), 'message settings' FROM instance_settings`,
 	ResVanity: `SELECT jsonb_build_object('slug', vanity_slug, 'accepts_signups', vanity_accepts_signups), 'vanity link' FROM instance_settings`,
 	ResEmoji:  `SELECT jsonb_build_object('name', name, 'animated', animated), name FROM custom_emoji WHERE id = $1`,
 	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
@@ -73,7 +75,7 @@ func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[s
 		return nil, ""
 	}
 	var args []any
-	if res != ResSettings && res != ResOnboarding && res != ResVanity {
+	if res != ResSettings && res != ResOnboarding && res != ResVanity && res != ResMessages {
 		uid, err := uuid.Parse(id)
 		if err != nil {
 			return nil, ""

@@ -37,7 +37,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		chattest.RequireError(t, err, "query channels")
 	})
 	t.Run("channel decoding", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_hours,auto_delete_scope,dm_id,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
 		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})

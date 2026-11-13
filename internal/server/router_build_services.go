@@ -60,7 +60,7 @@ func (c *components) newChat() {
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}
-	safego.Go("auto_delete", safego.Crash, func() { autoDelete.Run(c.ctx, channels.AutoDeleteEvery) })
+	safego.Go("auto_delete", safego.Crash, func() { autoDelete.Run(c.ctx) })
 }
 
 // newImport builds the Discord structure import.
