@@ -95,7 +95,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
     data-testid="forum-area"
     class="flex-1 flex flex-col h-full min-w-0 bg-mnema-canvas overflow-clip"
   >
-    <header class="h-14 px-4 max-md:pl-1.5 max-md:pr-3 border-b border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3 shrink-0">
+    <header class="@container h-14 px-4 max-md:pl-1.5 max-md:pr-3 border-b border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3 shrink-0">
       <div class="flex items-center gap-2.5 max-md:gap-1.5 min-w-0">
         <NavDrawerButton />
         <MessagesSquare class="w-5 h-5 text-mnema-accent shrink-0" />
@@ -129,7 +129,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
           @click="showManageTagsModal = true"
         >
           <Tags class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline">{{ $t('forum.manageTags') }}</span>
+          <span class="hidden sm:inline @max-md:hidden">{{ $t('forum.manageTags') }}</span>
         </button>
 
         <button
@@ -141,7 +141,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
           @click="showCreateModal = true"
         >
           <Plus class="w-4 h-4" />
-          <span class="max-sm:hidden">{{ $t('forum.newPost') }}</span>
+          <span class="max-sm:hidden @max-md:hidden">{{ $t('forum.newPost') }}</span>
         </button>
       </div>
     </header>

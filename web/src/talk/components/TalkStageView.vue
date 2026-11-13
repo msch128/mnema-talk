@@ -184,7 +184,8 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
             <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
             {{ $t('talk.live') }}
           </span>
-          <ScreenViewers v-if="!cameraOnStage && stage.userId" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 shrink-0" />
+          <!-- On a tiny stage (a phone) the right-hand buttons leave room for the LIVE badge only. -->
+          <ScreenViewers v-if="!cameraOnStage && stage.userId && !tiny" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 shrink-0" />
           <span v-full-text v-if="!tiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
           <span v-if="videoResolution && !narrow" class="text-white/60 text-xs font-mono shrink-0">{{ videoResolution }}</span>
         </div>

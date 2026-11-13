@@ -242,7 +242,7 @@ const groupedIds = computed(() => {
         <div class="w-14 h-14 rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text">
           <Volume2 class="w-7 h-7" />
         </div>
-        <p class="font-bold text-2xl text-mnema-text">{{ welcomeText }}</p>
+        <p class="font-bold text-2xl text-mnema-text wrap-anywhere">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-muted mt-1">{{ beginningText }}</p>
       </div>
 
@@ -251,7 +251,7 @@ const groupedIds = computed(() => {
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
           <component :is="channelIcon" class="w-5 h-5 opacity-80" />
         </div>
-        <p class="font-semibold text-lg text-mnema-text">{{ welcomeText }}</p>
+        <p class="font-semibold text-lg text-mnema-text wrap-anywhere">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">
           {{ $t('chat.emptyBody') }}
         </p>
@@ -266,7 +266,7 @@ const groupedIds = computed(() => {
           <div :class="['rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text', panel ? 'w-14 h-14' : 'w-16 h-16']">
             <component :is="channelIcon" :class="panel ? 'w-7 h-7' : 'w-9 h-9'" />
           </div>
-          <p :class="['font-bold text-mnema-text', panel ? 'text-2xl' : 'text-3xl']">{{ welcomeText }}</p>
+          <p :class="['font-bold text-mnema-text wrap-anywhere', panel ? 'text-2xl' : 'text-3xl']">{{ welcomeText }}</p>
           <p :class="['text-mnema-muted mt-1', panel ? 'text-sm' : 'text-base']">{{ beginningText }}</p>
         </div>
       </template>

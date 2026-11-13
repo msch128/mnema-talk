@@ -39,7 +39,7 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
 </script>
 
 <template>
-  <header class="h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10">
+  <header class="@container h-12 px-4 max-md:pl-1 max-md:pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 shrink-0 z-10">
     <div class="flex items-center gap-3 min-w-0">
       <NavDrawerButton />
       <div
@@ -53,7 +53,8 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
         <h2 v-full-text class="font-semibold text-base leading-5 text-mnema-text truncate min-w-12">
           {{ channelName || $t('voice.channelFallback') }}
         </h2>
-        <TalkParticipants class="shrink-0" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />
+        <!-- Under 22rem (a phone at 125 % zoom) the count steps aside for the buttons; the stage shows everyone. -->
+        <TalkParticipants class="shrink-0 @max-[22rem]:hidden" :users="users" :started-at="startedAt" :leader-id="channel?.leader_id ?? ''" />
         <VoiceTimer
           v-if="startedAt && !narrow"
           :since="startedAt"
