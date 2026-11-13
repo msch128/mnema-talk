@@ -3,8 +3,6 @@ package account
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -29,12 +27,17 @@ const (
 	// build slot.
 	exportBusyRetry  = time.Minute
 	exportSweepEvery = 15 * time.Minute
+	// exportRedownload is how long a complete download leaves the file in
+	// place (never past its expiry), so a copy the client lost after the last
+	// byte left the server (a desktop host or proxy that read it and could not
+	// save it, a browser that cancelled late) can be taken again.
+	exportRedownload = time.Hour
 )
 
 // requestExport handles POST /api/users/me/export.
 //
 // @Summary Request an export of my data
-// @Description GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded once within 24 hours and is then deleted. Needs object storage. Size-bounded; nothing of other members' personal data is included.
+// @Description GDPR Art. 20: builds a ZIP of JSON files with the caller's own data (profile, settings, roles, own messages with the channel names the caller can still see, reactions, upload list with links, audit entries about the account without other people's names). Needs the current password and, while two-factor sign-in is on, a current code. One export per 24 hours; it is built in the background (poll GET /api/users/me/export), can be downloaded within 24 hours and is deleted one hour after the first complete download. Needs object storage. Size-bounded; nothing of other members' personal data is included.
 // @ID requestDataExport
 // @Tags Users
 // @Accept json
@@ -154,8 +157,9 @@ func (h *API) exportState(ctx context.Context, user uuid.UUID) (auth.ExportStatu
 	var st auth.ExportStatus
 	var status string
 	var requested, expires time.Time
-	var hasKey, downloaded bool
-	err := h.Sessions.DB.QueryRow(ctx, `SELECT status, requested_at, COALESCE(expires_at, 'epoch'), size_bytes, s3_key IS NOT NULL, downloaded_at IS NOT NULL
+	var downloaded *time.Time
+	var hasKey bool
+	err := h.Sessions.DB.QueryRow(ctx, `SELECT status, requested_at, COALESCE(expires_at, 'epoch'), size_bytes, s3_key IS NOT NULL, downloaded_at
 		FROM data_exports WHERE user_id = $1 ORDER BY requested_at DESC LIMIT 1`, user).Scan(&status, &requested, &expires, &st.SizeBytes, &hasKey, &downloaded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.ExportStatus{State: "none"}, nil
@@ -164,7 +168,12 @@ func (h *API) exportState(ctx context.Context, user uuid.UUID) (auth.ExportStatu
 		return st, err
 	}
 	st.RequestedAt = &requested
-	st.State = exportStateName(status, hasKey, downloaded, expires)
+	if downloaded != nil {
+		// A downloaded file stays for the redownload window, never past its expiry.
+		expires = minTime(expires, downloaded.Add(exportRedownload))
+		st.DownloadedAt = downloaded
+	}
+	st.State = exportStateName(status, hasKey, downloaded != nil, expires)
 	if st.State == "ready" {
 		st.ExpiresAt = &expires
 	}
@@ -174,22 +183,31 @@ func (h *API) exportState(ctx context.Context, user uuid.UUID) (auth.ExportStatu
 	return st, nil
 }
 
+// exportStateName names the state; expires is when the file stops being
+// downloadable (for a downloaded export the end of its redownload window).
 func exportStateName(status string, hasKey, downloaded bool, expires time.Time) string {
 	switch {
 	case status != "ready":
 		return status
+	case hasKey && expires.After(time.Now()):
+		return "ready"
 	case downloaded:
 		return "downloaded"
-	case !hasKey || !expires.After(time.Now()):
-		return "expired"
 	}
-	return "ready"
+	return "expired"
+}
+
+func minTime(a, b time.Time) time.Time {
+	if b.Before(a) {
+		return b
+	}
+	return a
 }
 
 // exportStatus handles GET /api/users/me/export.
 //
 // @Summary Status of my data export
-// @Description The caller's newest export: none, pending, ready (with the time it expires), failed, downloaded or expired, and when a new one may be requested.
+// @Description The caller's newest export: none, pending, ready (with the time it stops being downloadable), failed, downloaded or expired, and when a new one may be requested. After a complete download the export stays ready for one more hour (never past its expiry) with downloaded_at set, then reads downloaded.
 // @ID getDataExport
 // @Tags Users
 // @Produce json
@@ -209,88 +227,6 @@ func (h *API) exportStatus(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Cache-Control", "no-store")
 	httpx.WriteJSON(w, http.StatusOK, st)
 	return nil
-}
-
-// downloadExport handles GET /api/users/me/export/download.
-//
-// @Summary Download my data export
-// @Description The finished ZIP, once: the file is spent and deleted only after it was sent completely, so an interrupted download can be repeated. Refuses requests that browsers mark as coming from another site (Sec-Fetch-Site). 404 when there is no ready export, it expired or it was downloaded already.
-// @ID downloadDataExport
-// @Tags Users
-// @Produce application/zip
-// @Security cookieAuth
-// @Success 200 {file} binary "The ZIP archive."
-// @Header 200 {string} Cache-Control "no-store"
-// @Header 200 {string} Content-Disposition "attachment; filename=mnema-talk-export.zip"
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the request came from another site (Sec-Fetch-Site is neither same-origin nor none)."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no export is ready, it expired or was downloaded already."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/users/me/export/download [get]
-func (h *API) downloadExport(w http.ResponseWriter, r *http.Request) error {
-	if h.Objects == nil {
-		return httpx.ErrUnavailable("exports need object storage")
-	}
-	// The download takes the file, so it must not be triggerable from another
-	// site (an image tag, a link, a form): browsers say where a request comes
-	// from, and only the app itself or a typed address may ask.
-	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
-		return httpx.ErrForbidden("the download can only be started from this site")
-	}
-	u := auth.UserFrom(r.Context())
-	id, key, err := h.claimDownload(r.Context(), u.ID)
-	if err != nil {
-		return err
-	}
-	body, err := h.Objects.GetObjectFrom(r.Context(), key, 0)
-	if err != nil {
-		h.releaseDownload(r.Context(), id)
-		return fmt.Errorf("open export: %w", err)
-	}
-	defer body.Close()
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", `attachment; filename="mnema-talk-export.zip"`)
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if _, err := io.Copy(w, body); err != nil {
-		// Not delivered: the export stays available for another try.
-		slog.Warn("export download interrupted", "err", err)
-		h.releaseDownload(r.Context(), id)
-		return nil
-	}
-	h.finishDownload(r.Context(), id, key)
-	h.AuditUser(r.Context(), u, "auth.export_download")
-	return nil
-}
-
-// claimDownload reserves the newest ready export for one download at a time.
-// A reservation that was never finished (a crashed request) lapses after ten
-// minutes.
-func (h *API) claimDownload(ctx context.Context, user uuid.UUID) (uuid.UUID, string, error) {
-	var id uuid.UUID
-	var key string
-	err := h.Sessions.DB.QueryRow(ctx, `UPDATE data_exports SET claimed_at = NOW()
-		WHERE id = (SELECT id FROM data_exports WHERE user_id = $1 AND status = 'ready' AND downloaded_at IS NULL
-		            AND s3_key IS NOT NULL AND expires_at > NOW()
-		            AND (claimed_at IS NULL OR claimed_at < NOW() - INTERVAL '10 minutes')
-		            ORDER BY requested_at DESC LIMIT 1)
-		RETURNING id, s3_key`, user).Scan(&id, &key)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, "", httpx.ErrNotFound("there is no export to download")
-	}
-	return id, key, err
-}
-
-func (h *API) releaseDownload(ctx context.Context, id uuid.UUID) {
-	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET claimed_at = NULL WHERE id = $1`, id)
-}
-
-// finishDownload spends the export after the whole file was sent.
-func (h *API) finishDownload(ctx context.Context, id uuid.UUID, key string) {
-	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET downloaded_at = NOW() WHERE id = $1`, id)
-	_ = h.dropExportFile(ctx, id, key)
 }
 
 // dropExportFile removes the stored file, then forgets its key. A failure
@@ -333,7 +269,9 @@ func (h *API) RunExportSweep(ctx context.Context, every time.Duration) {
 func (h *API) sweepExports(ctx context.Context) error {
 	db := h.Sessions.DB
 	_, markErr := db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
-	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL AND (expires_at < NOW() OR downloaded_at IS NOT NULL) LIMIT 200`)
+	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL
+		AND (expires_at < NOW() OR downloaded_at < NOW() - $1 * INTERVAL '1 second')
+		AND (claimed_at IS NULL OR claimed_at < NOW() - INTERVAL '10 minutes') LIMIT 200`, int64(exportRedownload.Seconds()))
 	if err != nil {
 		return errors.Join(markErr, err)
 	}
