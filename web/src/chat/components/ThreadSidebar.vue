@@ -3,7 +3,7 @@ import { messageText } from '../../shared/lib/textLength'
 import type { Message } from '../../types/domain'
 import { caughtErrorMessage } from '../../shared/lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Bell, BellOff, Lock } from '@lucide/vue'
+import { ArrowLeft, X, MessageSquare, Loader2, Bell, BellOff, Lock } from '@lucide/vue'
 import type { ThreadRoot } from '../../stores/chat'
 import { useChatStore } from '../../stores/chat'
 import { usePermissionsStore } from '../../stores/permissions'
@@ -24,6 +24,7 @@ import { useDraftSlot } from '../composables/useDraftSlot'
 import { setDraft, threadDraftKey, type DraftReply } from '../lib/drafts'
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
+import { threadOverlay } from '../../shared/lib/sideColumns'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
@@ -224,7 +225,17 @@ async function handleSendReply() {
     <!-- Thread Header -->
     <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 shrink-0">
       <div class="flex items-center gap-2 min-w-0">
-        <MessageSquare class="w-5 h-5 text-mnema-accent shrink-0" />
+        <button
+          v-if="threadOverlay"
+          type="button"
+          data-testid="thread-back"
+          class="btn btn-icon -ml-2 w-8 h-8 shrink-0"
+          v-tooltip="$t('thread.back')"
+          @click="chatStore.closeThread()"
+        >
+          <ArrowLeft class="w-5 h-5" />
+        </button>
+        <MessageSquare v-else class="w-5 h-5 text-mnema-accent shrink-0" />
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
             <span class="font-semibold text-base text-mnema-text shrink-0">{{ $t('thread.title') }}</span>

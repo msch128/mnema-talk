@@ -23,6 +23,7 @@ import DmMuteButton from '../../dm/components/DmMuteButton.vue'
 import { useDmChat } from '../../dm/composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
+import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
 // The channel header (48px, aligned with the side columns; 40px in the Talk's
 // chat) and the desktop notification opt-in under it, shown until answered or dismissed.
@@ -243,10 +244,10 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
       <button
         v-else
-        @click="chatStore.showMemberList = !chatStore.showMemberList"
+        @click="toggleMemberList(chatStore)"
         class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('members.toggle')"
-        :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
+        :aria-pressed="memberListShown(chatStore.showMemberList) ? 'true' : 'false'"
       >
         <Users class="w-5 h-5" />
       </button>

@@ -1246,6 +1246,7 @@
   },
   "thread": {
     "title": "Thread",
+    "back": "Zurück zum Chat",
     "close": "Thread schließen",
     "follow": "Thread folgen",
     "unfollow": "Thread nicht mehr folgen",

@@ -14,6 +14,7 @@ import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import { headerButton, focusRing } from './talkButtons'
 import NavDrawerButton from '../../shared/components/NavDrawerButton.vue'
+import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
 // The Talk's header: its name, who is there and for how long, and the
 // buttons for the Talk's chat, "only participants with video" and the member list.
@@ -127,10 +128,10 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
       <!-- Toggle Member List Sidebar -->
       <button
         type="button"
-        @click="chatStore.showMemberList = !chatStore.showMemberList"
-        :class="headerButton(chatStore.showMemberList)"
+        @click="toggleMemberList(chatStore)"
+        :class="headerButton(memberListShown(chatStore.showMemberList))"
         v-tooltip="$t('members.toggle')"
-        :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
+        :aria-pressed="memberListShown(chatStore.showMemberList) ? 'true' : 'false'"
       >
         <Users class="w-4 h-4" />
       </button>
