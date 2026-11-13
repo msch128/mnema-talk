@@ -175,6 +175,13 @@ func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string
 	if err != nil {
 		return nil, fmt.Errorf("list webhook bots: %w", err)
 	}
+	// The bot accounts' rows are taken before the cascade locks the messages:
+	// a delete of a webhook message takes its author's row before the
+	// message's (messages.lockMessageForDelete), and the other order here, the
+	// messages and then the account, would be a lock cycle with it.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) FOR UPDATE`, botIDs); err != nil {
+		return nil, fmt.Errorf("lock webhook bots: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
 		return nil, fmt.Errorf("delete channel: %w", err)
 	}
