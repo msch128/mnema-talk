@@ -101,6 +101,32 @@ describe('the access choice in a bot’s settings', () => {
     expect(w.get('[data-testid="bot-channel-access-mixed"]').text()).toContain('different permissions')
   })
 
+  it('reads an answer of a server that does not know the choice yet as selected channels with nothing ticked', async () => {
+    apiMock.mockImplementation(async () => ({ permissions: 0, elevated: false, channels: [] }))
+    const w = await mountPanel()
+    expect((w.get('[data-access="channels"]').element as HTMLInputElement).checked).toBe(true)
+    expect(w.findAll('[data-permission]').some(i => (i.element as HTMLInputElement).checked)).toBe(false)
+    expect(w.findAll('[data-channel]').some(i => (i.element as HTMLInputElement).checked)).toBe(false)
+  })
+
+  it('unticks a permission and saves without it, once even when clicked twice', async () => {
+    const w = await mountPanel()
+    await w.get('[data-permission="send_messages"]').setValue(false)
+    const save = w.get('[data-testid="bot-channel-access-save"]').element as HTMLButtonElement
+    save.click()
+    save.click()
+    await flushPromises()
+    expect(apiMock.mock.calls.filter(([, o]) => o?.method === 'PUT')).toHaveLength(1)
+    expect(putCall()).toMatchObject({ json: { access: 'channels', permissions: ['view_channel'] } })
+  })
+
+  it('shows nothing and tells the member when the choice cannot be loaded', async () => {
+    apiMock.mockImplementation(async () => { throw new ApiError(500, 'internal', 'internal server error') })
+    const w = await mountPanel()
+    expect(w.find('[data-testid="bot-channel-access"]').exists()).toBe(false)
+    expect(useToastStore().toasts).toHaveLength(1)
+  })
+
   it('shows a refusal inline, keeps the choice and does not say it was saved', async () => {
     const w = await mountPanel()
     apiMock.mockImplementation(async (_p, options) => {
