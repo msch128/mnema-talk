@@ -34,13 +34,15 @@ const STATUS = 'Back after the long weekend trip'
 
 // The desktop client opens at 1200x820 with a minimum of 640x480 and keeps 68px
 // for its server rail on the left (mnema-talk-desktop: web_shell/window.rs, RAIL_WIDTH).
-interface Size { name: string; width: number; height: number; sidebar?: 'Home' | 'End' }
+interface Size { name: string; width: number; height: number; sidebar?: 'Home' | 'End'; rootFont?: string }
 const SIZES: Size[] = [
   { name: 'phone', width: 390, height: 844 },
   { name: 'desktop minimum', width: 572, height: 480 },
   { name: 'desktop default', width: 1132, height: 820 },
   { name: 'desktop default, narrowest channel list', width: 1132, height: 820, sidebar: 'Home' },
   { name: 'desktop default, widest channel list', width: 1132, height: 820, sidebar: 'End' },
+  // A reader who needs larger text: the root font at 150 %.
+  { name: 'desktop default, 150 % font', width: 1132, height: 820, rootFont: '24px' },
   { name: 'laptop', width: 1366, height: 768 },
   { name: 'small laptop', width: 1280, height: 720 },
 ]
@@ -65,6 +67,8 @@ async function openDrawer(page: Page) {
  * drawer while it does. The drawer has to stay open on its own afterwards.
  */
 async function openSettledDrawer(page: Page) {
+  // A toast (the hint that a shared screen has no sound) can sit over the menu button on a phone; a tap dismisses it.
+  for (const toast of await page.locator('[data-toast]').all()) await toast.click({ timeout: 2_000 }).catch(() => undefined)
   await expect(async () => {
     await openDrawer(page)
     await page.waitForTimeout(400)
@@ -132,7 +136,7 @@ async function expectUncovered(controls: Locator[], where: string) {
   }
 }
 
-async function expectPanelWhole(page: Page, labels: Labels, where: string) {
+async function expectPanelWhole(page: Page, labels: Labels, where: string, largeFont: boolean) {
   const panel = page.locator('section.vpanel-wrap')
   const ids = ['voice-panel-open', 'voice-panel-ping', 'toggle-mute', 'toggle-deafen', 'voice-panel-share', 'voice-panel-stream-audio', 'voice-panel-leave']
   const controls = ids.map(id => page.getByTestId(id))
@@ -152,7 +156,8 @@ async function expectPanelWhole(page: Page, labels: Labels, where: string) {
   // The connection details are whole, the status word stands on its own, no text is a sliver.
   const details = panel.getByText(labels.details, { exact: true })
   await expect(details, `${where}: connection details shown`).toBeVisible()
-  expect(await details.evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${where}: connection details cut`).toBe(true)
+  // With a larger font the channel list keeps its width in pixels, so the details may truncate (never to a sliver).
+  if (!largeFont) expect(await details.evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${where}: connection details cut`).toBe(true)
   await expectNoSlivers(page, where)
   expect(await wordShown(page.getByTestId('voice-panel-open'), labels.status), `${where}: "${labels.status}" whole`).toBe(true)
 
@@ -181,13 +186,15 @@ async function checkEverySize(page: Page, labels: Labels, state: string) {
     await page.setViewportSize({ width: size.width, height: size.height })
     await openSettledDrawer(page)
     if (size.sidebar) await page.getByRole('separator', { name: labels.resize }).press(size.sidebar)
+    if (size.rootFont) await page.evaluate(px => document.documentElement.style.setProperty('font-size', px), size.rootFont)
     const where = `${state}, ${size.name} ${size.width}x${size.height}`
-    await expectPanelWhole(page, labels, where)
+    await expectPanelWhole(page, labels, where, !!size.rootFont)
     if (size.name === 'desktop default') await expectFullTextInTooltips(page)
     // E2E_SHOT_DIR=<dir> saves the sidebar of every size for a look by eye.
     if (process.env.E2E_SHOT_DIR) await page.getByTestId('channel-drawer').screenshot({ path: `${process.env.E2E_SHOT_DIR}/voice-panel-${labels.locale}-${state}-${size.name.replace(/\W+/g, '-')}.png` })
     // The next size starts from the default width.
     if (size.sidebar) await page.getByRole('separator', { name: labels.resize }).dblclick()
+    if (size.rootFont) await page.evaluate(() => document.documentElement.style.removeProperty('font-size'))
   }
 }
 
