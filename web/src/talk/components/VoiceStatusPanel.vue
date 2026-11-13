@@ -31,69 +31,76 @@ const ib = barIconButton
 </script>
 
 <template>
+  <!-- Two rows: the status and the call buttons, then the ping and the details
+       link across the whole width, so neither is squeezed beside the buttons. -->
   <section
     :aria-label="$t('voice.panel.label')"
-    class="vpanel-wrap flex items-center gap-1 border-t border-mnema-hairline py-2.5 pl-3 pr-2"
+    class="vpanel-wrap grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 gap-y-0.5 border-t border-mnema-hairline py-2 pl-3 pr-2"
   >
-    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <!-- "Connected" always stays whole; a long Talk name truncates, the tooltip has it in full. -->
+    <button
+      type="button"
+      data-testid="voice-panel-open"
+      v-tooltip.visual="$t('voice.panel.open', { channel: channelName })"
+      :aria-label="$t('voice.panel.connected', { channel: channelName })"
+      class="flex min-w-0 items-center gap-1.5 text-left text-sm font-semibold leading-5 text-mnema-accent hover:text-mnema-accent-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      @click="voiceStore.activeView = 'voice'"
+    >
+      <span class="mr-0.5 h-2 w-2 shrink-0 rounded-full bg-mnema-accent"></span>
+      <span class="shrink-0">{{ $t('voice.panel.status') }}</span>
+      <span class="shrink-0" aria-hidden="true">·</span>
+      <span data-testid="voice-panel-channel" class="min-w-0 truncate">{{ channelName }}</span>
+    </button>
+
+    <div class="flex items-center gap-1">
       <button
         type="button"
-        data-testid="voice-panel-open"
-        v-tooltip.visual="$t('voice.panel.open')"
-        class="flex min-w-0 items-center gap-2 text-left text-sm font-semibold leading-[18px] text-mnema-accent hover:text-mnema-accent-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
-        @click="voiceStore.activeView = 'voice'"
+        data-testid="voice-panel-share"
+        v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
+        :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
+        :class="[ib, 'vp-narrow-hide', voiceStore.isScreenSharing ? 'bg-mnema-accent text-mnema-accent-ink' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
+        v-bind="share.on"
+        @click="toggleScreenShare"
       >
-        <span class="h-2 w-2 shrink-0 rounded-full bg-mnema-accent"></span>
-        <span class="truncate">{{ $t('voice.panel.connected', { channel: channelName }) }}</span>
+        <MonitorOff v-if="voiceStore.isScreenSharing" class="h-[18px] w-[18px]" />
+        <Monitor v-else class="h-[18px] w-[18px]" />
       </button>
-      <!-- The ping opens the connection details. -->
+      <TriggerMenu :trigger="share" :aria-label="$t('talk.quality.title')" :min-width="260" />
+      <button
+        v-if="voiceStore.isScreenSharing"
+        type="button"
+        data-testid="voice-panel-stream-audio"
+        v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+        :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
+        :class="[ib, 'vp-narrow-hide', voiceStore.isScreenAudioMuted ? 'text-mnema-danger hover:bg-mnema-danger/12' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
+        @click="voiceStore.toggleScreenAudioMute"
+      >
+        <VolumeX v-if="voiceStore.isScreenAudioMuted" class="h-[18px] w-[18px]" />
+        <Volume2 v-else class="h-[18px] w-[18px]" />
+      </button>
       <button
         type="button"
-        data-testid="voice-panel-ping"
-        :data-tone="pingTone(ping)"
-        v-tooltip="$t('voice.panel.details')"
-        class="flex min-w-0 max-w-full items-center gap-1.5 self-start whitespace-nowrap pl-4 text-xs leading-4 rounded-xs hover:underline underline-offset-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
-        @click="voiceStore.showStatsModal = true"
+        data-testid="voice-panel-leave"
+        v-tooltip="$t('voice.leave')"
+        :class="[ib, 'text-mnema-danger hover:bg-mnema-danger/12']"
+        @click="leaveVoiceChannel"
       >
-        <span :class="['shrink-0 font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
-        <span class="vp-narrow-hide shrink-0 text-mnema-border-strong">·</span>
-        <span class="vp-narrow-hide min-w-0 truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
+        <PhoneOff class="h-[18px] w-[18px]" />
       </button>
     </div>
 
+    <!-- The ping opens the connection details. -->
     <button
       type="button"
-      data-testid="voice-panel-share"
-      v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
-      :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
-      :class="[ib, 'vp-narrow-hide', voiceStore.isScreenSharing ? 'bg-mnema-accent text-mnema-accent-ink' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
-      v-bind="share.on"
-      @click="toggleScreenShare"
+      data-testid="voice-panel-ping"
+      :data-tone="pingTone(ping)"
+      v-tooltip="$t('voice.panel.details')"
+      class="col-span-2 flex min-w-0 max-w-full items-center gap-1.5 justify-self-start whitespace-nowrap pl-4 text-xs leading-4 rounded-xs hover:underline underline-offset-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      @click="voiceStore.showStatsModal = true"
     >
-      <MonitorOff v-if="voiceStore.isScreenSharing" class="h-[18px] w-[18px]" />
-      <Monitor v-else class="h-[18px] w-[18px]" />
-    </button>
-    <TriggerMenu :trigger="share" :aria-label="$t('talk.quality.title')" :min-width="260" />
-    <button
-      v-if="voiceStore.isScreenSharing"
-      type="button"
-      data-testid="voice-panel-stream-audio"
-      v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
-      :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
-      :class="[ib, 'vp-narrow-hide', voiceStore.isScreenAudioMuted ? 'text-mnema-danger hover:bg-mnema-danger/12' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
-      @click="voiceStore.toggleScreenAudioMute"
-    >
-      <VolumeX v-if="voiceStore.isScreenAudioMuted" class="h-[18px] w-[18px]" />
-      <Volume2 v-else class="h-[18px] w-[18px]" />
-    </button>
-    <button
-      type="button"
-      data-testid="voice-panel-leave"
-      v-tooltip="$t('voice.leave')"
-      :class="[ib, 'text-mnema-danger hover:bg-mnema-danger/12']"
-      @click="leaveVoiceChannel"
-    >
-      <PhoneOff class="h-[18px] w-[18px]" />
+      <span :class="['shrink-0 font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
+      <span class="vp-narrow-hide shrink-0 text-mnema-border-strong">·</span>
+      <span class="vp-narrow-hide min-w-0 truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
     </button>
   </section>
 </template>

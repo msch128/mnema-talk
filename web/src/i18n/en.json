@@ -61,7 +61,7 @@
   },
   "user": {
     "avatar": "Profile picture",
-    "openProfile": "Open your profile",
+    "openProfile": "Open your profile ({name} · {status})",
     "deleted": "Deleted member"
   },
   "viewer": {
@@ -1281,8 +1281,9 @@
     "joinToTalk": "Click Join to start the conversation.",
     "panel": {
       "label": "Voice connection",
+      "status": "Connected",
       "connected": "Connected · {channel}",
-      "open": "Open the Talk",
+      "open": "Open the Talk “{channel}”",
       "details": "Connection details"
     },
     "cameraFailed": "Camera unavailable. Check the permission in your browser.",

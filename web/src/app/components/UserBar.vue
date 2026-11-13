@@ -35,7 +35,7 @@ const myStatus = computed(() => {
   const live = chatStore.presenceOf(me.value.id ?? null)
   return live === 'offline' ? me.value.presence || 'online' : live
 })
-// Second line: the status text, else the presence.
+// Second line: the status text, else the presence. Both lines truncate; the tooltip has them in full.
 const subline = computed(() => connectionLost.value ? t('connection.reconnectingShort') : me.value.status_text || t(`presence.${myStatus.value}`))
 
 function togglePresence() {
@@ -91,7 +91,7 @@ function ibTone(active: boolean) {
       <button
         type="button"
         data-testid="own-profile-button"
-        v-tooltip.visual="$t('user.openProfile')"
+        v-tooltip.visual="$t('user.openProfile', { name: me.display_name || me.username || '', status: subline })"
         class="flex min-w-0 flex-1 flex-col rounded-md px-1.5 py-1 text-left leading-[18px] transition-colors hover:bg-mnema-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="openOwnProfile"
       >
