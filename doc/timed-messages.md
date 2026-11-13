@@ -37,7 +37,11 @@ send button and stays for that channel or conversation (remembered on this
 device) until it is set to *Off*. The clock starts when the message is sent,
 not when somebody reads it. The shortest lifetime is 60 seconds, the longest 30
 days or less when the community set a lower ceiling. Lifetimes work in
-channels, threads, Talk chats, conversations and group conversations.
+channels, Talk chats, conversations and group conversations, and in threads:
+the web app's timer sits in the composer of the channel or conversation, and a
+reply in a thread takes a lifetime through the API (bots, scripts). Files sent
+with the message go with it. A message written offline keeps its lifetime in
+the outbox; the lifetime starts when the server stores it.
 
 **Reading.** A message with a lifetime carries a small mark with the time left
 ("5 min", "3 h", "2 d", updated as it runs down). At the end it leaves the list
@@ -50,7 +54,9 @@ author had deleted it: its files, reactions and edit history; its thread
 replies, if it was a thread root; the saved entries of everyone who saved it;
 reminders on it turn into "a message you can no longer see". Replies that
 quoted it show "Original message deleted". Unread and mention counts are
-corrected.
+corrected by the recount after the delete; until the sweep has run (about a
+second) a count may still include the ended message, as the counts are read
+from an index that does not hold the end.
 
 **What it cannot be.** A message with a lifetime cannot be pinned (the pin is
 refused with "A message with a lifetime cannot be pinned"), forwarded (the
@@ -78,15 +84,15 @@ or weeks (1 hour to 365 days), and what to delete:
   text stays and every file shows the "File removed" tile. Files of pinned
   messages stay.
 
-The settings show in plain words what will be deleted and when the next run
-is. A change that would delete content at once (a shorter period, or turning
+The settings show in plain words what will be deleted and when the next check
+is (every ten minutes, on the server's clock). A change that would delete content at once (a shorter period, or turning
 it on where old content exists) first shows how many messages and files it
 would remove and asks for confirmation. Conversations and the Talks started
 from them are never touched by auto-delete.
 
 ## As an operator (Owner and Administrators)
 
-**Server settings > Messages**:
+**Admin > Messages**:
 
 - **Messages with a lifetime**: on (the default) or off. Off refuses new
   messages with a lifetime everywhere; messages that already have one still end

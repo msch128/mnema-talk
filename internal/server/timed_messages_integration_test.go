@@ -74,6 +74,39 @@ func (a *app) endLifetime(ids ...uuid.UUID) {
 	}
 }
 
+// endLifetimeInPlace ends the lifetimes a second ago and keeps the messages'
+// times, for a test whose other rows depend on when a message was written (the
+// store trace's read markers). The bounds check is lifted for this one
+// statement and put back as it was (NOT VALID, migration 0105).
+func (a *app) endLifetimeInPlace(ids ...uuid.UUID) {
+	a.t.Helper()
+	ctx := context.Background()
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	for _, q := range []string{
+		`ALTER TABLE messages DISABLE TRIGGER message_lifetime_is_fixed`,
+		`ALTER TABLE messages DROP CONSTRAINT messages_lifetime_bounds`,
+		`UPDATE messages SET expires_at = now() - interval '1 second' WHERE id = ANY($1) AND expires_at IS NOT NULL`,
+		`ALTER TABLE messages ADD CONSTRAINT messages_lifetime_bounds
+		 CHECK (expires_at IS NULL OR expires_at - created_at BETWEEN interval '60 seconds' AND interval '30 days') NOT VALID`,
+		`ALTER TABLE messages ENABLE TRIGGER message_lifetime_is_fixed`,
+	} {
+		args := []any{}
+		if strings.Contains(q, "$1") {
+			args = append(args, ids)
+		}
+		if _, err := tx.Exec(ctx, q, args...); err != nil {
+			a.t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		a.t.Fatal(err)
+	}
+}
+
 // sweepEnded runs one pass of the expiry sweeper.
 func (a *app) sweepEnded() {
 	a.t.Helper()

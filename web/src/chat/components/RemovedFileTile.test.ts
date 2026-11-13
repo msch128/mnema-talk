@@ -1,0 +1,52 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import MessageAttachments from './MessageAttachments.vue'
+import { setLocale } from '../../i18n'
+import { fixtureId } from '../../test-fixtures.fixture'
+import type { MediaAttachment } from '../../types/domain'
+
+// A removed file shows the "File removed" tile where it was, for pictures,
+// videos and other files alike (doc/timed-messages.md, "Removed files"): a
+// picture keeps its measured size, nothing links to the gone file, and the
+// tile is named for screen readers.
+
+enableAutoUnmount(afterEach)
+
+beforeEach(() => {
+  setLocale('en')
+  setActivePinia(createPinia())
+})
+
+const file = (over: Partial<MediaAttachment>): MediaAttachment => ({
+  id: fixtureId(40), url: `/api/media/${fixtureId(40)}`, original_filename: 'plan.pdf', mime_type: 'application/pdf', size_bytes: 2048, is_deleted: true, ...over
+})
+
+describe('the removed-file tile', () => {
+  it('takes the place and the measured size of a removed picture', () => {
+    const w = mount(MessageAttachments, { props: { attachments: [file({ original_filename: 'wide.png', mime_type: 'image/png', width: 1600, height: 400 })] } })
+    const tile = w.get('[data-media-placeholder="gone"]')
+    expect(tile.attributes('role')).toBe('img')
+    expect(tile.attributes('aria-label')).toBe('File removed: wide.png')
+    expect(tile.text()).toBe('File removed')
+    const style = tile.attributes('style') ?? ''
+    expect(style).toContain('width: 448px')
+    expect(style).toContain('height: 112px')
+  })
+
+  it('stands in for a removed video and a removed file, without a link to them', () => {
+    const w = mount(MessageAttachments, {
+      props: { attachments: [file({ id: fixtureId(41), original_filename: 'clip.mp4', mime_type: 'video/mp4' }), file({ id: fixtureId(42) })] }
+    })
+    const tiles = w.findAll('[data-media-placeholder="gone"]')
+    expect(tiles.map(t => t.attributes('aria-label'))).toEqual(['File removed: clip.mp4', 'File removed: plan.pdf'])
+    expect(w.find('video').exists()).toBe(false)
+    expect(w.find('a[href]').exists()).toBe(false)
+  })
+
+  it('speaks German', () => {
+    setLocale('de')
+    const w = mount(MessageAttachments, { props: { attachments: [file({})] } })
+    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('Datei entfernt')
+  })
+})
