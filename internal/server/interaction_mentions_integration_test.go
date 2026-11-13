@@ -81,7 +81,7 @@ func TestTheBotLearnsItsHandle(t *testing.T) {
 		t.Fatalf("READY user: %+v, handle %q", r.User, handle)
 	}
 	var me bot.Self
-	f.client.get(bot.BasePath + "/users/@me").decode(t, &me)
+	f.client.get(bot.BasePath+"/users/@me").decode(t, &me)
 	if me.Handle != handle || me.Name != "helper" {
 		t.Fatalf("@me: %+v", me)
 	}
