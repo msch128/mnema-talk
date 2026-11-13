@@ -74,7 +74,7 @@ func TestAutoDeleteOfFilesKeepsTheTextAndMarksTheFilesRemoved(t *testing.T) {
 	wantStatus(t, "preview", preview, http.StatusOK)
 	var counts struct {
 		Messages, Attachments int
-		NextRunAt            time.Time `json:"next_run_at"`
+		NextRunAt             time.Time `json:"next_run_at"`
 	}
 	preview.decode(t, &counts)
 	if counts.Messages != 0 || counts.Attachments != 1 || !counts.NextRunAt.After(time.Now()) {
@@ -97,9 +97,11 @@ func TestAutoDeleteOfFilesKeepsTheTextAndMarksTheFilesRemoved(t *testing.T) {
 	var list []struct {
 		ID          uuid.UUID
 		Content     string
-		Attachments []struct{ IsDeleted bool `json:"is_deleted"` }
+		Attachments []struct {
+			IsDeleted bool `json:"is_deleted"`
+		}
 	}
-	f.alice.get(f.base() + "/messages").decode(t, &list)
+	f.alice.get(f.base()+"/messages").decode(t, &list)
 	found := false
 	for _, got := range list {
 		if got.ID == m.ID {

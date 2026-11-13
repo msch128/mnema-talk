@@ -33,9 +33,9 @@ const MessageSelect = `
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
 	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key,
 	       m.forwarded, m.expires_at
-	FROM `+core.LiveMessages+` m
+	FROM ` + core.LiveMessages + ` m
 	JOIN users u ON u.id = m.user_id
-	LEFT JOIN `+core.LiveMessages+` rm ON rm.id = m.reply_to_id
+	LEFT JOIN ` + core.LiveMessages + ` rm ON rm.id = m.reply_to_id
 	LEFT JOIN users ru ON ru.id = rm.user_id
 	LEFT JOIN users pu ON pu.id = m.pinned_by AND m.is_pinned`
 

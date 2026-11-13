@@ -32,7 +32,7 @@ type timedRace struct {
 	fresh bool
 	// freshBob gives every round a new acting member (the report and forward limits).
 	freshBob bool
-	act   func(f *timedRaceWorld, msg uuid.UUID, author *client) response
+	act      func(f *timedRaceWorld, msg uuid.UUID, author *client) response
 	// ok lists the answers the action may give.
 	ok []int
 	// left is an SQL count of rows that must not exist after the round ($1 = the message).
