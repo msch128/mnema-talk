@@ -7,9 +7,12 @@ follows Discord where it maps (bot users, roles and channel overwrites,
 smaller (one community, UUID ids); the
 [compatibility table](#differences-from-discord) lists the differences.
 
-This page describes accounts, access and tokens, then the REST API, the
-gateway, slash commands (a bot's own and the server's built-in ones), what
-bots do not see (direct messages) and the management API.
+This page describes accounts, access and tokens, adding a bot from its
+manifest, then the REST API, the gateway, slash commands (a bot's own and the
+server's built-in ones), message components (buttons and select menus) and
+modals, the official SDKs, what bots do not see (direct messages) and the
+management API. Why the platform has this shape, and what it leaves out on
+purpose, is in the [design note](bot-platform.md).
 
 ## Who may create bots
 
@@ -174,6 +177,90 @@ curl -s -X POST -H "Authorization: Bot $TOKEN" -H 'Content-Type: application/jso
   $MNEMA/api/bot/v1/channels/$CHANNEL_ID/messages
 ```
 
+Or start from an SDK (see [SDKs](#sdks)) and its examples.
+
+## Adding a bot from a manifest
+
+A bot written by someone else describes itself in a **manifest**: a JSON
+document in its README. The Owner or a member with *Manage bots* adds it in
+**Admin area > Bots > Add from manifest**, by pasting the manifest or by
+opening an **add link**, sees what it asks for, picks the channels it may
+work in, confirms, and copies the token (shown once) into the bot's
+configuration.
+
+```json
+{
+  "manifest_version": 1,
+  "name": "Mnemo",
+  "description": "Answers questions and keeps notes.",
+  "homepage": "https://github.com/msch128/mnema-talk-mnemo-bot",
+  "avatar": "data:image/png;base64,iVBORw0KGgo...",
+  "intents": ["GUILDS", "GUILD_MESSAGES"],
+  "permissions": ["view_channel", "send_messages", "add_reactions"],
+  "commands": [
+    {"name": "ask", "description": "Ask Mnemo something",
+     "options": [{"name": "question", "description": "Your question", "type": 3, "required": true}]}
+  ]
+}
+```
+
+| Field | Rule |
+|---|---|
+| `manifest_version` | required, `1` |
+| `name` | required, the bot's name (1 to 24 characters, as when creating a bot) |
+| `description` | optional, up to 200 characters, shown in the Bots tab |
+| `homepage` | optional `https` URL, up to 512 characters, shown as a link |
+| `avatar` | optional `data:` URL of a PNG, JPEG or WebP image of at most 256 KB; the web app uploads it through the avatar route, the server never fetches anything |
+| `intents` | optional, names from [Intents and events](#intents-and-events): `GUILDS`, `GUILD_MEMBERS`, `GUILD_MESSAGES`, `GUILD_MESSAGE_REACTIONS` |
+| `permissions` | optional, channel permissions only: `view_channel`, `send_messages`, `attach_files`, `add_reactions`, `manage_messages`, `mention_everyone`. Anything else (Administrator, admin-area permissions, voice) is refused: the Owner grants those by hand |
+| `commands` | optional, at most 50, each as for `PUT /api/bot/v1/commands` |
+
+Unknown fields are ignored, so a newer manifest still installs on an older
+server with what that server understands.
+
+**The add link** is
+
+```
+https://<your server>/admin/bots/add#manifest=<the manifest as base64url>
+```
+
+The manifest is in the URL fragment, which the browser never sends to the
+server, so it is not logged anywhere, and opening the link only opens the
+confirm screen (after signing in, for someone with *Manage bots*). Both SDKs
+build it (`addBotLink(serverUrl, manifest)`, `mnema.AddBotLink`). A bot's
+README usually shows the manifest and the link with a placeholder for the
+server's address.
+
+**The confirm screen** shows the name, avatar, description and homepage, each
+intent and permission the bot asks for (all ticked, each can be unticked),
+its commands, and the channels the installer can see (none ticked). Nothing
+is created until **Add bot**:
+
+- The requested permissions become **allow overwrites of the bot's own
+  role** in the ticked channels (and nothing server-wide: bots do not inherit
+  `@everyone`, so a server-wide grant would include private channels). A
+  bot added without a ticked channel can see nothing yet, like a bot created
+  by hand.
+- The allowed intents are the ticked ones; the commands are registered as
+  if the bot had sent them.
+- A token named after the manifest is issued and shown once.
+
+All of it happens in one transaction under the permission lock and the bot
+invariant (see [Every way a bot can gain permissions](#every-way-a-bot-can-gain-permissions)):
+the installer may only grant, in each channel, what they hold there
+themselves, the installer can untick but never add, and a manifest can never
+ask for anything elevated. Installing needs *Manage bots*, not *Manage
+channels*: the overwrites it writes belong to the new bot's own role, which
+nobody else holds, so they change nothing for any member. The install is
+logged (`bot.installed`). Afterwards it is an ordinary bot.
+
+The routes are `POST /api/admin/bots/manifests/check` (validates a manifest
+and answers it normalised, with the names of its permissions and intents;
+no side effects) and `POST /api/admin/bots/install`
+(`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...]}`,
+the lists being what the installer kept ticked; answers `201` with the bot
+and the token).
+
 ## REST API
 
 The base path is **`/api/bot/v1`**. It is a separate, versioned path, not the
@@ -206,8 +293,8 @@ security scheme `botAuth`).
 | `GET /channels` | the channels the bot can view, with their categories |
 | `GET /channels/{id}/messages` (`limit`, `before`, `after`, `around`) | View channels |
 | `GET /channels/{id}/messages/{id}` | View channels |
-| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `allowed_mentions`, `message_reference`, `parent_id` |
-| `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only |
+| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id` |
+| `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only; `content` and `components` (each optional, absent ones stay; `"components": []` removes them) |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
 | `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`, `allowed_mentions`, `parent_id`, `reply_to_id`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
@@ -450,10 +537,15 @@ member.
 **Respond** within 15 minutes, with `id` and `token` from the event:
 
 - `POST /api/bot/v1/interactions/{id}/{token}/callback`
-  `{"type": 4, "data": {"content": "pong", "embeds": [...], "flags": 0}}` posts
-  the message as the bot; `type 5` only acknowledges and the answer follows.
+  `{"type": 4, "data": {"content": "pong", "embeds": [...], "components": [...], "flags": 0}}` posts
+  the message as the bot; `type 5` only acknowledges and the answer follows
+  (with `"data": {"flags": 64}` the answer will be ephemeral); `type 9` opens
+  a [modal](#modals) instead. All callback types are in
+  [Interactions in detail](#interactions-in-detail).
 - `POST .../followups` with `data` as the body sends more messages, up to 5
   responses in total.
+- `PATCH .../messages/@original` edits the first response, and after a
+  `type 5` posts it; `DELETE .../messages/@original` deletes it.
 - **Ephemeral:** `"flags": 64` shows the response to the member who ran the
   command only. It is sent as the `interaction_response` WebSocket event to
   that member's sessions, shown as a private note in the channel, and **never
@@ -461,7 +553,163 @@ member.
 
 The bot needs *Send messages* in the channel when it responds; responses never
 notify `@all` or `@here`. Interactions live in the server's memory: a restart
-within the 15 minutes makes the token unknown (`404`).
+within the 15 minutes makes the token unknown (`404`). Components are not
+affected: their `custom_id` is stored with the message and every click is a
+new interaction (see [Message components](#message-components)).
+
+## Message components
+
+A bot message can carry **components**: buttons and select menus in up to 5
+**action rows**, in Discord's format. They go into `components` of
+`POST /channels/{id}/messages`, of an interaction response (callback types 4
+and 7, follow-ups, `@original`) and of `PATCH /channels/{id}/messages/{id}`.
+Only bot accounts can set them, on their own messages.
+
+```json
+{"content": "Deploy v2.4 to production?",
+ "components": [{"type": 1, "components": [
+   {"type": 2, "style": 3, "label": "Deploy", "custom_id": "deploy:v2.4"},
+   {"type": 2, "style": 2, "label": "Cancel", "custom_id": "cancel"},
+   {"type": 2, "style": 5, "label": "Changelog", "url": "https://example.org/changes"}]},
+  {"type": 1, "components": [
+   {"type": 3, "custom_id": "env", "placeholder": "Environment",
+    "options": [{"label": "Staging", "value": "staging"}, {"label": "Production", "value": "prod", "default": true}]}]}]}
+```
+
+| type | component | fields |
+|---|---|---|
+| `1` | action row | `components`: up to 5 buttons, or exactly one select |
+| `2` | button | `style` `1` primary, `2` secondary, `3` success, `4` danger (each with `custom_id`) or `5` link (with `url`, `http` or `https`, no `custom_id`); `label` (up to 80 characters) and/or `emoji` (`{"name": "👍"}`, a Unicode emoji); `disabled` |
+| `3` | string select | `custom_id`, `options` (1 to 25: `label` and `value` up to 100 characters, `description` up to 100, `default`; values unique), `placeholder` (up to 150), `min_values` (0 to 25, default 1), `max_values` (1 to 25, default 1), `disabled` |
+| `5` | user select | members; `custom_id`, `placeholder`, `min_values`, `max_values`, `disabled` |
+| `6` | role select | roles (not `@everyone`, not the managed bot roles); same fields |
+| `8` | channel select | text, forum and announcement channels; same fields |
+
+A `custom_id` is 1 to 100 characters, unique within the message; it is the
+bot's own state (`"deploy:v2.4"`), returned with every click. At most 5 rows,
+25 components. A message may consist of components only (no content, no
+embeds). Mentionable selects (type `7`) and Discord's newer layout
+components are not offered; a message that contains them is refused (`50035`),
+so a bot learns at once instead of posting a message with holes.
+
+**Clicks.** Any member who can view the channel can use a message's
+components, also in a read-only channel, unless they are timed out. The web
+app shows them under the message (keyboard reachable, a link button opens
+its address after the usual external link prompt). A click is
+`POST /api/channels/{id}/messages/{id}/components`
+`{"custom_id": "env", "values": ["prod"]}` (members and the web app; `values`
+only for selects). The server checks the message still has that enabled
+component, that string select values are among its options, the count
+between `min_values` and `max_values`, and that user, role and channel values
+are ones the member can see: active members who can view the channel, roles
+that exist, channels the member can view **and the bot can view**. It then
+creates a **new** interaction and delivers it to the bot (`202`, `409` when
+the bot is not connected, `404` when the message, the component or the bot's
+access is gone). Clicks and modal submits are limited to 30 a minute per
+member.
+
+```json
+{"op": 0, "t": "INTERACTION_CREATE", "s": 12, "d": {
+  "id": "...", "token": "...", "type": 3, "channel_id": "...", "application_id": "<bot id>",
+  "message": {"id": "...", "content": "Deploy v2.4 to production?", "components": [...], "...": "..."},
+  "data": {"custom_id": "env", "component_type": 3, "values": ["prod"]},
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}}}}
+```
+
+User, role and channel selects add `data.resolved` with what was picked:
+`users` (`id`, `username`, `display_name`, `avatar_url`), `roles` (`id`,
+`name`, `color`) and `channels` (`id`, `name`, `type`), each keyed by id.
+
+**Ephemeral notes** (responses with flags `64`) can carry components too.
+They are not stored, so their components work for the 15 minutes the
+interaction lives and only for the member who sees the note; a click is
+`POST /api/channels/{id}/ephemeral/{noteID}/components` and reaches the bot
+with `message: {"id": "<note id>", "flags": 64, "content": ..., "components": ...}`.
+
+## Modals
+
+A **modal** is a small form the member fills in, opened as the response to a
+command or a component click (not to a modal submit), with callback type 9:
+
+```json
+{"type": 9, "data": {"custom_id": "feedback", "title": "Feedback",
+  "components": [
+    {"type": 1, "components": [{"type": 4, "custom_id": "subject", "label": "Subject", "style": 1, "max_length": 80}]},
+    {"type": 1, "components": [{"type": 4, "custom_id": "body", "label": "What happened?", "style": 2, "required": false, "placeholder": "Tell us more"}]}]}}
+```
+
+`title` up to 45 characters; 1 to 5 rows of one **text input** (type `4`)
+each: `custom_id`, `label` (up to 45), `style` `1` short or `2` paragraph,
+`min_length` (0 to 4000), `max_length` (1 to 4000), `required` (default
+true), `value` (prefilled, up to 4000), `placeholder` (up to 100). The modal
+reaches the member as the `interaction_modal` WebSocket event and the web app
+shows it as a dialog. Submitting is
+`POST /api/channels/{id}/modals/{modalID}` `{"values": {"subject": "...", "body": "..."}}`;
+the server checks the lengths and required inputs and delivers
+`INTERACTION_CREATE` type 5:
+
+```json
+{"type": 5, "data": {"custom_id": "feedback", "components": [
+  {"type": 1, "components": [{"type": 4, "custom_id": "subject", "value": "Login"}]},
+  {"type": 1, "components": [{"type": 4, "custom_id": "body", "value": ""}]}]}, "...": "..."}
+```
+
+A modal can be submitted once, by the member it was opened for, within 15
+minutes; after a restart of the server an open modal is gone (submitting
+answers `404`, the web app says so and the member starts again). Closing it
+sends nothing to the bot.
+
+## Interactions in detail
+
+| Interaction `type` | When |
+|---|---|
+| `2` | a slash command ran (`data`: `id`, `name`, `options`) |
+| `3` | a component was used (`data`: `custom_id`, `component_type`, `values`, `resolved`; `message` is the message it is on) |
+| `5` | a modal was submitted (`data`: `custom_id`, `components`; `message` when the modal came from a component) |
+
+| Callback `type` | Effect | Allowed for |
+|---|---|---|
+| `4` | post a message (`data`: `content`, `embeds`, `components`, `flags`) | 2, 3, 5 |
+| `5` | acknowledge, the message follows (`PATCH @original` or follow-ups) | 2, 3, 5 |
+| `6` | acknowledge a click without changing anything yet | 3 |
+| `7` | update the message the component is on (`data`: `content`, `embeds`, `components`; absent fields stay) | 3 |
+| `9` | open a modal | 2, 3 |
+
+Callback `6` or `7` on a modal submit that came from a component work like on
+the component. The first answer must come within 15 minutes; follow-ups and
+`@original` edits work for the same 15 minutes. The original response is
+the message posted by callback `4` (or by the first `PATCH @original` after
+callback `5`); for a component interaction it is the message the component
+is on. `PATCH .../messages/@original` takes `content`, `embeds` and
+`components` (absent ones stay) and answers the message (`200`), or `204`
+for an ephemeral note, which the member sees replaced. `DELETE` answers
+`204`. Updating or editing a message is allowed while the bot can send in
+the channel, like any of its edits; it is announced as `MESSAGE_UPDATE` and
+`message_update`.
+
+## SDKs
+
+Two official SDKs live in this repository and are tested against the server
+in CI on every change: [TypeScript](../sdk/typescript/README.md) (Node 24 or
+newer, no runtime dependencies) and [Go](../sdk/go/README.md) (module
+`github.com/msch128/mnema-talk/sdk/go`). Both cover the REST API with rate
+limits, the gateway with heartbeats, resume and reconnects, slash command
+registration, interactions (`reply`, `deferReply`, `editReply`, `followUp`,
+`update`, `deferUpdate`, `showModal`), components and modals, and the add
+link. Each README shows how to install it and has three examples: an echo
+bot, a slash command bot, and a buttons and modal bot.
+
+```ts
+import { Client, Intents, actionRow, button, ButtonStyle } from 'mnema-talk-sdk'
+
+const bot = new Client({ baseUrl: 'https://talk.example.org', token: process.env.MNEMA_TOKEN!, intents: Intents.GuildMessages })
+bot.on('messageCreate', async (m) => {
+  if (m.content === '!ping') await bot.rest.createMessage(m.channel_id, {
+    content: 'pong', components: [actionRow(button({ customId: 'again', label: 'Again', style: ButtonStyle.Primary }))] })
+})
+bot.on('interactionCreate', async (i) => { if (i.isButton() && i.customId === 'again') await i.update({ content: 'pong again' }) })
+await bot.connect()
+```
 
 ## Moderation: timeouts and bans
 
@@ -615,6 +863,7 @@ mutation is reported to the audit log.
 | Route | Purpose |
 |---|---|
 | `GET`, `POST /bots` | list, create (name, optional intents) |
+| `POST /bots/manifests/check`, `POST /bots/install` | check a manifest, add a bot from it (see [Adding a bot from a manifest](#adding-a-bot-from-a-manifest)) |
 | `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete; renaming renames the bot's own role, deleting deletes it |
 | `POST /bots/{id}/avatar` | avatar (multipart, field `avatar`) |
 | `PUT /bots/{id}/roles` | the bot's roles (the Bot role and its own role stay, whatever the list says; another bot's own role is refused) |
@@ -627,6 +876,9 @@ mutation is reported to the audit log.
 | | Discord | Mnema Talk |
 |---|---|---|
 | Who creates bots | anyone with a developer account | the Owner and *Manage bots* (Owner-granted) |
+| Adding someone else's bot | an OAuth2 invite link with permissions, to any server | a manifest (in an add link's fragment, or pasted) on your own server; channel permissions only, granted per channel the installer picks, never elevated |
+| Components | buttons, selects (string, user, role, mentionable, channel), modals, newer layout components | buttons, selects (string, user, role, channel), modals with text inputs; no mentionable select, no layout components |
+| Interaction tokens | 15 minutes | the same, kept in memory: a restart drops the ones in flight; components keep working, each click is a new interaction |
 | Ids | snowflakes | UUIDs |
 | Default access | bots get `@everyone` | bots get nothing until given a role |
 | Member list | bots are listed, with a BOT tag | the same; webhook authors are not listed and are tagged Webhook (Discord tags them BOT) |
