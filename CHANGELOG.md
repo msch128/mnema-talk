@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/msch128/mnema-talk/compare/v3.1.0...v3.1.1) (2026-11-13)
+
+
+### Documentation
+
+* the review of the webhook call-chat fix, and the Go SDK needs Go 1.26 ([#810](https://github.com/msch128/mnema-talk/issues/810)) ([a8963ea](https://github.com/msch128/mnema-talk/commit/a8963ea37e036dc475f47a4e64afd2da6cc04071))
+
 ## [3.1.0](https://github.com/msch128/mnema-talk/compare/v3.0.13...v3.1.0) (2026-11-13)
 
 
