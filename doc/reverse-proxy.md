@@ -59,8 +59,9 @@ a single address with `/32`, never a whole private range. Caddy replaces any
 `X-Forwarded-For` the client sent, so a client cannot spoof its address through
 it. After the restart the warning is gone and the `ip` of the request log lines
 is the real client. The gateway address belongs to the network: it stays while
-the network exists and can change if you remove and recreate it, so look at
-Status again after such a change.
+the network exists. `docker compose down` removes the network, and a new one
+may get another subnet, so look at Status again after a `down` (a plain
+`docker compose up -d` keeps it).
 
 ## Synology (DSM reverse proxy)
 
