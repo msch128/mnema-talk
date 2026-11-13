@@ -65,13 +65,29 @@ func envOr(get func(string) string, key, def string) string {
 	return def
 }
 
+// origins are the default release workflows (after and before the move to
+// mnema-xyz), or exactly one origin when UPDATER_CERT_IDENTITY_REGEXP or
+// UPDATER_SOURCE_URL is set (a fork's own workflow); an unset one of the two
+// then takes the default of the current repository.
+func origins(get func(string) string) []imageverify.Origin {
+	identity := envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", "")
+	source := envOr(get, "UPDATER_SOURCE_URL", "")
+	if identity == "" && source == "" {
+		return imageverify.DefaultOrigins()
+	}
+	return []imageverify.Origin{{
+		IdentityRegexp: envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", imageverify.DefaultIdentity),
+		Source:         envOr(get, "UPDATER_SOURCE_URL", imageverify.DefaultSource),
+	}}
+}
+
 // ParseConfig reads and validates the environment.
 func ParseConfig(get func(string) string) (Config, error) {
 	def := imageverify.DefaultPolicy()
 	repository := envOr(get, "UPDATER_IMAGE_REPOSITORY", "")
-	mirror := def.Mirror
+	mirrors := def.Mirrors
 	if repository != "" {
-		mirror = "" // an explicit repository is the only one trusted
+		mirrors = nil // an explicit repository is the only one trusted
 	} else {
 		repository = def.Repository
 	}
@@ -84,11 +100,10 @@ func ParseConfig(get func(string) string) (Config, error) {
 		TrustedRoot:  envOr(get, "UPDATER_TRUSTED_ROOT", ""),
 		CacheDir:     envOr(get, "UPDATER_TUF_CACHE", "/tmp/tuf"),
 		Policy: imageverify.Policy{
-			Repository:     repository,
-			Mirror:         mirror,
-			Issuer:         envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
-			IdentityRegexp: envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", def.IdentityRegexp),
-			Source:         envOr(get, "UPDATER_SOURCE_URL", def.Source),
+			Repository: repository,
+			Mirrors:    mirrors,
+			Issuer:     envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
+			Origins:    origins(get),
 		},
 	}
 	if len(c.Token) < 32 {
@@ -152,7 +167,7 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 		defer cancel()
 		_ = hs.Shutdown(shutdown)
 	})
-	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirror", cfg.Policy.Mirror, "identity", cfg.Policy.IdentityRegexp)
+	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirrors", cfg.Policy.Mirrors, "origins", cfg.Policy.Origins)
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)
 		return 1

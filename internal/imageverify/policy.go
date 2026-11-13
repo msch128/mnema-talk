@@ -34,28 +34,35 @@ import (
 // Defaults pin the identity of this repository's release workflow. They are
 // what the published images carry: the certificate's subject is
 // ".../release.yml@refs/heads/main" (the workflow_run trigger runs on main).
+//
+// The repository moves from the GitHub account msch128 to the organization
+// mnema-xyz. Releases built before the move are signed as msch128 and record
+// the msch128 source; releases after it as mnema-xyz. Both are trusted, each
+// as one Origin: a signature of one owner never vouches for provenance of
+// the other (see Origin).
 const (
-	DefaultRepository = "ghcr.io/msch128/mnema-talk"
+	DefaultRepository = "ghcr.io/mnema-xyz/mnema-talk"
+	// LegacyRepository is where the images were published before the move.
+	// GHCR does not redirect, so installs keep pulling from it until their
+	// MNEMA_IMAGE names DefaultRepository.
+	LegacyRepository = "ghcr.io/msch128/mnema-talk"
 	// DefaultMirror is the Docker Hub copy of the same images, mirrored by
 	// digest: same signature identity, same provenance.
-	DefaultMirror   = "docker.io/msch128/mnema-talk"
-	DefaultIssuer   = "https://token.actions.githubusercontent.com"
-	DefaultSource   = "https://github.com/msch128/mnema-talk"
-	DefaultIdentity = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	DefaultMirror = "docker.io/msch128/mnema-talk"
+	DefaultIssuer = "https://token.actions.githubusercontent.com"
+	DefaultSource = "https://github.com/mnema-xyz/mnema-talk"
+	// DefaultIdentity is the release workflow of DefaultSource.
+	DefaultIdentity = `^https://github\.com/mnema-xyz/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	// LegacySource and LegacyIdentity are the same before the move.
+	LegacySource   = "https://github.com/msch128/mnema-talk"
+	LegacyIdentity = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
 )
 
-// Policy says which images are trusted.
-type Policy struct {
-	// Repository is the only image repository the updater may pull from,
-	// e.g. "ghcr.io/msch128/mnema-talk".
-	Repository string
-	// Mirror is a second repository trusted under exactly the same identity
-	// and source (empty = none). The default policy sets the Docker Hub copy;
-	// overriding Repository drops it, so a third-party setup trusts one
-	// repository only.
-	Mirror string
-	// Issuer is the exact OIDC issuer in the signing certificate.
-	Issuer string
+// Origin is one trusted producer of images: the signing identity of its
+// release workflow and the repository its builds record. An image is trusted
+// only if one Origin matches both its signature and its provenance, so a
+// signature of one owner cannot be combined with provenance of another.
+type Origin struct {
 	// IdentityRegexp must match the certificate's subject alternative name
 	// (the workflow URL and ref). It has to be anchored.
 	IdentityRegexp string
@@ -64,9 +71,38 @@ type Policy struct {
 	Source string
 }
 
+// Policy says which images are trusted.
+type Policy struct {
+	// Repository is the primary image repository the updater may pull from,
+	// e.g. "ghcr.io/mnema-xyz/mnema-talk".
+	Repository string
+	// Mirrors are further repositories trusted under exactly the same
+	// origins (none = only Repository). The default policy sets the legacy
+	// GHCR path and the Docker Hub copy; overriding Repository drops them,
+	// so a third-party setup trusts one repository only.
+	Mirrors []string
+	// Issuer is the exact OIDC issuer in the signing certificate.
+	Issuer string
+	// Origins are the trusted producers, tried in order (at least one).
+	Origins []Origin
+}
+
+// DefaultOrigins are the release workflow after and before the move.
+func DefaultOrigins() []Origin {
+	return []Origin{
+		{IdentityRegexp: DefaultIdentity, Source: DefaultSource},
+		{IdentityRegexp: LegacyIdentity, Source: LegacySource},
+	}
+}
+
 // DefaultPolicy is the policy for the official release images.
 func DefaultPolicy() Policy {
-	return Policy{Repository: DefaultRepository, Mirror: DefaultMirror, Issuer: DefaultIssuer, IdentityRegexp: DefaultIdentity, Source: DefaultSource}
+	return Policy{
+		Repository: DefaultRepository,
+		Mirrors:    []string{LegacyRepository, DefaultMirror},
+		Issuer:     DefaultIssuer,
+		Origins:    DefaultOrigins(),
+	}
 }
 
 // Validate refuses a policy that would trust too much (an empty or unanchored
@@ -75,19 +111,24 @@ func (p Policy) Validate() error {
 	if err := validateRepository(p.Repository); err != nil {
 		return err
 	}
-	if p.Mirror != "" {
-		if err := validateRepository(p.Mirror); err != nil {
+	for _, m := range p.Mirrors {
+		if err := validateRepository(m); err != nil {
 			return err
 		}
 	}
 	if p.Issuer == "" {
 		return errors.New("the certificate issuer must be set")
 	}
-	if err := validateIdentity(p.IdentityRegexp); err != nil {
-		return err
+	if len(p.Origins) == 0 {
+		return errors.New("at least one trusted origin (identity and source) must be set")
 	}
-	if !strings.HasPrefix(p.Source, "https://") {
-		return errors.New("the source must be an https URL")
+	for _, o := range p.Origins {
+		if err := validateIdentity(o.IdentityRegexp); err != nil {
+			return err
+		}
+		if !strings.HasPrefix(o.Source, "https://") {
+			return errors.New("the source must be an https URL")
+		}
 	}
 	return nil
 }
@@ -131,7 +172,7 @@ func DaemonRepository(repo string) string {
 // Trusted lists the normalised names of the repositories the policy trusts.
 func (p Policy) Trusted() []string {
 	var out []string
-	for _, r := range []string{p.Repository, p.Mirror} {
+	for _, r := range append([]string{p.Repository}, p.Mirrors...) {
 		if n, ok := NormalizeRepository(r); ok && r != "" {
 			out = append(out, n)
 		}

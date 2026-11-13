@@ -33,6 +33,19 @@ const (
 	ReasonCustomTag     = "custom_tag"
 )
 
+// moved maps image repositories that no longer get releases to where the
+// releases are now. ghcr.io/msch128/mnema-talk got its last release before
+// the repository moved to the mnema-xyz organization.
+var moved = map[string]string{
+	"ghcr.io/msch128/mnema-talk": "ghcr.io/mnema-xyz/mnema-talk",
+}
+
+// MovedTo is the new repository of an image whose repository moved, or "".
+func MovedTo(image string) string {
+	repo, _, _ := SplitImage(image)
+	return moved[strings.ToLower(repo)]
+}
+
 var (
 	majorTag      = regexp.MustCompile(`^v?(\d{1,6})$`)
 	majorMinorTag = regexp.MustCompile(`^v?(\d{1,6})\.(\d{1,6})$`)
@@ -70,6 +83,7 @@ func ImageReach(image, latest string) (Reach, string) {
 	if !strings.Contains(repo, "/") {
 		return ReachNo, ReasonLocal
 	}
+
 	if tag == "latest" {
 		return ReachYes, ReasonFollows
 	}

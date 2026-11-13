@@ -124,9 +124,9 @@ diff <(grep -o '^[A-Z_0-9]*=' .env | sort) <(grep -o '^[A-Z_0-9]*=' .env.example
 
 # Point the app at the new image
 if grep -q '^MNEMA_IMAGE=' .env; then
-  sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:$NEW|" .env
+  sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:$NEW|" .env
 else
-  echo "MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:$NEW" >> .env
+  echo "MNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:$NEW" >> .env
 fi
 
 # Check the configuration, pull and start
