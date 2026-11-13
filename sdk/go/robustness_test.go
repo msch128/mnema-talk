@@ -112,6 +112,35 @@ func TestRetryAfterSecondsThatDoNotFitADurationAreCapped(t *testing.T) {
 	}
 }
 
+func TestAnInteractionIsNeverShedEvenWhenTheQueueIsFull(t *testing.T) {
+	g := newFakeGateway(t, 41250)
+	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})
+	block := make(chan struct{})
+	c.OnMessageCreate(func(ctx context.Context, _ *Message) {
+		select {
+		case <-block:
+		case <-ctx.Done():
+		}
+	})
+	got := make(chan string, 1)
+	c.OnInteraction(func(_ context.Context, i *Interaction) { got <- i.ID })
+	runClient(t, c)
+	fc := g.next(t)
+	fc.expect(t, opIdentify)
+	fc.ready(t, "s1")
+	n := int64(dispatchQueueFactor + 50)
+	for i := int64(0); i < n; i++ {
+		fc.dispatch(t, i+2, "MESSAGE_CREATE", map[string]any{"id": "m", "channel_id": "c", "content": "x"})
+	}
+	fc.dispatch(t, n+2, "INTERACTION_CREATE", map[string]any{"id": "i-1", "token": "t", "type": 2,
+		"member": map[string]any{"user": map[string]any{"id": "u1", "username": "max"}}, "data": map[string]any{"name": "ping"}})
+	time.Sleep(100 * time.Millisecond)
+	close(block)
+	if id := waitFor(t, got, "the interaction behind a full queue"); id != "i-1" {
+		t.Fatalf("interaction = %q", id)
+	}
+}
+
 func TestAFloodTheHandlersCannotKeepUpWithIsShedAndTheConnectionStays(t *testing.T) {
 	g := newFakeGateway(t, 200)
 	c := g.client(t, Options{Intents: IntentGuildMessages, HandlerConcurrency: 1})

@@ -100,7 +100,8 @@ a slow handler never stalls heartbeats or the reading of further events. At
 most `Options.HandlerConcurrency` (default 64) dispatches are handled at once;
 further ones wait for a free slot without holding up the connection, up to
 16 times that many. Beyond that the client drops events with a logged
-warning rather than stop reading the connection (which would leave heartbeat
+warning (never READY, RESUMED or an interaction, which always get their
+turn) rather than stop reading the connection (which would leave heartbeat
 ACKs unread and end in a reconnect that replays the same flood): a handler
 that waits on something slow should hand the work off and return. Events can therefore
 be handled concurrently and out of order: guard shared state yourself. A panic

@@ -177,27 +177,36 @@ func (c *Client) newDispatcher(ctx context.Context) *dispatcher {
 // dispatchQueueFactor times HandlerConcurrency events may wait for a slot.
 const dispatchQueueFactor = 16
 
+// neverShed are the events that are never dropped: the session's own
+// (READY, RESUMED) and interactions, where a drop would leave a member's
+// command or click unanswered. They wait for a handler slot like any event
+// but outside the queue's bound; the server bounds them (a few per member a
+// minute, at most 2000 pending per bot).
+var neverShed = map[string]bool{"READY": true, "RESUMED": true, "INTERACTION_CREATE": true}
+
 // dispatch starts the handlers of one event in a goroutine and returns at
 // once, so the read loop, and with it the heartbeat ACKs, never waits for a
 // handler. When the queue in front of the handler slots is full (handlers
 // that block far longer than events arrive), the event is shed with a
-// warning instead: blocking the read loop would leave ACKs unread, turn the
-// connection into a zombie and replay the same flood after the resume.
+// warning instead (never one of neverShed): blocking the read loop would
+// leave ACKs unread, turn the connection into a zombie and replay the same
+// flood after the resume.
 func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 	run := d.c.handlerFunc(name, raw)
 	if run == nil {
 		return
 	}
-	select {
-	case d.queued <- struct{}{}:
-	default:
+	queued := !neverShed[name]
+	if queued && !d.enqueue() {
 		d.shed(name)
 		return
 	}
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
-		defer func() { <-d.queued }()
+		if queued {
+			defer func() { <-d.queued }()
+		}
 		select {
 		case d.sem <- struct{}{}:
 		case <-d.ctx.Done():
@@ -214,6 +223,16 @@ func (d *dispatcher) dispatch(name string, raw json.RawMessage) {
 }
 
 func (d *dispatcher) wait() { d.wg.Wait() }
+
+// enqueue takes a place in the queue in front of the handler slots, if one is free.
+func (d *dispatcher) enqueue() bool {
+	select {
+	case d.queued <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
 
 // shed logs a dropped event: the first one, then every 1000th, with the total.
 func (d *dispatcher) shed(name string) {
