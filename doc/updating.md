@@ -92,26 +92,31 @@ up, pull, recreate the app, check health. Save this as
 set -uo pipefail
 exec 9>/run/mnema-auto-update.lock; flock -n 9 || exit 0   # never two runs at once
 cd /opt/mnema-talk || exit 1                               # your deployment folder
+HEALTH_WAIT=${HEALTH_WAIT:-180}      # seconds; raise it if a release runs long migrations
+bad=/var/lib/mnema-bad-image         # id of a release that failed its health check
+
 img=$(sed -n 's/^MNEMA_IMAGE=//p' .env)
-case $img in *:[0-9]*.[0-9]*) ;; *) echo "MNEMA_IMAGE must be a pinned X.Y tag, got '$img'" >&2; exit 1 ;; esac
-old=$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null || true)
+[[ ${img##*:} =~ ^[0-9]+\.[0-9]+$ ]] || { echo "MNEMA_IMAGE must be a pinned X.Y tag, got '$img'" >&2; exit 1; }
+old=$(docker inspect -f '{{.Image}}' mnema-talk 2>/dev/null || true)   # what runs now
 docker pull -q "$img" >/dev/null || { echo "pull of $img failed" >&2; exit 1; }
 new=$(docker image inspect -f '{{.Id}}' "$img")
-[ "$new" != "$old" ] || exit 0                              # nothing new
-[ "$(cat /var/lib/mnema-bad-image 2>/dev/null)" != "$new" ] || exit 0   # failed before: do not retry
-health() { for _ in $(seq 1 36); do
+[ "$new" != "$old" ] || exit 0                                         # nothing new
+
+rollback() { [ -n "$old" ] && docker tag "$old" "$img"; }              # the tag points at the old image again
+if [ "$(cat "$bad" 2>/dev/null)" = "$new" ]; then rollback; exit 0; fi # failed before: do not retry
+
+health() { for _ in $(seq 1 $((HEALTH_WAIT / 5))); do
   [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk)" = healthy ] && return 0; sleep 5; done; return 1; }
-rollback() { echo "$new" > /var/lib/mnema-bad-image; [ -n "$old" ] && docker tag "$old" "$img"; }
-if BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
-  docker compose up -d        # recreates the services whose image changed (app and updater)
-  health && exit 0
-  echo "new version not healthy, going back" >&2
-  rollback; docker compose up -d
-  health || echo "ROLLBACK ALSO UNHEALTHY: manual action needed" >&2
-  exit 1
+
+if ! BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
+  echo "backup failed, not updating" >&2; rollback; exit 1           # retried at the next run
 fi
-echo "backup failed, not updating" >&2
-rollback; exit 1
+docker compose up -d        # recreates the services whose image changed (app and updater)
+health && exit 0
+echo "new version not healthy, going back" >&2
+echo "$new" > "$bad"; rollback; docker compose up -d
+health || echo "ROLLBACK ALSO UNHEALTHY: manual action needed" >&2
+exit 1
 ```
 
 Run it hourly from `/etc/cron.d/mnema-auto-update`
@@ -119,7 +124,9 @@ Run it hourly from `/etc/cron.d/mnema-auto-update`
 and keep it clear of the nightly backup slot. Nothing alerts you: the log file
 is the only report, so read it now and then (or add a mail or webhook call at the
 `echo` lines). A release that failed its health check is remembered in
-`/var/lib/mnema-bad-image` and not retried until a newer image appears. Things
+`/var/lib/mnema-bad-image` and not retried until a newer image appears; a failed
+backup is retried at the next run. If `old` is empty (the app container was
+missing) there is nothing to go back to and the script only reports. Things
 to know:
 
 - Members are disconnected for 30 to 60 seconds during an update, so pick the
