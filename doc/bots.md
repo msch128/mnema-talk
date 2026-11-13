@@ -84,8 +84,14 @@ tag instead.
   one) and is part of the connect-time `presence_snapshot`. Bots are not counted
   in the online total and are never reached by `@here`. The gateway does not
   dispatch other members' presence to bots in v1.
-- **Mentions.** Mention a bot by its username (`@bot-…`, shown in the picker
-  under its name). The message's `mentions` list then contains the bot's user
+- **Mentions.** Mention a bot by its username (shown in the picker under its
+  name). A new bot's username follows its name: lower case letters and digits,
+  other runs as `_` (`Mnema Bot` is `@mnema_bot`), numbered on a collision with
+  any account (`@mnema_bot_2`); a name with nothing usable, or a reserved word,
+  gets `@bot-` and 12 hex digits. Bots created earlier keep the name they have.
+  The stored message text keeps `@username`, so a rename of the display name
+  never breaks a mention; readers see the display name in the pill (the
+  username on hover), in previews and in push text. The message's `mentions` list then contains the bot's user
   id, which `READY` gave the bot as `user.id`, so a bot recognises a mention of
   itself in `MESSAGE_CREATE` (the bot must be able to view the channel, like
   anyone). `@all` and `@here` never include bots. `GET /members` lists bots too,

@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/mention"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -192,6 +193,36 @@ func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[u
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("push: read mentions", "err", err)
+		return nil
+	}
+	return out
+}
+
+// mentionLabels maps the lower-cased usernames mentioned in content to the
+// members' display names, so a push reads "@Mnemo" and not "@bot-3f9a...".
+// Members without a display name, and any read failure, leave the username.
+func mentionLabels(ctx context.Context, q db.Querier, content string) map[string]string {
+	names := mention.Names(content)
+	if len(names) == 0 {
+		return nil
+	}
+	rows, err := q.Query(ctx, `SELECT lower(username), display_name FROM users WHERE lower(username) = ANY($1) AND display_name <> ''`, names)
+	if err != nil {
+		slog.Warn("push: load mention names", "err", err)
+		return nil
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var name, display string
+		if err := rows.Scan(&name, &display); err != nil {
+			slog.Warn("push: read mention names", "err", err)
+			return nil
+		}
+		out[name] = display
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("push: read mention names", "err", err)
 		return nil
 	}
 	return out

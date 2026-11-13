@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { setMentionLabels } from '../shared/lib/markdown'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import { useSocketStore } from './socket'
@@ -176,6 +177,11 @@ export const useChatStore = defineStore('chat', () => {
   installVisibilityRetry(cx)
   installActivityListeners(cx)
   setReturnToTabHandler(() => markActiveChannelReadIfReading(cx))
+  // Previews (replies, saved, notifications) name a mentioned member by display name.
+  setMentionLabels(name => {
+    const m = cs.members.value.find(x => (x.username || '').toLowerCase() === name)
+    return m?.display_name && m.display_name.toLowerCase() !== name ? m.display_name : undefined
+  })
 
   return { ...exposedState(cs), ...exposedActions(cx) }
 })
