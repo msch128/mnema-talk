@@ -63,6 +63,7 @@ function toggle(node: WikiNode) {
           </button>
           <span v-else class="w-6 shrink-0" aria-hidden="true"></span>
           <button
+            v-full-text
             type="button"
             :class="['min-w-0 flex-1 truncate py-1.5 pr-2 text-left text-sm focus-ring', slug === node.slug ? 'font-medium text-mnema-text' : 'text-mnema-muted']"
             :aria-current="slug === node.slug ? 'page' : undefined"

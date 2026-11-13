@@ -71,7 +71,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
     >
       <ChevronRight v-if="collapsed" class="w-3 h-3 shrink-0" />
       <ChevronDown v-else class="w-3 h-3 shrink-0" />
-      <span class="truncate">{{ category.name }}</span>
+      <span v-full-text class="truncate">{{ category.name }}</span>
       <BellOff v-if="ownLevel === 'mute'" class="w-3 h-3 shrink-0 ml-1" data-testid="category-muted" :aria-label="$t('notifications.bellNothing')" />
       <AtSign v-else-if="ownLevel === 'mentions'" class="w-3 h-3 shrink-0 ml-1" data-testid="category-mentions-only" :aria-label="$t('notifications.bellMentions')" />
       <span

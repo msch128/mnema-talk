@@ -52,6 +52,7 @@ export function resetWindow(cx: Cx) {
   cs.isLoadingBefore.value = false
   cs.isLoadingAfter.value = false
   cs.isLoadingWindow.value = false
+  cs.windowLoadFailed.value = false
   cs.missedLiveCount.value = 0
 }
 
@@ -83,7 +84,11 @@ export async function fetchMessages(cx: Cx, channelId: string) {
   } catch (e) {
     console.error('Failed to fetch messages:', e)
     // The window stays as it is: a refresh that fails must not empty a chat being read.
-    if (gen === cs.windowGen && cs.activeChannel.value?.id === channelId) showToast(t('chat.messageLoadFailed'))
+    // An empty chat shows the failure in place (with a retry); one with messages gets a toast.
+    if (gen === cs.windowGen && cs.activeChannel.value?.id === channelId) {
+      cs.windowLoadFailed.value = true
+      if (cs.messages.value.length) showToast(t('chat.messageLoadFailed'))
+    }
     return false
   } finally {
     if (gen === cs.windowGen) cs.isLoadingWindow.value = false

@@ -17,7 +17,7 @@ const blocks = useBlocksStore()
     <ul v-if="blocks.blocked.length" class="space-y-2">
       <li v-for="member in blocks.blocked" :key="member.user_id" class="flex items-center gap-3 rounded-md border border-mnema-hairline px-4 py-2.5" :data-blocked="member.username">
         <UserAvatar :user="{ username: member.username, display_name: member.display_name, avatar_url: member.avatar_url }" size="xs" />
-        <span class="min-w-0 flex-1 truncate text-sm text-mnema-text">{{ member.display_name || member.username }}</span>
+        <span v-full-text class="min-w-0 flex-1 truncate text-sm text-mnema-text">{{ member.display_name || member.username }}</span>
         <button
           type="button"
           data-testid="blocked-unblock"

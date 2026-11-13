@@ -2,6 +2,7 @@ import { createApp, ref } from 'vue'
 import { i18nPlugin } from '../../i18n'
 import { parseSearchQuery, serializeSearchQuery } from './searchQuery'
 import { tooltip } from '../../directives/tooltip'
+import { fullText } from '../../directives/fullText'
 
 // Ctrl/⌘+K opens the message search from every view while signed in.
 // App.vue is not involved: the chat store installs the shortcut after login,
@@ -23,7 +24,7 @@ function ensureMounted() {
     mounting = import('../components/GlobalSearch.vue').then(({ default: GlobalSearch }) => {
       const host = document.createElement('div')
       document.body.appendChild(host)
-      createApp(GlobalSearch).use(i18nPlugin).directive('tooltip', tooltip).mount(host)
+      createApp(GlobalSearch).use(i18nPlugin).directive('tooltip', tooltip).directive('fullText', fullText).mount(host)
     }).catch((error: unknown) => {
       // Forget the failed load (a network blip, a chunk swapped by a deploy) so the next try fetches again.
       mounting = null

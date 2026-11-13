@@ -110,7 +110,7 @@ async function removeComment(c: EventComment) {
           <UserAvatar :user="eventAvatar(c.user)" size="sm" class="mt-0.5 shrink-0" />
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-baseline gap-x-2">
-              <span class="truncate text-sm font-semibold text-mnema-text">{{ name(c) }}</span>
+              <span v-full-text class="truncate text-sm font-semibold text-mnema-text">{{ name(c) }}</span>
               <span class="text-xs text-mnema-tertiary">{{ relative(c.created_at, locale) }}</span>
               <span v-if="c.edited_at" class="text-xs italic text-mnema-tertiary">{{ $t('chat.edited') }}</span>
               <span class="ml-auto flex shrink-0 items-center md:opacity-0 md:transition md:group-focus-within:opacity-100 md:group-hover:opacity-100">

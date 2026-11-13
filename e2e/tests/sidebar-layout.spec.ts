@@ -122,6 +122,8 @@ const row = (page: Page, key: string) => page.locator(`[data-drop="channel"][dat
 const header = (page: Page, key: string) => page.locator(`[data-drop="header"][data-id="${ids[key]}"]`)
 const toggle = (page: Page, key: string) => page.locator(`[data-category-toggle="${ids[key]}"]`)
 const ghost = (page: Page) => page.getByTestId('drag-ghost')
+// The page while an item is held: picked up, whether or not it moved yet.
+const pickedUp = (page: Page) => page.locator('html')
 const indicator = (page: Page) => page.locator('[data-drop-indicator]')
 const tail = (page: Page) => nav(page).locator('[data-drop-tail]')
 
@@ -565,13 +567,15 @@ test('touch: long press drags, a quick swipe scrolls', async ({ browser, browser
   }
 
   // Long press picks the channel up, then it follows the finger. Alpha sits
-  // mid-list, away from the edges where the list would auto-scroll.
+  // mid-list, away from the edges where the list would auto-scroll. A pick-up
+  // shows as a drag once the finger moves (held still, it shows a cut name).
   await row(page, 'a2').evaluate((el) => el.scrollIntoView({ block: 'center' }))
   const from = await point(row(page, 'a1'))
   const to = await point(row(page, 'a3'), 0.8)
   const scrollBefore = await list.evaluate((el) => el.scrollTop)
   await touch('touchStart', from.x, from.y)
-  await expect(ghost(page)).toBeVisible()
+  await expect(pickedUp(page)).toHaveClass(/mnema-dragging/)
+  await expect(ghost(page)).toHaveCount(0)
   for (let i = 1; i <= 10; i++) {
     await touch('touchMove', from.x, from.y + ((to.y - from.y) * i) / 10)
   }
@@ -591,9 +595,9 @@ test('touch: long press drags, a quick swipe scrolls', async ({ browser, browser
   await row(page, 'a2').scrollIntoViewIfNeeded()
   const hold = await point(row(page, 'a2'))
   await touch('touchStart', hold.x, hold.y)
-  await expect(ghost(page)).toBeVisible()
+  await expect(pickedUp(page)).toHaveClass(/mnema-dragging/)
   await touch('touchEnd')
-  await expect(ghost(page)).toBeHidden()
+  await expect(ghost(page)).toHaveCount(0)
   await expect(page.getByRole('menu').getByRole('menuitem', { name: 'Kanal duplizieren' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menu')).toHaveCount(0)
