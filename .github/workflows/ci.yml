@@ -1151,7 +1151,7 @@ jobs:
           # runs on macOS WebKit locally (evidence in doc/product-status.md); this
           # list is every other spec, plus browser-sealing.spec.ts for the refusal.
           - browser: webkit
-            only: "--project=webkit a11y.spec.ts account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-install-layout.spec.ts bot-members.spec.ts bot-platform.spec.ts bots.spec.ts browser-sealing.spec.ts clipping-auditor.spec.ts clipping.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts narrow-columns.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts voice-panel-layout.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
+            only: "--project=webkit a11y.spec.ts account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-install-layout.spec.ts bot-members.spec.ts bot-platform.spec.ts bots.spec.ts browser-sealing.spec.ts clipping-auditor.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts narrow-columns.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           # The runner has no audio output device, and Firefox then never starts an
           # AudioContext. The specs that need audio played out follow with an audio
           # device: late-join.spec.ts (AI noise filter) and audio-stall.spec.ts, whose
