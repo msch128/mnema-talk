@@ -270,7 +270,8 @@ func (h *API) sweepExports(ctx context.Context) error {
 	db := h.Sessions.DB
 	_, markErr := db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
 	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL
-		AND (expires_at < NOW() OR downloaded_at < NOW() - $1 * INTERVAL '1 second') LIMIT 200`, int64(exportRedownload.Seconds()))
+		AND (expires_at < NOW() OR downloaded_at < NOW() - $1 * INTERVAL '1 second')
+		AND (claimed_at IS NULL OR claimed_at < NOW() - INTERVAL '10 minutes') LIMIT 200`, int64(exportRedownload.Seconds()))
 	if err != nil {
 		return errors.Join(markErr, err)
 	}

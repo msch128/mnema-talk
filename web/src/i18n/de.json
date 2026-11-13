@@ -4188,7 +4188,7 @@
     "privacy": {
       "title": "Deine Daten",
       "exportTitle": "Kopie deiner Daten herunterladen",
-      "exportIntro": "Eine ZIP-Datei mit JSON-Dateien zu Profil, Einstellungen, Rollen, Nachrichten, Reaktionen, Uploads und den Protokolleinträgen zu deinem Konto. Daten anderer Mitglieder sind nicht enthalten. Einmal pro Tag; du kannst ihn 24 Stunden lang herunterladen, eine Stunde nach dem ersten Download wird er entfernt.",
+      "exportIntro": "Eine ZIP-Datei mit JSON-Dateien zu Profil, Einstellungen, Rollen, Nachrichten, Reaktionen, Uploads und den Protokolleinträgen zu deinem Konto. Daten anderer Mitglieder sind nicht enthalten. Einmal pro Tag; du kannst den Export 24 Stunden lang herunterladen, eine Stunde nach dem ersten Download wird er entfernt.",
       "exportRequest": "Export anfordern",
       "exportStarted": "Dein Export wird vorbereitet.",
       "exportPending": "Dein Export wird vorbereitet …",

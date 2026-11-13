@@ -1681,8 +1681,9 @@ still running while the account was erased fails (500) and stores nothing:
 the database refuses rows that name an erased account. The one exception is a picture a
 wiki page still shows: it survives the erasure, unlinked from the person
 (see [the wiki](wiki.md#privacy)). Exports are stored for at most 24 hours
-under `exports/` in the bucket (one hour after the first complete download, at
-the latest; the member can download it again in that hour) and need object storage; back-ups taken in that
+under `exports/` in the bucket (after the first complete download about an
+hour more, in which the member can download it again: the sweep that removes it
+runs every 15 minutes) and need object storage; back-ups taken in that
 window contain them, so a restore can bring back a deleted account's rows and
 files: delete the account again after restoring an old back-up. Add this to your
 back-up retention statement.

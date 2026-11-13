@@ -134,6 +134,8 @@ func TestATransferCutInTheMiddleKeepsTheExport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A failed check must not leave the handler writing to a reader that never reads.
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || resp.ContentLength != size {
 		t.Fatalf("answer: %d, length %d", resp.StatusCode, resp.ContentLength)
 	}

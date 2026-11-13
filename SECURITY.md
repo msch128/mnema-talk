@@ -513,9 +513,10 @@ details and the limits.
   the last byte, not that a browser, a proxy or a desktop host saved it, and
   without that hour a copy lost after it left the server would cost the member
   the day's export), is swept when expired, and is removed with the account.
-  The hour gives a stolen session no file it could not already take in the 24
-  hours before the member's own download; every complete download is audited
-  (`auth.export_download`), and making an export needs the password. Because
+  The hour gives a stolen session at most one more hour to take the same file
+  (a session stolen before the download could take it anyway); every complete
+  download is audited (`auth.export_download`), and making an export needs the
+  password. Because
   the download changes state, it refuses requests the browser marks as coming
   from another site (`Sec-Fetch-Site`) and prefetches (`Sec-Purpose: prefetch`),
   so a link or image on another page, or a speculative load, cannot start it.
