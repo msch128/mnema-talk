@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Admin dashboard: invite codes (registration is invite-only).
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { ref, computed, onMounted } from 'vue'
 import { Link, Pencil, Trash2, Check, Copy, ChevronRight } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
@@ -104,7 +105,7 @@ function onEdited(updated: Invite) {
 }
 
 async function copyInviteLink(code: string) {
-  const url = `${window.location.origin}/?invite=${encodeURIComponent(code)}`
+  const url = `${useServerFeaturesStore().shareOrigin}/?invite=${encodeURIComponent(code)}`
   try {
     await navigator.clipboard.writeText(url)
     copiedCode.value = code

@@ -8981,6 +8981,10 @@
             },
             "type": "array"
           },
+          "public_url": {
+            "description": "PublicURL is the address this server is reached at (PUBLIC_URL), left\nout when none is configured. A client that is not served from that\naddress, such as the desktop app, builds the links it shares from it.",
+            "type": "string"
+          },
           "status": {
             "enum": [
               "ok"
@@ -9021,6 +9025,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "public_url": {
+            "description": "PublicURL is the address this server is reached at (PUBLIC_URL), left\nout when none is configured. A client that is not served from that\naddress, such as the desktop app, builds the links it shares from it.",
+            "type": "string"
           },
           "status": {
             "enum": [
