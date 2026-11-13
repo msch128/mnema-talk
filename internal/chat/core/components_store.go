@@ -10,7 +10,7 @@ import (
 )
 
 // SaveComponents stores the validated components of a bot's message
-// (message_components, migration 0106), replacing what it had. No
+// (message_components, migration 0105), replacing what it had. No
 // components removes the row. It runs in the transaction that stores or
 // edits the message, so the message event already carries them.
 func SaveComponents(ctx context.Context, q db.Querier, messageID uuid.UUID, comps []ActionRow) error {
