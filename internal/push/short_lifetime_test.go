@@ -34,8 +34,8 @@ func TestAShortLivedMessageIsPushedWithoutItsText(t *testing.T) {
 		}
 		n.Count = 3
 		p = build(n, "en", true)
-		if strings.Contains(p.Title+p.Body, "back door") || strings.Contains(p.Body, "Alice") && strings.Contains(p.Body, "door") {
-			t.Errorf("dm %v: a burst ending in a short-lived message shows its text: %q %q", dm, p.Title, p.Body)
+		if strings.Contains(p.Title+p.Body, "back door") || strings.Contains(p.Title+p.Body, "Alice") {
+			t.Errorf("dm %v: a burst ending in a short-lived message shows its text or sender: %q %q", dm, p.Title, p.Body)
 		}
 	}
 }

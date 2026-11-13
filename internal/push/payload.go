@@ -97,7 +97,8 @@ type Notice struct {
 	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
 	Addressed bool
 	// Short marks a message whose lifetime is under ten minutes: its push
-	// carries no text and no names, only "New message" (doc/timed-messages.md).
+	// carries no text and no names, only "New message", and a burst that ends
+	// in one only the count (doc/timed-messages.md).
 	Short bool
 	// Count is how many messages this push stands for (1 or more).
 	Count int
@@ -124,7 +125,7 @@ func build(n Notice, locale string, preview bool) Payload {
 	if n.Count > 1 {
 		p.Title = "#" + channel
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
-		if preview {
+		if preview && !n.Short {
 			p.Body += "\n" + sender + ": " + line
 		}
 		return p
@@ -155,7 +156,7 @@ func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Pay
 	if n.Count > 1 {
 		p.Title = text(locale, "dm")
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
-		if preview {
+		if preview && !n.Short {
 			p.Body += "\n" + sender + ": " + line
 		}
 		return p

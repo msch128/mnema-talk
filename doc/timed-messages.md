@@ -19,9 +19,10 @@ message from anyone who could read it before that:
 - Text is not end-to-end encrypted. The server can read it while it exists,
   and backups made while it existed keep it.
 - A push notification that was already delivered stays on the device. A
-  message whose lifetime is under 10 minutes is pushed without its text (only
-  "New message" and the channel or conversation), so its words do not end up
-  in a notification centre; longer lifetimes push as usual.
+  message whose lifetime is under 10 minutes is pushed as "New message" alone,
+  with no text, no sender and no channel or conversation (a burst of messages
+  that ends in one shows only the count), so its words do not end up in a
+  notification centre; longer lifetimes push as usual.
 - A report filed before the end keeps its copy of the message for the
   moderators, as it does for a deleted message: a lifetime does not make a
   message unreportable. A data export taken before the end contains it.
