@@ -1,5 +1,6 @@
 import { cameraLayersKey, declaredCameraLayers, planCameraLayers } from '../../lib/cameraLayers'
 import type { Cx } from './state'
+import { dropLayerClone } from './layerClones'
 
 // The camera's lower layers (see talk/lib/cameraLayers): sending the captured track
 // smaller on lines of its own, only the layers viewers need (until the server
@@ -42,30 +43,6 @@ export async function replaceQuietly(sender: RTCRtpSender, track: MediaStreamTra
   }
 }
 
-/**
- * The track lower layer `index` encodes: a clone of the capture, its own per
- * layer. The browser adapts a track to the most constrained sender it feeds,
- * so with one track on every line a best layer cut down for bandwidth shrank
- * every layer with it (a 180-line thumbnail went out at 90 lines, and only
- * slowly grew back). A clone is made once per capture and line, and stopped
- * when the capture or the line no longer needs it: a clone keeps the camera on.
- */
-export function layerClone(st: Cx['st'], index: number, source: MediaStreamTrack): MediaStreamTrack {
-  const held = st.cameraLayerClones[index]
-  if (held && held.source === source && held.clone.readyState === 'live') return held.clone
-  dropLayerClone(st, index)
-  const clone = source.clone()
-  clone.contentHint = source.contentHint
-  st.cameraLayerClones[index] = { source, clone }
-  return clone
-}
-
-/** Stops lower layer `index`'s clone of the capture, if it has one. */
-export function dropLayerClone(st: Cx['st'], index: number) {
-  st.cameraLayerClones[index]?.clone.stop()
-  st.cameraLayerClones[index] = null
-}
-
 /** The camera stopped: the lower layers go quiet, their clones stop, and the next camera declares afresh. */
 export function releaseCameraLayers(cx: Cx) {
   const { voice, st } = cx
@@ -74,5 +51,5 @@ export function releaseCameraLayers(cx: Cx) {
   for (const sender of st.cameraLayerSenders) {
     if (sender?.track) void replaceQuietly(sender, null)
   }
-  st.cameraLayerClones.forEach((_, i) => dropLayerClone(st, i))
+  st.cameraLayerClones.forEach((_, i) => dropLayerClone(st.cameraLayerClones, i))
 }

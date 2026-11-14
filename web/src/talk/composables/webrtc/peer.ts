@@ -238,10 +238,10 @@ async function finishOfferNegotiation(
   await tuneBoundSenders(cx, bound.fresh)
   if (!isCurrent()) return
   if (!(await startWaitingScreen(cx, bound, isCurrent))) return
-  if (bound.fresh.layers?.length) {
+  if (bound.fresh.layers?.length || bound.screen || cx.st.screenLayerClones.some(Boolean)) {
     await syncLayers(cx)
   }
-  if (bound.fresh.cameraLayers?.length) {
+  if (bound.fresh.cameraLayers?.length || bound.camera || cx.st.cameraLayerClones.some(Boolean)) {
     await syncCameraLayers(cx)
   }
 }

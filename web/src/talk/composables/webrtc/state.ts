@@ -64,6 +64,8 @@ export interface RtcState {
   screenAudioSender: RTCRtpSender | null
   /** Senders of the screen's lower layers (see talk/lib/screenLayers), on the SFU's third and fourth video line; null where the server offers none. */
   layerSenders: (RTCRtpSender | null)[]
+  /** The copy of the screen capture each lower layer encodes, by line (see layers.ts). */
+  screenLayerClones: (LayerClone | null)[]
   /** Senders of the camera's lower layers (see talk/lib/cameraLayers), on the video lines after the screen's; null where the server offers none. */
   cameraLayerSenders: (RTCRtpSender | null)[]
   /** The copy of the camera's capture each lower layer encodes, by line (see cameraLayers.layerClone). */
@@ -164,7 +166,7 @@ export function createRtcState(): RtcState {
     screenSender: null,
     cameraSender: null,
     screenAudioSender: null,
-    layerSenders: [null, null], cameraLayerSenders: [null, null], cameraLayerClones: [null, null],
+    layerSenders: [null, null], screenLayerClones: [null, null], cameraLayerSenders: [null, null], cameraLayerClones: [null, null],
     declaredKey: '', declaredCameraKey: '',
     captureWatch: null,
     captureSettle: null,
