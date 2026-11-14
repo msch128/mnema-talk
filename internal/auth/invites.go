@@ -32,10 +32,11 @@ type Invite struct {
 	Weak bool `json:"weak"`
 	// ChannelID is the channel the invite lands the joiner in; null: the
 	// default channel. Only invites created from a channel's menu have one.
-	ChannelID *uuid.UUID `json:"channel_id" format:"uuid" extensions:"x-nullable"`
-	// CreatedByID and CreatedByName say who created the invite.
-	CreatedByID   uuid.UUID `json:"created_by_id" format:"uuid"`
-	CreatedByName string    `json:"created_by_name"`
+	ChannelID *uuid.UUID `json:"channel_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	// CreatedByID and CreatedByName say who created the invite (a server before
+	// member invites sends neither, so a client treats them as optional).
+	CreatedByID   uuid.UUID `json:"created_by_id" format:"uuid" binding:"optional"`
+	CreatedByName string    `json:"created_by_name" binding:"optional"`
 }
 
 // inviteColumns are the columns of an Invite, read from invites i joined with

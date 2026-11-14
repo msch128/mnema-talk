@@ -262,11 +262,11 @@ export function isAuthExportStatus(value: unknown): value is AuthExportStatus {
 export const decodeAuthExportStatus = decoder("auth.ExportStatus", isAuthExportStatus)
 
 export type AuthInvite = {
-  channel_id: string | null
+  channel_id?: string | null
   code: string
   created_at: string
-  created_by_id: string
-  created_by_name: string
+  created_by_id?: string
+  created_by_name?: string
   expires_at: string | null
   id: string
   max_uses: number | null
@@ -276,11 +276,11 @@ export type AuthInvite = {
 
 export function isAuthInvite(value: unknown): value is AuthInvite {
   return isRecord(value)
-    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
     && (hasOwn(value, "code") && isString(value["code"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
-    && (hasOwn(value, "created_by_id") && isIdentifier(value["created_by_id"]))
-    && (hasOwn(value, "created_by_name") && isString(value["created_by_name"]))
+    && (!hasOwn(value, "created_by_id") || isIdentifier(value["created_by_id"]))
+    && (!hasOwn(value, "created_by_name") || isString(value["created_by_name"]))
     && (hasOwn(value, "expires_at") && (isTimestamp(value["expires_at"]) || value["expires_at"] === null))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) || value["max_uses"] === null))

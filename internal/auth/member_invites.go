@@ -19,9 +19,6 @@ import (
 const (
 	defaultMemberInviteHours = 24
 	defaultMemberInviteUses  = 10
-	// memberInviteMemory is how long a creation is kept; the per-hour limit
-	// only looks an hour back.
-	memberInviteMemory = 24 * time.Hour
 )
 
 // MemberInviteLimits are the bounds the holders of Manage invites set for the
@@ -189,17 +186,12 @@ func admitMemberInvite(ctx context.Context, tx pgx.Tx, member uuid.UUID, req Cre
 	return uses, expires, nil
 }
 
-// storeMemberInvite counts the creation and inserts the invite with a fresh code.
+// storeMemberInvite inserts the invite with a fresh code. The caller's audit
+// entry, written in the same transaction, is what the per-hour limit counts.
 func storeMemberInvite(ctx context.Context, tx pgx.Tx, member uuid.UUID, channel *uuid.UUID, uses int, expires time.Time) (*Invite, error) {
 	code, err := GenerateInviteCode()
 	if err != nil {
 		return nil, err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM member_invite_creations WHERE created_at < NOW() - $1::interval`, memberInviteMemory); err != nil {
-		return nil, fmt.Errorf("prune member invite creations: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `INSERT INTO member_invite_creations (user_id) VALUES ($1)`, member); err != nil {
-		return nil, fmt.Errorf("record member invite creation: %w", err)
 	}
 	inv, err := insertInvite(ctx, tx, member, code, &uses, &expires, channel)
 	if err != nil {
@@ -216,7 +208,7 @@ func checkMemberInviteCaps(ctx context.Context, tx pgx.Tx, member uuid.UUID, l M
 		SELECT
 			(SELECT COUNT(*) FROM invites WHERE created_by = $1
 				AND (expires_at IS NULL OR expires_at > NOW()) AND (max_uses IS NULL OR uses_count < max_uses)),
-			(SELECT COUNT(*) FROM member_invite_creations WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour')`,
+			(SELECT COUNT(*) FROM audit_log WHERE actor_id = $1 AND action = 'invite.member_create' AND created_at > NOW() - INTERVAL '1 hour')`,
 		member).Scan(&active, &lastHour)
 	if err != nil {
 		return fmt.Errorf("count member invites: %w", err)

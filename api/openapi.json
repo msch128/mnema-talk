@@ -498,7 +498,7 @@
             "type": "string"
           },
           "created_by_id": {
-            "description": "CreatedByID and CreatedByName say who created the invite.",
+            "description": "CreatedByID and CreatedByName say who created the invite (a server before\nmember invites sends neither, so a client treats them as optional).",
             "format": "uuid",
             "type": "string"
           },
@@ -531,11 +531,8 @@
           }
         },
         "required": [
-          "channel_id",
           "code",
           "created_at",
-          "created_by_id",
-          "created_by_name",
           "expires_at",
           "id",
           "max_uses",
