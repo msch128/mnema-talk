@@ -53,7 +53,7 @@ export function useMenuState() {
 }
 
 export function channelLink(channel: Channel) {
-  const base = typeof window !== 'undefined' ? window.location.origin : ''
+  const base = typeof window !== 'undefined' ? useServerFeaturesStore().shareOrigin : ''
   return `${base}${channelPath(channel)}`
 }
 

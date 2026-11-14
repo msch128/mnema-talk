@@ -2,6 +2,7 @@
 // The vanity invite link (Owner and Administrators): one custom address for the whole community,
 // /join/<name>. By default it only leads visitors to the sign-in page; registration stays invite-only.
 // The switch turns it into a permanent public invite, which is a decision of its own.
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { ref, computed, onMounted } from 'vue'
 import { Check, Copy } from '@lucide/vue'
 import { api } from '../../shared/lib/api'
@@ -26,7 +27,7 @@ const loaded = ref(false)
 const failed = ref(false)
 const copied = ref(false)
 
-const fullLink = computed(() => (stored.value.slug ? joinLink(window.location.origin, stored.value.slug) : ''))
+const fullLink = computed(() => (stored.value.slug ? joinLink(useServerFeaturesStore().shareOrigin, stored.value.slug) : ''))
 const nameOf = (slug: string) => normalise.text(slug).toLowerCase()
 // What is sent: an Administrator cannot keep sign-ups on for another name, so a rename switches them off.
 const acceptsFor = (draft: { slug: string; accepts: boolean }) => draft.accepts && (isOwner.value || nameOf(draft.slug) === stored.value.slug)

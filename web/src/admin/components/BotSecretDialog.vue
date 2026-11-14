@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // A bot token is shown exactly once, right after issuing or regenerating it.
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { computed } from 'vue'
 import { Copy, TriangleAlert } from '@lucide/vue'
 import { curlExample } from '../lib/bots'
@@ -13,7 +14,7 @@ defineProps({
 })
 const emit = defineEmits<{ close: [] }>()
 const toasts = useToastStore()
-const curl = computed(() => curlExample(window.location.origin))
+const curl = computed(() => curlExample(useServerFeaturesStore().shareOrigin))
 
 async function copy(text: string) {
   try {
