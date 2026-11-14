@@ -117,17 +117,22 @@ func TestCollectUniqueCommandNames(t *testing.T) {
 func TestCommandInputDefaultMemberPermissions(t *testing.T) {
 	str := func(s string) *string { return &s }
 
-	// Valid inputs: absent, null, "0", valid bits, and leading zeroes
+	// Valid inputs: absent, null, "0", valid bits, leading zeroes, and array forms
 	for name, tc := range map[string]struct {
-		input *string
+		input *CommandPermissionsInput
 		want  *string
 	}{
 		"absent/nil":     {input: nil, want: nil},
-		"zero":           {input: str("0"), want: str("0")},
-		"valid bits":     {input: str(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10)), want: str(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10))},
-		"administrator":  {input: str(strconv.FormatUint(uint64(perm.Administrator), 10)), want: str(strconv.FormatUint(uint64(perm.Administrator), 10))},
-		"all bits":       {input: str(strconv.FormatUint(uint64(perm.All), 10)), want: str(strconv.FormatUint(uint64(perm.All), 10))},
-		"leading zeroes": {input: str("008"), want: str("8")},
+		"null raw":       {input: &CommandPermissionsInput{raw: []byte("null")}, want: nil},
+		"zero":           {input: PermissionsString("0"), want: str("0")},
+		"valid bits":     {input: PermissionsString(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10)), want: str(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10))},
+		"administrator":  {input: PermissionsString(strconv.FormatUint(uint64(perm.Administrator), 10)), want: str(strconv.FormatUint(uint64(perm.Administrator), 10))},
+		"all bits":       {input: PermissionsString(strconv.FormatUint(uint64(perm.All), 10)), want: str(strconv.FormatUint(uint64(perm.All), 10))},
+		"leading zeroes": {input: PermissionsString("008"), want: str("8")},
+		"array empty":    {input: PermissionsKeys(), want: str("0")},
+		"array ban":      {input: PermissionsKeys("ban_members"), want: str(strconv.FormatUint(uint64(perm.BanMembers), 10))},
+		"array multi":    {input: PermissionsKeys("view_channel", "send_messages"), want: str("6")},
+		"array admin":    {input: PermissionsKeys("administrator"), want: str("1")},
 	} {
 		t.Run(name, func(t *testing.T) {
 			in := CommandInput{Name: "cmd", Description: "desc", DefaultMemberPermissions: tc.input}
@@ -137,36 +142,49 @@ func TestCommandInputDefaultMemberPermissions(t *testing.T) {
 			}
 			if tc.want == nil {
 				if cleaned.DefaultMemberPermissions != nil {
-					t.Fatalf("want nil, got %v", *cleaned.DefaultMemberPermissions)
+					t.Fatalf("want nil, got %v", cleaned.DefaultMemberPermissions.Value())
 				}
 			} else {
-				if cleaned.DefaultMemberPermissions == nil || *cleaned.DefaultMemberPermissions != *tc.want {
-					t.Fatalf("want %v, got %v", *tc.want, cleaned.DefaultMemberPermissions)
+				if cleaned.DefaultMemberPermissions == nil || cleaned.DefaultMemberPermissions.Value() == nil || *cleaned.DefaultMemberPermissions.Value() != *tc.want {
+					t.Fatalf("want %v, got %v", *tc.want, cleaned.DefaultMemberPermissions.Value())
 				}
 			}
 		})
 	}
 
 	// Invalid inputs
-	for name, input := range map[string]string{
-		"empty":        "",
-		"letters":      "invalid",
-		"negative":     "-1",
-		"hex":          "0x10",
-		"with spaces":  " 8 ",
-		"unknown bits": strconv.FormatUint(1<<60, 10),
+	for name, tc := range map[string]struct {
+		input   *CommandPermissionsInput
+		wantSub string
+	}{
+		"empty":         {input: PermissionsString(""), wantSub: "unknown permission bits"},
+		"letters":       {input: PermissionsString("invalid"), wantSub: "unknown permission bits"},
+		"negative":      {input: PermissionsString("-1"), wantSub: "unknown permission bits"},
+		"hex":           {input: PermissionsString("0x10"), wantSub: "unknown permission bits"},
+		"with spaces":   {input: PermissionsString(" 8 "), wantSub: "unknown permission bits"},
+		"unknown bits":  {input: PermissionsString(strconv.FormatUint(1<<60, 10)), wantSub: "unknown permission bits"},
+		"unknown key":   {input: PermissionsKeys("not_a_real_permission"), wantSub: "not_a_real_permission"},
+		"mix with bad":  {input: PermissionsKeys("ban_members", "extra_bad_perm"), wantSub: "extra_bad_perm"},
+		"array non-str": {input: &CommandPermissionsInput{raw: []byte(`[123]`)}, wantSub: "unknown permission bits"},
+		"raw number":    {input: &CommandPermissionsInput{raw: []byte(`123`)}, wantSub: "unknown permission bits"},
+		"raw boolean":   {input: &CommandPermissionsInput{raw: []byte(`true`)}, wantSub: "unknown permission bits"},
+		"raw object":    {input: &CommandPermissionsInput{raw: []byte(`{}`)}, wantSub: "unknown permission bits"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			in := CommandInput{Name: "cmd", Description: "desc", DefaultMemberPermissions: str(input)}
-			if _, err := in.Clean(); err == nil {
+			in := CommandInput{Name: "cmd", Description: "desc", DefaultMemberPermissions: tc.input}
+			_, err := in.Clean()
+			if err == nil {
 				t.Fatalf("expected error for %s", name)
+			}
+			if tc.wantSub != "" && !strings.Contains(err.Error(), tc.wantSub) {
+				t.Fatalf("error %q does not contain %q", err.Error(), tc.wantSub)
 			}
 		})
 	}
 }
 
 func TestCommandPermChecks(t *testing.T) {
-	str := func(s string) *string { return &s }
+	permPtr := func(p perm.Set) *perm.Set { return &p }
 	f := permtest.NewFixture()
 	ch := f.Channel(uuid.Nil)
 	deniedCh := f.Channel(uuid.Nil)
@@ -195,7 +213,7 @@ func TestCommandPermChecks(t *testing.T) {
 	}
 
 	// 2. "0" permissions: Owner and Administrator pass; normal member fails
-	zero := str("0")
+	zero := permPtr(0)
 	if !hasCommandPerm(snap, ownerSub, snap.Channel(ownerSub, ch), zero) || !hasCommandPerm(snap, adminSub, snap.Channel(adminSub, ch), zero) {
 		t.Fatal("expected owner and admin to have command perm for 0")
 	}
@@ -214,7 +232,7 @@ func TestCommandPermChecks(t *testing.T) {
 	}
 
 	// 3. Permission checks differ by channel overwrite
-	sendPerm := str(strconv.FormatUint(uint64(perm.SendMessages), 10))
+	sendPerm := permPtr(perm.SendMessages)
 	if !hasCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), sendPerm) {
 		t.Fatal("expected member to have send permission in open channel")
 	}

@@ -28380,7 +28380,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+            "description": "FORBIDDEN: missing the Send messages permission or the command's default_member_permissions in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
           },
           "404": {
             "content": {

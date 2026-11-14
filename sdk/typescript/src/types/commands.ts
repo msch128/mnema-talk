@@ -18,7 +18,7 @@ export interface CommandInput {
   name: string
   description: string
   options?: CommandOption[]
-  default_member_permissions?: string | null
+  default_member_permissions?: string | string[] | null
 }
 
 /** A registered command (GET /commands). */

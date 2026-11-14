@@ -54,8 +54,7 @@ func TestManifestCheckRefusesWhatAManifestCannotSay(t *testing.T) {
 		"an unknown permission":     {func(m *Manifest) { m.Permissions = []string{"rule_the_world"} }, "rule_the_world"},
 		"a bad command name":        {func(m *Manifest) { m.Commands = []CommandInput{{Name: "Ask", Description: "d"}} }, "command names"},
 		"a bad command permission": {func(m *Manifest) {
-			s := "invalid"
-			m.Commands = []CommandInput{{Name: "ask", Description: "d", DefaultMemberPermissions: &s}}
+			m.Commands = []CommandInput{{Name: "ask", Description: "d", DefaultMemberPermissions: PermissionsString("invalid")}}
 		}, "unknown permission bits"},
 		"a command twice":   {func(m *Manifest) { m.Commands = append(commands(1), commands(1)...) }, "duplicate"},
 		"too many commands": {func(m *Manifest) { m.Commands = commands(MaxCommands + 1) }, "at most 50"},
@@ -187,27 +186,30 @@ func manyIDs(n int) []uuid.UUID {
 }
 
 func TestManifestDefaultMemberPermissions(t *testing.T) {
-	str := func(s string) *string { return &s }
 	m := validManifest()
 	m.Commands = []CommandInput{
-		{Name: "c1", Description: "d", DefaultMemberPermissions: str("0")},
-		{Name: "c2", Description: "d", DefaultMemberPermissions: str("8")},
+		{Name: "c1", Description: "d", DefaultMemberPermissions: PermissionsString("0")},
+		{Name: "c2", Description: "d", DefaultMemberPermissions: PermissionsString("8")},
 		{Name: "c3", Description: "d", DefaultMemberPermissions: nil},
+		{Name: "c4", Description: "d", DefaultMemberPermissions: PermissionsKeys("ban_members")},
 	}
 	checked, err := m.Check()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(checked.Commands) != 3 {
-		t.Fatalf("expected 3 commands, got %d", len(checked.Commands))
+	if len(checked.Commands) != 4 {
+		t.Fatalf("expected 4 commands, got %d", len(checked.Commands))
 	}
-	if checked.Commands[0].DefaultMemberPermissions == nil || *checked.Commands[0].DefaultMemberPermissions != "0" {
-		t.Fatalf("c1: expected '0', got %v", checked.Commands[0].DefaultMemberPermissions)
+	if checked.Commands[0].DefaultMemberPermissions == nil || *checked.Commands[0].DefaultMemberPermissions.Value() != "0" {
+		t.Fatalf("c1: expected '0', got %v", checked.Commands[0].DefaultMemberPermissions.Value())
 	}
-	if checked.Commands[1].DefaultMemberPermissions == nil || *checked.Commands[1].DefaultMemberPermissions != "8" {
-		t.Fatalf("c2: expected '8', got %v", checked.Commands[1].DefaultMemberPermissions)
+	if checked.Commands[1].DefaultMemberPermissions == nil || *checked.Commands[1].DefaultMemberPermissions.Value() != "8" {
+		t.Fatalf("c2: expected '8', got %v", checked.Commands[1].DefaultMemberPermissions.Value())
 	}
 	if checked.Commands[2].DefaultMemberPermissions != nil {
-		t.Fatalf("c3: expected nil, got %v", *checked.Commands[2].DefaultMemberPermissions)
+		t.Fatalf("c3: expected nil, got %v", checked.Commands[2].DefaultMemberPermissions.Value())
+	}
+	if checked.Commands[3].DefaultMemberPermissions == nil || *checked.Commands[3].DefaultMemberPermissions.Value() != "524288" {
+		t.Fatalf("c4: expected '524288', got %v", checked.Commands[3].DefaultMemberPermissions.Value())
 	}
 }

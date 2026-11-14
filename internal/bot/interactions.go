@@ -110,7 +110,8 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if err := perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ViewChannel); err != nil {
+	sub := auth.UserFrom(r.Context()).Subject()
+	if err := perm.CheckChannel(snap.Channel(sub, ch), perm.ViewChannel); err != nil {
 		return err
 	}
 	type found struct {
@@ -135,15 +136,15 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return fmt.Errorf("list channel commands: %w", err)
 	}
-	out := c.builtinsFor(snap, auth.UserFrom(r.Context()).Subject(), ch)
+	out := c.builtinsFor(snap, sub, ch)
 	if out == nil {
 		out = []ChannelCommand{}
 	}
-	memberPerms := snap.Channel(auth.UserFrom(r.Context()).Subject(), ch)
+	memberPerms := snap.Channel(sub, ch)
 	// The verdict depends on the bot's account only, so it is evaluated once per bot.
 	canSend := map[uuid.UUID]bool{}
 	for _, f := range list {
-		if !hasCommandPerm(snap, auth.UserFrom(r.Context()).Subject(), memberPerms, f.Command.DefaultMemberPermissions) {
+		if !hasCommandPerm(snap, sub, memberPerms, f.Command.DefaultPerms()) {
 			continue
 		}
 		ok, seen := canSend[f.BotUser]
@@ -277,7 +278,7 @@ func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID,
 // @Success 202 {object} Invoked "Delivered to the bot."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): unknown or ill-typed options."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission or the command's default_member_permissions in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such channel or command, or the command is not available here."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the bot is not connected."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -302,7 +303,7 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	memberPerms := snap.Channel(user.Subject(), ch)
-	if err := checkCommandPerm(snap, user.Subject(), memberPerms, cmd.DefaultMemberPermissions); err != nil {
+	if err := checkCommandPerm(snap, user.Subject(), memberPerms, cmd.DefaultPerms()); err != nil {
 		return err
 	}
 	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {

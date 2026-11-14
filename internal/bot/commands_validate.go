@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -126,51 +128,174 @@ func (c *Commands) checkReference(r *http.Request, snap *perm.Snapshot, user *au
 	return id, nil
 }
 
-// cleanDefaultMemberPermissions validates that default_member_permissions is a
-// valid decimal string of defined permission bits. Null/absent returns nil.
-func cleanDefaultMemberPermissions(s *string) (*string, error) {
-	if s == nil {
-		return nil, nil
-	}
-	bits, err := strconv.ParseUint(*s, 10, 64)
-	if err != nil || !perm.Set(bits).Valid() {
-		return nil, httpx.ErrInvalidInput("unknown permission bits")
-	}
-	canonical := strconv.FormatUint(bits, 10)
-	return &canonical, nil
-}
-
-// hasCommandPerm reports whether the member holds the command's default
-// permissions in the channel. Owner and Administrators always pass.
-func hasCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *string) bool {
-	if defaultPerms == nil {
+func isValidOptionType(t int) bool {
+	switch t {
+	case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
 		return true
-	}
-	if snap.IsOwner(sub) || memberPerms.Has(perm.Administrator) {
-		return true
-	}
-	bits, err := strconv.ParseUint(*defaultPerms, 10, 64)
-	if err != nil || bits == 0 {
+	default:
 		return false
 	}
-	return memberPerms.Has(perm.Set(bits))
+}
+
+func cleanOptionEntry(o *Option, seen map[string]bool) error {
+	if !nameRE.MatchString(o.Name) || seen[o.Name] {
+		return httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
+	}
+	seen[o.Name] = true
+	d, err := httpx.CleanText("option description", o.Description, 100, true)
+	if err != nil {
+		return err
+	}
+	o.Description = d
+	if !isValidOptionType(o.Type) {
+		return httpx.ErrInvalidInput("unknown option type")
+	}
+	return cleanChoices(o)
+}
+
+// MaxChoices bounds the choices of one option.
+const MaxChoices = 25
+
+func cleanChoices(o *Option) error {
+	if len(o.Choices) == 0 {
+		o.Choices = nil
+		return nil
+	}
+	if o.Type != OptionString || len(o.Choices) > MaxChoices {
+		return httpx.ErrInvalidInput(fmt.Sprintf("only a text option has choices, at most %d", MaxChoices))
+	}
+	seen := map[string]bool{}
+	for i, ch := range o.Choices {
+		v, err := httpx.CleanText("choice", ch, 100, true)
+		if err != nil || seen[v] {
+			return httpx.ErrInvalidInput("choices are 1 to 100 characters and unique")
+		}
+		seen[v] = true
+		o.Choices[i] = v
+	}
+	return nil
+}
+
+// cleanOptions validates option names, descriptions, types and order, and
+// normalizes the descriptions in place.
+func cleanOptions(opts []Option) error {
+	seen := map[string]bool{}
+	optional := false
+	for i := range opts {
+		if err := cleanOptionEntry(&opts[i], seen); err != nil {
+			return err
+		}
+		// As in Discord, required options come first.
+		if opts[i].Required && optional {
+			return httpx.ErrInvalidInput("required options must come before optional ones")
+		}
+		optional = optional || !opts[i].Required
+	}
+	return nil
+}
+
+// CommandPermissionsInput holds default_member_permissions for CommandInput:
+// either a decimal bitfield string (e.g. "6") or an array of permission keys
+// (e.g. ["ban_members"]). A JSON null or omitting the field clears the
+// requirement (available to everyone).
+type CommandPermissionsInput struct {
+	raw []byte
+}
+
+func (c *CommandPermissionsInput) UnmarshalJSON(b []byte) error {
+	c.raw = append(c.raw[:0], b...)
+	return nil
+}
+
+func (c CommandPermissionsInput) MarshalJSON() ([]byte, error) {
+	if len(c.raw) == 0 {
+		return []byte("null"), nil
+	}
+	return c.raw, nil
+}
+
+// PermissionsString creates a CommandPermissionsInput from a decimal bitfield string.
+func PermissionsString(s string) *CommandPermissionsInput {
+	b, _ := json.Marshal(s)
+	return &CommandPermissionsInput{raw: b}
+}
+
+// PermissionsKeys creates a CommandPermissionsInput from permission keys.
+func PermissionsKeys(keys ...string) *CommandPermissionsInput {
+	if keys == nil {
+		keys = []string{}
+	}
+	b, _ := json.Marshal(keys)
+	return &CommandPermissionsInput{raw: b}
+}
+
+// Value returns the unquoted string if c represents a string, or nil if null/empty.
+func (c *CommandPermissionsInput) Value() *string {
+	if c == nil || len(c.raw) == 0 || bytes.Equal(bytes.TrimSpace(c.raw), []byte("null")) {
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(c.raw, &s); err == nil {
+		return &s
+	}
+	str := string(c.raw)
+	return &str
+}
+
+// cleanDefaultMemberPermissions validates that default_member_permissions is a
+// valid decimal string of defined permission bits or an array of permission keys.
+// Null/absent returns nil, nil, nil.
+func cleanDefaultMemberPermissions(in *CommandPermissionsInput) (*string, *perm.Set, error) {
+	if in == nil || len(in.raw) == 0 || bytes.Equal(bytes.TrimSpace(in.raw), []byte("null")) {
+		return nil, nil, nil
+	}
+	var s string
+	if err := json.Unmarshal(in.raw, &s); err == nil {
+		bits, err := strconv.ParseUint(s, 10, 64)
+		if err != nil || !perm.Set(bits).Valid() {
+			return nil, nil, httpx.ErrInvalidInput("unknown permission bits")
+		}
+		canonical := strconv.FormatUint(bits, 10)
+		p := perm.Set(bits)
+		return &canonical, &p, nil
+	}
+	var arr []any
+	if err := json.Unmarshal(in.raw, &arr); err == nil {
+		var set perm.Set
+		for _, item := range arr {
+			k, ok := item.(string)
+			if !ok {
+				return nil, nil, httpx.ErrInvalidInput("unknown permission bits")
+			}
+			info, found := catalogByKey(k)
+			if !found {
+				return nil, nil, httpx.ErrInvalidInput("unknown permission: " + clipForError(k))
+			}
+			set |= info.Bit
+		}
+		canonical := strconv.FormatUint(uint64(set), 10)
+		return &canonical, &set, nil
+	}
+	return nil, nil, httpx.ErrInvalidInput("unknown permission bits")
 }
 
 // checkCommandPerm ensures the member holds the command's default permissions
 // in the channel, returning 403 naming the missing permission if they do not.
-func checkCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *string) error {
+func checkCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *perm.Set) error {
 	if defaultPerms == nil {
 		return nil
 	}
 	if snap.IsOwner(sub) || memberPerms.Has(perm.Administrator) {
 		return nil
 	}
-	bits, err := strconv.ParseUint(*defaultPerms, 10, 64)
-	if err != nil {
-		return httpx.ErrForbidden("missing permission")
-	}
-	if bits == 0 {
+	if *defaultPerms == 0 {
 		return snap.Deny(sub, memberPerms, perm.Administrator)
 	}
-	return snap.Deny(sub, memberPerms, perm.Set(bits))
+	return snap.Deny(sub, memberPerms, *defaultPerms)
+}
+
+// hasCommandPerm reports whether the member holds the command's default
+// permissions in the channel. Owner and Administrators always pass.
+func hasCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *perm.Set) bool {
+	return checkCommandPerm(snap, sub, memberPerms, defaultPerms) == nil
 }

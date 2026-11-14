@@ -635,7 +635,7 @@ overwrite; `POST` adds or updates one by name; `GET`, `DELETE
 ```json
 {"name": "ping", "description": "Replies with pong",
  "options": [{"name": "text", "description": "What to say", "type": 3, "required": true}],
- "default_member_permissions": "3072"}
+ "default_member_permissions": "6"}
 ```
 
 Names are 1 to 32 lowercase letters, digits, `-` or `_`; at most 50 commands
@@ -661,22 +661,26 @@ stays off even when the bot registers it again.
 ### Command permissions (default_member_permissions)
 
 Like Discord, a command may declare `default_member_permissions` as a decimal
-string bitfield of required permissions (e.g. `"3072"` for *View channels* and
-*Send messages*, `"8"` for *Administrator*, `"16"` for *Ban members*). Bit
-values follow Mnema's permission catalogue ([Roles and
-permissions](roles-and-permissions.md) and `GET /api/permissions`), not
-Discord's:
+string bitfield of required permissions (e.g. `"6"` for *View channels* and
+*Send messages*, `"1"` for *Administrator*, `"524288"` for *Ban members*), or
+as an array of permission keys (e.g. `["ban_members"]` or `["view_channel", "send_messages"]`).
+
+> [!WARNING]
+> Mnema's permission bit values are **not** Discord's bit values (e.g. `discord.js`'s `PermissionFlagsBits`). Do not reuse Discord's permission constants; a ported bot must not reuse Discord's PermissionFlagsBits, and must compute bit values from Mnema's catalogue or pass an array of permission keys.
 
 - **`null` or omitted:** available to everyone who may use commands in the
-  channel (requires *Send messages*).
-- **`"0"`:** available to nobody except the **Owner** and members with
+  channel (requires *Send messages*). Re-registering a command without
+  `default_member_permissions` (or with `null`) clears the requirement back to `null`,
+  making it available to everyone again.
+- **`"0"` or `[]`:** available to nobody except the **Owner** and members with
   **Administrator**.
-- **A decimal bitfield:** the member must hold every requested permission in
-  the channel where the command is used. Unknown permission bits are rejected
-  on registration with `400` (`INVALID_INPUT`, "unknown permission bits").
-  Elevated bits (Administrator, admin-area permissions, Disconnect members)
-  are allowed here because this field only restricts who may run the command;
-  it grants no rights to the bot.
+- **A decimal bitfield string or array of permission keys:** the member must hold
+  every requested permission in the channel where the command is used. Unknown
+  permission bits or unknown permission keys are rejected on registration with
+  `400` (`INVALID_INPUT`, e.g. "unknown permission: ..."). Elevated bits
+  (Administrator, admin-area permissions, Disconnect members) are allowed here
+  because this field only restricts who may run the command; it grants no rights
+  to the bot. The REST API always returns the decimal string bitfield (or `null`).
 
 Enforcement is strictly server-side:
 
@@ -687,13 +691,53 @@ Enforcement is strictly server-side:
    re-checks the invoking member's permissions in that channel. If the member
    lacks any required permission, execution is refused with `403` (`FORBIDDEN`,
    naming the missing permission, e.g. `missing permission: ban members`), even if
-   the command ID is known.
+   the command ID is known. Running a command that is hidden from the member in
+   that channel by its ID fails with this `403`.
 3. **Owner and Administrator:** Always pass all permission checks (the snapshot
    grants them all bits).
 
 Updating a command over the REST API updates `default_member_permissions`
-immediately. A command disabled by an administrator stays disabled regardless of
+immediately. Re-registering a command without `default_member_permissions` clears
+it to `null`. A command disabled by an administrator stays disabled regardless of
 re-registration.
+
+### Permission bit values
+
+The bit values used in `default_member_permissions` and interaction `member.permissions`
+follow Mnema's permission catalogue (`GET /api/permissions`):
+
+| Permission key | Bit value | Name |
+|---|---|---|
+| `administrator` | `1` | administrator |
+| `view_channel` | `2` | view channels |
+| `send_messages` | `4` | send messages |
+| `attach_files` | `8` | attach files |
+| `add_reactions` | `16` | add reactions |
+| `manage_messages` | `32` | manage messages |
+| `mention_everyone` | `64` | mention everyone |
+| `connect` | `128` | connect to Talks |
+| `speak` | `256` | speak |
+| `video` | `512` | share video and screen |
+| `disconnect_members` | `1024` | disconnect members |
+| `manage_channels` | `2048` | manage channels |
+| `manage_roles` | `4096` | manage roles |
+| `create_invites` | `8192` | manage invites |
+| `manage_webhooks` | `16384` | manage webhooks |
+| `manage_members` | `32768` | manage members |
+| `manage_bots` | `65536` | manage bots |
+| `view_audit_log` | `131072` | view the audit log |
+| `timeout_members` | `262144` | timeout members |
+| `ban_members` | `524288` | ban members |
+| `manage_emoji` | `1048576` | manage emoji |
+| `manage_reports` | `2097152` | manage reports |
+| `send_direct_messages` | `4194304` | send direct messages |
+| `kick_members` | `8388608` | kick members |
+| `manage_stage` | `16777216` | manage Stages |
+| `manage_events` | `33554432` | manage events |
+| `bypass_new_member_limits` | `67108864` | bypass new member limits |
+| `edit_wiki` | `134217728` | edit the wiki |
+| `manage_wiki` | `268435456` | manage the wiki |
+| `view_wiki` | `536870912` | view the wiki |
 
 **Run.** `POST /api/channels/{id}/interactions {"command_id": "...",
 "options": {"text": "hello"}}` validates the options (types, required ones,
@@ -706,7 +750,7 @@ member.
 {"op": 0, "t": "INTERACTION_CREATE", "s": 7, "d": {
   "id": "...", "token": "...", "type": 2, "channel_id": "...", "application_id": "<bot id>",
   "data": {"id": "<command id>", "name": "ping", "options": [{"name": "text", "type": 3, "value": "hello"}]},
-  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "3072"}}}
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "6"}}}
 ```
 
 **Respond** within 15 minutes, with `id` and `token` from the event:
@@ -821,7 +865,7 @@ delivered.
   "id": "...", "token": "...", "type": 3, "channel_id": "...", "application_id": "<bot id>",
   "message": {"id": "...", "content": "Deploy v2.4 to production?", "components": [...], "...": "..."},
   "data": {"custom_id": "env", "component_type": 3, "values": ["prod"]},
-  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "3072"}}}
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "6"}}}
 ```
 
 User, role and channel selects add `data.resolved` with what was picked:
@@ -886,7 +930,7 @@ Every `INTERACTION_CREATE` dispatch shares this structure:
 | `application_id` | string | The bot's ID |
 | `data` | object | Interaction data (`id`, `name`, `options` for commands; `custom_id`, `component_type`, `values`, `resolved` for components; `custom_id`, `components` for modals) |
 | `member.user` | object | The invoking member (`id`, `username`, `display_name`, `avatar_url`) |
-| `member.permissions` | string | Invoking member's effective channel permissions at invocation time as a decimal string bitfield (Owner: all bits). Bits follow Mnema's catalogue ([Roles and permissions](roles-and-permissions.md) and `GET /api/permissions`), not Discord's |
+| `member.permissions` | string | Invoking member's effective channel permissions at invocation time as a decimal string bitfield (Owner: all bits). Bits follow Mnema's catalogue ([Roles and permissions](roles-and-permissions.md) and `GET /api/permissions`), not Discord's (a ported bot must not reuse Discord's `PermissionFlagsBits`) |
 | `message` | object | The message a component or modal was attached to (types `3` and `5`) |
 
 The interaction payload is delivered **only** to the bot that owns the

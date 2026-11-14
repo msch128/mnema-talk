@@ -90,7 +90,7 @@ type CommandInput struct {
 	Name                     string          `json:"name"`
 	Description              string          `json:"description"`
 	Options                  []CommandOption `json:"options"`
-	DefaultMemberPermissions *string         `json:"default_member_permissions,omitempty"`
+	DefaultMemberPermissions any             `json:"default_member_permissions,omitempty"`
 }
 
 // OptionType is the type of a command option.
