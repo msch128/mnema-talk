@@ -91,7 +91,9 @@ type savedRow struct {
 // last entry of the previous page.
 func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.UUID, before *uuid.UUID, limit int) (SavedPage, error) {
 	if before != nil {
-		if err := core.CursorExists(ctx, p, `SELECT 1 FROM saved_messages WHERE user_id = $1 AND message_id = $2`, user, *before); err != nil {
+		// An entry whose message's lifetime ended is gone, as in the list below.
+		if err := core.CursorExists(ctx, p, `SELECT 1 FROM saved_messages s WHERE s.user_id = $1 AND s.message_id = $2
+			AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = s.message_id AND x.expires_at <= now())`, user, *before); err != nil {
 			return SavedPage{}, err
 		}
 	}
