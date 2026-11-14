@@ -21,3 +21,21 @@ func TestNamesMatchLegacyAndNewUsernames(t *testing.T) {
 		t.Fatalf("Names = %v, want %v", got, want)
 	}
 }
+
+func TestRewriteWritesLabelsForKnownNamesOnly(t *testing.T) {
+	labels := map[string]string{"bot-abc": "Mnemo", "max": "Max M."}
+	cases := map[string]string{
+		"hi @bot-abc, see @Max.":     "hi @Mnemo, see @Max M..",
+		"mail a@max.example @nobody": "mail a@max.example @nobody",
+		"@all @max":                  "@all @Max M.",
+		"@bot-abc-":                  "@Mnemo-",
+	}
+	for in, want := range cases {
+		if got := Rewrite(in, labels); got != want {
+			t.Errorf("Rewrite(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := Rewrite("@max", nil); got != "@max" {
+		t.Errorf("no labels changed the text: %q", got)
+	}
+}

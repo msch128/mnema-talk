@@ -42,7 +42,8 @@ const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 
 // Only real members (and @all/@here) are highlighted, and clickable.
-const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username || '').toLowerCase())))
+// Each is drawn with its display name; the username stays in the stored text and the tooltip.
+const knownNames = computed(() => new Map(chatStore.members.map(m => [(m.username || '').toLowerCase(), m.display_name || ''] as const)))
 // Pills for the recorded roles that still exist, from their stored IDs.
 const mentionedRoles = computed(() => props.mentionRoles
   .map(id => permissions.roles.find(r => r.id === id))
