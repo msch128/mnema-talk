@@ -72,7 +72,8 @@ func GoConn(conn Conn, name string, onPanic func(), fn func()) {
 // goroutine starts and marks it done only after Run returned, so whoever
 // waits on wg finds a panic of fn already counted, logged and handled. A
 // `defer wg.Done()` inside fn runs before Run's recover and lets the waiter
-// go first. With Crash the panic continues and wg is never released.
+// go first. With Crash the panic continues past Run: Done still runs while
+// the goroutine unwinds, and then the process ends.
 func GoWaited(wg *sync.WaitGroup, name string, onPanic func(), fn func()) {
 	mustHandle(name, onPanic)
 	wg.Add(1)

@@ -38,6 +38,7 @@ audit.
 | [bot-platform-web](2026-11/bot-platform-web.md) | the bot platform | the web UI: the add-bot flow, components, selects, forms and their states, at six viewports in two browsers; two rounds |
 | [webhook-call-chat](2026-11/webhook-call-chat.md) | #803 | an outgoing webhook of a conversation's call Talk heard its call chat (releases up to 3.0.13; fixed in 3.1.0): the routes, the queue insert and the delivery each refuse a private channel |
 | [816](2026-11/816.md) | #816 | the flaky ws, sfu and macOS stage tests fixed at their cause: each stated cause checked against the code, two reproduced on main, and each test shown to fail again when the product behaviour it guards is broken |
+| [815-delta](2026-11/815-delta.md) | #815 | messages with a lifetime, the last delta: new, duplicated and conversation Talk channels answer the auto-delete they follow (every channel INSERT ... RETURNING checked), the narrow header chip, the admin Messages tab heading and the layout spec; MERGE, two non-blocking suggestions (the GoWaited comment is fixed in the same pull request) |
 
 ## 2026-11: defect hunt on 3.0.8
 
