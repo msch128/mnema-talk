@@ -103,7 +103,7 @@ func (h *Hub) endPresence(userID, chID uuid.UUID, log *slog.Logger, keep func() 
 // room by then. No grace starts while a connection other than except is in
 // the room: the user never left. except is the connection that went away, and
 // the leave the grace ends in is logged under its id.
-func (h *Hub) startGrace(key voiceKey, except *Client) {
+func (h *Hub) startGrace(key voiceKey, except *Client, tab ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed || h.seatedLocked(key.user, key.ch, except) {
@@ -112,7 +112,13 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 	if old := h.grace[key]; old != nil {
 		old.timer.Stop()
 	}
-	g := &graceLeave{channelID: key.ch}
+	var tabID string
+	if len(tab) > 0 {
+		tabID = tab[0]
+	} else if except != nil {
+		tabID = except.tabID()
+	}
+	g := &graceLeave{channelID: key.ch, tab: tabID}
 	log := except.logger() // not the client: the timer outlives its connection
 	var conn safego.Conn   // stays "" when a refused join restores the grace: no connection is leaving
 	if except != nil {
@@ -128,12 +134,7 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 	// recovered and ends the process.
 	claimed := false
 	end := func() {
-		h.endPresence(key.user, key.ch, log, func() bool {
-			if h.graceKeep != nil {
-				return h.graceKeep(key)
-			}
-			return h.seatedLocked(key.user, key.ch, nil)
-		})
+		h.endGracePresence(key, log)
 	}
 	onPanic := func() {
 		if claimed {
@@ -153,6 +154,44 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 		}
 	})
 	h.grace[key] = g
+}
+
+func (h *Hub) endGracePresence(key voiceKey, log *slog.Logger) {
+	h.endPresence(key.user, key.ch, log, func() bool {
+		return h.graceSeatKeptLocked(key)
+	})
+}
+
+// graceSeatKeptLocked reports whether key's voice seat must be kept rather than
+// ended by its grace leave. Callers hold h.mu.
+func (h *Hub) graceSeatKeptLocked(key voiceKey) bool {
+	if h.graceKeep != nil {
+		return h.graceKeep(key)
+	}
+	return h.seatedLocked(key.user, key.ch, nil)
+}
+
+// leaveLostVoice ends a voice seat of userID in chID from a lost connection
+// with tab (or a lingering grace from it) when a seatless connection names
+// that Talk and the page's tab id.
+func (h *Hub) leaveLostVoice(userID, chID uuid.UUID, tab string, log *slog.Logger) {
+	for _, o := range h.clientsOf(userID) {
+		safego.Locked(&o.voiceMu, func() {
+			if cur := o.currentVoice(); cur != nil && *cur == chID && o.tabID() == tab {
+				h.leaveVoiceLocked(o, chID)
+			}
+		})
+	}
+	key := voiceKey{userID, chID}
+	h.endPresence(userID, chID, log, func() bool {
+		g := h.grace[key]
+		if g == nil || g.tab == "" || g.tab != tab || h.graceSeatKeptLocked(key) {
+			return true
+		}
+		g.timer.Stop()
+		delete(h.grace, key)
+		return false
+	})
 }
 
 // takeGrace cancels and returns a pending grace leave, if any.

@@ -49,7 +49,7 @@ func TestSeatGivenUpDuringAResumeIsTakenAsANewJoin(t *testing.T) {
 	broken := testClient(h, user)
 	resuming := testClient(h, user)
 
-	rejoin, _ := h.leaveOtherRooms(resuming, ch.ID)
+	rejoin, _, _ := h.leaveOtherRooms(resuming, ch.ID)
 	if !rejoin {
 		t.Fatal("the lingering seat was not found")
 	}
