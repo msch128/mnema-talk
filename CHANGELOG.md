@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.2.0](https://github.com/msch128/mnema-talk/compare/v3.1.1...v3.2.0) (2026-11-14)
+
+
+### Features
+
+* a bot can be given access to every channel in one step ([#829](https://github.com/msch128/mnema-talk/issues/829)) ([7f0b1fd](https://github.com/msch128/mnema-talk/commit/7f0b1fdcb07a4e718278f2defd929c78cd966968))
+* a removed file shows a placeholder at its size, in the chat, reply previews and the viewer ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+* auto-delete in hours, days or weeks, for attachments only or everything, with a community default and a dry run ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+* messages with a lifetime, set when sending and ended by the server like an author's delete ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+* the bot API and both SDKs take a lifetime (lifetime_seconds, expires_at) ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+
+
+### Bug Fixes
+
+* a context menu taller than the window opens as a bottom sheet ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* a failed message load shows an error with a retry, never an empty channel ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* a lobby join and a join during the microphone prompt send one join when the realtime socket drops ([#822](https://github.com/msch128/mnema-talk/issues/822)) ([a7b5232](https://github.com/msch128/mnema-talk/commit/a7b5232b50c316ec45c2b4e4e75c48c168564dac))
+* a saved list page cursor at an ended message answers like a missing one ([#845](https://github.com/msch128/mnema-talk/issues/845)) ([7f3534e](https://github.com/msch128/mnema-talk/commit/7f3534eee3c746de6694874e16a528df5cd45b5d))
+* a screen share's thumbnails keep their quality when the best layer is cut for bandwidth ([#836](https://github.com/msch128/mnema-talk/issues/836)) ([20fc113](https://github.com/msch128/mnema-talk/commit/20fc113902013edc2ee40ca0be2aa0a6613012eb))
+* a Talk picked right after the page loads connects ([#819](https://github.com/msch128/mnema-talk/issues/819)) ([646a67f](https://github.com/msch128/mnema-talk/commit/646a67f7c80752b0049dbb9935c464669dfd804c))
+* a thread opens over a chat too narrow for it, and the member list steps aside honestly ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* an admin's removal of a file updates open clients at once ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+* cut names can be read in full on hover, keyboard focus and long press ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* deletes take the author's row first, and channel and webhook deletes take their bot accounts first, so they cannot deadlock ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+* each lower camera layer encodes its own copy of the capture ([#824](https://github.com/msch128/mnema-talk/issues/824)) ([2d2c790](https://github.com/msch128/mnema-talk/commit/2d2c790104652efa1f874f41cb27baec4245da67))
+* keep the voice panel in the sidebar whole, with the call controls in their own row ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* link rules apply to hosts with a bare ACE label as well ([#817](https://github.com/msch128/mnema-talk/issues/817)) ([78d8a25](https://github.com/msch128/mnema-talk/commit/78d8a25f2fb401b27c4e5ab7fbde3a39f5de284c))
+* mentions show the member's name instead of the account name ([#830](https://github.com/msch128/mnema-talk/issues/830)) ([894084e](https://github.com/msch128/mnema-talk/commit/894084e280ac16da2951d215942abc201740877f))
+* nothing is clipped: names, titles, menus, headers, the composer and the chat column at every size ([3d30079](https://github.com/msch128/mnema-talk/commit/3d300793970e2e16ac49db902bcbf1e7d1c53293))
+* release the notice wait group only after a panic is counted ([#814](https://github.com/msch128/mnema-talk/issues/814)) ([502b105](https://github.com/msch128/mnema-talk/commit/502b1056b54201454ffac06490cfef346fbb7479))
+* the auto-delete default never saves without its dry run's confirmation ([fe466c2](https://github.com/msch128/mnema-talk/commit/fe466c252086dc5f3eb02bfcd8f8c5d1d33cba79))
+
+
+### Documentation
+
+* link the TypeScript SDK in its own repository from the new bot pages ([#833](https://github.com/msch128/mnema-talk/issues/833)) ([15d7530](https://github.com/msch128/mnema-talk/commit/15d7530788d7f18f225d933b93d7889a504de749))
+* the follow-ups of the website review ([#823](https://github.com/msch128/mnema-talk/issues/823)) ([70996d2](https://github.com/msch128/mnema-talk/commit/70996d2e439e44727e233090bd6124812ec2b8b0))
+
 ## [3.1.1](https://github.com/msch128/mnema-talk/compare/v3.1.0...v3.1.1) (2026-11-13)
 
 

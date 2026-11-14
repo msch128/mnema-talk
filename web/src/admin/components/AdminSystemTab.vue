@@ -235,6 +235,11 @@ onMounted(refresh)
         </button>
       </div>
 
+      <!-- The image repository moved (GHCR does not redirect): a calm note, with or without the sidecar -->
+      <p v-if="self?.moved_to" role="note" class="text-sm text-mnema-muted" data-testid="image-moved">
+        {{ $t('admin.system.image_moved', { image: self.image, moved_to: self.moved_to }) }}
+      </p>
+
       <!-- Self-update through the updater sidecar -->
       <div v-if="updatePhase === 'running'" role="status" class="rounded-md border border-mnema-accent/30 bg-mnema-accent/10 p-3 text-sm text-mnema-text" data-testid="self-update-running">
         {{ $t('admin.system.selfUpdateRunning') }}

@@ -112,6 +112,12 @@ func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 		return p
 	}
 	p := base
+	if s.botsAll[sub.ID] && !s.EveryoneCanView(ch) {
+		// A bot with access to every channel does not see what members cannot
+		// see by default. The View channels its roles hold does not open it; an
+		// allow in an overwrite of one of its roles or of the bot itself still does.
+		p &^= ViewChannel
+	}
 	if cat != uuid.Nil {
 		p = s.categoryOv[cat].apply(p, s, sub.ID)
 	}
@@ -188,7 +194,25 @@ func (s *Snapshot) CategoryVisible(sub Subject, cat uuid.UUID) bool {
 	if base.Has(Administrator) {
 		return true
 	}
+	if s.botsAll[sub.ID] && !s.everyoneSeesCategory(cat) {
+		base &^= ViewChannel // see channelPerms: not what members cannot see by default
+	}
 	return s.categoryOv[cat].apply(base, s, sub.ID).Has(ViewChannel)
+}
+
+// everyoneSeesCategory reports whether @everyone alone leaves View channels in
+// place under the category's overwrites.
+func (s *Snapshot) everyoneSeesCategory(cat uuid.UUID) bool {
+	p := s.everyone
+	if p.Has(Administrator) {
+		return true
+	}
+	if sc := s.categoryOv[cat]; sc != nil {
+		if ow, ok := sc.roles[s.everyoneID]; ok {
+			p = p&^ow.deny | ow.allow
+		}
+	}
+	return p.Has(ViewChannel)
 }
 
 // ViewableChannels lists the channels sub may view; nil means all of them

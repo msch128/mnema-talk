@@ -191,6 +191,7 @@ func FirstUnread(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, s
 	err := p.QueryRow(ctx, `
 		SELECT id FROM messages
 		WHERE channel_id = $1 AND parent_id IS NULL AND user_id <> $2 AND created_at > $3
+		  AND (expires_at IS NULL OR expires_at > now())
 		ORDER BY created_at, id LIMIT 1`, channelID, userID, since).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

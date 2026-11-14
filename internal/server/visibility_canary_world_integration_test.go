@@ -31,9 +31,10 @@ const (
 	clsReport                      // report notes and moderator notes: Manage reports and the Owner
 	clsOwner                       // the Owner alone
 	clsReporter                    // carol's report note: carol and Manage reports
+	clsEnded                       // a message whose lifetime ended, not swept yet: nobody
 )
 
-var classNames = []string{"open", "staff", "dm", "insider", "exstaff-own", "report", "owner", "reporter"}
+var classNames = []string{"open", "staff", "dm", "insider", "exstaff-own", "report", "owner", "reporter", "ended"}
 
 func (c canaryClass) String() string { return classNames[c] }
 
@@ -102,7 +103,9 @@ func (w *canaryWorld) hide(c canaryClass, kind, what string, id uuid.UUID) uuid.
 
 func newCanaryWorld(t *testing.T, seed uint64) *canaryWorld {
 	t.Helper()
-	a := newApp(t, true)
+	// The expiry sweeper is held: the ended messages stay stored, and every
+	// route must leave them out by their end alone.
+	a := newAppWithDeps(t, true, nil, func(d *Deps) { d.HoldExpiry = true })
 	owner := a.seedAdmin()
 	w := &canaryWorld{a: a, owner: owner, words: map[string]canaryClass{}, wordWhat: map[string]string{},
 		ids: map[string]canaryClass{}, idWhat: map[string]string{}, pool: map[string][]string{}, rng: rand.New(rand.NewPCG(seed, seed^0x9e37))}
@@ -354,6 +357,7 @@ func (w *canaryWorld) build(t *testing.T) {
 	w.conversation(t)
 	w.pending(t, reported)
 	w.demote(t)
+	w.ended(t)
 	botRole := createRole(t, w.owner, "Reader bot", perm.SendMessages)
 	b := createBot(t, w.owner, "reader")
 	wantStatus(t, "bot role", w.owner.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{"role_ids": []uuid.UUID{botRole}}), http.StatusOK)

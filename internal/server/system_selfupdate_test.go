@@ -50,7 +50,7 @@ func TestConcurrentSelfUpdatesReserveOneSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 	confirmEntered, confirmRelease := make(chan struct{}, 2), make(chan struct{}, 2)
-	h := &systemHandler{cfg: &config.Config{AppImage: "ghcr.io/msch128/mnema-talk:latest"}, version: "0.3.0", updates: checker,
+	h := &systemHandler{cfg: &config.Config{AppImage: "ghcr.io/mnema-xyz/mnema-talk:latest"}, version: "0.3.0", updates: checker,
 		self: selfUpdate{updater: updater, now: time.Now, confirm: func(context.Context, uuid.UUID, string) (time.Duration, error) {
 			confirmEntered <- struct{}{}
 			<-confirmRelease

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, responseString, suiteMember, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -29,7 +29,6 @@ test('a full Talk shows N/limit and turns members away', async ({ browser }) => 
   opened.push(adminCtx)
   const memberCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(memberCtx)
-  await adminCtx.addInitScript(trackPeerConnections)
   const admin = await adminCtx.newPage()
   const member = await memberCtx.newPage()
 

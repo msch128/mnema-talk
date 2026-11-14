@@ -2,6 +2,9 @@
 import type { SentenceRow } from './errorSentences'
 
 export const ROWS: readonly SentenceRow[] = [
+  ['a forum post cannot have a lifetime', 'lifetimeForumPost'],
+  ['a message with a lifetime cannot be forwarded', 'lifetimeNoForward'],
+  ['a message with a lifetime cannot be pinned', 'lifetimeNoPin'],
   ['%d created channel(s) have messages now; confirm that they are deleted too', 'srvCreatedChannelSHaveMessages'],
   ['%q is not a domain', 'srvIsNotADomain'],
   ['%s contains invalid characters', 'fieldInvalidChars', ['field']],
@@ -41,6 +44,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['a bot can have at most %d active tokens', 'srvABotCanHaveAt'],
   ['a bot can have at most %d commands', 'srvABotCanHaveAt2'],
   ['a bot holds this role: only the Owner can add administrator or admin-area permissions to it', 'srvABotHoldsThisRole'],
+  ['a bot\'s access can only grant channel permissions: view, send, attach, react, manage messages, mention everyone', 'srvABotSAccessGrants'],
   ['a bot\'s own role belongs to that bot only', 'srvABotSOwnRole'],
   ['a bot\'s roles are set in its bot settings', 'srvABotSRolesAre'],
   ['a button takes no values', 'srvButtonTakesNoValues'],
@@ -73,6 +77,8 @@ export const ROWS: readonly SentenceRow[] = [
   ['a word is too long', 'srvAWordIsTooLong'],
   ['a word needs at least one letter or digit besides *', 'srvAWordNeedsAtLeast'],
   ['accept the community rules first', 'srvAcceptTheCommunityRulesFirst'],
+  ['access "all" needs the view_channel permission: without it the bot sees nothing', 'srvAccessAllNeedsView'],
+  ['access must be "channels" or "all"', 'srvAccessMustBeChannels'],
   ['action must be block or flag', 'srvActionMustBeBlockOr'],
   ['add an e-mail address to your account or name a recipient', 'srvAddAnEMailAddress'],
   ['after must be an RFC 3339 timestamp', 'srvAfterRfc3339', []],

@@ -30,6 +30,7 @@ var routeGuards = map[string]string{
 	"DELETE /admin/bots/{id}":                           "acting",
 	"POST /admin/bots/{id}/avatar":                      "acting",
 	"PUT /admin/bots/{id}/roles":                        "acting",
+	"PUT /admin/bots/{id}/access":                       "acting",
 	"GET /admin/bots/{id}/access":                       "load",
 	"GET /admin/bots/{id}/tokens":                       "acting",
 	"POST /admin/bots/{id}/tokens":                      "acting",
@@ -133,6 +134,7 @@ func verifyRouteGuards(t *testing.T, h *Handler, manager *auth.User, f fixtureBo
 	bodies := map[string]string{
 		"PATCH /admin/bots/{id}":                      `{"name":"renamed"}`,
 		"PUT /admin/bots/{id}/roles":                  `{"role_ids":[]}`,
+		"PUT /admin/bots/{id}/access":                 `{"access":"channels","permissions":[],"channel_ids":[]}`,
 		"POST /admin/bots/{id}/tokens":                `{"expires_at":"` + later + `"}`,
 		"PATCH /admin/bots/{id}/commands/{commandID}": `{"disabled":true}`,
 		"POST /admin/bots":                            `{"name":"fresh"}`,
