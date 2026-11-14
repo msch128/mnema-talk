@@ -4,7 +4,8 @@ import type { Cx } from './state'
 import { isLayerActive } from './layers'
 import { tuneSender } from './senderTuning'
 import { cameraSenderParams, qosPriority } from './senders'
-import { cameraPlansOf, dropLayerClone, layerClone, replaceQuietly } from './cameraLayers'
+import { cameraPlansOf, replaceQuietly } from './cameraLayers'
+import { dropLayerClone, dropMissingSenderClones, layerClone } from './layerClones'
 
 // Feeding and switching the camera's lower layers (see cameraLayers).
 
@@ -16,8 +17,30 @@ async function feedLowerLayer(cx: Cx, index: number, sender: RTCRtpSender, plan:
     degradationPreference: 'balanced', priority: prio, networkPriority: prio
   })
   if (gen !== st.joinGeneration || toRaw(st.localCameraStream.value)?.getVideoTracks()[0] !== track) return
-  const clone = layerClone(st, index, track)
+  const clone = layerClone(st.cameraLayerClones, index, track)
   if (sender.track !== clone) await replaceQuietly(sender, clone)
+}
+
+async function syncCameraSenderLayers(
+  cx: Cx,
+  senders: (RTCRtpSender | null | undefined)[],
+  plans: ReturnType<typeof cameraPlansOf>,
+  track: MediaStreamTrack | undefined,
+  gen: number,
+  wanted: number[] | null
+) {
+  const { st } = cx
+  for (let i = 0; i < senders.length; i++) {
+    const sender = senders[i]
+    if (!sender) continue
+    const plan = plans[i + 1]
+    if (!track || !plan) {
+      if (sender.track) await replaceQuietly(sender, null)
+      dropLayerClone(st.cameraLayerClones, i)
+      continue
+    }
+    await feedLowerLayer(cx, i, sender, plan, isLayerActive(wanted, i + 1), track, gen)
+  }
 }
 
 async function runSyncCameraLayers(cx: Cx) {
@@ -25,23 +48,14 @@ async function runSyncCameraLayers(cx: Cx) {
   const track = st.localCameraStream.value?.getVideoTracks()[0]
   const gen = st.joinGeneration
   const senders = [...st.cameraLayerSenders]
+  dropMissingSenderClones(senders, st.cameraLayerClones)
   if (!senders.some(Boolean)) return
   const plans = track ? cameraPlansOf(track, true) : []
   const wanted = voice.cameraLayersWanted
   if (track && st.cameraSender) {
     await tuneSender(st.cameraSender, { ...cameraSenderParams(cx), ...(plans.length ? { active: isLayerActive(wanted, 0) } : { active: true }) })
   }
-  for (let i = 0; i < senders.length; i++) {
-    const sender = senders[i]
-    if (!sender) continue
-    const plan = plans[i + 1]
-    if (!track || !plan) {
-      if (sender.track) await replaceQuietly(sender, null)
-      dropLayerClone(st, i)
-      continue
-    }
-    await feedLowerLayer(cx, i, sender, plan, isLayerActive(wanted, i + 1), track, gen)
-  }
+  await syncCameraSenderLayers(cx, senders, plans, track, gen, wanted)
 }
 
 /** A failure here must not stop the quality changes queued behind it. */

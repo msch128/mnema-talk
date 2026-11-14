@@ -42,6 +42,7 @@ audit.
 | [824](2026-11/824.md) | #824 | each lower camera layer encodes its own copy of the capture, so a bandwidth-cut best layer no longer shrinks the thumbnail; the clones' lifecycle (camera light), the frame encryption of their lines, and the e2e noise filter turned off from the fixture |
 | [815-delta](2026-11/815-delta.md) | #815 | messages with a lifetime, the last delta: new, duplicated and conversation Talk channels answer the auto-delete they follow (every channel INSERT ... RETURNING checked), the narrow header chip, the admin Messages tab heading and the layout spec; MERGE, two non-blocking suggestions (the GoWaited comment is fixed in the same pull request) |
 | [829](2026-11/829.md) | #829 | a bot can be given access to every channel in one step: the install and settings endpoints under the bot invariant, the snapshot rule that keeps private channels and categories hidden from such a bot, replace semantics when switching back; three rounds, the findings of the first two fixed in the same pull request |
+| [836](2026-11/836.md) | #836 | each lower screen layer encodes its own copy of the capture, as #824 did for the camera: the clones' lifecycle (sharing indicator), a quality change, reconnects, the frame encryption of their lines; two rounds: the required finding of the first (a stale hint after a quality change) was fixed in the same pull request and checked in the second |
 
 ## 2026-11: defect hunt on 3.0.8
 

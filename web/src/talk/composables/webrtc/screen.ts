@@ -7,7 +7,7 @@ import type { MediaStat } from '../../lib/mediaStats'
 import type { StreamQuality } from '../../lib/streamQuality'
 import { mediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
-import { retuneForCapture, stopCaptureWatch, syncLayers, watchCapture } from './layers'
+import { retuneForCapture, stopCaptureWatch, stopScreenLayerClones, syncLayers, watchCapture } from './layers'
 import { ensureScreenAudioGuard, screenAudioConstraints, tuneSender } from './senderTuning'
 import { screenSenderParams } from './senders'
 
@@ -215,6 +215,9 @@ export async function replaceScreenShare(cx: Cx): Promise<void> {
     stream.getTracks().forEach(tr => tr.stop())
     return
   }
+  // Stop old clones before attaching the new capture so the sharing indicator
+  // tracks the new source, and new clones are made from it.
+  stopScreenLayerClones(cx)
   st.localScreenStream.value = stream
   voice.localScreenStream = stream
   await attachScreen(cx, stream)
@@ -231,6 +234,9 @@ export function stopScreenShare(cx: Cx) {
   const wasSharing = !!st.localScreenStream.value
   if (st.screenSender) st.screenSender.replaceTrack(null).catch(() => {})
   detachScreenAudio(cx)
+  // Stop lower layer clones now so the browser's sharing indicator goes away
+  // immediately — without this they would linger until the async syncLayers chain runs.
+  stopScreenLayerClones(cx)
   // The next share starts again with its best layer only.
   voice.layersWanted = null
   st.declaredKey = ''
