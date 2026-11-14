@@ -17,13 +17,9 @@
 import { watch } from 'vue'
 import type { Cx } from './state'
 
-/** Resolves once the realtime socket is connected. */
+/** Resolves once the realtime socket is connected; callers ask only while it is down, so the next change is the connect. */
 export function socketUp({ chat }: Cx): Promise<void> {
   return new Promise((resolve) => {
-    const stop = watch(() => chat.isConnected, (up) => {
-      if (!up) return
-      stop()
-      resolve()
-    })
+    watch(() => chat.isConnected, () => resolve(), { once: true })
   })
 }
