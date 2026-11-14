@@ -28,7 +28,7 @@ type Target struct {
 	// org.opencontainers.image.version label ("" if it has none).
 	RunningVersion string
 	// Image is the reference the container was created from, e.g.
-	// "ghcr.io/msch128/mnema-talk:1.0".
+	// "ghcr.io/mnema-xyz/mnema-talk:1.0".
 	Image string
 	// ImageID is the id of the image the container runs. It still names that
 	// image after the tag has moved on, so a tag can be put back.

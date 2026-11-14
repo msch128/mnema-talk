@@ -18,7 +18,7 @@ Mnema Talk cannot start - fix these settings in .env:
 Fix every listed line in `.env` (the six required settings are in
 [Settings at a glance](operations.md#settings-at-a-glance)) and run
 `docker compose up -d`. The app exits with status 78 in this case.
-Before the first start, `docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check`
+Before the first start, `docker run --rm -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup --check`
 prints the same list for the `.env` in the current folder. Other startup messages are explained under
 [The app does not start](operations.md#the-app-does-not-start).
 

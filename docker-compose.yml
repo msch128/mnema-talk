@@ -36,7 +36,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Default: built on this host. To run (and self-update) a released image,
-    # set MNEMA_IMAGE in .env, e.g. ghcr.io/msch128/mnema-talk:X.Y (follows the
+    # set MNEMA_IMAGE in .env, e.g. ghcr.io/mnema-xyz/mnema-talk:X.Y (follows the
     # patch releases of one minor line; see the releases page for X.Y) or
     # :latest, and start with `docker compose pull app && docker compose up -d`
     # instead of --build. The setup assistant writes this for you

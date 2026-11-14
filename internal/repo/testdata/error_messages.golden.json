@@ -490,6 +490,7 @@
   "the image cannot be read",
   "the image is larger than %d KiB after processing",
   "the image must be between 1 and %d pixels on each edge",
+  "the image repository moved to %s: set MNEMA_IMAGE in .env and run docker compose pull \u0026\u0026 docker compose up -d",
   "the interaction already has a response",
   "the interaction was answered with a modal; answer its submit",
   "the kind of a rule cannot change; create a new rule",

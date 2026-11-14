@@ -17,7 +17,7 @@ import (
 
 const (
 	// Repo is the GitHub repository whose releases are checked.
-	Repo = "msch128/mnema-talk"
+	Repo = "mnema-xyz/talk"
 	// DefaultReleaseURL is GitHub's "latest release" endpoint for Repo. The
 	// request is unauthenticated and carries no user data; GitHub sees the
 	// server's IP address and the User-Agent "mnema-talk/<version>".

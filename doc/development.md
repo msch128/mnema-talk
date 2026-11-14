@@ -254,16 +254,26 @@ branch) was waived when it landed there and is not reported again.
    cheaply, but not every edit: no commit trailer, variable or label skips
    it, and the script and the workflow are code-owned paths.
 3. The same workflow then builds the image and pushes it to GHCR:
-   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
+   `ghcr.io/mnema-xyz/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
    provenance and SBOM, and signs every tag keylessly with cosign (verify with
-   [operations.md](operations.md#verifying-a-release-image)). When the
-   repository variable `DOCKERHUB_NAMESPACE` and the secrets
-   `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, the `dockerhub-mirror`
-   job then copies that exact image (same digest, no rebuild) to
-   `docker.io/msch128/mnema-talk` as `:X.Y.Z`, `:X.Y`, `:X` and `:latest`,
-   checks the digests and signs it the same way. Without them the job is
-   skipped with a notice and the release is not affected. To mirror an
+   [operations.md](operations.md#verifying-a-release-image)). The `org-ghcr`
+   job copies that exact image (same digest, no rebuild) to the
+   organization's path `ghcr.io/mnema-xyz/mnema-talk` as `:X.Y.Z`, `:X.Y`,
+   `:X` and `:latest` with the secret `GHCR_MNEMA_XYZ_TOKEN` (a classic PAT,
+   `write:packages` only), signs it there the same way and verifies the
+   signature at both paths; the release fails if the new path is incomplete
+   (the repository moves to the mnema-xyz organization, and GHCR does not
+   redirect). The `dockerhub-mirror` job copies the image to Docker Hub, one
+   leg per account: `docker.io/<DOCKERHUB_NAMESPACE>/mnema-talk` with the
+   secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, and
+   `docker.io/mnemaxyz/mnema-talk` with `DOCKERHUB_MNEMAXYZ_USERNAME` and
+   `DOCKERHUB_MNEMAXYZ_TOKEN` (Docker Hub allows no hyphen in a name). Each
+   leg copies `:X.Y.Z`, `:X.Y`, `:X` and `:latest`, checks the digests, signs
+   the copy the same way; the mnemaxyz leg also sets that repository's short
+   and full description from `deploy/dockerhub/` (its token has the Read,
+   Write, Delete scope this needs). A leg without its secrets is skipped with a notice
+   and the release is not affected. To mirror an
    existing release, run the Release workflow by hand on `main` (`workflow_dispatch`)
    with `mirror_version` set to the version, for example `2.0.0`. Only the mirror job runs: it
    resolves the GHCR digest of that version, mirrors it only if cosign shows that
@@ -278,7 +288,7 @@ branch) was waived when it landed there and is not reported again.
    the desktop clients' archive and manifest rules
    (`TestPublishedBundlesSatisfyDesktopLayout`). A failed run is the alert.
 4. Desktop builds are published from
-   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); this
+   [mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop); this
    repository's releases stopped attaching them after v0.7.3. They are unsigned
    Beta packages (see [desktop-app.md](desktop-app.md)). The server ships
    through Docker; releases do not publish standalone server binaries.

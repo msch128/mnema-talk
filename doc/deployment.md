@@ -11,7 +11,7 @@ New here? Start with the [quick start](quick-start.md); platform specifics
 (Synology, Unraid, a plain VPS) are in [platform-notes.md](platform-notes.md) and
 all updating is on one page, [updating.md](updating.md). The steps below are the
 manual, platform-independent reference; the setup assistant
-(`docker run --rm -it ghcr.io/msch128/mnema-talk setup`) does the "Fresh
+(`docker run --rm -it ghcr.io/mnema-xyz/mnema-talk setup`) does the "Fresh
 install" part for you.
 
 ## Ports
@@ -57,9 +57,9 @@ The commands install the latest release; to pin another, set `VERSION` yourself.
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-VERSION=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+VERSION=$(curl -fsSL https://api.github.com/repos/mnema-xyz/talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 [ -n "$VERSION" ] || { echo "could not read the latest version; set VERSION=x.y.z yourself" >&2; false; }
-base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
+base=https://raw.githubusercontent.com/mnema-xyz/talk/v$VERSION
 curl -fsSLO "$base/docker-compose.yml"
 curl -fsSL "$base/.env.example" -o .env
 chmod 600 .env
@@ -74,7 +74,7 @@ The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk`
 
 | Variable | Set it to |
 |---|---|
-| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:X.Y.Z` (or `:X.Y`, or `:latest`; see [Updates](#updates)) |
+| `MNEMA_IMAGE` | `ghcr.io/mnema-xyz/mnema-talk:X.Y.Z` (or `:X.Y`, or `:latest`; see [Updates](#updates)) |
 | `PUBLIC_URL` | The `https://` address members open. An `http://` address starts, with a warning (see [operations.md](operations.md#public_url-and-secure-cookies)). |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
@@ -153,7 +153,7 @@ in `.env` (the compose file uses it for the `app` service) and start without
 
 ```sh
 # .env
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:X.Y   # or :X.Y.Z (pinned) or :latest
+MNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:X.Y   # or :X.Y.Z (pinned) or :latest
 
 docker compose pull app && docker compose up -d
 ```

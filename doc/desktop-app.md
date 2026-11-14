@@ -2,7 +2,7 @@
 
 Status: **the desktop client is Beta.** Windows and macOS run a Tauri host and
 Linux runs an Electron client; Windows is the furthest along. Builds come from
-the [desktop repository](https://github.com/msch128/mnema-talk-desktop/releases)
+the [desktop repository](https://github.com/mnema-xyz/talk-desktop/releases)
 (releases of this repository through v0.7.3 attached an older ZIP). The Gaming
 integration described below is Windows only. The installers are not signed with
 a platform certificate (no Authenticode, macOS ad-hoc signed); the program
@@ -14,9 +14,9 @@ compatibility, sealed media in WebView2 and complete browser parity remain
 separate acceptance work.
 
 The current client source is
-[experimental/app](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
+[experimental/app](https://github.com/mnema-xyz/talk-desktop/blob/main/experimental/README.md)
 in `web-client` mode, in the
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository.
+[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository.
 It runs the shared Vue app from a signed bundle that the client verifies and
 reaches the selected instance through its own proxy; the instance supplies data,
 never executable code ([doc/desktop-trusted-client.md](desktop-trusted-client.md)).
@@ -24,7 +24,7 @@ Since 1.1 it shows several servers side by side, each with its own session,
 browser storage and connection
 ([several servers at once](desktop-trusted-client.md#several-servers-at-once)).
 The native-crypto boundary below remains a separate requirement. The older
-[feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
+[feasibility probe](https://github.com/mnema-xyz/talk-desktop/blob/main/README.md)
 is a historical foundation.
 See [product status and evidence](product-status.md) for the binding scope.
 
@@ -34,7 +34,7 @@ The desktop app is Beta and its installers are not code-signed: the project
 will not buy code-signing certificates. The operating system therefore warns
 before the first start. This does not mean the file is malicious, and it is no
 substitute for checking it: download only from the
-[desktop releases](https://github.com/msch128/mnema-talk-desktop/releases) and
+[desktop releases](https://github.com/mnema-xyz/talk-desktop/releases) and
 compare the published checksum. The app itself still verifies its web bundle and
 its updates with the project's own signatures.
 
@@ -143,7 +143,7 @@ or replace the bundled Gaming surfaces.
 
 #### Reference sources and scope
 
-The [bundled catalog](https://github.com/msch128/mnema-talk-desktop/blob/main/src/game-catalog.json) records source URLs and
+The [bundled catalog](https://github.com/mnema-xyz/talk-desktop/blob/main/src/game-catalog.json) records source URLs and
 its retrieval date. It combines requested games, Valve's
 [most-played snapshot](https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/)
 and a [SteamSpy snapshot](https://steamspy.com/api.php?request=all&page=0), using
@@ -282,5 +282,5 @@ fullscreen operation. Tests must record OS, hardware, drivers, game/rendering mo
 display configuration and measured results. Process injection or anti-cheat
 circumvention is not an approved shortcut.
 
-See the [probe instructions](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md) for the current build and testing
+See the [probe instructions](https://github.com/mnema-xyz/talk-desktop/blob/main/README.md) for the current build and testing
 scope, and [SECURITY.md](../SECURITY.md) for the released server security model.

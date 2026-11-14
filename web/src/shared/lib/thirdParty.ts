@@ -5,7 +5,7 @@
 
 // AGPL-3.0 section 13: users of a network deployment get the source. A modified
 // deployment must point this at its own source.
-export const SOURCE_URL = 'https://github.com/msch128/mnema-talk'
+export const SOURCE_URL = 'https://github.com/mnema-xyz/talk'
 export const NOTICES_FILE = 'THIRD_PARTY_NOTICES.md'
 export const NOTICES_URL = `${SOURCE_URL}/blob/main/${NOTICES_FILE}`
 
@@ -57,7 +57,7 @@ export const THIRD_PARTY = [
       { name: 'sigstore-go, go-containerregistry (update verification)', license: 'Apache-2.0', url: 'https://github.com/sigstore/sigstore-go' },
       { name: 'godotenv', license: 'MIT', url: 'https://github.com/joho/godotenv' },
       { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' },
-      { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in mnema-talk-desktop THIRD_PARTY_NOTICES.md', url: 'https://github.com/msch128/mnema-talk-desktop/blob/main/THIRD_PARTY_NOTICES.md' }
+      { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in mnema-talk-desktop THIRD_PARTY_NOTICES.md', url: 'https://github.com/mnema-xyz/talk-desktop/blob/main/THIRD_PARTY_NOTICES.md' }
     ]
   },
   {

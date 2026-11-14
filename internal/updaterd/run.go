@@ -65,13 +65,30 @@ func envOr(get func(string) string, key, def string) string {
 	return def
 }
 
+// origins are the default release workflows (after and before the move to
+// mnema-xyz), or exactly one origin when UPDATER_CERT_IDENTITY_REGEXP and
+// UPDATER_SOURCE_URL are set (a fork's own workflow). Setting only one of the
+// two is refused: filling the other from a default would pair one owner's
+// signature with another owner's provenance.
+func origins(get func(string) string) ([]imageverify.Origin, error) {
+	identity := envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", "")
+	source := envOr(get, "UPDATER_SOURCE_URL", "")
+	switch {
+	case identity == "" && source == "":
+		return imageverify.DefaultOrigins(), nil
+	case identity == "" || source == "":
+		return nil, errors.New("set UPDATER_CERT_IDENTITY_REGEXP and UPDATER_SOURCE_URL together (the workflow that signs and the repository it builds from)")
+	}
+	return []imageverify.Origin{{IdentityRegexp: identity, Source: source}}, nil
+}
+
 // ParseConfig reads and validates the environment.
 func ParseConfig(get func(string) string) (Config, error) {
 	def := imageverify.DefaultPolicy()
 	repository := envOr(get, "UPDATER_IMAGE_REPOSITORY", "")
-	mirror := def.Mirror
+	mirrors := def.Mirrors
 	if repository != "" {
-		mirror = "" // an explicit repository is the only one trusted
+		mirrors = nil // an explicit repository is the only one trusted
 	} else {
 		repository = def.Repository
 	}
@@ -84,13 +101,16 @@ func ParseConfig(get func(string) string) (Config, error) {
 		TrustedRoot:  envOr(get, "UPDATER_TRUSTED_ROOT", ""),
 		CacheDir:     envOr(get, "UPDATER_TUF_CACHE", "/tmp/tuf"),
 		Policy: imageverify.Policy{
-			Repository:     repository,
-			Mirror:         mirror,
-			Issuer:         envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
-			IdentityRegexp: envOr(get, "UPDATER_CERT_IDENTITY_REGEXP", def.IdentityRegexp),
-			Source:         envOr(get, "UPDATER_SOURCE_URL", def.Source),
+			Repository: repository,
+			Mirrors:    mirrors,
+			Issuer:     envOr(get, "UPDATER_CERT_ISSUER", def.Issuer),
 		},
 	}
+	o, err := origins(get)
+	if err != nil {
+		return c, err
+	}
+	c.Policy.Origins = o
 	if len(c.Token) < 32 {
 		return c, errors.New("UPDATER_TOKEN must be set (at least 32 characters)")
 	}
@@ -152,7 +172,7 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 		defer cancel()
 		_ = hs.Shutdown(shutdown)
 	})
-	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirror", cfg.Policy.Mirror, "identity", cfg.Policy.IdentityRegexp)
+	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirrors", cfg.Policy.Mirrors, "origins", cfg.Policy.Origins)
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)
 		return 1

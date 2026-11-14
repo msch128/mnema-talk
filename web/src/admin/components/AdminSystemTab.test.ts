@@ -59,7 +59,7 @@ describe('AdminSystemTab', () => {
     const st = systemStatus()
     st.update = {
       ...st.update, current_version: '0.3.0', latest_version: '0.4.0', update_available: true,
-      release_url: 'https://github.com/msch128/mnema-talk/releases/tag/v0.4.0',
+      release_url: 'https://github.com/mnema-xyz/talk/releases/tag/v0.4.0',
       release_notes: '<img src=x onerror=alert(1)> **bold**'
     }
     apiMock.mockResolvedValue(st)
@@ -70,7 +70,7 @@ describe('AdminSystemTab', () => {
     expect(notes.text()).toBe('<img src=x onerror=alert(1)> **bold**')
     expect(notes.find('img')!.exists()).toBe(false)
     const link = w.find('[data-testid="update-release-link"]')!
-    expect(link.attributes('href')).toBe('https://github.com/msch128/mnema-talk/releases/tag/v0.4.0')
+    expect(link.attributes('href')).toBe('https://github.com/mnema-xyz/talk/releases/tag/v0.4.0')
     expect(link.attributes('rel')).toContain('noopener')
     expect(w.find('[data-testid="update-command"]')!.text()).toContain('docker compose pull app')
     expect(useAppVersionStore().adminUpdateAvailable).toBe(true)
@@ -108,7 +108,7 @@ describe('AdminSystemTab', () => {
 it('keeps the update controls unavailable while sidecar reachability is not known', async () => {
   const st = systemStatus()
   st.update = { ...st.update, update_available: true, latest_version: '0.5.0' }
-  st.self_update = { ...st.self_update, configured: true, reach: 'unknown', reach_reason: 'unset' }
+  st.self_update = { ...st.self_update, configured: true, reach: 'unknown', moved_to: '', reach_reason: 'unset' }
   apiMock.mockResolvedValue(st)
   const w = mount(AdminSystemTab)
   await flushPromises()

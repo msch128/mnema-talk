@@ -627,6 +627,7 @@
       "srvInvalidId": "Invalid ID.",
       "srvInvalidScheduledId": "Invalid scheduled message ID.",
       "srvImageTagCannotReach": "The configured image tag can’t reach this release. Update manually.",
+      "srvImageRepositoryMoved": "The images moved to {a}. Set MNEMA_IMAGE in .env to it (same tag), then run docker compose pull && docker compose up -d.",
       "srvImageCannotBeRead": "The image can’t be read.",
       "srvBanned": "This account is banned.",
       "srvBannedUntil": "This account is banned until {a}.",
@@ -2043,6 +2044,7 @@
           "gc": "GC cycles (total pause)"
         }
       },
+      "image_moved": "The releases moved from {image} to {moved_to} (GitHub organization mnema-xyz). In .env, set MNEMA_IMAGE to {moved_to} with the same tag, then run docker compose pull && docker compose up -d.",
       "reach": {
         "follows": "The image {image} follows new versions.",
         "unset": "MNEMA_IMAGE is not set.",
