@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
@@ -159,15 +158,5 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-
-	etag := `"` + id.String() + `"`
-	obj := &objectReader{ctx: r.Context(), store: h.Store, key: m.key, size: m.size}
-	defer obj.Close()
-	if err := prefetchObject(r, obj, etag, m); err != nil {
-		return err
-	}
-	setServeHeaders(w.Header(), m, etag)
-	// ServeContent answers Range (206, video seeking), If-None-Match and HEAD.
-	http.ServeContent(w, r, "", time.Time{}, obj)
-	return nil
+	return h.serveMedia(w, r, m, false)
 }

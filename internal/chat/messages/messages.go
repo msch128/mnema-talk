@@ -92,28 +92,6 @@ func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
 	return nil
 }
 
-// loadAttachments fills msgs[].Attachments; idx maps a message ID to its
-// position in msgs.
-func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `
-		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted, width, height
-		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
-	if err != nil {
-		return fmt.Errorf("load attachments: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var a core.MediaAttachment
-		var msgID uuid.UUID
-		if err := rows.Scan(&a.ID, &msgID, &a.OriginalFilename, &a.MimeType, &a.SizeBytes, &a.IsDeleted, &a.Width, &a.Height); err != nil {
-			return err
-		}
-		a.URL = "/api/media/" + a.ID.String()
-		msgs[idx[msgID]].Attachments = append(msgs[idx[msgID]].Attachments, a)
-	}
-	return rows.Err()
-}
-
 func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT message_id, MIN(emoji), array_agg(user_id ORDER BY created_at)

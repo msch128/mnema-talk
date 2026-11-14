@@ -2336,11 +2336,14 @@ export function isChatMarkUnreadRequest(value: unknown): value is ChatMarkUnread
 export const decodeChatMarkUnreadRequest = decoder("chat.MarkUnreadRequest", isChatMarkUnreadRequest)
 
 export type ChatMediaAttachment = {
+  content_type?: string
+  filename?: string
   height?: number
   id: string
   is_deleted: boolean
   mime_type: string
   original_filename: string
+  size?: number
   size_bytes: number
   url: string
   width?: number
@@ -2348,11 +2351,14 @@ export type ChatMediaAttachment = {
 
 export function isChatMediaAttachment(value: unknown): value is ChatMediaAttachment {
   return isRecord(value)
+    && (!hasOwn(value, "content_type") || isString(value["content_type"]))
+    && (!hasOwn(value, "filename") || isString(value["filename"]))
     && (!hasOwn(value, "height") || isInteger(value["height"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "is_deleted") && typeof value["is_deleted"] === 'boolean')
     && (hasOwn(value, "mime_type") && isString(value["mime_type"]))
     && (hasOwn(value, "original_filename") && isString(value["original_filename"]))
+    && (!hasOwn(value, "size") || isInteger(value["size"]))
     && (hasOwn(value, "size_bytes") && isInteger(value["size_bytes"]))
     && (hasOwn(value, "url") && isString(value["url"]))
     && (!hasOwn(value, "width") || isInteger(value["width"]))

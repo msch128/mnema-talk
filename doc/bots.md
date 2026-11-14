@@ -435,6 +435,7 @@ security scheme `botAuth`).
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
 | `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
 | `POST /channels/{id}/upload` (multipart `file`, optional `content`, `allowed_mentions`, `parent_id`, `reply_to_id`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
+| `GET /media/{id}` | View channels for a channel attachment, or direct message membership; streams the attachment (`Content-Disposition: attachment`) |
 | `GET /members`, `GET /members/{id}` | the `GUILD_MEMBERS` intent allowed; only members who can view a channel the bot can view; id, name, avatar |
 
 Slow mode: a channel's slow mode holds a bot back like a member, on every route
@@ -450,6 +451,15 @@ Custom emoji travel as the token the app stores, `<:name:id>` (a bot can copy
 one from a message it reads); a plain `:name:` in a message posted through the
 API stays literal text, because only the web composer turns shortcodes into
 tokens. Unicode emoji work as typed.
+
+### Downloading attachments
+
+Bots can download files attached to messages they can view (`GET /api/bot/v1/media/{id}`). The endpoint streams the file with `Content-Type`, `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, `Cache-Control: private, no-cache`, and `ETag`. Conditional revalidation with `If-None-Match` (304) and `Range` (206) requests are supported. Attachments in message payloads carry `id`, `filename`, `content_type`, `size`, and `url` (`/api/bot/v1/media/{id}`), alongside Mnema's internal field names (`original_filename`, `mime_type`, `size_bytes`).
+
+**Access rules:**
+- **Channel attachments:** The file belongs to a message in a channel (text or voice), and the bot has *View channel* there under the same permission evaluation as for members (including bot overwrites, the private-channel rules of `access_all`, and conversation participants for DM calls).
+- **Direct message attachments:** The file belongs to a direct message or DM call of which the bot itself is a participant.
+- **Failures return 404:** Deleted messages, admin-deleted media (`is_deleted`), expired timed messages, unfinished uploads, files belonging to other contexts (such as member avatars, banners, event covers, or wiki pictures), or media from channels the bot cannot view all answer `404 Not Found` (never `403`), so the existence of an ID is never leaked.
 
 ## Gateway
 

@@ -3975,6 +3975,12 @@
       },
       "chat.MediaAttachment": {
         "properties": {
+          "content_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
           "height": {
             "type": "integer"
           },
@@ -3991,11 +3997,14 @@
           "original_filename": {
             "type": "string"
           },
+          "size": {
+            "type": "integer"
+          },
           "size_bytes": {
             "type": "integer"
           },
           "url": {
-            "description": "URL is /api/media/{id}.",
+            "description": "URL is /api/media/{id} for members, /api/bot/v1/media/{id} for bots.",
             "type": "string"
           },
           "width": {
@@ -27429,6 +27438,120 @@
           }
         ],
         "summary": "Edit the original response",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/media/{id}": {
+      "get": {
+        "description": "Streams a message attachment to an authenticated bot. Needs View channels for a channel attachment (text or voice), or to be a participant of the direct message. Attachments of deleted or expired messages, and unfinished uploads answer 404.",
+        "operationId": "botDownloadAttachment",
+        "parameters": [
+          {
+            "description": "Media ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "File content; Content-Type is the stored MIME type."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Media not found (10003)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "File storage is not available."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Download an attachment",
         "tags": [
           "Bot API"
         ]
