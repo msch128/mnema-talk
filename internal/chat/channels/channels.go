@@ -95,9 +95,10 @@ func lockCategory(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, c
 	return err
 }
 
-// CreateChannelWithStage adds a channel to categoryID (or to no category) and,
-// with asStage, makes it a Stage in the same transaction, so a request that
-// cannot be a Stage (a text channel) creates nothing.
+// CreateChannelWithStage is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It adds a channel to categoryID (or to no
+// category) and, with asStage, makes it a Stage in the same transaction, so a
+// request that cannot be a Stage (a text channel) creates nothing.
 func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	return CreateChannelSeenBy(ctx, p, nil, categoryID, name, chType, topic, sortOrder, asStage)
 }
@@ -135,8 +136,10 @@ func CreateChannelTx(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool
 	return &ch, nil
 }
 
-// CreateChannelSeenBy is CreateChannelWithStage for a caller who sees the
-// categories canSee names (nil: all): any other category answers as a missing one.
+// CreateChannelSeenBy is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It is CreateChannelWithStage for a caller who
+// sees the categories canSee names (nil: all): any other category answers as a
+// missing one.
 func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
@@ -105,15 +104,7 @@ func (h *Handler) Posts() *messages.Service {
 
 // channels builds the channels API from the handler's fields.
 func (h *Handler) channels() *channels.API {
-	var locked func(ctx context.Context, actor perm.Subject, fn func(tx pgx.Tx) error) error
-	if h.Perms != nil {
-		locked = func(ctx context.Context, actor perm.Subject, fn func(tx pgx.Tx) error) error {
-			return h.Perms.Locked(ctx, actor, func(tx pgx.Tx, _ *perm.Snapshot) error {
-				return fn(tx)
-			})
-		}
-	}
-	return &channels.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms(), Locked: locked}
+	return &channels.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms()}
 }
 
 // DMs is the direct message API of this handler, for the services that start

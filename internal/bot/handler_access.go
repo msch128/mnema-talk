@@ -42,7 +42,8 @@ type Access struct {
 	// different sets (set by hand): saving the choice applies one set to all.
 	Mixed bool `json:"mixed" binding:"optional"`
 	// PrivateReach is true in mode "channels" when the bot can view a channel
-	// that plain members cannot see (@everyone cannot view it).
+	// that plain members cannot see (@everyone cannot view it) without having
+	// an overwrite of its own role there.
 	PrivateReach bool `json:"private_reach" binding:"optional"`
 	// SelectedChannelIDs are the channels the caller can view where the bot's
 	// own role has an overwrite: its channels in mode "channels", the private
@@ -130,14 +131,6 @@ func (h *Handler) currentAccess(r *http.Request, b *Bot, snap *perm.Snapshot) (A
 	if snap.HasAllChannelAccess(b.UserID) {
 		out.Mode = AccessAll
 	}
-	if out.Mode == AccessChannels {
-		for ch := range snap.ChannelPermissions(sub) {
-			if !snap.EveryoneCanView(ch) {
-				out.PrivateReach = true
-				break
-			}
-		}
-	}
 	// Only channels the caller can see: names of others stay theirs.
 	caller := auth.UserFrom(r.Context()).Subject()
 	perms := map[uuid.UUID]perm.Set{}
@@ -152,6 +145,14 @@ func (h *Handler) currentAccess(r *http.Request, b *Bot, snap *perm.Snapshot) (A
 	}
 	if err := h.addChoice(r, snap, b.UserID, &out); err != nil {
 		return Access{}, err
+	}
+	if out.Mode == AccessChannels {
+		for ch := range perms {
+			if !snap.EveryoneCanView(ch) && !slices.Contains(out.SelectedChannelIDs, ch) {
+				out.PrivateReach = true
+				break
+			}
+		}
 	}
 	for id, p := range perms {
 		out.Channels = append(out.Channels, ChannelAccess{ChannelID: id, Name: names[id], Permissions: p})

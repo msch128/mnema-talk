@@ -1,10 +1,7 @@
 package channels
 
 import (
-	"context"
-
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -26,17 +23,6 @@ type API struct {
 	Objects core.ObjectDeleter
 	// Voice empties the voice room of a deleted channel; nil skips it.
 	Voice core.VoiceRooms
-	// Locked runs fn in a transaction holding the permission lock and verifying
-	// the bot invariant (checkBotGrowth). When nil, a plain transaction on DB
-	// is used.
-	Locked func(ctx context.Context, actor perm.Subject, fn func(tx pgx.Tx) error) error
-}
-
-func (a *API) runTx(ctx context.Context, actor perm.Subject, fn func(tx pgx.Tx) error) error {
-	if a.Locked != nil {
-		return a.Locked(ctx, actor, fn)
-	}
-	return pgx.BeginFunc(ctx, a.DB, fn)
 }
 
 // Mount registers the member-facing channel routes (RequireUser must already

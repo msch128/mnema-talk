@@ -143,12 +143,12 @@ func checkBotGrowth(before, after *Snapshot, actor Subject) error {
 		if before.bots[id] { // a bot created by this change had nothing before
 			wasGlobal, was = before.Global(bot), before.ChannelPermissions(bot)
 		}
-		if err := checkGrowth(after, actor, bot, uuid.Nil, wasGlobal, after.Global(bot), after.Global(actor)); err != nil {
+		if err := checkGrowth(before, after, actor, bot, uuid.Nil, wasGlobal, after.Global(bot), after.Global(actor)); err != nil {
 			return err
 		}
 		now := after.ChannelPermissions(bot)
 		for ch, p := range now {
-			if err := checkGrowth(after, actor, bot, ch, was[ch], p, after.Channel(actor, ch)); err != nil {
+			if err := checkGrowth(before, after, actor, bot, ch, was[ch], p, after.Channel(actor, ch)); err != nil {
 				return err
 			}
 		}
@@ -156,9 +156,13 @@ func checkBotGrowth(before, after *Snapshot, actor Subject) error {
 	return nil
 }
 
-func checkGrowth(after *Snapshot, actor, bot Subject, ch uuid.UUID, before, now, actorPerms Set) error {
-	added := now &^ before
-	if !added.HasAny(Elevated) && added&^actorPerms == 0 {
+func checkGrowth(before, after *Snapshot, actor, bot Subject, ch uuid.UUID, was, now, actorPerms Set) error {
+	added := now &^ was
+	elevAdded := added & Elevated
+	if ch != uuid.Nil && !before.KnowsChannel(ch) {
+		elevAdded = added & Elevated &^ (before.Global(bot) & Elevated)
+	}
+	if elevAdded == 0 && added&^actorPerms == 0 {
 		return nil
 	}
 	botName := after.BotName(bot.ID)
@@ -173,8 +177,8 @@ func checkGrowth(after *Snapshot, actor, bot Subject, ch uuid.UUID, before, now,
 			}
 		}
 	}
-	if added.HasAny(Elevated) {
-		permName := Set(0).MissingName(added & Elevated)
+	if elevAdded != 0 {
+		permName := Set(0).MissingName(elevAdded)
 		return errBotElevation(botName, permName, chName)
 	}
 	permName := Set(0).MissingName(added &^ actorPerms)

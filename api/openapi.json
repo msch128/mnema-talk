@@ -1368,7 +1368,7 @@
             "type": "integer"
           },
           "private_reach": {
-            "description": "PrivateReach is true in mode \"channels\" when the bot can view a channel\nthat plain members cannot see (@everyone cannot view it).",
+            "description": "PrivateReach is true in mode \"channels\" when the bot can view a channel\nthat plain members cannot see (@everyone cannot view it) without having\nan overwrite of its own role there.",
             "type": "boolean"
           },
           "selected_channel_ids": {

@@ -4097,7 +4097,7 @@
     },
     "choice": {
       "mixedNote": "The bot has different permissions in different channels. Saving gives the selected channels the permissions ticked here.",
-      "privateReach": "Another role of this bot grants “View channels” server-wide, so private channels are visible to it as well.",
+      "privateReach": "Another role of this bot grants “View channels”, so private channels are visible to it as well.",
       "sectionTitle": "Channel access",
       "title": "Access",
       "settingsHint": "Choose where this bot may work. This never gives it Administrator or admin-area permissions.",

@@ -437,7 +437,14 @@ func TestBotAccessPrivateReachWarning(t *testing.T) {
 	a := newApp(t, false)
 	owner := a.seedAdmin()
 	open := a.createChannel(owner, "open", "text")
-	privateChannel(t, a, owner, "staff")
+	staff := privateChannel(t, a, owner, "staff")
+
+	// Channels mode with one private channel selected on purpose and no other role:
+	// private_reach must stay false.
+	priv := installBot(t, owner, installBody(testManifest("PrivOnly"), []string{"view_channel", "send_messages"}, nil, staff)).Bot
+	if acc := accessOf(t, owner, priv); acc.PrivateReach {
+		t.Fatalf("expected PrivateReach to be false with private channel selected on purpose, got %+v", acc)
+	}
 
 	// Install bot in mode "channels" for open channel only.
 	out := installBot(t, owner, installBody(testManifest("Helper"), []string{"view_channel", "send_messages"}, nil, open))
@@ -474,6 +481,56 @@ func TestBotAccessPrivateReachWarning(t *testing.T) {
 	res.decode(t, &putAcc)
 	if !putAcc.PrivateReach {
 		t.Fatalf("expected PUT access response to have PrivateReach: true, got %+v", putAcc)
+	}
+}
+
+func TestAdminCreatesChannelWithServerElevatedBot(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+
+	// Owner installs bot with access "all".
+	out := installAll(t, owner, "helper", []string{"view_channel", "send_messages"})
+	b := out.Bot
+	role, ok := ownRoleOf(t, owner, b.UserID)
+	if !ok {
+		t.Fatal("missing own role")
+	}
+	managedRole := botRoleOf(t, owner)
+	// Owner gives the bot an elevated bit (timeout_members) server-wide.
+	timeoutRole := createRole(t, owner, "Timeouter", perm.TimeoutMembers)
+	wantStatus(t, "grant timeout_members", owner.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{
+		"role_ids": []uuid.UUID{managedRole.ID, role.ID, timeoutRole},
+	}), http.StatusOK)
+
+	// Non-Owner Administrator has Administrator permission.
+	admin := a.register(owner, "admin")
+	adminRole := createRole(t, owner, "Admin", perm.Administrator)
+	assignRoles(t, owner, admin, adminRole)
+
+	// Moderator has Manage channels only (lacks timeout_members).
+	mod := a.register(owner, "mod")
+	modRole := createRole(t, owner, "Moderator", perm.ManageChannels)
+	assignRoles(t, owner, mod, modRole)
+
+	// Non-Owner Administrator can create a channel.
+	wantStatus(t, "admin create channel", admin.post("/api/admin/channels", map[string]any{"name": "admin-open", "type": "text"}), http.StatusCreated)
+
+	// Non-Owner Administrator can duplicate a channel.
+	wantStatus(t, "admin duplicate channel", admin.post("/api/admin/channels/"+open.String()+"/duplicate", nil), http.StatusCreated)
+
+	// Manage-channels moderator without timeout_members is refused channel creation.
+	res := mod.post("/api/admin/channels", map[string]any{"name": "mod-open", "type": "text"})
+	wantStatus(t, "mod create channel", res, http.StatusForbidden)
+	if !strings.Contains(errorMessage(res), `the change would give the bot "helper" a permission you do not have: timeout members in #mod-open`) {
+		t.Fatalf("unexpected refusal on creation: %s", res.body)
+	}
+
+	// Manage-channels moderator without timeout_members is refused channel duplication.
+	res = mod.post("/api/admin/channels/"+open.String()+"/duplicate", nil)
+	wantStatus(t, "mod duplicate channel", res, http.StatusForbidden)
+	if !strings.Contains(errorMessage(res), `the change would give the bot "helper" a permission you do not have: timeout members in #open`) {
+		t.Fatalf("unexpected refusal on duplication: %s", res.body)
 	}
 }
 

@@ -4097,7 +4097,7 @@
     },
     "choice": {
       "mixedNote": "Der Bot hat in den Kanälen unterschiedliche Berechtigungen. Beim Speichern erhalten die ausgewählten Kanäle die hier angehakten Berechtigungen.",
-      "privateReach": "Eine andere Rolle dieses Bots gewährt serverweit „Kanäle ansehen“, sodass auch private Kanäle für ihn sichtbar sind.",
+      "privateReach": "Eine andere Rolle dieses Bots gewährt „Kanäle ansehen“, sodass auch private Kanäle für ihn sichtbar sind.",
       "sectionTitle": "Kanalzugriff",
       "title": "Zugriff",
       "settingsHint": "Lege fest, wo dieser Bot arbeiten darf. Administrator- oder Admin-Rechte bekommt er dadurch nie.",

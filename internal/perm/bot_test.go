@@ -229,3 +229,38 @@ func TestCheckBotGrowthNamedErrors(t *testing.T) {
 		t.Fatalf("unexpected elevation server-wide error: %v", err)
 	}
 }
+
+func TestCheckBotGrowthNewChannelElevatedBaseline(t *testing.T) {
+	bot, admin, mod := uuid.New(), uuid.New(), uuid.New()
+	newCh := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+
+	build := func(withNewChannel bool) (*Snapshot, *Snapshot) {
+		fBefore := permtest.NewFixture().BotWithName(bot, "Helper").BotAllChannels(bot)
+		fBefore.Assign(bot, fBefore.Role(1, ViewChannel|SendMessages|TimeoutMembers))
+		fBefore.Assign(admin, fBefore.Role(2, Administrator))
+		fBefore.Assign(mod, fBefore.Role(3, ManageChannels|ViewChannel))
+
+		fAfter := permtest.NewFixture().BotWithName(bot, "Helper").BotAllChannels(bot)
+		fAfter.Assign(bot, fAfter.Role(1, ViewChannel|SendMessages|TimeoutMembers))
+		fAfter.Assign(admin, fAfter.Role(2, Administrator))
+		fAfter.Assign(mod, fAfter.Role(3, ManageChannels|ViewChannel))
+		if withNewChannel {
+			fAfter.ChannelWithName(newCh, uuid.Nil, "announcements")
+		}
+		return fBefore.Snapshot(), fAfter.Snapshot()
+	}
+
+	before, after := build(true)
+
+	// A non-Owner Administrator creates the channel: allowed because the bot's
+	// elevated timeout_members was held server-wide before.
+	if err := CheckBotGrowth(before, after, sub(admin)); err != nil {
+		t.Fatalf("administrator must be able to create channel: %v", err)
+	}
+
+	// A moderator without timeout_members is refused with errBotGrowth.
+	err := CheckBotGrowth(before, after, sub(mod))
+	if err == nil || err.Error() != `the change would give the bot "Helper" a permission you do not have: timeout members in #announcements` {
+		t.Fatalf("unexpected refusal for moderator: %v", err)
+	}
+}

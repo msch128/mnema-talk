@@ -176,11 +176,12 @@ func DuplicateChannelTx(ctx context.Context, tx pgx.Tx, sourceID uuid.UUID) (*co
 	return InsertChannelCopy(ctx, tx, src, newOrder, false)
 }
 
-// DuplicateChannel copies a channel's own properties (name, type, topic,
-// category) into a new channel placed directly below it in the same group
-// (its category, or the uncategorized channels). Messages, reactions and
-// per-user state (read position, notification level) are not copied. Channel
-// names need not be unique, so the copy keeps the source name unchanged.
+// DuplicateChannel is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It copies a channel's own properties (name,
+// type, topic, category) into a new channel placed directly below it in the
+// same group (its category, or the uncategorized channels). Messages, reactions
+// and per-user state (read position, notification level) are not copied.
+// Channel names need not be unique, so the copy keeps the source name unchanged.
 func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*core.Channel, error) {
 	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {

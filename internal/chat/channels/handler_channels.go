@@ -1,6 +1,8 @@
 package channels
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -106,19 +108,24 @@ func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 	if req.Type == "" {
 		req.Type = core.ChannelTypeText
 	}
+	// Guard only builds CategoryViewer from an *http.Request, not from an existing Snapshot.
 	canSee, err := a.Guard.CategoryViewer(r)
 	if err != nil {
 		return err
 	}
 	actor := auth.UserFrom(r.Context()).Subject()
 	var ch *core.Channel
-	err = a.runTx(r.Context(), actor, func(tx pgx.Tx) error {
+	err = a.Guard.Perms.Locked(r.Context(), actor, func(tx pgx.Tx, snap *perm.Snapshot) error {
 		var txErr error
 		ch, txErr = CreateChannelTx(r.Context(), tx, canSee, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
 		return txErr
 	})
+	var refusal *httpx.APIError
+	if errors.As(err, &refusal) {
+		return refusal
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("create channel: %w", err)
 	}
 	a.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
@@ -153,7 +160,7 @@ func (a *API) ServeDuplicateChannel(w http.ResponseWriter, r *http.Request) erro
 	}
 	actor := auth.UserFrom(r.Context()).Subject()
 	var ch *core.Channel
-	err = a.runTx(r.Context(), actor, func(tx pgx.Tx) error {
+	err = a.Guard.Perms.Locked(r.Context(), actor, func(tx pgx.Tx, snap *perm.Snapshot) error {
 		var txErr error
 		ch, txErr = DuplicateChannelTx(r.Context(), tx, id)
 		return txErr

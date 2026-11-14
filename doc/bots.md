@@ -361,10 +361,12 @@ reaches a channel they cannot view.
 channel to `@everyone` (or giving `@everyone` *View channels*) widens where the
 bot works. The bot invariant therefore applies to that edit as to every other:
 a member without a permission the bot holds, such as *Manage messages*, cannot
-open a channel to everyone while such a bot exists. Likewise, switching back to
-*Selected channels* only removes what the choice gave; *View channels* that a
-role the bot holds besides its own (or the shared Bot role) grants server-wide
-keeps working, private channels included, and the same invariant guards that
+open a channel to everyone while such a bot exists. Temporary Talks copy their
+lobby's overwrites outside the invariant (the bot gets what it already had in the
+lobby), and creating or duplicating a channel is checked by the invariant.
+Likewise, switching back to *Selected channels* only removes what the choice gave;
+*View channels* that a role the bot holds besides its own (or the shared Bot role)
+grants keeps working, private channels included, and the same invariant guards that
 switch. The access settings show a calm note (`private_reach`) when another
 role still leaves private channels reachable.
 
@@ -376,8 +378,8 @@ set on the own role stays, except for a permission that is ticked and listed:
 the explicit choice wins there. Switching to *All channels* replaces the bot's
 server-wide channel permissions with the chosen ones. Other permissions of the
 own role (and any role the bot holds) are not touched. If another role of the
-bot grants *View channels* server-wide, private channels stay visible to the
-bot; the access view flags this (`private_reach`) and the settings show a note.
+bot grants *View channels*, private channels stay visible to the bot; the
+access view flags this (`private_reach`) and the settings show a note.
 If the selected channels allow different sets (set by hand), the access view
 says `mixed` and the settings say so: saving gives every selected channel the
 ticked set.
