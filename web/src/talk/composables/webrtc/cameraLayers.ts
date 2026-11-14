@@ -1,6 +1,6 @@
 import { cameraLayersKey, declaredCameraLayers, planCameraLayers } from '../../lib/cameraLayers'
 import type { Cx } from './state'
-import { dropLayerClone } from './layerClones'
+import { dropAllClones } from './layerClones'
 
 // The camera's lower layers (see talk/lib/cameraLayers): sending the captured track
 // smaller on lines of its own, only the layers viewers need (until the server
@@ -51,5 +51,5 @@ export function releaseCameraLayers(cx: Cx) {
   for (const sender of st.cameraLayerSenders) {
     if (sender?.track) void replaceQuietly(sender, null)
   }
-  st.cameraLayerClones.forEach((_, i) => dropLayerClone(st.cameraLayerClones, i))
+  dropAllClones(st.cameraLayerClones)
 }

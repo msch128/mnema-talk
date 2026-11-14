@@ -696,6 +696,25 @@ describe('layers of my screen share', () => {
     expect(copy2?.contentHint).toBe('detail')
   })
 
+  // A clone keeps the hint and the constraints the capture had when it was made:
+  // a quality change ("optimise for", size, rate) gives the lower lines new copies.
+  it('gives the lower lines new copies with the new hint when the share switches to motion', async () => {
+    const { rtc, voice, low1, low2 } = await joinedWithLayers()
+    const { stream, track } = display(1920, 1080)
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    const [old1, old2] = clonesOf(track)
+    expect(old1?.contentHint).toBe('detail')
+
+    voice.setScreenQuality({ resolution: 1080, fps: 30, optimize: 'motion' })
+    await vi.waitFor(() => expect(track.contentHint).toBe('motion'))
+    expect(old1?.stop).toHaveBeenCalled()
+    expect(old2?.stop).toHaveBeenCalled()
+    await vi.waitFor(() => expect(low1.track?.contentHint).toBe('motion'))
+    expect(low2.track?.contentHint).toBe('motion')
+    expect([low1.track, low2.track]).not.toContain(old1)
+  })
+
   it('reuses the copies across syncs while the capture is the same', async () => {
     const { rtc, voice, low1, low2 } = await joinedWithLayers()
     const { stream, track } = display(1920, 1080)

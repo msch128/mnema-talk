@@ -13,7 +13,11 @@ import type { LayerClone } from './state'
  */
 export function layerClone(slots: (LayerClone | null)[], index: number, source: MediaStreamTrack): MediaStreamTrack {
   const held = slots[index]
-  if (held && held.source === source && held.clone.readyState === 'live') return held.clone
+  if (held && held.source === source && held.clone.readyState === 'live') {
+    // The capture's hint can change while it runs (the screen's "optimise for" choice).
+    held.clone.contentHint = source.contentHint
+    return held.clone
+  }
   dropLayerClone(slots, index)
   const clone = source.clone()
   clone.contentHint = source.contentHint
@@ -32,4 +36,9 @@ export function dropMissingSenderClones(senders: (RTCRtpSender | null | undefine
   for (let i = 0; i < slots.length; i++) {
     if (!senders[i]) dropLayerClone(slots, i)
   }
+}
+
+/** Stops every clone in `slots`: the capture stopped or was replaced. */
+export function dropAllClones(slots: (LayerClone | null)[]) {
+  slots.forEach((_, i) => dropLayerClone(slots, i))
 }

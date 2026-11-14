@@ -4,7 +4,7 @@ import { declaredLayers, layersKey, planScreenLayers } from '../../lib/screenLay
 import type { Cx, LayerClone } from './state'
 import { tuneSender } from './senderTuning'
 import { qosPriority, screenSenderParams } from './senders'
-import { dropLayerClone, dropMissingSenderClones, layerClone } from './layerClones'
+import { dropAllClones, dropLayerClone, dropMissingSenderClones, layerClone } from './layerClones'
 
 // The size and rate a capture delivers change under a running share (a resized
 // window, a new display mode), and a track fires no event for it, so they are
@@ -65,7 +65,6 @@ async function releaseLayers(cx: Cx, senders: (RTCRtpSender | null | undefined)[
     const sender = senders[i]
     if (sender) await dropTrack(sender, st.screenLayerClones, i)
   }
-  stopScreenLayerClones(cx)
   if (st.screenSender) await tuneSender(st.screenSender, { active: true })
   st.declaredKey = ''
 }
@@ -151,18 +150,16 @@ async function runSyncLayers(cx: Cx) {
 
 /** Stops all screen lower-layer clones synchronously (keeps the browser's sharing indicator off). */
 export function stopScreenLayerClones(cx: Cx) {
-  const { st } = cx
-  st.screenLayerClones.forEach((_, i) => dropLayerClone(st.screenLayerClones, i))
+  dropAllClones(cx.st.screenLayerClones)
 }
 
 // The capture changed size or rate: the best layer is sized for the new
 // picture, the lower ones are re-planned and the layers declared again (the
 // server and the viewers' pickers only hear of it if the sizes differ).
-// Clones are recreated so they copy the capture's current settings.
+// The lower lines get new clones, which copy the capture as it is now.
 export async function retuneForCapture(cx: Cx, track: MediaStreamTrack) {
   const { st } = cx
-  // Stop old clones before making new ones: constraints applied to the source
-  // track later do not propagate to an existing clone.
+  // A clone keeps the constraints the capture had when it was made.
   stopScreenLayerClones(cx)
   st.qualityChain = st.qualityChain.then(async () => {
     if (st.screenSender) await tuneSender(st.screenSender, screenSenderParams(cx, track))

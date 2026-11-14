@@ -9,6 +9,7 @@ import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from '.
 import { announceMediaUnprotected, announceNoMediaConnection } from './mediaRoom'
 import type { Cx } from './state'
 import { stopCaptureWatch, syncLayers } from './layers'
+import { dropMissingSenderClones } from './layerClones'
 import { syncCameraLayers } from './cameraLayerSync'
 import { bindPublishSenders, tuneBoundSenders } from './senders'
 
@@ -238,10 +239,13 @@ async function finishOfferNegotiation(
   await tuneBoundSenders(cx, bound.fresh)
   if (!isCurrent()) return
   if (!(await startWaitingScreen(cx, bound, isCurrent))) return
-  if (bound.fresh.layers?.length || bound.screen || cx.st.screenLayerClones.some(Boolean)) {
+  // A new connection may offer fewer layer lines: the clones of lines it lacks stop.
+  dropMissingSenderClones(cx.st.layerSenders, cx.st.screenLayerClones)
+  dropMissingSenderClones(cx.st.cameraLayerSenders, cx.st.cameraLayerClones)
+  if (bound.fresh.layers?.length) {
     await syncLayers(cx)
   }
-  if (bound.fresh.cameraLayers?.length || bound.camera || cx.st.cameraLayerClones.some(Boolean)) {
+  if (bound.fresh.cameraLayers?.length) {
     await syncCameraLayers(cx)
   }
 }
