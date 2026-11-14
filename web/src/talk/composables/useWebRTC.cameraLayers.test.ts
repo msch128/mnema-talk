@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { present } from '../../media-test.fixture'
-import { installHarness, cameraCapture, declared, declaredLayersOf, encodingOf, installRecordingCall, joinedWithCameraLayers, joined, FakePC, SFU_CAMERA_LAYER_OFFER } from './useWebRTC.harness.fixture'
+import { installHarness, cameraCapture, declared, declaredLayersOf, encodingOf, installRecordingCall, joinedWithCameraLayers, joined, FakePC, SFU_CAMERA_LAYER_OFFER, SFU_LAYER_OFFER } from './useWebRTC.harness.fixture'
 
 vi.mock('../lib/noiseSuppressor', async () => (await import('./useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)
 vi.mock('../lib/soundEffects', () => ({ playSoundEffect: vi.fn() }))
@@ -211,5 +211,49 @@ describe('layers of my camera', () => {
     expect(known).toEqual([2])
     expect(cameraDeclarations(sent)).toHaveLength(2)
     expect(encodingOf(present(pc.senders[6]))).toMatchObject({ active: false, scaleResolutionDownBy: 2 })
+  })
+
+  it('stops a lower layer\'s clone when the capture becomes too small for that layer', async () => {
+    const { rtc, chat, cameraLow1, cameraLow2 } = await joinedWithCameraLayers()
+    // Start with a 1280x720 camera that gets two lower layer lines.
+    const { stream, track } = cameraCapture(1280, 720)
+    cameraFrom(stream)
+    await rtc.startCamera()
+
+    const [copy1, copy2] = clonesOf(track)
+    expect(cameraLow1.track).toBe(copy1)
+    expect(cameraLow2.track).toBe(copy2)
+
+    // The camera's capture shrinks below the threshold for a second layer: the plan has
+    // no entry for lines 1 and 2 anymore, so their clones must be stopped.
+    track.getSettings = () => ({ width: 320, height: 180, frameRate: 30 })
+    chat.handleWSEvent({ type: 'screen_layers_wanted', payload: { channel_id: 'ch-1', layers: [0, 1, 2], source: 'camera' } })
+    await vi.waitFor(() => expect(cameraLow1.track).toBeNull())
+    // The clones for lines that lost their plan are stopped.
+    expect(copy1?.stop).toHaveBeenCalled()
+    expect(copy2?.stop).toHaveBeenCalled()
+    expect(cameraLow2.track).toBeNull()
+  })
+
+  it('stops clones of camera lines that have no sender after a reconnect', async () => {
+    const { rtc, voice, chat } = await joinedWithCameraLayers()
+    const { stream, track } = cameraCapture(1280, 720)
+    cameraFrom(stream)
+    await rtc.startCamera()
+
+    const [copy1, copy2] = clonesOf(track)
+
+    // Reconnect with an offer that has no camera layer lines (only the four fixed lines).
+    voice.serverCameraLayers = 0
+    rtc.rejoinAfterReconnect()
+    const pc = present(FakePC.instances.at(-1))
+    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_LAYER_OFFER } })
+    await vi.waitFor(() => expect(pc.transceivers.length).toBe(6))
+
+    // The new connection has no camera layer senders: existing clones must be stopped.
+    await vi.waitFor(() =>
+      expect(copy1?.stop).toHaveBeenCalled()
+    )
+    expect(copy2?.stop).toHaveBeenCalled()
   })
 })
