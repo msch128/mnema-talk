@@ -6,8 +6,8 @@ examples show `d` only. Ids are UUIDs, times are RFC 3339 in UTC.
 
 The shapes come from the server's own types: the message is the one the REST API
 returns (`api/openapi.json`, tag *Bot API*), and the other payloads are the Go
-types in `internal/gateway`. The TypeScript SDK names them in
-[`sdk/typescript/src/types/gateway.ts`](../sdk/typescript/src/types/gateway.ts),
+types in `internal/gateway`. They are named in
+[`src/types/gateway.ts` of the TypeScript SDK](https://github.com/mnema-xyz/bot-sdk-js/blob/main/src/types/gateway.ts),
 the Go SDK in [`sdk/go/types.go`](../sdk/go/types.go).
 
 | Event | Intent | Sent when |

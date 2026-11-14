@@ -4,11 +4,11 @@ import type { Cx } from './state'
 import { isLayerActive } from './layers'
 import { tuneSender } from './senderTuning'
 import { cameraSenderParams, qosPriority } from './senders'
-import { cameraPlansOf, replaceQuietly } from './cameraLayers'
+import { cameraPlansOf, dropLayerClone, layerClone, replaceQuietly } from './cameraLayers'
 
 // Feeding and switching the camera's lower layers (see cameraLayers).
 
-async function feedLowerLayer(cx: Cx, sender: RTCRtpSender, plan: ReturnType<typeof planCameraLayers>[number], active: boolean, track: MediaStreamTrack, gen: number) {
+async function feedLowerLayer(cx: Cx, index: number, sender: RTCRtpSender, plan: ReturnType<typeof planCameraLayers>[number], active: boolean, track: MediaStreamTrack, gen: number) {
   const { st } = cx
   const prio = qosPriority(cx)
   await tuneSender(sender, {
@@ -16,7 +16,8 @@ async function feedLowerLayer(cx: Cx, sender: RTCRtpSender, plan: ReturnType<typ
     degradationPreference: 'balanced', priority: prio, networkPriority: prio
   })
   if (gen !== st.joinGeneration || toRaw(st.localCameraStream.value)?.getVideoTracks()[0] !== track) return
-  if (sender.track !== track) await replaceQuietly(sender, track)
+  const clone = layerClone(st, index, track)
+  if (sender.track !== clone) await replaceQuietly(sender, clone)
 }
 
 async function runSyncCameraLayers(cx: Cx) {
@@ -36,9 +37,10 @@ async function runSyncCameraLayers(cx: Cx) {
     const plan = plans[i + 1]
     if (!track || !plan) {
       if (sender.track) await replaceQuietly(sender, null)
+      dropLayerClone(st, i)
       continue
     }
-    await feedLowerLayer(cx, sender, plan, isLayerActive(wanted, i + 1), track, gen)
+    await feedLowerLayer(cx, i, sender, plan, isLayerActive(wanted, i + 1), track, gen)
   }
 }
 
