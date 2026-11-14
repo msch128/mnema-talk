@@ -34,8 +34,9 @@ function parse(content: string, limit = MAX_MARKDOWN_CHARS): Block[] {
 
 /**
  * Renders chat Markdown. Options:
- * - known: Set of lower-cased usernames; when given, only those (and @all,
- *   @here) are highlighted as mentions.
+ * - known: lower-cased usernames (a Set, or a Map to display names, which the
+ *   pill then shows); when given, only those (and @all, @here) are highlighted
+ *   as mentions.
  * - me: the reader's username; mentions of them get .md-mention-me.
  * - roles: the roles the message mentions (by the server), drawn as pills.
  * - document, rules: a wiki page: the longer limit and its own text rules.
@@ -43,7 +44,7 @@ function parse(content: string, limit = MAX_MARKDOWN_CHARS): Block[] {
 export function renderMarkdown(
   content: string | null | undefined,
   { known = null, me = '', roles = [], document = false, rules: extra = [] }: {
-    known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[]
+    known?: ReadonlySet<string> | ReadonlyMap<string, string> | null; me?: string; roles?: readonly RoleMention[]
     /** A document (a wiki page): parsed up to MAX_DOCUMENT_CHARS instead of the chat limit. */
     document?: boolean
     /** More text rules for this render only. */
@@ -71,7 +72,32 @@ export function previewLinks(content: string | null | undefined): string[] {
   return content ? linksIn(parse(content)) : []
 }
 
-/** One-line plain-text preview; markdown stripped, newlines collapse to spaces. */
+type MentionLabels = (lowerUsername: string) => string | undefined
+let mentionLabels: MentionLabels | null = null
+
+/**
+ * Where previewText finds the display name of a member by lower-cased
+ * username (the chat store registers it). Previews are only read, so they show
+ * "@Mnemo" for a stored "@bot-3f9a..."; null removes it.
+ */
+export function setMentionLabels(resolve: MentionLabels | null): void {
+  mentionLabels = resolve
+}
+
+function labelMentions(text: string): string {
+  const resolve = mentionLabels
+  if (!resolve) return text
+  return text.replace(/(^|[\s(])@([A-Za-z0-9_.-]{2,32})/g, (all, pre: string, raw: string) => {
+    const name = raw.replace(/[.-]+$/, '')
+    const label = name.length >= 2 ? resolve(name.toLowerCase()) : undefined
+    return label ? `${pre}@${label}${raw.slice(name.length)}` : all
+  })
+}
+
+/**
+ * One-line plain-text preview; markdown stripped, newlines collapse to spaces,
+ * members mentioned by username shown by display name.
+ */
 export function previewText(content: string | null | undefined): string {
-  return markdownToPlain(content).replace(/\s+/g, ' ').trim()
+  return labelMentions(markdownToPlain(content).replace(/\s+/g, ' ').trim())
 }

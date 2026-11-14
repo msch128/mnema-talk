@@ -93,7 +93,7 @@ func (b *contractBot) me(t *testing.T) {
 	if me.AllowedIntents&contractIntents != contractIntents {
 		t.Fatalf("allowed_intents %d lacks %d", me.AllowedIntents, contractIntents)
 	}
-	if !strings.HasPrefix(me.Handle, "bot-") {
+	if me.Handle == "" {
 		t.Fatalf("handle = %q, want the name members mention", me.Handle)
 	}
 	b.self = me

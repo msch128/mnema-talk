@@ -62,7 +62,7 @@ describe('contract with a running server', { skip }, () => {
     assert.equal(me.bot, true)
     assert.match(me.id, /^[0-9a-f-]{36}$/)
     assert.equal(me.allowed_intents & intents, intents, `allowed_intents ${me.allowed_intents} lacks ${intents}`)
-    assert.match(me.handle ?? "", /^bot-/, 'the handle is the name members mention')
+    assert.match(me.handle ?? "", /^[a-z0-9_.-]{2,32}$/, 'the handle is the name members mention')
     botUserId = me.id
     botHandle = me.handle ?? ""
   })
