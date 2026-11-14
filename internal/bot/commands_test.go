@@ -1,8 +1,13 @@
 package bot
 
 import (
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestCommandInputClean(t *testing.T) {
@@ -106,5 +111,128 @@ func TestCollectUniqueCommandNames(t *testing.T) {
 	}
 	if len(names) != 2 || names[0] != "ping" || names[1] != "pong" {
 		t.Errorf("unexpected names: %v", names)
+	}
+}
+
+func TestCommandInputDefaultMemberPermissions(t *testing.T) {
+	str := func(s string) *string { return &s }
+
+	// Valid inputs: absent, null, "0", valid bits, and leading zeroes
+	for name, tc := range map[string]struct {
+		input *string
+		want  *string
+	}{
+		"absent/nil":     {input: nil, want: nil},
+		"zero":           {input: str("0"), want: str("0")},
+		"valid bits":     {input: str(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10)), want: str(strconv.FormatUint(uint64(perm.SendMessages|perm.AttachFiles), 10))},
+		"administrator":  {input: str(strconv.FormatUint(uint64(perm.Administrator), 10)), want: str(strconv.FormatUint(uint64(perm.Administrator), 10))},
+		"all bits":       {input: str(strconv.FormatUint(uint64(perm.All), 10)), want: str(strconv.FormatUint(uint64(perm.All), 10))},
+		"leading zeroes": {input: str("008"), want: str("8")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			in := CommandInput{Name: "cmd", Description: "desc", DefaultMemberPermissions: tc.input}
+			cleaned, err := in.Clean()
+			if err != nil {
+				t.Fatalf("unexpected error for %s: %v", name, err)
+			}
+			if tc.want == nil {
+				if cleaned.DefaultMemberPermissions != nil {
+					t.Fatalf("want nil, got %v", *cleaned.DefaultMemberPermissions)
+				}
+			} else {
+				if cleaned.DefaultMemberPermissions == nil || *cleaned.DefaultMemberPermissions != *tc.want {
+					t.Fatalf("want %v, got %v", *tc.want, cleaned.DefaultMemberPermissions)
+				}
+			}
+		})
+	}
+
+	// Invalid inputs
+	for name, input := range map[string]string{
+		"empty":        "",
+		"letters":      "invalid",
+		"negative":     "-1",
+		"hex":          "0x10",
+		"with spaces":  " 8 ",
+		"unknown bits": strconv.FormatUint(1<<60, 10),
+	} {
+		t.Run(name, func(t *testing.T) {
+			in := CommandInput{Name: "cmd", Description: "desc", DefaultMemberPermissions: str(input)}
+			if _, err := in.Clean(); err == nil {
+				t.Fatalf("expected error for %s", name)
+			}
+		})
+	}
+}
+
+func TestCommandPermChecks(t *testing.T) {
+	str := func(s string) *string { return &s }
+	f := permtest.NewFixture()
+	ch := f.Channel(uuid.Nil)
+	deniedCh := f.Channel(uuid.Nil)
+
+	ownerID := uuid.New()
+	adminID := uuid.New()
+	memberID := uuid.New()
+
+	adminRole := f.Role(5, perm.Administrator)
+	f.Assign(adminID, adminRole)
+
+	// Deny SendMessages in deniedCh for @everyone
+	f.RoleOverwrite(true, deniedCh, f.EveryoneID(), 0, perm.SendMessages)
+
+	snap := f.Snapshot()
+	ownerSub := perm.Subject{ID: ownerID, Owner: true}
+	adminSub := perm.Subject{ID: adminID}
+	memberSub := perm.Subject{ID: memberID}
+
+	// 1. Nil default_member_permissions allows everyone
+	if !hasCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), nil) {
+		t.Fatal("expected nil permissions to be allowed in picker")
+	}
+	if err := checkCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), nil); err != nil {
+		t.Fatalf("expected nil permissions to pass checkCommandPerm: %v", err)
+	}
+
+	// 2. "0" permissions: Owner and Administrator pass; normal member fails
+	zero := str("0")
+	if !hasCommandPerm(snap, ownerSub, snap.Channel(ownerSub, ch), zero) || !hasCommandPerm(snap, adminSub, snap.Channel(adminSub, ch), zero) {
+		t.Fatal("expected owner and admin to have command perm for 0")
+	}
+	if hasCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), zero) {
+		t.Fatal("expected normal member to be hidden from picker for 0")
+	}
+	if err := checkCommandPerm(snap, ownerSub, snap.Channel(ownerSub, ch), zero); err != nil {
+		t.Fatalf("expected owner to pass checkCommandPerm: %v", err)
+	}
+	if err := checkCommandPerm(snap, adminSub, snap.Channel(adminSub, ch), zero); err != nil {
+		t.Fatalf("expected admin to pass checkCommandPerm: %v", err)
+	}
+	err := checkCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), zero)
+	if err == nil || !strings.Contains(err.Error(), "missing permission: administrator") {
+		t.Fatalf("expected missing permission: administrator, got %v", err)
+	}
+
+	// 3. Permission checks differ by channel overwrite
+	sendPerm := str(strconv.FormatUint(uint64(perm.SendMessages), 10))
+	if !hasCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), sendPerm) {
+		t.Fatal("expected member to have send permission in open channel")
+	}
+	if err := checkCommandPerm(snap, memberSub, snap.Channel(memberSub, ch), sendPerm); err != nil {
+		t.Fatalf("expected member to pass in open channel: %v", err)
+	}
+	if hasCommandPerm(snap, memberSub, snap.Channel(memberSub, deniedCh), sendPerm) {
+		t.Fatal("expected member to be hidden in channel where Send is denied")
+	}
+	err = checkCommandPerm(snap, memberSub, snap.Channel(memberSub, deniedCh), sendPerm)
+	if err == nil || !strings.Contains(err.Error(), "missing permission: send messages") {
+		t.Fatalf("expected missing permission: send messages, got %v", err)
+	}
+	// Owner still passes in denied channel
+	if !hasCommandPerm(snap, ownerSub, snap.Channel(ownerSub, deniedCh), sendPerm) {
+		t.Fatal("owner must pass in denied channel")
+	}
+	if err := checkCommandPerm(snap, ownerSub, snap.Channel(ownerSub, deniedCh), sendPerm); err != nil {
+		t.Fatalf("owner must pass checkCommandPerm in denied channel: %v", err)
 	}
 }

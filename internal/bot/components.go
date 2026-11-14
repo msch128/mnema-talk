@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -160,7 +161,7 @@ func (c *Commands) useMessageComponent(w http.ResponseWriter, r *http.Request) e
 	}
 	in := &interaction{kind: InteractionMessageComponent, botID: cm.botID, botUser: cm.botUser, botName: cm.botName,
 		avatar: auth.AvatarURL(cm.avatar), channel: ch, invoker: user.ID, source: source{message: msgID}}
-	return c.startInteraction(w, in, user, data, msg)
+	return c.startInteraction(w, in, user, snap.Channel(user.Subject(), ch), data, msg)
 }
 
 // useNoteComponent handles POST /api/channels/{channelID}/ephemeral/{noteID}/components.
@@ -217,7 +218,7 @@ func (c *Commands) useNoteComponent(w http.ResponseWriter, r *http.Request) erro
 	}
 	in := &interaction{kind: InteractionMessageComponent, botID: n.botID, botUser: n.botUser, botName: name,
 		avatar: avatar, channel: ch, invoker: user.ID, source: source{note: n.id}}
-	return c.startInteraction(w, in, user, data, notePayload(n))
+	return c.startInteraction(w, in, user, snap.Channel(user.Subject(), ch), data, notePayload(n))
 }
 
 // notePayload is a note as the bot receives it in an interaction's message.
@@ -249,7 +250,7 @@ func (c *Commands) usableBot(ctx context.Context, snap *perm.Snapshot, botID, bo
 // startInteraction registers a new interaction of a component use or a
 // modal submit and delivers it: 202, 409 when the bot is not connected, 429
 // when the store's caps for the bot or the member are full.
-func (c *Commands) startInteraction(w http.ResponseWriter, in *interaction, user *auth.User, data, message any) error {
+func (c *Commands) startInteraction(w http.ResponseWriter, in *interaction, user *auth.User, perms perm.Set, data, message any) error {
 	id := uuid.New()
 	token, ok := c.store.add(id, in)
 	if !ok {
@@ -257,7 +258,7 @@ func (c *Commands) startInteraction(w http.ResponseWriter, in *interaction, user
 	}
 	d := map[string]any{
 		"id": id, "token": token, "type": in.kind, "channel_id": in.channel, "application_id": in.botID,
-		"data": data, "member": memberPayload(user),
+		"data": data, "member": memberPayload(user, perms),
 	}
 	if message != nil {
 		d["message"] = message
@@ -275,6 +276,9 @@ func (c *Commands) startInteraction(w http.ResponseWriter, in *interaction, user
 }
 
 // memberPayload is the member who caused an interaction, as the bot receives it.
-func memberPayload(user *auth.User) map[string]any {
-	return map[string]any{"user": map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL}}
+func memberPayload(user *auth.User, perms perm.Set) map[string]any {
+	return map[string]any{
+		"user":        map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL},
+		"permissions": strconv.FormatUint(uint64(perms), 10),
+	}
 }

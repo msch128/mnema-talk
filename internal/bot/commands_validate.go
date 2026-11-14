@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -123,4 +124,53 @@ func (c *Commands) checkReference(r *http.Request, snap *perm.Snapshot, user *au
 		return bad("a member of this channel")
 	}
 	return id, nil
+}
+
+// cleanDefaultMemberPermissions validates that default_member_permissions is a
+// valid decimal string of defined permission bits. Null/absent returns nil.
+func cleanDefaultMemberPermissions(s *string) (*string, error) {
+	if s == nil {
+		return nil, nil
+	}
+	bits, err := strconv.ParseUint(*s, 10, 64)
+	if err != nil || !perm.Set(bits).Valid() {
+		return nil, httpx.ErrInvalidInput("unknown permission bits")
+	}
+	canonical := strconv.FormatUint(bits, 10)
+	return &canonical, nil
+}
+
+// hasCommandPerm reports whether the member holds the command's default
+// permissions in the channel. Owner and Administrators always pass.
+func hasCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *string) bool {
+	if defaultPerms == nil {
+		return true
+	}
+	if snap.IsOwner(sub) || memberPerms.Has(perm.Administrator) {
+		return true
+	}
+	bits, err := strconv.ParseUint(*defaultPerms, 10, 64)
+	if err != nil || bits == 0 {
+		return false
+	}
+	return memberPerms.Has(perm.Set(bits))
+}
+
+// checkCommandPerm ensures the member holds the command's default permissions
+// in the channel, returning 403 naming the missing permission if they do not.
+func checkCommandPerm(snap *perm.Snapshot, sub perm.Subject, memberPerms perm.Set, defaultPerms *string) error {
+	if defaultPerms == nil {
+		return nil
+	}
+	if snap.IsOwner(sub) || memberPerms.Has(perm.Administrator) {
+		return nil
+	}
+	bits, err := strconv.ParseUint(*defaultPerms, 10, 64)
+	if err != nil {
+		return httpx.ErrForbidden("missing permission")
+	}
+	if bits == 0 {
+		return snap.Deny(sub, memberPerms, perm.Administrator)
+	}
+	return snap.Deny(sub, memberPerms, perm.Set(bits))
 }

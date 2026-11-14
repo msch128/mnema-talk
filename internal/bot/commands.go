@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,9 +52,10 @@ type Option struct {
 // CommandInput is what a bot sends to register a command.
 type CommandInput struct {
 	// Name is lowercase letters, digits, '-' and '_' (1 to 32).
-	Name        string   `json:"name" minLength:"1" maxLength:"32"`
-	Description string   `json:"description" minLength:"1" maxLength:"100"`
-	Options     []Option `json:"options"`
+	Name                     string   `json:"name" minLength:"1" maxLength:"32"`
+	Description              string   `json:"description" minLength:"1" maxLength:"100"`
+	Options                  []Option `json:"options"`
+	DefaultMemberPermissions *string  `json:"default_member_permissions,omitempty" binding:"optional"`
 }
 
 // Command is a registered command.
@@ -65,8 +67,9 @@ type Command struct {
 	Options     []Option  `json:"options"`
 	// Disabled commands are hidden from members and refuse invocations; only
 	// an admin can set it, a bot registering the command again keeps it.
-	Disabled  bool      `json:"disabled"`
-	CreatedAt time.Time `json:"created_at" format:"date-time"`
+	Disabled                 bool      `json:"disabled"`
+	CreatedAt                time.Time `json:"created_at" format:"date-time"`
+	DefaultMemberPermissions *string   `json:"default_member_permissions" binding:"optional" extensions:"x-nullable"`
 }
 
 // Clean validates and normalizes a command definition.
@@ -88,6 +91,11 @@ func (in CommandInput) Clean() (CommandInput, error) {
 	if err := cleanOptions(in.Options); err != nil {
 		return in, err
 	}
+	permStr, err := cleanDefaultMemberPermissions(in.DefaultMemberPermissions)
+	if err != nil {
+		return in, err
+	}
+	in.DefaultMemberPermissions = permStr
 	return in, nil
 }
 
@@ -157,7 +165,7 @@ func cleanOptions(opts []Option) error {
 	return nil
 }
 
-const commandColumns = `id, bot_id, name, description, options, disabled, created_at`
+const commandColumns = `id, bot_id, name, description, options, disabled, created_at, default_member_permissions`
 
 // commandColumnsAs is commandColumns with every column qualified by a table alias.
 func commandColumnsAs(alias string) string {
@@ -176,9 +184,14 @@ func scanCommand(row pgx.Row) (Command, error) {
 // query selects after them.
 func scanCommandWith(row pgx.Row, extra ...any) (Command, error) {
 	var c Command
+	var defaultPerms *int64
 	// options is a JSON array (a check constraint), scanned straight into the slice.
-	dest := append([]any{&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt}, extra...)
+	dest := append([]any{&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt, &defaultPerms}, extra...)
 	err := row.Scan(dest...)
+	if err == nil && defaultPerms != nil {
+		s := strconv.FormatUint(uint64(*defaultPerms), 10)
+		c.DefaultMemberPermissions = &s
+	}
 	return c, err
 }
 
@@ -200,10 +213,16 @@ func upsert(ctx context.Context, q db.Querier, botID uuid.UUID, in CommandInput)
 	if err != nil {
 		return Command{}, fmt.Errorf("marshal options: %w", err)
 	}
+	var defaultPerms *int64
+	if in.DefaultMemberPermissions != nil {
+		bits, _ := strconv.ParseUint(*in.DefaultMemberPermissions, 10, 64)
+		v := int64(bits)
+		defaultPerms = &v
+	}
 	return scanCommand(q.QueryRow(ctx, `
-		INSERT INTO bot_commands (bot_id, name, description, options) VALUES ($1, $2, $3, $4)
-		ON CONFLICT (bot_id, name) DO UPDATE SET description = EXCLUDED.description, options = EXCLUDED.options, updated_at = NOW()
-		RETURNING `+commandColumns, botID, in.Name, in.Description, opts))
+		INSERT INTO bot_commands (bot_id, name, description, options, default_member_permissions) VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (bot_id, name) DO UPDATE SET description = EXCLUDED.description, options = EXCLUDED.options, default_member_permissions = EXCLUDED.default_member_permissions, updated_at = NOW()
+		RETURNING `+commandColumns, botID, in.Name, in.Description, opts, defaultPerms))
 }
 
 // UpsertCommand registers or updates a command by name, keeping an admin's

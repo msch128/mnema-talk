@@ -194,7 +194,7 @@ func TestAModalIsSubmittedOnceByItsMemberWithinItsTime(t *testing.T) {
 }
 
 func TestCommandColumnsAs(t *testing.T) {
-	want := "c.id, c.bot_id, c.name, c.description, c.options, c.disabled, c.created_at"
+	want := "c.id, c.bot_id, c.name, c.description, c.options, c.disabled, c.created_at, c.default_member_permissions"
 	if got := commandColumnsAs("c"); got != want {
 		t.Fatalf("got %q", got)
 	}

@@ -121,6 +121,6 @@ export interface InteractionPayload {
   channel_id: string
   application_id: string
   data: InteractionData
-  member: { user: InteractionUser }
+  member: { user: InteractionUser; permissions?: string }
   message?: InteractionMessage
 }

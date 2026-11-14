@@ -139,9 +139,13 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if out == nil {
 		out = []ChannelCommand{}
 	}
+	memberPerms := snap.Channel(auth.UserFrom(r.Context()).Subject(), ch)
 	// The verdict depends on the bot's account only, so it is evaluated once per bot.
 	canSend := map[uuid.UUID]bool{}
 	for _, f := range list {
+		if !hasCommandPerm(snap, auth.UserFrom(r.Context()).Subject(), memberPerms, f.Command.DefaultMemberPermissions) {
+			continue
+		}
 		ok, seen := canSend[f.BotUser]
 		if !seen {
 			ok = snap.Channel(perm.Subject{ID: f.BotUser}, ch).Has(perm.ViewChannel | perm.SendMessages)
@@ -183,11 +187,11 @@ func (c *Commands) loadBotProfile(ctx context.Context, botID uuid.UUID) (string,
 	return name, avatar, err
 }
 
-func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) ([]byte, error) {
+func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User, perms perm.Set) ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
 		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
-		"member": memberPayload(user),
+		"member": memberPayload(user, perms),
 	})
 }
 
@@ -250,8 +254,8 @@ func (c *Commands) createInteraction(ctx context.Context, cmd *Command, botUser,
 	return c.registerInteraction(cmd, botUser, name, avatar, ch, invoker)
 }
 
-func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) error {
-	payload, err := buildInteractionPayload(id, token, ch, cmd, opts, user)
+func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User, perms perm.Set) error {
+	payload, err := buildInteractionPayload(id, token, ch, cmd, opts, user, perms)
 	if err != nil {
 		return err
 	}
@@ -297,6 +301,10 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	memberPerms := snap.Channel(user.Subject(), ch)
+	if err := checkCommandPerm(snap, user.Subject(), memberPerms, cmd.DefaultMemberPermissions); err != nil {
+		return err
+	}
 	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {
 		return err
 	}
@@ -308,7 +316,7 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := c.dispatchInteraction(id, token, ch, *cmd, opts, user); err != nil {
+	if err := c.dispatchInteraction(id, token, ch, *cmd, opts, user, memberPerms); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, Invoked{InteractionID: id})

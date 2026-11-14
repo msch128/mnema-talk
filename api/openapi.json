@@ -1591,6 +1591,12 @@
             "format": "date-time",
             "type": "string"
           },
+          "default_member_permissions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "description": {
             "type": "string"
           },
@@ -1685,6 +1691,12 @@
             "format": "date-time",
             "type": "string"
           },
+          "default_member_permissions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "description": {
             "type": "string"
           },
@@ -1719,6 +1731,9 @@
       },
       "bot.CommandInput": {
         "properties": {
+          "default_member_permissions": {
+            "type": "string"
+          },
           "description": {
             "maxLength": 100,
             "minLength": 1,
