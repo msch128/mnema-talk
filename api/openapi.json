@@ -2192,7 +2192,7 @@
             "type": "string"
           },
           "handle": {
-            "description": "Handle is the account's unique name, the one members mention\n(@bot-...); Discord calls this the username.",
+            "description": "Handle is the account's unique name, the one members mention\n(for example @mnemo); Discord calls this the username.",
             "type": "string"
           },
           "id": {

@@ -36,3 +36,28 @@ func Names(content string) []string {
 	}
 	return names
 }
+
+// Rewrite returns content with each "@name" whose lower-cased name has a label
+// written as "@label". It is for text that is only read (a push notification),
+// never for what is stored: the stored text keeps the username, so a rename
+// leaves every mention correct. Names without a label stay as they are.
+func Rewrite(content string, labels map[string]string) string {
+	if len(labels) == 0 {
+		return content
+	}
+	var b strings.Builder
+	last := 0
+	for _, loc := range token.FindAllStringSubmatchIndex(content, -1) {
+		start, end := loc[2], loc[3] // the name, after the "@"
+		name := strings.TrimRight(content[start:end], ".-")
+		label, ok := labels[strings.ToLower(name)]
+		if !ok || label == "" || len(name) < MinNameLen || len(name) > MaxNameLen {
+			continue
+		}
+		b.WriteString(content[last:start])
+		b.WriteString(label)
+		last = start + len(name)
+	}
+	b.WriteString(content[last:])
+	return b.String()
+}
