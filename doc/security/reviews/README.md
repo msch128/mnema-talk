@@ -22,6 +22,7 @@ audit.
 | [779c](2026-11/779c.md) | #779 | group merge, third round |
 | [779d](2026-11/779d.md) | #779 | group merge, fourth round |
 | [779-final](2026-11/779-final.md) | #779 | the three lines that changed after the fourth round, reviewed after the merge |
+| [831](2026-11/831.md) | #831 | members creating invites, and inviting into a channel |
 | [780](2026-11/780.md) | #780 | the merge train as a whole |
 | [780-events](2026-11/780-events.md) | #780 | typed events |
 | [780-outbox](2026-11/780-outbox.md) | #780 | webhook queue written in the transaction, health under a storage outage |

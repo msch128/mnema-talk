@@ -2,6 +2,7 @@
 // The Owner's calm "Get started" checklist under the channel header. The server
 // ticks the steps from real state (stores/firstRun); closing it keeps it one
 // click away in the server menu.
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Check, Circle, X } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../../shared/lib/api'
@@ -39,7 +40,7 @@ async function createInvite() {
   inviting.value = true
   try {
     const invite = await api('/api/admin/invites', { method: 'POST', json: { max_uses: INVITE_USES, expires_in_hours: INVITE_HOURS }, decode: decodeInvite })
-    const link = `${window.location.origin}/?invite=${encodeURIComponent(invite.code)}`
+    const link = `${useServerFeaturesStore().shareOrigin}/?invite=${encodeURIComponent(invite.code)}`
     try {
       await navigator.clipboard.writeText(link)
       toasts.success(t('firstRun.inviteCopied', { count: INVITE_USES }))

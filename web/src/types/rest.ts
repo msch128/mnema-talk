@@ -199,6 +199,21 @@ export function isAuthCreateInviteRequest(value: unknown): value is AuthCreateIn
 
 export const decodeAuthCreateInviteRequest = decoder("auth.CreateInviteRequest", isAuthCreateInviteRequest)
 
+export type AuthCreateMemberInviteRequest = {
+  channel_id?: string | null
+  expires_in_hours?: number | null
+  max_uses?: number | null
+}
+
+export function isAuthCreateMemberInviteRequest(value: unknown): value is AuthCreateMemberInviteRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "expires_in_hours") || ((isInteger(value["expires_in_hours"]) && value["expires_in_hours"] >= 1 && value["expires_in_hours"] <= 8760) || value["expires_in_hours"] === null))
+    && (!hasOwn(value, "max_uses") || ((isInteger(value["max_uses"]) && value["max_uses"] >= 1 && value["max_uses"] <= 1000) || value["max_uses"] === null))
+}
+
+export const decodeAuthCreateMemberInviteRequest = decoder("auth.CreateMemberInviteRequest", isAuthCreateMemberInviteRequest)
+
 export type AuthDeleteAccountRequest = {
   code?: string
   current_password: string
@@ -247,8 +262,11 @@ export function isAuthExportStatus(value: unknown): value is AuthExportStatus {
 export const decodeAuthExportStatus = decoder("auth.ExportStatus", isAuthExportStatus)
 
 export type AuthInvite = {
+  channel_id?: string | null
   code: string
   created_at: string
+  created_by_id?: string
+  created_by_name?: string
   expires_at: string | null
   id: string
   max_uses: number | null
@@ -258,8 +276,11 @@ export type AuthInvite = {
 
 export function isAuthInvite(value: unknown): value is AuthInvite {
   return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
     && (hasOwn(value, "code") && isString(value["code"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by_id") || isIdentifier(value["created_by_id"]))
+    && (!hasOwn(value, "created_by_name") || isString(value["created_by_name"]))
     && (hasOwn(value, "expires_at") && (isTimestamp(value["expires_at"]) || value["expires_at"] === null))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) || value["max_uses"] === null))
@@ -281,6 +302,36 @@ export function isAuthLoginRequest(value: unknown): value is AuthLoginRequest {
 }
 
 export const decodeAuthLoginRequest = decoder("auth.LoginRequest", isAuthLoginRequest)
+
+export type AuthMemberInviteLimits = {
+  max_active: number
+  max_expires_in_hours: number
+  max_per_hour: number
+  max_uses: number
+}
+
+export function isAuthMemberInviteLimits(value: unknown): value is AuthMemberInviteLimits {
+  return isRecord(value)
+    && (hasOwn(value, "max_active") && (isInteger(value["max_active"]) && value["max_active"] >= 1 && value["max_active"] <= 100))
+    && (hasOwn(value, "max_expires_in_hours") && (isInteger(value["max_expires_in_hours"]) && value["max_expires_in_hours"] >= 1 && value["max_expires_in_hours"] <= 8760))
+    && (hasOwn(value, "max_per_hour") && (isInteger(value["max_per_hour"]) && value["max_per_hour"] >= 1 && value["max_per_hour"] <= 100))
+    && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) && value["max_uses"] >= 1 && value["max_uses"] <= 1000))
+}
+
+export const decodeAuthMemberInviteLimits = decoder("auth.MemberInviteLimits", isAuthMemberInviteLimits)
+
+export type AuthMemberInviteList = {
+  invites: Array<AuthInvite>
+  limits: AuthMemberInviteLimits
+}
+
+export function isAuthMemberInviteList(value: unknown): value is AuthMemberInviteList {
+  return isRecord(value)
+    && (hasOwn(value, "invites") && isArrayOf(value["invites"], item => isAuthInvite(item)))
+    && (hasOwn(value, "limits") && isAuthMemberInviteLimits(value["limits"]))
+}
+
+export const decodeAuthMemberInviteList = decoder("auth.MemberInviteList", isAuthMemberInviteList)
 
 export type AuthMemberSession = {
   created_at: string
@@ -4549,6 +4600,7 @@ export function isOnboardingFirstRunStep(value: unknown): value is OnboardingFir
 export const decodeOnboardingFirstRunStep = decoder("onboarding.FirstRunStep", isOnboardingFirstRunStep)
 
 export type OnboardingInvitePreview = {
+  channel_id?: string
   community_name?: string
   expires_at?: string
   valid: boolean
@@ -4556,6 +4608,7 @@ export type OnboardingInvitePreview = {
 
 export function isOnboardingInvitePreview(value: unknown): value is OnboardingInvitePreview {
   return isRecord(value)
+    && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "valid") && typeof value["valid"] === 'boolean')
@@ -5370,6 +5423,7 @@ export type ServerHealth = {
   community_icon?: string
   community_name?: string
   features?: Array<string>
+  public_url?: string
   status: "ok"
   version: string
   web_client_api: number
@@ -5380,6 +5434,7 @@ export function isServerHealth(value: unknown): value is ServerHealth {
     && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
@@ -5392,6 +5447,7 @@ export type ServerHealthUnavailable = {
   community_name?: string
   error: HttpxAPIError
   features?: Array<string>
+  public_url?: string
   status: "unavailable"
   unavailable: Array<string>
   version: string
@@ -5404,6 +5460,7 @@ export function isServerHealthUnavailable(value: unknown): value is ServerHealth
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "unavailable"))
     && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => isString(item)))
     && (hasOwn(value, "version") && isString(value["version"]))
