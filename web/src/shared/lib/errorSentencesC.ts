@@ -44,6 +44,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['the code is incorrect', 'codeWrong', []],
   ['the configured image tag cannot reach this release (%s); update manually', 'srvImageTagCannotReach', ['a']],
   ['the configured image tag cannot reach this release; update manually', 'srvImageTagCannotReach', []],
+  ['the image repository moved to %s: set MNEMA_IMAGE in .env and run docker compose pull && docker compose up -d', 'srvImageRepositoryMoved', ['a']],
   ['the confirmation e-mail could not be sent', 'emailSendFailed', []],
   ['the connection test could not be set up', 'srvTheConnectionTestCouldNot'],
   ['the download can only be started from this site', 'exportSameSite', []],

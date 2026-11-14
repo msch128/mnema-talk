@@ -108,7 +108,7 @@ folder (on a Synology or Unraid NAS: [platform notes](platform-notes.md)):
 <!-- test:setup-vps -->
 ```sh
 mkdir mnema-talk && cd mnema-talk
-docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
 ```
 
 `-it` lets it ask you questions; `--user` makes the files yours instead of
@@ -138,7 +138,7 @@ No terminal (scripts, NAS web UI)? Pass everything as flags and see
 
 <!-- test:setup-flags -->
 ```sh
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk \
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk \
   setup --non-interactive --public-url https://chat.example.com --admin-username admin --language en
 ```
 

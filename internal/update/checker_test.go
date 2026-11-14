@@ -14,7 +14,7 @@ import (
 
 const releaseJSON = `{
   "tag_name": "v0.4.0",
-  "html_url": "https://github.com/msch128/mnema-talk/releases/tag/v0.4.0",
+  "html_url": "https://github.com/mnema-xyz/talk/releases/tag/v0.4.0",
   "published_at": "2026-10-05T12:00:00Z",
   "body": "## Features\n\n* **admin:** system tab\u0007\r\n",
   "draft": false,
@@ -59,7 +59,7 @@ func TestCheckParsesTheLatestRelease(t *testing.T) {
 	if s.Latest == nil || s.Latest.Version != "0.4.0" || s.Error != "" || s.CheckedAt.IsZero() {
 		t.Fatalf("snapshot = %+v", s)
 	}
-	if s.Latest.URL != "https://github.com/msch128/mnema-talk/releases/tag/v0.4.0" {
+	if s.Latest.URL != "https://github.com/mnema-xyz/talk/releases/tag/v0.4.0" {
 		t.Fatalf("url = %q", s.Latest.URL)
 	}
 	if s.Latest.Notes != "## Features\n\n* **admin:** system tab" {
@@ -237,20 +237,20 @@ func TestCheckRefusesForeignRedirects(t *testing.T) {
 
 func TestReleasePageOnlyLinksToTheRepository(t *testing.T) {
 	v := Semver{Major: 1}
-	want := "https://github.com/msch128/mnema-talk/releases/tag/v1.0.0"
+	want := "https://github.com/mnema-xyz/talk/releases/tag/v1.0.0"
 	for _, raw := range []string{
-		"https://evil.example/msch128/mnema-talk/releases/tag/v1.0.0",
-		"http://github.com/msch128/mnema-talk/releases/tag/v1.0.0",
+		"https://evil.example/mnema-xyz/talk/releases/tag/v1.0.0",
+		"http://github.com/mnema-xyz/talk/releases/tag/v1.0.0",
 		"https://github.com/someone/else/releases/tag/v1.0.0",
 		"javascript:alert(1)",
-		"https://user@github.com/msch128/mnema-talk/releases/tag/v1.0.0",
+		"https://user@github.com/mnema-xyz/talk/releases/tag/v1.0.0",
 		"",
 	} {
 		if got := releasePage(raw, v); got != want {
 			t.Errorf("releasePage(%q) = %q", raw, got)
 		}
 	}
-	ok := "https://github.com/msch128/mnema-talk/releases/tag/v1.0.0"
+	ok := "https://github.com/mnema-xyz/talk/releases/tag/v1.0.0"
 	if got := releasePage(ok, v); got != ok {
 		t.Errorf("releasePage(valid) = %q", got)
 	}

@@ -97,6 +97,11 @@ func TestAnEndedMessageIsGoneBeforeTheSweep(t *testing.T) {
 			t.Errorf("GET %s shows the ended message: %d %s", path, res.status, res.body)
 		}
 	}
+	// A page cursor naming the ended entry answers like one naming no entry.
+	ended, missing := w.bob.get("/api/me/saved?before="+root.ID.String()), w.bob.get("/api/me/saved?before="+uuid.NewString())
+	if ended.status != missing.status || string(ended.body) != string(missing.body) {
+		t.Errorf("saved page before the ended entry: %d %s, before a missing one: %d %s", ended.status, ended.body, missing.status, missing.body)
+	}
 	wantStatus(t, "the file", w.bob.get(file.Attachments[0].URL), http.StatusNotFound)
 	wantStatus(t, "edit", w.alice.put(w.path("/messages/"+root.ID.String()), map[string]any{"content": "again"}), http.StatusNotFound)
 	wantStatus(t, "react", w.bob.post("/api/messages/"+root.ID.String()+"/reactions", map[string]string{"emoji": "👍"}), http.StatusNotFound)
