@@ -95,16 +95,16 @@ func lockCategory(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, c
 	return err
 }
 
-// CreateChannelWithStage adds a channel to categoryID (or to no category) and,
-// with asStage, makes it a Stage in the same transaction, so a request that
-// cannot be a Stage (a text channel) creates nothing.
+// CreateChannelWithStage is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It adds a channel to categoryID (or to no
+// category) and, with asStage, makes it a Stage in the same transaction, so a
+// request that cannot be a Stage (a text channel) creates nothing.
 func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	return CreateChannelSeenBy(ctx, p, nil, categoryID, name, chType, topic, sortOrder, asStage)
 }
 
-// CreateChannelSeenBy is CreateChannelWithStage for a caller who sees the
-// categories canSee names (nil: all): any other category answers as a missing one.
-func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
+// CreateChannelTx creates a channel inside tx, including slug assignment and Stage setup.
+func CreateChannelTx(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -112,26 +112,40 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
+	if err := lockCategory(ctx, tx, canSee, categoryID); err != nil {
+		return nil, err
+	}
 	var ch core.Channel
-	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockCategory(ctx, tx, canSee, categoryID); err != nil {
-			return err
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
+		categoryID, name, chType, topic, sortOrder).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
+		return nil, err
+	}
+	ch.FillAutoDeleteDays()
+	if asStage {
+		if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
+			return nil, err
 		}
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
-			categoryID, name, chType, topic, sortOrder).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
-			return err
-		}
-		ch.FillAutoDeleteDays()
-		if asStage {
-			if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
-				return err
-			}
-			ch.IsStage = true
-		}
-		return assignAndFillSlugs(ctx, tx, &ch)
+		ch.IsStage = true
+	}
+	if err := assignAndFillSlugs(ctx, tx, &ch); err != nil {
+		return nil, err
+	}
+	return &ch, nil
+}
+
+// CreateChannelSeenBy is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It is CreateChannelWithStage for a caller who
+// sees the categories canSee names (nil: all): any other category answers as a
+// missing one.
+func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
+	var ch *core.Channel
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		var err error
+		ch, err = CreateChannelTx(ctx, tx, canSee, categoryID, name, chType, topic, sortOrder, asStage)
+		return err
 	})
 	var refusal *httpx.APIError
 	if errors.As(err, &refusal) {
@@ -140,7 +154,7 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
-	return &ch, nil
+	return ch, nil
 }
 
 // assignAndFillSlugs gives ch the slug for its name and loads it into ch.

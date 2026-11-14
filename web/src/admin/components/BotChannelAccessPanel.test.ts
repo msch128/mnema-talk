@@ -101,6 +101,14 @@ describe('the access choice in a bot’s settings', () => {
     expect(w.get('[data-testid="bot-channel-access-mixed"]').text()).toContain('different permissions')
   })
 
+  it('shows a calm note when another role gives the bot reach to private channels', async () => {
+    const quiet = await mountPanel()
+    expect(quiet.find('[data-testid="bot-channel-access-private-reach"]').exists()).toBe(false)
+    current = access({ private_reach: true })
+    const w = await mountPanel()
+    expect(w.get('[data-testid="bot-channel-access-private-reach"]').text()).toContain('Another role of this bot')
+  })
+
   it('reads an answer of a server that does not know the choice yet as selected channels with nothing ticked', async () => {
     apiMock.mockImplementation(async () => ({ permissions: 0, elevated: false, channels: [] }))
     const w = await mountPanel()

@@ -142,6 +142,8 @@ export const ROWS: readonly SentenceRow[] = [
   ['only the Owner can do this', 'ownerOnly', []],
   ['only the Owner can give a bot a role with administrator or admin-area permissions', 'srvOnlyTheOwnerCanGive'],
   ['only the Owner can give a bot administrator or admin-area permissions, anywhere', 'srvOnlyTheOwnerCanGive2'],
+  ['only the Owner can give the bot %q administrator or admin-area permissions: %s', 'srvOnlyTheOwnerCanGiveBotPerm', ['bot', 'permission']],
+  ['only the Owner can give the bot %q administrator or admin-area permissions: %s in #%s', 'srvOnlyTheOwnerCanGiveBotPermInChannel', ['bot', 'permission', 'channel']],
   ['only the Owner can grant: manage bots', 'srvOnlyTheOwnerCanGrant'],
   ['only the Owner can let the vanity link create accounts', 'vanityOwnerOnly', []],
   ['only the Owner can manage a bot with administrator permissions', 'srvOnlyTheOwnerCanManage'],

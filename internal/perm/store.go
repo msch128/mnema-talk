@@ -128,11 +128,6 @@ func (s *Service) verifyBotGrowth(ctx context.Context, tx pgx.Tx, snap *Snapshot
 	return checkBotGrowth(snap, after, actor)
 }
 
-var (
-	errBotElevation = httpx.ErrForbidden("only the Owner can give a bot administrator or admin-area permissions, anywhere")
-	errBotGrowth    = httpx.ErrForbidden("the change would give a bot a permission you do not have")
-)
-
 // checkBotGrowth is the bot invariant of every permission change by someone
 // other than the Owner: comparing where each bot stands before and after the
 // change, nothing may have been added to a bot (server-wide or in any channel)
@@ -148,12 +143,12 @@ func checkBotGrowth(before, after *Snapshot, actor Subject) error {
 		if before.bots[id] { // a bot created by this change had nothing before
 			wasGlobal, was = before.Global(bot), before.ChannelPermissions(bot)
 		}
-		if err := growth(wasGlobal, after.Global(bot), after.Global(actor)); err != nil {
+		if err := checkGrowth(before, after, actor, bot, uuid.Nil, wasGlobal, after.Global(bot), after.Global(actor)); err != nil {
 			return err
 		}
 		now := after.ChannelPermissions(bot)
 		for ch, p := range now {
-			if err := growth(was[ch], p, after.Channel(actor, ch)); err != nil {
+			if err := checkGrowth(before, after, actor, bot, ch, was[ch], p, after.Channel(actor, ch)); err != nil {
 				return err
 			}
 		}
@@ -161,17 +156,53 @@ func checkBotGrowth(before, after *Snapshot, actor Subject) error {
 	return nil
 }
 
-// growth checks what was added between before and after against what the
-// actor holds.
-func growth(before, after, actor Set) error {
-	added := after &^ before
-	switch {
-	case added.HasAny(Elevated):
-		return errBotElevation
-	case added&^actor != 0:
-		return errBotGrowth
+func checkGrowth(before, after *Snapshot, actor, bot Subject, ch uuid.UUID, was, now, actorPerms Set) error {
+	added := now &^ was
+	elevAdded := added & Elevated
+	if ch != uuid.Nil && !before.KnowsChannel(ch) {
+		elevAdded = added & Elevated &^ (before.Global(bot) & Elevated)
 	}
-	return nil
+	if elevAdded == 0 && added&^actorPerms == 0 {
+		return nil
+	}
+	botName := after.BotName(bot.ID)
+	var chName string
+	if ch != uuid.Nil {
+		if !after.Channel(actor, ch).Has(ViewChannel) {
+			botName = ""
+		} else {
+			chName = after.ChannelName(ch)
+			if chName == "" {
+				botName = ""
+			}
+		}
+	}
+	if elevAdded != 0 {
+		permName := Set(0).MissingName(elevAdded)
+		return errBotElevation(botName, permName, chName)
+	}
+	permName := Set(0).MissingName(added &^ actorPerms)
+	return errBotGrowth(botName, permName, chName)
+}
+
+func errBotElevation(botName, permName, chName string) error {
+	if botName != "" && chName != "" {
+		return httpx.ErrForbidden(fmt.Sprintf("only the Owner can give the bot %q administrator or admin-area permissions: %s in #%s", botName, permName, chName))
+	}
+	if botName != "" {
+		return httpx.ErrForbidden(fmt.Sprintf("only the Owner can give the bot %q administrator or admin-area permissions: %s", botName, permName))
+	}
+	return httpx.ErrForbidden("only the Owner can give a bot administrator or admin-area permissions, anywhere")
+}
+
+func errBotGrowth(botName, permName, chName string) error {
+	if botName != "" && chName != "" {
+		return httpx.ErrForbidden(fmt.Sprintf("the change would give the bot %q a permission you do not have: %s in #%s", botName, permName, chName))
+	}
+	if botName != "" {
+		return httpx.ErrForbidden(fmt.Sprintf("the change would give the bot %q a permission you do not have: %s", botName, permName))
+	}
+	return httpx.ErrForbidden("the change would give a bot a permission you do not have")
 }
 
 func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error)) error {

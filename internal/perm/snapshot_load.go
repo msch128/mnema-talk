@@ -16,22 +16,24 @@ var clock = time.Now
 
 func newSnapshot(now time.Time) *Snapshot {
 	return &Snapshot{
-		loaded:     now,
-		everyone:   DefaultEveryone,
-		roles:      map[uuid.UUID]Role{},
-		userRoles:  map[uuid.UUID][]uuid.UUID{},
-		owners:     map[uuid.UUID]bool{},
-		bots:       map[uuid.UUID]bool{},
-		botsAll:    map[uuid.UUID]bool{},
-		channelCat: map[uuid.UUID]uuid.UUID{},
-		stages:     map[uuid.UUID]bool{},
-		dms:        map[uuid.UUID]map[uuid.UUID]bool{},
-		dmTalks:    map[uuid.UUID]uuid.UUID{},
-		dmEnabled:  true,
-		categories: map[uuid.UUID]bool{},
-		channelOv:  map[uuid.UUID]*scope{},
-		categoryOv: map[uuid.UUID]*scope{},
-		timeouts:   map[uuid.UUID]Timeout{},
+		loaded:       now,
+		everyone:     DefaultEveryone,
+		roles:        map[uuid.UUID]Role{},
+		userRoles:    map[uuid.UUID][]uuid.UUID{},
+		owners:       map[uuid.UUID]bool{},
+		bots:         map[uuid.UUID]bool{},
+		botsAll:      map[uuid.UUID]bool{},
+		botNames:     map[uuid.UUID]string{},
+		channelCat:   map[uuid.UUID]uuid.UUID{},
+		channelNames: map[uuid.UUID]string{},
+		stages:       map[uuid.UUID]bool{},
+		dms:          map[uuid.UUID]map[uuid.UUID]bool{},
+		dmTalks:      map[uuid.UUID]uuid.UUID{},
+		dmEnabled:    true,
+		categories:   map[uuid.UUID]bool{},
+		channelOv:    map[uuid.UUID]*scope{},
+		categoryOv:   map[uuid.UUID]*scope{},
+		timeouts:     map[uuid.UUID]Timeout{},
 
 		rulesAccepted: map[uuid.UUID]int{},
 		joined:        map[uuid.UUID]time.Time{},
@@ -123,6 +125,12 @@ type channelRow struct {
 	ID       uuid.UUID
 	Category *uuid.UUID
 	Stage    bool
+	Name     string
+}
+
+type botRow struct {
+	UserID uuid.UUID
+	Name   string
 }
 
 type overwriteRow struct {
@@ -140,10 +148,10 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	// Only while a minimum age is set: when each member joined.
 	joined := load(r, `SELECT id, created_at FROM users WHERE deleted_at IS NULL AND (SELECT GREATEST(min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes) FROM instance_settings) > 0`, pgx.RowToStructByPos[joinedRow])
-	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
+	bots := load(r, `SELECT user_id, name FROM bots`, pgx.RowToStructByPos[botRow])
 	botsAll := load(r, `SELECT user_id FROM bots WHERE access_all`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
-	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
+	chans := load(r, `SELECT id, category_id, is_stage, name FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
 	dmTalks := load(r, `SELECT id, dm_id FROM channels WHERE dm_id IS NOT NULL`, pgx.RowToStructByPos[dmTalkRow])
 	dmRows := load(r, `SELECT channel_id, user_id FROM dm_members`, pgx.RowToStructByPos[dmMemberRow])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
@@ -182,15 +190,16 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	return nil
 }
 
-func (s *Snapshot) addEntities(owners, bots, cats []uuid.UUID, timeouts []timeoutRow) {
+func (s *Snapshot) addEntities(owners []uuid.UUID, bots []botRow, cats []uuid.UUID, timeouts []timeoutRow) {
 	for _, id := range owners {
 		s.owners[id] = true
 	}
 	for _, t := range timeouts {
 		s.timeouts[t.ID] = Timeout{Until: t.Until, Reason: t.Reason}
 	}
-	for _, id := range bots {
-		s.bots[id] = true
+	for _, b := range bots {
+		s.bots[b.UserID] = true
+		s.botNames[b.UserID] = b.Name
 	}
 	for _, id := range cats {
 		s.categories[id] = true
@@ -206,6 +215,7 @@ func (s *Snapshot) addChannels(rows []channelRow) {
 		if c.Stage {
 			s.stages[c.ID] = true
 		}
+		s.channelNames[c.ID] = c.Name
 	}
 }
 
