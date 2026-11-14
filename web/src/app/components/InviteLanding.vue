@@ -3,19 +3,21 @@
 // code still works (GET /api/invites/{code}, public and rate limited, answering
 // only valid / community name / expiry) and then shows the sign-up form with
 // the code filled in; everywhere else it is just the login dialog. At /join/{name}
-// (the Owner's vanity link) it asks GET /api/join/{name}: a link that takes sign-ups opens the
-// sign-up form, one that does not greets the visitor on the sign-in page; an unknown one is
+// (the vanity link) it asks GET /api/join/{name}: an active link opens the
+// sign-up form, an inactive link shows the inactive page; an unknown one is
 // just the login dialog.
 import { ref, onMounted } from 'vue'
 import { api } from '../../shared/lib/api'
 import { inviteCodeFromPath, joinSlugFromPath, vanityInviteCode, type InviteContext } from '../../shared/lib/inviteLink'
 import { decodeOnboardingInvitePreview, decodeOnboardingJoinPreview } from '../../types/rest'
 import LoginModal from './LoginModal.vue'
+import InviteInactive from './InviteInactive.vue'
 
 const path = typeof window === 'undefined' ? '' : window.location.pathname
 const code = inviteCodeFromPath(path)
 const slug = joinSlugFromPath(path)
 const invite = ref<InviteContext | null>(null)
+const inactive = ref(false)
 const loading = ref(code !== '' || slug !== '')
 
 async function checkVanity() {
@@ -23,8 +25,12 @@ async function checkVanity() {
     const preview = await api(`/api/join/${encodeURIComponent(slug)}`, { decode: decodeOnboardingJoinPreview })
     // An unknown link is no invite: the plain login dialog, nothing about the slug.
     if (!preview.valid) return
+    if (!preview.accepts_signups) {
+      inactive.value = true
+      return
+    }
     invite.value = {
-      code: preview.accepts_signups ? vanityInviteCode(slug) : '', valid: true,
+      code: vanityInviteCode(slug), valid: true,
       communityName: preview.community_name ?? '', expiresAt: '', vanity: true
     }
   } catch {
@@ -55,6 +61,7 @@ onMounted(async () => {
   <div v-if="loading" class="flex-1 flex items-center justify-center" role="status" aria-live="polite" data-testid="invite-loading">
     <span class="text-sm text-mnema-tertiary">{{ $t('login.inviteChecking') }}</span>
   </div>
+  <InviteInactive v-else-if="inactive" />
   <LoginModal v-else-if="invite" :invite="invite" />
   <LoginModal v-else />
 </template>

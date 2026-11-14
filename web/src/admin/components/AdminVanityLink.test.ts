@@ -30,11 +30,12 @@ beforeEach(() => {
 })
 
 describe('AdminVanityLink', () => {
-  it('starts empty with sign-ups off, no link to copy and Save off', async () => {
+  it('starts empty with the switch off, no link to copy and Save off', async () => {
     const w = await mountLink()
     expect(apiMock).toHaveBeenCalledWith('/api/admin/vanity-link', { decode: expect.any(Function) })
     expect(w.find<HTMLInputElement>('[data-testid="vanity-slug"]').element.value).toBe('')
-    expect(w.find<HTMLInputElement>('[data-testid="vanity-accepts"]').element.disabled).toBe(true)
+    expect(w.get('[data-testid="vanity-active"]').attributes('disabled')).toBeDefined()
+    expect(w.get('[data-testid="vanity-active"]').attributes('aria-checked')).toBe('false')
     expect(w.find('[data-testid="vanity-full"]').exists()).toBe(false)
     expect(w.get('[data-testid="vanity-save"]').attributes('disabled')).toBeDefined()
   })
@@ -42,7 +43,8 @@ describe('AdminVanityLink', () => {
   it('saves the slug and the switch together and shows the full link', async () => {
     const w = await mountLink()
     await w.get('[data-testid="vanity-slug"]').setValue('Mein-Clan')
-    await w.get('[data-testid="vanity-accepts"]').setValue(true)
+    // When no link exists yet and viewer is Owner, the switch starts ON once a name is typed
+    expect(w.get('[data-testid="vanity-active"]').attributes('aria-checked')).toBe('true')
     apiMock.mockResolvedValue({ slug: 'mein-clan', accepts_signups: true, path: '/join/mein-clan' })
     await w.get('form').trigger('submit')
     await flushPromises()
@@ -50,6 +52,18 @@ describe('AdminVanityLink', () => {
     expect(w.get('[data-testid="vanity-url"]').text()).toBe(`${window.location.origin}/join/mein-clan`)
     expect(w.get<HTMLInputElement>('[data-testid="vanity-slug"]').element.value).toBe('mein-clan')
     expect(useToastStore().toasts[0]?.text).toBe('Vanity link saved.')
+  })
+
+  it('allows the Owner to switch the link off before saving', async () => {
+    const w = await mountLink()
+    await w.get('[data-testid="vanity-slug"]').setValue('Mein-Clan')
+    expect(w.get('[data-testid="vanity-active"]').attributes('aria-checked')).toBe('true')
+    await w.get('[data-testid="vanity-active"]').trigger('click')
+    expect(w.get('[data-testid="vanity-active"]').attributes('aria-checked')).toBe('false')
+    apiMock.mockResolvedValue({ slug: 'mein-clan', accepts_signups: false, path: '/join/mein-clan' })
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/vanity-link', { method: 'PUT', json: { slug: 'Mein-Clan', accepts_signups: false }, decode: expect.any(Function) })
   })
 
   it('refuses a slug that is too short before asking the server, and reports a refusal', async () => {
@@ -113,15 +127,15 @@ describe('AdminVanityLink', () => {
   })
 
   describe('for an Administrator who is not the Owner', () => {
-    it('hides the switch while sign-ups are off and says why', async () => {
+    it('hides the switch while the link is inactive and says why', async () => {
       const w = await mountLink({ slug: 'owls', accepts_signups: false, path: '/join/owls' }, 'user')
-      expect(w.find('[data-testid="vanity-accepts"]').exists()).toBe(false)
+      expect(w.find('[data-testid="vanity-active"]').exists()).toBe(false)
       expect(w.get('[data-testid="vanity-owner-note"]').text()).toContain('Only the Owner')
     })
 
-    it('shows the switch while sign-ups are on so they can be switched off, and a rename switches them off', async () => {
+    it('shows the switch while the link is active so it can be switched off, and a rename switches it off', async () => {
       const w = await mountLink({ slug: 'owls', accepts_signups: true, path: '/join/owls' }, 'user')
-      expect(w.find('[data-testid="vanity-accepts"]').exists()).toBe(true)
+      expect(w.find('[data-testid="vanity-active"]').exists()).toBe(true)
       await w.get('[data-testid="vanity-slug"]').setValue('hawks')
       apiMock.mockResolvedValue({ slug: 'hawks', accepts_signups: false, path: '/join/hawks' })
       await w.get('form').trigger('submit')

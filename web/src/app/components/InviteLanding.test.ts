@@ -96,13 +96,13 @@ describe('InviteLanding', () => {
       expect(w.find<HTMLInputElement>('#login-invite').element.value).toBe('')
     })
 
-    it('greets the visitor on the sign-in page when the link takes no sign-ups', async () => {
-      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls' })
+    it('shows the inactive page when the link is not active', async () => {
+      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls', accepts_signups: false })
       const w = await landing('/join/owls')
-      expect(w.find('[data-testid="login-heading"]').text()).toBe('Owls')
-      expect(w.text()).toContain('You were invited to Owls')
-      expect(w.find('#login-invite').exists()).toBe(false)
-      expect(w.find('button[type="submit"]').text()).toBe('Sign in')
+      expect(w.find('[data-testid="invite-inactive"]').exists()).toBe(true)
+      expect(w.get('[data-testid="invite-inactive-title"]').text()).toBe('This link is not active')
+      expect(w.get('[data-testid="invite-inactive-signin"]').attributes('href')).toBe('/')
+      expect(w.find('[data-testid="login-heading"]').exists()).toBe(false)
     })
 
     it('is the plain login dialog for an unknown link, and when the server cannot be asked', async () => {

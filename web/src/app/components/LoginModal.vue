@@ -55,14 +55,12 @@ const optionsIcon = ref('')
 const communityIcon = computed(() => communityIconUrl(optionsIcon.value, 128))
 const heading = computed(() => (props.invite?.valid && props.invite.communityName) || optionsName.value || communityName.value)
 const inviteDead = computed(() => props.invite?.valid === false)
-// A vanity link (/join/name) that takes sign-ups signs up with the link itself; one that does not
-// only greets the visitor on the sign-in page.
+// A vanity link (/join/name) signs up with the link itself (~name as code).
 // A refused vanity code (the Owner switched it off meanwhile) falls back to asking for a code.
 const vanityRefused = ref(false)
 const vanityCode = computed(() => !vanityRefused.value && !!props.invite?.vanity && props.invite.code !== '')
-const vanityGreeting = computed(() => !!props.invite?.vanity && props.invite.code === '' && props.invite.valid === true)
 const subtitle = computed(() => {
-  if (!isRegister.value) return t(vanityGreeting.value ? 'login.subtitleVanity' : 'login.subtitleLogin', { name: heading.value })
+  if (!isRegister.value) return t('login.subtitleLogin', { name: heading.value })
   return t(props.invite?.valid ? 'login.subtitleInvited' : 'login.subtitleRegister')
 })
 const expiry = computed(() => {
@@ -74,7 +72,7 @@ onMounted(() => {
   void loadOptions()
   if (props.invite) {
     inviteCode.value = props.invite.code
-    isRegister.value = props.invite.valid !== false && !vanityGreeting.value
+    isRegister.value = props.invite.valid !== false
     return
   }
   // Check if URL has ?invite=...

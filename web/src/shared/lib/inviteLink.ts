@@ -46,6 +46,6 @@ export interface InviteContext {
   communityName: string
   /** When the code expires (RFC 3339); empty when it does not. */
   expiresAt: string
-  /** True when the page was opened through a vanity link (/join/name); then code is '~name' or empty. */
+  /** True when the page was opened through an active vanity link (/join/name); then code is '~name'. */
   vanity?: boolean
 }
