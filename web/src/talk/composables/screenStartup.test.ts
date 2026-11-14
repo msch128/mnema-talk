@@ -65,6 +65,7 @@ beforeEach(async () => {
   })
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   chat = useChatStore()
+  chat.isConnected = true
   chat.sendWSEvent = vi.fn()
   voice = useVoiceStore()
   rtc = useWebRTC()
