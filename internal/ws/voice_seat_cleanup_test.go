@@ -121,17 +121,18 @@ func TestTwoTabsJoiningAtOnceLeaveTheLaterOneSeated(t *testing.T) {
 	}
 }
 
-// A join that panics after the SFU gave it a media peer (here: while it tells
-// the member's other tab) leaves no peer behind that the hub does not know.
+// A join that panics after the SFU gave it a media peer leaves no peer behind
+// that the hub does not know. The panic comes from the hook right after the
+// peer is attached. Closing another tab's send queue to make "telling it"
+// panic raced the SFU: that tab's own offer and candidates go out on goroutines
+// of their own, one of them could hit the closed queue first, and its recovery
+// dropped the tab from voice, so the join had nobody to tell and did not panic.
 func TestPanicAfterTheMediaJoinRemovesThePeer(t *testing.T) {
 	media := newSeatTestSFU(t)
 	h := NewHub(nil, nil, media, nil, openPerms())
 	ch := voiceCh()
-	user := auth.User{ID: uuid.New(), Username: "twotabs"}
-	first := testClient(h, user)
-	second := testClient(h, user)
-	h.joinVoice(first, ch)
-	close(first.send) // telling first panics
+	c := testClient(h, auth.User{ID: uuid.New(), Username: "joiner"})
+	h.afterPeer = func() { panic("after the media join") }
 
 	func() {
 		defer func() {
@@ -139,10 +140,12 @@ func TestPanicAfterTheMediaJoinRemovesThePeer(t *testing.T) {
 				t.Error("the join did not panic")
 			}
 		}()
-		h.joinVoice(second, ch)
+		h.joinVoice(c, ch)
 	}()
-	first.shutdown() // nothing more is sent to it
-	second.abandon()
+	if c.peer() == nil {
+		t.Fatal("the join panicked before the SFU gave it a peer")
+	}
+	c.abandon()
 
 	if media.Room(ch.ID) != nil {
 		t.Fatal("a media peer stayed in the Talk after its connection was cleaned up")
