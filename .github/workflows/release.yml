@@ -416,7 +416,7 @@ jobs:
       id-token: write # keyless cosign signature (Sigstore)
     env:
       SOURCE: ghcr.io/mnema-xyz/mnema-talk
-      # Releases before 3.2.0 exist only at the old path (GHCR does not
+      # Releases before 3.2.1 exist only at the old path (GHCR does not
       # redirect); a backfill of one reads it from there.
       LEGACY_SOURCE: ghcr.io/msch128/mnema-talk
       VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.mirror_version || needs.release-please.outputs.version }}

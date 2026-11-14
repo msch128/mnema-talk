@@ -176,7 +176,7 @@ func TestTheOldOwnerVouchesForNothingAfterTheSwitchRelease(t *testing.T) {
 	if got := imageverify.DefaultOrigins()[1]; got.Source != legacy || got.MaxVersion != imageverify.LegacyMaxVersion {
 		t.Fatalf("legacy origin = %+v", got)
 	}
-	for version, want := range map[string]bool{"3.1.1": true, "3.2.0": true, "3.2.1": false, "4.0.0": false} {
+	for version, want := range map[string]bool{"3.1.1": true, "3.2.0": true, "3.2.1": true, "3.2.2": false, "4.0.0": false} {
 		f := newFixture(t)
 		rel := f.Push("1.0", Provenance{Source: legacy, Builder: legacy + "/actions/runs/7/attempts/1", Version: version},
 			Provenance{Source: legacy, Builder: legacy + "/actions/runs/7/attempts/1", Version: version})

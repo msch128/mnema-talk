@@ -1418,7 +1418,7 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
     issuer `https://token.actions.githubusercontent.com`, subject exactly
     `https://github.com/mnema-xyz/talk/.github/workflows/release.yml@refs/heads/main`
     (the repository's name in the mnema-xyz organization) or, for releases
-    from before the repository moved there (up to 3.2.0), `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
+    from before the repository moved there (up to 3.2.1), `https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main`;
   - the BuildKit SLSA v1 provenance exists for every platform image, names that
     image as its subject, and records a GitHub Actions run and source
     repository of this project, **of the same owner as the signature** (an

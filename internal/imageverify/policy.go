@@ -63,7 +63,7 @@ const (
 	LegacySource = "https://github.com/msch128/mnema-talk"
 	// LegacyMaxVersion is the last release built under msch128 (the switch
 	// release before the move): the old owner never vouches for a newer one.
-	LegacyMaxVersion = "3.2.0"
+	LegacyMaxVersion = "3.2.1"
 	LegacyIdentity   = `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
 )
 
