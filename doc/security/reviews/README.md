@@ -14,6 +14,7 @@ audit.
 
 | Report | Change | Subject |
 |---|---|---|
+| [828](2026-11/828.md) | #828 | shared links use the server's public address (`public_url`) |
 | [771-third](2026-11/771-third.md) | #771, merged with #780 | metadata removal for JPEG, PNG and WebP, third round |
 | [775](2026-11/775.md) | #775, merged with #780 | repair of the media group protocol |
 | [777-keys](2026-11/777-keys.md) | #777 | key rotation (`JWT_SECRET_PREVIOUS`, `DATA_KEY`, `rotate-keys`) |
