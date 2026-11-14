@@ -15,7 +15,7 @@ checks the required settings at startup and, if any is missing or still a
 placeholder, logs "Mnema Talk cannot start - fix these settings in .env:" with
 the complete list and exits with status 78 (a refused configuration, not a
 crash). `mnema-talk setup --check` prints the same list for the `.env` in a
-folder before you start (`docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check`).
+folder before you start (`docker run --rm -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup --check`).
 A missing `ADMIN_INITIAL_PASSWORD` is reported separately, when the first start
 tries to create the Owner.
 
@@ -195,7 +195,7 @@ behind it and so uses the stored language or the default.
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
-| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images (GHCR and the Docker Hub mirror) and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the one image repository it may pull from (setting it drops the built-in Docker Hub mirror), an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
+| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images (`ghcr.io/mnema-xyz/mnema-talk`, the old path `ghcr.io/msch128/mnema-talk` and the Docker Hub mirrors) and its release workflow before and after the move to mnema-xyz | Read by the updater sidecar only, for a fork that publishes its own signed images: the one image repository it may pull from (setting it drops all built-in repositories), an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance (identity and source must be set together; they replace both built-in origins with this one) and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
 
 ### Legal and privacy page
 
@@ -1043,7 +1043,7 @@ test has finished, the new backup lies unencrypted in `BACKUP_DIR`.
 
 ## Verifying a release image
 
-Release images on GHCR (`ghcr.io/msch128/mnema-talk`, every tag of a release)
+Release images on GHCR (`ghcr.io/mnema-xyz/mnema-talk`, every tag of a release)
 and their mirror on Docker Hub (`docker.io/msch128/mnema-talk`, see below)
 are signed keylessly with [cosign](https://github.com/sigstore/cosign) by the
 release workflow, using its GitHub OIDC identity; no long-lived key exists.
@@ -1051,9 +1051,9 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:latest \
+cosign verify ghcr.io/mnema-xyz/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
+  --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@'
 ```
 
 The Docker Hub copy carries the same digest, signature identity, provenance
@@ -1062,8 +1062,16 @@ and SBOM, so the same command works with the Docker Hub reference:
 ```sh
 cosign verify docker.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
+  --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@'
 ```
+
+The repository moved from the GitHub account msch128 to the organization
+mnema-xyz, where it is called `talk`. Releases signed before the move carry
+the `msch128/mnema-talk` identity, releases after it `mnema-xyz/talk`; the pattern above accepts both. Images
+up to the move are also at `ghcr.io/msch128/mnema-talk` (GHCR does not
+redirect); that path gets no new releases, so set `MNEMA_IMAGE` to
+`ghcr.io/mnema-xyz/mnema-talk` with the same tag (the System tab says so
+while it still names the old path).
 
 `docker buildx imagetools inspect` shows the same index digest on both
 registries. GHCR stays the primary reference; the updater sidecar and the
@@ -1071,7 +1079,7 @@ examples use it.
 
 A passing check shows that this repository's release workflow produced the
 digest; it says nothing about the code in it beyond that. Pinning the digest in
-`MNEMA_IMAGE` (`ghcr.io/msch128/mnema-talk@sha256:...`) keeps a verified image
+`MNEMA_IMAGE` (`ghcr.io/mnema-xyz/mnema-talk@sha256:...`) keeps a verified image
 from changing under a tag. Images released before signing was added carry no
 signature.
 
@@ -1086,14 +1094,20 @@ shows that the update was refused, and the updater's log (`docker compose logs
 updater`) has the reason. Details and limits are in
 [SECURITY.md](../SECURITY.md#self-update-sidecar).
 
-- By default the updater trusts exactly two repositories:
-  `ghcr.io/msch128/mnema-talk` and its Docker Hub mirror `docker.io/msch128/mnema-talk`
+- By default the updater trusts exactly four repositories:
+  `ghcr.io/mnema-xyz/mnema-talk`, the old path `ghcr.io/msch128/mnema-talk`
+  and the Docker Hub mirrors `docker.io/msch128/mnema-talk` and
+  `docker.io/mnemaxyz/mnema-talk`
   (`msch128/mnema-talk` and `index.docker.io/...` name the same repository).
   It updates from the registry the running app image names, so an install with
-  `MNEMA_IMAGE=msch128/mnema-talk:latest` stays on Docker Hub. Signature
-  identity, issuer and provenance source are the same for both; any other
-  namespace is refused. With `UPDATER_IMAGE_REPOSITORY` set, only that
-  repository is trusted.
+  `MNEMA_IMAGE=msch128/mnema-talk:latest` stays on Docker Hub. It trusts two
+  origins, the release workflow of `github.com/mnema-xyz/talk` (the
+  repository's name in the organization; the image keeps `mnema-talk`) and, for
+  releases from before the move, that of `github.com/msch128/mnema-talk`; the
+  signature and the provenance must come from the same origin. Any other
+  namespace or identity is refused. With `UPDATER_IMAGE_REPOSITORY` set, only
+  that repository is trusted; with `UPDATER_CERT_IDENTITY_REGEXP` or
+  `UPDATER_SOURCE_URL` set, only that one origin.
 - The updater needs outbound HTTPS to the image registry and to Sigstore's
   TUF mirror (`tuf-repo-cdn.sigstore.dev`); it has its own network for that. An
   installation that cannot reach the mirror can mount a `trusted_root.json`
@@ -1820,7 +1834,7 @@ repeats at that pace until the settings are right. The server deliberately
 serves no "error page" meanwhile: a half-started process would be an
 unauthenticated surface and every health check would have to special-case it.
 Check an `.env` without starting anything with
-`docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check --dir /out`
+`docker run --rm -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup --check --dir /out`
 (or `mnema-talk setup --check`). Other messages here: `TRUSTED_PROXY_CIDRS
 contains an invalid entry`, or a migration failure (see [upgrade.md](upgrade.md)).
 `mnema-talk doctor` prints the same block when the settings are wrong.

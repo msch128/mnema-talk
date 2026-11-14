@@ -20,7 +20,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PUBLISHED = "ghcr.io/msch128/mnema-talk"
+PUBLISHED = "ghcr.io/mnema-xyz/mnema-talk"
 PUBLIC_URL = "https://chat.example.com"
 REQUIRED = {  # key -> minimum length of the generated value
     "PUBLIC_URL": 1, "MNEMA_IMAGE": 1, "JWT_SECRET": 32, "POSTGRES_PASSWORD": 16,
