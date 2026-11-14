@@ -442,7 +442,7 @@ func TestAMuteLetsThroughWhatIsAddressedToTheMemberButNotAtAll(t *testing.T) {
 
 	e.publish(e.stored(message(alice, e.general, "@bob are you there?"), 0, bob))
 	p := e.content(bob, e.pushedTo("/device/bob", 1)[0])
-	if !p.Mention || p.Body != "@bob are you there?" {
+	if !p.Mention || p.Body != "@Display bob are you there?" {
 		t.Fatalf("push for a mention in a muted channel: %+v", p)
 	}
 }

@@ -6,6 +6,7 @@ import { useSocketStore } from './socket'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
 import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
+import { memberLabel } from './chat/mentionLabel'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, patchOpenProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
@@ -178,10 +179,7 @@ export const useChatStore = defineStore('chat', () => {
   installActivityListeners(cx)
   setReturnToTabHandler(() => markActiveChannelReadIfReading(cx))
   // Previews (replies, saved, notifications) name a mentioned member by display name.
-  setMentionLabels(name => {
-    const m = cs.members.value.find(x => (x.username || '').toLowerCase() === name)
-    return m?.display_name && m.display_name.toLowerCase() !== name ? m.display_name : undefined
-  })
+  setMentionLabels(name => memberLabel(cs.members.value, name))
 
   return { ...exposedState(cs), ...exposedActions(cx) }
 })
