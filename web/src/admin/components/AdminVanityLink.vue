@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // The vanity invite link (Owner and Administrators): one custom address for the whole community,
-// /join/<name>. By default it only leads visitors to the sign-in page; registration stays invite-only.
-// The switch turns it into a permanent public invite, which is a decision of its own.
-import { ref, computed, onMounted } from 'vue'
+// /join/<name>. When active, anyone with the link can sign up without an individual code.
+// When inactive, the link is closed and the name stays reserved.
+import { ref, computed, onMounted, watch } from 'vue'
 import { Check, Copy } from '@lucide/vue'
 import { api } from '../../shared/lib/api'
 import { decodeOnboardingVanitySettings } from '../../types/rest'
 import { normalise, useSettingsDraft } from '../../shared/composables/useSettingsDraft'
 import UnsavedChangesBar from '../../shared/components/UnsavedChangesBar.vue'
+import SwitchRow from '../../shared/components/SwitchRow.vue'
 import { joinLink } from '../../shared/lib/inviteLink'
 import { useToastStore } from '../../stores/toast'
 import { usePermissionsStore } from '../../stores/permissions'
@@ -19,7 +20,7 @@ const MAX_SLUG = 32
 const JOIN_PREFIX = '/join/'
 
 const toasts = useToastStore()
-// Only the Owner decides that the link creates accounts; Administrators set the name and may switch it off.
+// Only the Owner can activate the link; Administrators set the name and may switch it off.
 const isOwner = computed(() => usePermissionsStore().isOwner)
 const stored = ref({ slug: '', accepts: false })
 const loaded = ref(false)
@@ -28,7 +29,7 @@ const copied = ref(false)
 
 const fullLink = computed(() => (stored.value.slug ? joinLink(window.location.origin, stored.value.slug) : ''))
 const nameOf = (slug: string) => normalise.text(slug).toLowerCase()
-// What is sent: an Administrator cannot keep sign-ups on for another name, so a rename switches them off.
+// What is sent: an Administrator cannot keep an active link for another name, so a rename switches it off.
 const acceptsFor = (draft: { slug: string; accepts: boolean }) => draft.accepts && (isOwner.value || nameOf(draft.slug) === stored.value.slug)
 
 // One draft with one Save (doc/settings-ux.md): the name and the switch are saved together.
@@ -51,6 +52,20 @@ const form = useSettingsDraft<{ slug: string; accepts: boolean }>({
   saved: () => { toasts.success(t(stored.value.slug ? 'admin.vanity.saved' : 'admin.vanity.removed')) }
 })
 const { draft, errors } = form
+
+// When no link exists yet and the viewer is the Owner, start with the switch on once a name is typed.
+watch(
+  () => draft.slug,
+  (next, prev) => {
+    if (!stored.value.slug && isOwner.value) {
+      if (next.trim() !== '' && (!prev || prev.trim() === '')) {
+        draft.accepts = true
+      } else if (next.trim() === '') {
+        draft.accepts = false
+      }
+    }
+  }
+)
 
 async function load() {
   failed.value = false
@@ -93,13 +108,14 @@ onMounted(load)
         </div>
         <p class="text-xs" :class="errors.slug ? 'text-mnema-danger' : 'text-mnema-tertiary'">{{ $t('admin.vanity.rules', { min: MIN_SLUG, max: MAX_SLUG }) }}</p>
       </div>
-      <label v-if="isOwner || stored.accepts" class="flex items-start gap-2 text-sm text-mnema-text">
-        <input v-model="draft.accepts" type="checkbox" class="mt-0.5" :disabled="draft.slug.trim() === ''" data-testid="vanity-accepts" />
-        <span>
-          {{ $t('admin.vanity.accepts') }}
-          <span class="block text-xs text-mnema-tertiary">{{ $t('admin.vanity.acceptsHint') }}</span>
-        </span>
-      </label>
+      <SwitchRow
+        v-if="isOwner || stored.accepts"
+        v-model="draft.accepts"
+        :title="$t('admin.vanity.active')"
+        :hint="$t('admin.vanity.activeHint')"
+        :disabled="draft.slug.trim() === ''"
+        data-testid="vanity-active"
+      />
       <p v-else class="text-xs text-mnema-tertiary" data-testid="vanity-owner-note">{{ $t('admin.vanity.ownerOnly') }}</p>
       <UnsavedChangesBar inline save-testid="vanity-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
     </form>

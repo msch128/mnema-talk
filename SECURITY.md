@@ -299,9 +299,9 @@ details and the limits.
   member data.
 - **Vanity link (`/join/<name>`).** One optional short address the Owner or an
   Administrator sets (only the Owner may turn on sign-ups, enforced
-  server-side). Alone it only leads to the sign-in page and never
-  bypasses invite-only registration. If the Owner switches on *Let this link
-  create accounts*, it is a deliberate permanent public invite (unlimited, no
+  server-side). While it is not active it only shows a
+  "not active" page and never bypasses invite-only registration. If the Owner
+  switches on *Link active*, it is a deliberate permanent public invite (unlimited, no
   expiry; the guessable name is public by design, so the strong-code floor does
   not apply to it) that goes through the same registration, limits and raid
   protection as any invite; off or removed, it stops working for new sign-ups at once. Its
