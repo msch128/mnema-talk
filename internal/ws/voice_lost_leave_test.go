@@ -317,6 +317,34 @@ func TestVoiceLeaveDifferentTabOnStillSeatedConnectionUntouched(t *testing.T) {
 	}
 }
 
+func TestVoiceLeaveDifferentTalkOnStillSeatedConnectionUntouched(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	h.VoiceGrace = 5 * time.Second
+	t.Cleanup(h.Close)
+	chA := voiceCh()
+	chB := voiceCh()
+	user := auth.User{ID: uuid.New(), Username: "alice"}
+	conn1 := testClient(h, user)
+	conn1.setTab("tab-T")
+	h.joinVoice(conn1, chB)
+
+	observer := testClient(h, auth.User{ID: uuid.New(), Username: "observer"})
+	h.joinVoice(observer, chB)
+	sentEvents(t, observer, "")
+
+	conn2 := testClient(h, user)
+	payload := []byte(fmt.Sprintf(`{"channel_id":"%s","tab":"tab-T"}`, chA.ID))
+	conn2.handle(events.ClientVoiceLeave, payload)
+
+	cur := conn1.currentVoice()
+	if !inRoom(h, chB.ID, user.ID) || cur == nil || *cur != chB.ID {
+		t.Fatal("conn1 seat in Talk B removed on leave for Talk A")
+	}
+	if len(sentEvents(t, observer, "voice_state_update")) != 0 {
+		t.Fatal("unexpected leave announcement for Talk B")
+	}
+}
+
 func TestVoiceLeaveAnotherUserWithSameTabUntouched(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = 5 * time.Second
