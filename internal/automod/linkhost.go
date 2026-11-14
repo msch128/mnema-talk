@@ -3,8 +3,10 @@ package automod
 import (
 	"errors"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/net/idna"
@@ -87,6 +89,9 @@ func readDomain(raw string) reading {
 		var err error
 		host, err = browserIDNA.ToASCII(d)
 		host, exact = strings.ToLower(host), err == nil
+		if kept, ok := keepEmptyACE(d, host); ok {
+			host, exact = kept, false
+		}
 	}
 	if host == "" || strings.ContainsFunc(host, forbiddenInDomain) {
 		return reading{host: strings.TrimRight(host, "."), rejected: true}
@@ -99,6 +104,47 @@ func readDomain(raw string) reading {
 		host = ip
 	}
 	return reading{host: strings.TrimRight(host, "."), exact: exact}
+}
+
+// keepEmptyACE puts back the labels Go's IDNA empties: a label that maps to
+// the bare ACE prefix "xn--" decodes to nothing there, without an error.
+// UTS #46 calls it an error, but some URL parsers keep the label as it is, so
+// the host is read with it, and never as exact. ok: there was such a label.
+func keepEmptyACE(d, host string) (string, bool) {
+	if host != "" && !strings.HasPrefix(host, ".") && !strings.HasSuffix(host, ".") && !strings.Contains(host, "..") {
+		return host, false // no label was emptied
+	}
+	mapped := strings.Split(mapEachRune(d), ".")
+	if !slices.Contains(mapped, acePrefix) {
+		return host, false
+	}
+	out := strings.Split(host, ".")
+	if len(out) != len(mapped) {
+		return host, true
+	}
+	for i, label := range mapped {
+		if label == acePrefix {
+			out[i] = acePrefix
+		}
+	}
+	return strings.Join(out, "."), true
+}
+
+const acePrefix = "xn--"
+
+// mapEachRune is the UTS #46 mapping of d, one code point at a time: enough
+// to tell which labels map to the ACE prefix, as no composition makes one.
+func mapEachRune(d string) string {
+	var b strings.Builder
+	for _, r := range d {
+		if r < utf8.RuneSelf {
+			b.WriteByte(byte(unicode.ToLower(r)))
+			continue
+		}
+		m, _ := browserIDNA.ToUnicode(string(r))
+		b.WriteString(m)
+	}
+	return b.String()
 }
 
 // percentDecode decodes %XX and leaves a "%" without two hex digits as it is.
@@ -134,7 +180,7 @@ func isASCII(s string) bool {
 
 func hasACELabel(d string) bool {
 	for label := range strings.SplitSeq(d, ".") {
-		if len(label) >= 4 && strings.EqualFold(label[:4], "xn--") {
+		if len(label) >= len(acePrefix) && strings.EqualFold(label[:len(acePrefix)], acePrefix) {
 			return true
 		}
 	}
