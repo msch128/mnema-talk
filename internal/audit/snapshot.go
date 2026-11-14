@@ -47,7 +47,8 @@ var snapshotSQL = map[Resource]string{
 		'auto_delete_default_hours', auto_delete_default_hours, 'auto_delete_default_scope', auto_delete_default_scope), 'message settings' FROM instance_settings`,
 	ResVanity: `SELECT jsonb_build_object('slug', vanity_slug, 'accepts_signups', vanity_accepts_signups), 'vanity link' FROM instance_settings`,
 	ResEmoji:  `SELECT jsonb_build_object('name', name, 'animated', animated), name FROM custom_emoji WHERE id = $1`,
-	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
+	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled, 'access_all', b.access_all,
+		'own_role_permissions', (SELECT r.permissions FROM roles r WHERE r.bot_user_id = b.user_id),
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = b.user_id), '[]'::jsonb),
 		'active_tokens', (SELECT COUNT(*) FROM bot_tokens t WHERE t.bot_id = b.id AND t.revoked_at IS NULL
 		                  AND (t.expires_at IS NULL OR t.expires_at > NOW())),

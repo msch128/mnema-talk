@@ -98,6 +98,17 @@ func (f *Fixture) ManagedRole(position int, p perm.Set) uuid.UUID {
 	return id
 }
 
+// BotOwnRole adds the managed own role of a bot, held by that bot, and
+// returns its ID.
+func (f *Fixture) BotOwnRole(position int, p perm.Set, bot uuid.UUID) uuid.UUID {
+	id := f.ManagedRole(position, p)
+	r := f.st.Roles[id]
+	r.BotUserID = &bot
+	f.st.Roles[id] = r
+	f.Assign(bot, id)
+	return id
+}
+
 // Assign gives a member a role.
 func (f *Fixture) Assign(user, role uuid.UUID) *Fixture {
 	f.st.UserRoles[user] = append(slices.Clip(f.st.UserRoles[user]), role)
@@ -119,6 +130,17 @@ func (f *Fixture) Unassign(user, role uuid.UUID) *Fixture {
 // Bot marks user as a bot account (no @everyone).
 func (f *Fixture) Bot(user uuid.UUID) *Fixture {
 	f.st.Bots[user] = true
+	return f.touch()
+}
+
+// BotAllChannels marks the bot user as given access to every channel: it also
+// does not see what @everyone alone cannot see.
+func (f *Fixture) BotAllChannels(user uuid.UUID) *Fixture {
+	f.Bot(user)
+	if f.st.BotsAll == nil {
+		f.st.BotsAll = map[uuid.UUID]bool{}
+	}
+	f.st.BotsAll[user] = true
 	return f.touch()
 }
 
