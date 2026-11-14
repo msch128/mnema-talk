@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, expectTalkLive, leaveTalks, responseString, responseUserId, trackPeerConnections, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, expectTalkLive, leaveTalks, responseString, responseUserId, leaveAndClose } from './helpers'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
 const opened: BrowserContext[] = []
@@ -51,7 +51,6 @@ async function world(browser: import('@playwright/test').Browser): Promise<World
   opened.push(ownerCtx)
   const calleeCtx = await browser.newContext(OPTIONS)
   opened.push(calleeCtx)
-  for (const ctx of [ownerCtx, calleeCtx]) await ctx.addInitScript(trackPeerConnections)
   const owner = await ownerCtx.newPage()
   const callee = await calleeCtx.newPage()
   await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)

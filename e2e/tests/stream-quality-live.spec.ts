@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, responseString, responseUserId, leaveTalks, leaveAndClose } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -66,7 +66,6 @@ test('changing frame rate in a running stream keeps the stream, the capture and 
   opened.push(sharerCtx)
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(viewerCtx)
-  await sharerCtx.addInitScript(trackPeerConnections)
   await sharerCtx.addInitScript(fakeDisplayMedia)
   const sharer = await sharerCtx.newPage()
   const viewer = await viewerCtx.newPage()

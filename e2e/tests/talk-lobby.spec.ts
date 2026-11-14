@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -33,8 +33,6 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
   opened.push(bCtx)
-  // expectTalkLive reads window.__pcs, which this records.
-  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
 
