@@ -372,6 +372,37 @@
         },
         "type": "object"
       },
+      "auth.CreateMemberInviteRequest": {
+        "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel the joiner lands in; omitted: the default\nchannel. The member must see the channel and hold Create invites in it.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_in_hours": {
+            "description": "ExpiresInHours is 24 (or the limit, if lower) when omitted; never unlimited.",
+            "maximum": 8760,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "max_uses": {
+            "description": "MaxUses is 10 (or the limit, if lower) when omitted; never unlimited.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "auth.DeleteAccountRequest": {
         "properties": {
           "code": {
@@ -451,11 +482,27 @@
       },
       "auth.Invite": {
         "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel the invite lands the joiner in; null: the\ndefault channel. Only invites created from a channel's menu have one.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "code": {
             "type": "string"
           },
           "created_at": {
             "format": "date-time",
+            "type": "string"
+          },
+          "created_by_id": {
+            "description": "CreatedByID and CreatedByName say who created the invite (a server before\nmember invites sends neither, so a client treats them as optional).",
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_by_name": {
             "type": "string"
           },
           "expires_at": {
@@ -508,6 +555,61 @@
         "required": [
           "password",
           "username"
+        ],
+        "type": "object"
+      },
+      "auth.MemberInviteLimits": {
+        "properties": {
+          "max_active": {
+            "description": "MaxActive is how many invites of one member may be valid at once.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_expires_in_hours": {
+            "description": "MaxExpiresInHours is the longest an invite of a member may stay valid.",
+            "maximum": 8760,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_per_hour": {
+            "description": "MaxPerHour is how many invites one member may create per hour.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_uses": {
+            "description": "MaxUses is the most uses one invite of a member may have.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_active",
+          "max_expires_in_hours",
+          "max_per_hour",
+          "max_uses"
+        ],
+        "type": "object"
+      },
+      "auth.MemberInviteList": {
+        "properties": {
+          "invites": {
+            "description": "Invites are the member's own, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/auth.Invite"
+            },
+            "type": "array"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/auth.MemberInviteLimits",
+            "description": "Limits are the bounds new invites must stay within."
+          }
+        },
+        "required": [
+          "invites",
+          "limits"
         ],
         "type": "object"
       },
@@ -7770,6 +7872,11 @@
       },
       "onboarding.InvitePreview": {
         "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel the invite lands the new member in. It is left\nout for an invite without one, and for a channel that a plain new\nmember could not see: they land in the default channel then.",
+            "format": "uuid",
+            "type": "string"
+          },
           "community_name": {
             "type": "string"
           },
@@ -9247,6 +9354,10 @@
             },
             "type": "array"
           },
+          "public_url": {
+            "description": "PublicURL is the address this server is reached at (PUBLIC_URL), left\nout when none is configured. A client that is not served from that\naddress, such as the desktop app, builds the links it shares from it.",
+            "type": "string"
+          },
           "status": {
             "enum": [
               "ok"
@@ -9287,6 +9398,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "public_url": {
+            "description": "PublicURL is the address this server is reached at (PUBLIC_URL), left\nout when none is configured. A client that is not served from that\naddress, such as the desktop app, builds the links it shares from it.",
+            "type": "string"
           },
           "status": {
             "enum": [
@@ -17248,6 +17363,175 @@
           }
         ],
         "summary": "Create an invite",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/invites/limits": {
+      "get": {
+        "description": "Requires the Manage invites permission (403 otherwise).",
+        "operationId": "getMemberInviteLimits",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.MemberInviteLimits"
+                }
+              }
+            },
+            "description": "The limits."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage invites permission."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the limits of member invites",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "description": "Requires the Manage invites permission (403 otherwise). Replaces all four limits. They apply to invites created from now on; invites that exist keep what they have.",
+        "operationId": "putMemberInviteLimits",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.MemberInviteLimits"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.MemberInviteLimits"
+                }
+              }
+            },
+            "description": "The limits now in force."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or a value out of range."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage invites permission, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the limits of member invites",
         "tags": [
           "Admin"
         ]
@@ -35022,7 +35306,7 @@
     },
     "/api/invites/{code}": {
       "get": {
-        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name and when the code expires. Unknown, weak legacy custom, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)",
+        "description": "Public, no session. Says whether an invite code can still be used and, if so, the community's name, when the code expires and the channel it lands the new member in (only one every new member can see). Unknown, weak legacy custom, expired, revoked and used-up codes all answer the same `{\"valid\": false}`; nothing else about the invite is revealed. Rate limited per IP (30 per minute, IPv6 per /64)",
         "operationId": "previewInvite",
         "parameters": [
           {
@@ -35617,6 +35901,285 @@
         "summary": "Block a member",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/me/invites": {
+      "get": {
+        "description": "The invites the signed-in member created, newest first, with the limits new ones must stay within. Needs a session only, so a member whose right was withdrawn still sees (and can revoke) what they made.",
+        "operationId": "listOwnInvites",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.MemberInviteList"
+                }
+              }
+            },
+            "description": "The member's invites and the limits."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List my invites",
+        "tags": [
+          "Invites"
+        ]
+      },
+      "post": {
+        "description": "Needs the Create invites permission, in the channel when one is named (403 otherwise; a channel the member cannot see answers 404). The invite always expires and has a use limit, both within the bounds the holders of Manage invites set; omitted fields take safe defaults (24 hours, 10 uses). The number of active invites and of invites per hour is limited per member. A lockdown that pauses invites refuses it (409).",
+        "operationId": "createMemberInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.CreateMemberInviteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.Invite"
+                }
+              }
+            },
+            "description": "Created invite."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, or a value above the limits."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Create invites permission, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the channel does not exist or the member cannot see it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the member has too many active invites, or invites are paused."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or too many invites created this hour.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create an invite as a member",
+        "tags": [
+          "Invites"
+        ]
+      }
+    },
+    "/api/me/invites/{id}": {
+      "delete": {
+        "description": "Revokes an invite the signed-in member created; accounts that registered with it stay. Another member's invite answers 404. Needs no permission beyond a session, so a member whose right was withdrawn can still revoke what they made.",
+        "operationId": "deleteOwnInvite",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the invite does not exist or is not the member's."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Revoke my invite",
+        "tags": [
+          "Invites"
         ]
       }
     },

@@ -41,7 +41,7 @@ onMounted(async () => {
   if (!code) return
   try {
     const preview = await api(`/api/invites/${encodeURIComponent(code)}`, { decode: decodeOnboardingInvitePreview })
-    invite.value = { code, valid: preview.valid, communityName: preview.community_name ?? '', expiresAt: preview.expires_at ?? '' }
+    invite.value = { code, valid: preview.valid, communityName: preview.community_name ?? '', expiresAt: preview.expires_at ?? '', ...(preview.channel_id ? { channelId: preview.channel_id } : {}) }
   } catch {
     // Rate limited or offline: no verdict, the form still works with the code.
     invite.value = { code, valid: null, communityName: '', expiresAt: '' }

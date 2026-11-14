@@ -103,6 +103,13 @@ const (
 	ManageWiki Set = 1 << 28
 	// ViewWiki reads the wiki. On for @everyone.
 	ViewWiki Set = 1 << 29
+	// CreateMemberInvites lets a member create invites within the bounds the
+	// holders of Manage invites set, and see and revoke their own
+	// (doc/roles-and-permissions.md). Separate from CreateInvites ("manage
+	// invites"), which lists, edits and revokes every invite. A channel
+	// overwrite may allow or deny it: an invite that lands in a channel needs
+	// it there. It is the last bit the web helpers can hold (bit 30).
+	CreateMemberInvites Set = 1 << 30
 )
 
 // Info describes one permission for clients.
@@ -147,6 +154,7 @@ var Catalog = []Info{
 	{Key: "edit_wiki", Bit: EditWiki, Name: "edit the wiki"},
 	{Key: "manage_wiki", Bit: ManageWiki, Name: "manage the wiki"},
 	{Key: "view_wiki", Bit: ViewWiki, Name: "view the wiki"},
+	{Key: "create_member_invites", Bit: CreateMemberInvites, Name: "create invites", Channel: true},
 }
 
 var (
@@ -175,7 +183,7 @@ const (
 	// DefaultEveryone is what @everyone holds on a fresh install and what
 	// migration 0017 seeds: exactly what every member could do before roles
 	// existed. Do not widen it: upgrades must not change behavior.
-	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | ViewWiki
+	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | ViewWiki | CreateMemberInvites
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
@@ -183,7 +191,7 @@ const (
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.
-const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki
+const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki | CreateMemberInvites
 
 // Has reports whether every bit of need is in s.
 func (s Set) Has(need Set) bool { return s&need == need }

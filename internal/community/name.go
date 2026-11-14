@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -26,6 +27,7 @@ const ttl = time.Minute
 type Names struct {
 	q        db.Querier
 	fallback string
+	public   string
 
 	mu     sync.Mutex
 	name   string
@@ -36,7 +38,21 @@ type Names struct {
 // New returns a Names reading from q. publicURL supplies the host used while
 // no name is set.
 func New(q db.Querier, publicURL string) *Names {
-	return &Names{q: q, fallback: Fallback(publicURL)}
+	return &Names{q: q, fallback: Fallback(publicURL), public: strings.TrimRight(strings.TrimSpace(publicURL), "/")}
+}
+
+// PublicURL is the address this server is reached at (PUBLIC_URL, without a
+// trailing slash). A nil *Names has none, and neither has a server still on
+// the loopback default: that address is nobody's way in, so a client keeps the
+// address it was opened with.
+func (n *Names) PublicURL() string {
+	if n == nil {
+		return ""
+	}
+	if u, err := url.Parse(n.public); err != nil || config.IsLoopbackAddr(u.Hostname()) {
+		return ""
+	}
+	return n.public
 }
 
 // Fallback is the host of publicURL, or the product name when there is none.

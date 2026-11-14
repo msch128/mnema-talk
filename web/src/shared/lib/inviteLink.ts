@@ -46,6 +46,8 @@ export interface InviteContext {
   communityName: string
   /** When the code expires (RFC 3339); empty when it does not. */
   expiresAt: string
+  /** The channel the invite lands the new member in (the preview names one every new member can see); empty or absent: the default place. */
+  channelId?: string
   /** True when the page was opened through a vanity link (/join/name); then code is '~name' or empty. */
   vanity?: boolean
 }

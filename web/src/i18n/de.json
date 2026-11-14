@@ -169,6 +169,13 @@
       "srvAWikiPageHoldsAtMost": "Eine Wiki-Seite fasst höchstens 50 KB Text.",
       "srvBaseRevTheRevisionYouEdited": "Die bearbeitete Version fehlt. Öffne die Seite neu.",
       "srvHoursMustBeBetween0": "Stunden müssen zwischen 0 und {a} liegen.",
+      "srvMaxActiveMustBeBetween": "Das Limit aktiver Einladungen muss zwischen 1 und 100 liegen.",
+      "srvMaxExpiresInHoursMust": "Die längste Gültigkeit muss zwischen 1 und 8760 Stunden liegen.",
+      "srvMaxPerHourMustBe": "Das Limit je Stunde muss zwischen 1 und 100 liegen.",
+      "srvYouAlreadyHaveActive": "Du hast bereits {a} aktive Einladungen. Widerrufe zuerst eine.",
+      "srvYouCanCreateInvites": "Du kannst {a} Einladungen pro Stunde erstellen.",
+      "srvAnInviteCanHaveAtMost": "Eine Einladung kann höchstens {a} Verwendungen haben.",
+      "srvAnInviteCanLastAtMost": "Eine Einladung kann höchstens {a} Stunden gültig sein.",
       "invitesPausedLockdown": "Einladungen sind während eines Lockdowns pausiert.",
       "srvJoinLimitMustBeBetween0": "Das Anmelde-Limit muss zwischen 0 und {a} liegen.",
       "srvJoinWindowMinutesMustBe": "Das Anmelde-Zeitfenster muss zwischen {a} und {b} Minuten liegen.",
@@ -377,7 +384,6 @@
       "srvExpiresAtIsTooFar2": "„expires_at“ liegt zu weit in der Zukunft.",
       "srvExpiresAtMustBeIn": "„expires_at“ muss in der Zukunft liegen.",
       "srvExpiresAtMustBeWithin": "„expires_at“ muss innerhalb der nächsten 8760 Stunden liegen.",
-      "srvExpiresInHoursMustBe": "„expires_in_hours“ muss zwischen 1 und 8760 liegen.",
       "srvFileIsEmpty": "Die Datei ist leer.",
       "srvFileStorageIsAlmostFull": "Der Dateispeicher ist fast voll. Uploads sind pausiert.",
       "srvFileStorageIsFullUploads": "Der Dateispeicher ist voll. Uploads sind pausiert.",
@@ -418,7 +424,6 @@
       "srvMaxMentionsMustBeBetween": "„max_mentions“ muss zwischen 1 und {a} liegen.",
       "srvMaxUploadMbMustBe": "Das Upload-Limit muss zwischen 1 und {a} MB liegen.",
       "srvMaxUsesMustBeAt": "„max_uses“ muss mindestens so hoch sein wie die {a} bereits verbrauchten Verwendungen.",
-      "srvMaxUsesMustBeBetween": "„max_uses“ muss zwischen 1 und 1000 liegen.",
       "srvMediaFileIsMissingFrom": "Die Mediendatei fehlt im Speicher.",
       "srvMediaHasExpiredOrWas": "Das Medium ist abgelaufen oder wurde gelöscht.",
       "srvMediaNotFound": "Diese Mediendatei wurde nicht gefunden.",
@@ -3298,6 +3303,47 @@
     "view_wiki": {
       "name": "Wiki ansehen",
       "desc": "Das Wiki lesen. Für @everyone an; schalte es dort aus, um das Wiki für Mitglieder ohne eine Rolle damit zu schließen."
+    },
+    "create_member_invites": {
+      "name": "Einladungen erstellen",
+      "desc": "Einladungen innerhalb der Grenzen der Admins erstellen und die eigenen ansehen und widerrufen, zum Beispiel über das Menü eines Kanals. Pro Kanal erlaubbar oder verbietbar. Ein Timeout und die Wartezeit neuer Mitglieder nehmen es weg."
+    }
+  },
+  "memberInvites": {
+    "menu": "Leute einladen",
+    "title": "Leute in {name} einladen",
+    "intro": "Wer diesen Link hat, kann sich anmelden und {name} beitreten. Gib ihn nur an Leute weiter, die du hier haben willst.",
+    "link": "Einladungslink",
+    "copy": "Link kopieren",
+    "copied": "Link kopiert",
+    "expiry": "Der Link gilt",
+    "making": "Dein Link wird erstellt …",
+    "failed": "Die Einladung konnte nicht erstellt werden. Versuch es noch einmal.",
+    "uses": "Bis zu {count} Personen können sich damit anmelden.",
+    "yours": "Deine Einladungen",
+    "yoursHint": "Widerrufe eine Einladung, um ihren Link zurückzunehmen. Konten, die sich schon angemeldet haben, bleiben.",
+    "none": "Du hast noch keine Einladungen.",
+    "used": "{used} von {max} verwendet",
+    "expires": "Läuft ab {date}",
+    "expired": "Abgelaufen",
+    "usedUp": "Aufgebraucht",
+    "revoke": "Widerrufen",
+    "revokeNamed": "Einladung {code} widerrufen",
+    "revoked": "Einladung widerrufen",
+    "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Versuch es noch einmal.",
+    "done": "Fertig",
+    "by": "von {name}",
+    "into": "in #{name}",
+    "limits": {
+      "title": "Einladungen von Mitgliedern",
+      "hint": "Mitglieder mit dem Recht „Einladungen erstellen“ erstellen Einladungen innerhalb dieser Grenzen. Wer „Einladungen verwalten“ hat, unterliegt den letzten beiden nicht.",
+      "hours": "Längste Gültigkeit (Stunden)",
+      "uses": "Höchstzahl Verwendungen pro Einladung",
+      "active": "Aktive Einladungen pro Mitglied",
+      "perHour": "Neue Einladungen pro Mitglied und Stunde",
+      "invalid": "Nutze ganze Zahlen: Gültigkeit 1 bis 8760 Stunden, Verwendungen 1 bis 1000, aktive Einladungen und Einladungen pro Stunde 1 bis 100.",
+      "saved": "Grenzen gespeichert",
+      "loadFailed": "Die Grenzen konnten nicht geladen werden."
     }
   },
   "audit": {
@@ -3386,7 +3432,10 @@
         "create": "Einladung erstellt",
         "update": "Einladung bearbeitet",
         "revoke": "Einladung widerrufen",
-        "vanity_link": "Kurzlink geändert"
+        "vanity_link": "Kurzlink geändert",
+        "limits": "Grenzen für Einladungen von Mitgliedern geändert",
+        "member_create": "Einladung eines Mitglieds erstellt",
+        "member_revoke": "Einladung eines Mitglieds widerrufen"
       },
       "webhook": {
         "create": "Webhook erstellt",

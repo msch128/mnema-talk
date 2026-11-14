@@ -93,6 +93,8 @@ export const ROWS: readonly SentenceRow[] = [
   ['an event has at most %d roles', 'srvAnEventHasAtMost'],
   ['an event keeps at most %d comments', 'srvAnEventKeepsAtMost'],
   ['an interaction takes at most %d responses', 'srvAnInteractionTakesAtMost'],
+  ['an invite can have at most %d uses', 'srvAnInviteCanHaveAtMost'],
+  ['an invite can last at most %d hours', 'srvAnInviteCanLastAtMost'],
   ['an option is given twice', 'pollOptionTwice', []],
   ['an option is one line of text', 'pollOptionLine', []],
   ['an update is already running', 'srvAnUpdateIsAlreadyRunning'],

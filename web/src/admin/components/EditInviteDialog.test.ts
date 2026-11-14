@@ -20,7 +20,8 @@ const ID = '00000000-0000-4000-8000-000000000411'
 const NOW = new Date('2026-06-01T12:00:00Z')
 const invite = (over: Partial<Invite> = {}): Invite => ({
   id: ID, code: 'edit-me-code', max_uses: 10, uses_count: 3, expires_at: '2026-06-10T12:00:00Z',
-  created_at: '2026-05-01T00:00:00Z', weak: false, ...over
+  created_at: '2026-05-01T00:00:00Z', weak: false, channel_id: null,
+  created_by_id: '00000000-0000-4000-8000-000000000412', created_by_name: 'admin', ...over
 })
 
 let wrapper: VueWrapper

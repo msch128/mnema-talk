@@ -61,7 +61,7 @@ var Classes = slices.Concat(
 		{"channel.%", VisChannel, "names, topics and overwrites of a possibly private channel"},
 	},
 	auditorRows("invites are community administration",
-		"invite.create", "invite.vanity_link", "invite.update", "invite.revoke"),
+		"invite.create", "invite.vanity_link", "invite.update", "invite.revoke", "invite.limits", "invite.member_create", "invite.member_revoke"),
 	auditorRows("moderation of a member, which every auditor reviews",
 		"user.disable", "user.enable", "user.sessions_revoke", "user.status", "user.roles_set",
 		"user.talk_kick", "moderation.timeout", "moderation.timeout_remove", "moderation.ban",

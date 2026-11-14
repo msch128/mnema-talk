@@ -36,6 +36,10 @@ func TestNewMemberWaitsHoldWritingReactingAndSpeakingApart(t *testing.T) {
 	if !got.Has(Connect) {
 		t.Fatal("a new member may still join a Talk and listen")
 	}
+	// Inviting people is writing in the sense of raid protection: a newcomer does not recruit.
+	if got.Has(CreateMemberInvites) || !s.Channel(Subject{ID: vouched}, ch).Has(CreateMemberInvites) || !s.Channel(Subject{ID: old}, ch).Has(CreateMemberInvites) {
+		t.Fatalf("Create invites during the write wait: newcomer %v", got.Has(CreateMemberInvites))
+	}
 	if w := s.NewMemberWaits(newbie); w.Write != 5*time.Minute || w.React != 25*time.Minute || w.Speak != 55*time.Minute {
 		t.Fatalf("waits %+v", w)
 	}

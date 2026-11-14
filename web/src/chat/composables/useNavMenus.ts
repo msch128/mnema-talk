@@ -20,6 +20,7 @@ import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { useToastStore } from '../../stores/toast'
 import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { inviteMenuItems } from '../lib/channelInvite'
 import { canConfigureTalk, canToggleStage, isStageTalk, openTalkSettings, setStage } from '../../talk/lib/talks'
 import { api } from '../../shared/lib/api'
 import { copyToClipboard } from '../../shared/lib/clipboard'
@@ -53,7 +54,7 @@ export function useMenuState() {
 }
 
 export function channelLink(channel: Channel) {
-  const base = typeof window !== 'undefined' ? window.location.origin : ''
+  const base = typeof window !== 'undefined' ? useServerFeaturesStore().shareOrigin : ''
   return `${base}${channelPath(channel)}`
 }
 
@@ -84,7 +85,8 @@ function basicChannelItems(channel: Channel): ContextMenuItem[] {
       label: t('sidebar.copyLink'),
       icon: Link,
       action: () => copyToClipboard(channelLink(channel), t('sidebar.copiedLink'))
-    }
+    },
+    ...inviteMenuItems(channel.id)
   ]
 }
 

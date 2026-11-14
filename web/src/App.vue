@@ -10,6 +10,7 @@ import { useBlocksStore } from './stores/blocks'
 import { useServerFeaturesStore } from './stores/serverFeatures'
 import { recoveryFromLocation } from './app/lib/recoveryLink'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './shared/lib/router'
+import { inviteLandingRoute } from './shared/lib/inviteLanding'
 import Sidebar from './app/components/Sidebar.vue'
 import UserBar from './app/components/UserBar.vue'
 import ChatArea from './chat/components/ChatArea.vue'
@@ -50,7 +51,7 @@ import SkipLinks from './app/components/SkipLinks.vue'
 import TimeoutBanner from './app/components/TimeoutBanner.vue'
 import UpdateBanner from './app/components/UpdateBanner.vue'
 import WikiDialog from './wiki/components/WikiDialog.vue'
-import { ModerationDialog, MessageModerationDialog, EditHistoryDialog, ReportDialog, ForwardDialog, LaterDialog, TalkSettingsHost } from './app/components/overlayHosts'
+import { ModerationDialog, MessageModerationDialog, EditHistoryDialog, ReportDialog, ForwardDialog, LaterDialog, TalkSettingsHost, ChannelInviteHost } from './app/components/overlayHosts'
 import PipHost from './talk/components/PipHost.vue'
 import { useResizable } from './shared/composables/useResizable'
 import { useWebRTC } from './talk/composables/useWebRTC'
@@ -160,7 +161,8 @@ async function onAuthSuccess() {
   resumeAttempted = false
   await initializeApp()
   if (!alive) return
-  const redirect = popRedirectRoute()
+  const landing = inviteLandingRoute(chatStore.allChannels)
+  const redirect = popRedirectRoute() ?? landing
   if (redirect) {
     routing.endFirstRoute()
     navigate(redirect, { replace: true })
@@ -380,6 +382,7 @@ onMounted(async () => {
     <ToastHost />
     <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
     <TalkSettingsHost />
+    <ChannelInviteHost />
     <CallHost />
     <ConfirmDialog />
     <MediaViewer />

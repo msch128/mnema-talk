@@ -216,6 +216,8 @@ var adminMatrix = map[string]string{
 	"POST /api/admin/import/discord/preview":                 "Admin",
 	"GET /api/admin/invites":                                 "Admin,Inv",
 	"POST /api/admin/invites":                                "Admin,Inv",
+	"GET /api/admin/invites/limits":                          "Admin,Inv",
+	"PUT /api/admin/invites/limits":                          "Admin,Inv",
 	"DELETE /api/admin/invites/{id}":                         "Admin,Inv",
 	"PATCH /api/admin/invites/{id}":                          "Admin,Inv",
 	"PUT /api/admin/layout":                                  "Admin,Chan",
