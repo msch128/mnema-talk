@@ -181,19 +181,11 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 	if n >= MaxBots {
 		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("at most %d bots are allowed", MaxBots))
 	}
-	username, err := newUsername(ctx, tx, name)
+	user, err := insertBotUser(ctx, tx, name)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	var user, id uuid.UUID
-	// "!" is no password hash: the account can never sign in (login,
-	// sessions and re-authentication skip bots).
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO users (username, display_name, password_hash, role, is_bot)
-		VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
-		username, name).Scan(&user); err != nil {
-		return uuid.Nil, err
-	}
+	var id uuid.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO bots (user_id, name, allowed_intents, created_by) VALUES ($1, $2, $3, $4) RETURNING id`,
 		user, name, intents, creator).Scan(&id); err != nil {
@@ -243,43 +235,68 @@ func usernameBase(name string) string {
 	return base
 }
 
-// newUsername gives a new bot its @username: the one its name stands for
-// ("mnema bot" is mnema_bot), numbered on a collision (mnema_bot_2). Where the
-// name leaves nothing usable, or the policy for new names refuses it, the name
-// is "bot-" and 12 random hex digits. Bots that exist keep the name they have.
-func newUsername(ctx context.Context, tx pgx.Tx, name string) (string, error) {
+// insertBotUser creates the user row for a bot account, picking the readable
+// username from its name (base, base_2, ...) or falling back to a random name.
+func insertBotUser(ctx context.Context, tx pgx.Tx, name string) (uuid.UUID, error) {
 	if base := usernameBase(name); base != "" {
-		if u, err := freeUsername(ctx, tx, base); err != nil || u != "" {
-			return u, err
+		id, err := insertReadableUser(ctx, tx, name, base)
+		if err != nil || id != uuid.Nil {
+			return id, err
 		}
 	}
-	suffix := make([]byte, 6)
-	if _, err := rand.Read(suffix); err != nil {
-		return "", err
-	}
-	return "bot-" + hex.EncodeToString(suffix), nil
+	return insertRandomUser(ctx, tx, name)
 }
 
-// freeUsername is base, or base numbered from 2, whichever no account holds
-// yet. It is "" when the policy refuses the name or every number is taken.
-func freeUsername(ctx context.Context, tx pgx.Tx, base string) (string, error) {
+// insertReadableUser loops over candidate usernames (base, base_2, ...) up to
+// maxUsernameTries, inserting the user on the first one that does not conflict.
+func insertReadableUser(ctx context.Context, tx pgx.Tx, name, base string) (uuid.UUID, error) {
 	for i := 1; i <= maxUsernameTries; i++ {
 		candidate := base
 		if i > 1 {
 			candidate = fmt.Sprintf("%s_%d", base, i)
 		}
 		if auth.ValidateUsername(candidate) != nil {
-			return "", nil
+			return uuid.Nil, nil
 		}
-		var taken bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = $1)`, candidate).Scan(&taken); err != nil {
-			return "", err
-		}
-		if !taken {
-			return candidate, nil
+		id, err := tryInsertUser(ctx, tx, candidate, name)
+		if err != nil || id != uuid.Nil {
+			return id, err
 		}
 	}
-	return "", nil
+	return uuid.Nil, nil
+}
+
+// tryInsertUser attempts to insert the bot's account with the given username.
+// "!" is no password hash: the account can never sign in (login, sessions and
+// re-authentication skip bots). It returns uuid.Nil, nil on a collision.
+func tryInsertUser(ctx context.Context, tx pgx.Tx, username, displayName string) (uuid.UUID, error) {
+	var user uuid.UUID
+	err := pgx.BeginFunc(ctx, tx, func(sp pgx.Tx) error {
+		return sp.QueryRow(ctx, `
+			INSERT INTO users (username, display_name, password_hash, role, is_bot)
+			VALUES ($1, $2, '!', 'user', TRUE)
+			ON CONFLICT (LOWER(username)) DO NOTHING
+			RETURNING id`, username, displayName).Scan(&user)
+	})
+	if errors.Is(err, pgx.ErrNoRows) || db.IsUniqueViolation(err) {
+		return uuid.Nil, nil
+	}
+	return user, err
+}
+
+// insertRandomUser inserts the account with a random bot-<hex> username.
+func insertRandomUser(ctx context.Context, tx pgx.Tx, name string) (uuid.UUID, error) {
+	for {
+		suffix := make([]byte, 6)
+		if _, err := rand.Read(suffix); err != nil {
+			return uuid.Nil, err
+		}
+		username := "bot-" + hex.EncodeToString(suffix)
+		id, err := tryInsertUser(ctx, tx, username, name)
+		if err != nil || id != uuid.Nil {
+			return id, err
+		}
+	}
 }
 
 // setProfile stores the description and homepage of a bot added from a
