@@ -108,7 +108,7 @@ describe('AdminSystemTab', () => {
 it('keeps the update controls unavailable while sidecar reachability is not known', async () => {
   const st = systemStatus()
   st.update = { ...st.update, update_available: true, latest_version: '0.5.0' }
-  st.self_update = { ...st.self_update, configured: true, reach: 'unknown', reach_reason: 'unset' }
+  st.self_update = { ...st.self_update, configured: true, reach: 'unknown', moved_to: '', reach_reason: 'unset' }
   apiMock.mockResolvedValue(st)
   const w = mount(AdminSystemTab)
   await flushPromises()

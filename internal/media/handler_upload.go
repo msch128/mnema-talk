@@ -117,6 +117,7 @@ func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, u
 func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user *auth.User, in *storedUpload, target *uploadTarget) (uuid.UUID, error) {
 	nm := messages.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID, HasAttachment: true,
+		LifetimeSeconds: target.lifetime,
 	}
 	var storePost func(tx pgx.Tx, msgID uuid.UUID) error
 	if target.post != nil {
@@ -130,9 +131,9 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 			}
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size); err != nil {
+			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, width, height)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size, in.width, in.height); err != nil {
 			return err
 		}
 		return RecordUploadUsage(ctx, tx, user.ID, in.size)
@@ -161,6 +162,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
 // @Param title formData string false "In a forum channel: makes the message a post with this title (1 to 100 characters; not with parent_id or reply_to_id). A root message in a forum needs one." maxlength(100)
 // @Param tag_ids formData string false "With title: the post's tags, comma-separated IDs (at most 5, the forum's rules for moderated and required tags apply)."
+// @Param lifetime_seconds formData integer false "The message's lifetime: the server deletes it that long after storing it (60 to 2592000, at most the community's ceiling; not for a forum post). Needs the messages.lifetime feature." minimum(60) maximum(2592000)
 // @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."

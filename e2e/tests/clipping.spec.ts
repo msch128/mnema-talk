@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import type { Browser, BrowserContext, Page, TestInfo } from '@playwright/test'
 import { test, expect, showWelcomeFlow } from './fixtures'
-import { apiFetch, trackPeerConnections } from './helpers'
+import { apiFetch } from './helpers'
 import { auditClipping, type ClipFinding } from './clipping/auditor'
 import { EXCEPTIONS, isExcepted, unexplained } from './clipping/exceptions'
 import { translate } from './clipping/i18n'
@@ -117,7 +117,7 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   expect((await apiFetch(mp, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   await mp.goto('/')
   const welcome = mp.getByRole('dialog')
-  // isVisible answers at once (it takes no timeout): wait for the dialog instead.
+  // isVisible does not wait (its timeout is ignored): wait for the dialog itself.
   if (await welcome.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)) await audit(mp, info, 'welcome flow', report)
   else report.push({ scene: 'welcome flow', findings: [], unreached: 'the welcome flow did not open' })
   await member.close()
@@ -137,7 +137,6 @@ async function signedIn(browser: Browser, combo: Combo): Promise<{ ctx: BrowserC
     locale: combo.locale === 'en' ? 'en-US' : 'de-DE',
     permissions: ['microphone', 'camera'],
   })
-  await ctx.addInitScript(trackPeerConnections)
   await ctx.addInitScript(fakeDisplayMedia)
   const page = await ctx.newPage()
   await browserFont(page)

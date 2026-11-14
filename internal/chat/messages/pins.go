@@ -95,7 +95,7 @@ func (a *API) listPins(w http.ResponseWriter, r *http.Request) error {
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
 // @Success 200 {object} core.Message "The message."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the message has a lifetime (it cannot be pinned)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -184,8 +184,8 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 		FOR KEY SHARE`, t.message, t.channel); err != nil {
 		return false, fmt.Errorf("lock thread root: %w", err)
 	}
-	var current bool
-	err := tx.QueryRow(ctx, `SELECT is_pinned FROM messages WHERE id = $1 AND channel_id = $2 FOR NO KEY UPDATE`, t.message, t.channel).Scan(&current)
+	var current, timed bool
+	err := tx.QueryRow(ctx, `SELECT is_pinned, expires_at IS NOT NULL FROM messages WHERE id = $1 AND channel_id = $2 AND `+core.LiveSQL("messages")+` FOR NO KEY UPDATE`, t.message, t.channel).Scan(&current, &timed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, core.ErrMessageNotFound
 	}
@@ -194,6 +194,9 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 	}
 	if current == pinned {
 		return false, nil
+	}
+	if pinned && timed {
+		return false, errTimedPin
 	}
 	if pinned {
 		var count int

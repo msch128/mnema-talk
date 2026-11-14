@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -51,8 +51,6 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
   opened.push(bCtx)
-  await aCtx.addInitScript(trackPeerConnections)
-  await bCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
 

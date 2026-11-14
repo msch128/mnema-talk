@@ -4,6 +4,7 @@
 // the page is visible; a signed-in tab with no timer on screen wakes nothing.
 import { getCurrentInstance, onBeforeUnmount, ref, watch } from 'vue'
 import { visibleInterval } from './pageVisibility'
+import { noteServerTime } from './serverTime'
 
 /** Milliseconds to add to Date.now() to get the server's time. */
 export const serverOffset = ref(0)
@@ -53,6 +54,7 @@ export function useServerClock(needed: () => boolean = () => true): void {
 export function syncServerClock(serverNow: string): void {
   const t = Date.parse(serverNow)
   if (!Number.isFinite(t)) return
+  noteServerTime(t)
   serverOffset.value = t - Date.now()
   tick()
 }

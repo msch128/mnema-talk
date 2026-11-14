@@ -1,20 +1,24 @@
-# Importing the structure of a Discord server
+# Importing a server layout from a template
 
-Since 1.2 the Owner and members with the *Administrator* permission can copy the
-**structure** of a Discord server into Mnema Talk: categories, text channels,
-Talks and roles with their permission overwrites. It works from a Discord
-**server template** link. The server advertises it as `import.discord` in the
-`features` list of `GET /api/health`; a web app hides the interface when the
-name is missing.
+Since 1.2 the Owner and members with the *Administrator* permission can build
+the **layout** of a community from a server template: categories, text channels,
+Talks and roles with their permission overwrites. The source is a **server
+template link** in the format Discord uses (`discord.new/<code>` or
+`discord.com/template/<code>`). It is a way to start from a layout you already
+have, not a migration: nothing is sent back and nothing else is read from the
+other service. Mnema Talk is an independent project and not affiliated with
+Discord. The feature is `import.discord` in the `features` list of
+`GET /api/health` (named after the template format it reads); a web app hides
+the interface when the name is missing.
 
 What an import brings in is what a template contains and nothing more: no
 messages, members, emoji, stickers, webhooks or bots.
 
 ## How to use it
 
-1. In Discord: *Server Settings*, *Server Template*, create the template and
-   copy its link (`discord.new/<code>` or `discord.com/template/<code>`; the bare
-   code works too).
+1. At the source: create a server template of the community (in Discord,
+   *Server Settings*, *Server Template*) and copy its link (`discord.new/<code>`
+   or `discord.com/template/<code>`; the bare code works too).
 2. In Mnema Talk: *Admin*, *Import*. Paste the link and choose *Preview*. Nothing
    is written yet: the preview lists every category, channel and Talk that would
    be created, every role with the permissions it would get, and every Discord

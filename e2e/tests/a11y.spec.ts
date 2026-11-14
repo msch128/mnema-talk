@@ -41,9 +41,28 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
   const id = responseString(channel, 'id')
   expect((await apiFetch(page, 'POST', '/api/admin/channels', { name: `${CHANNEL}-talk`, type: 'voice' })).status).toBe(201)
   expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: 'Hello **world** with `code`' })).status).toBe(201)
+  // A message with a lifetime carries its remaining-time mark (doc/timed-messages.md).
+  expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: 'Short-lived note', lifetime_seconds: 3600 })).status).toBe(201)
   await page.goto(`/c/${id}`)
   await expect(page.getByRole('article').filter({ hasText: 'Hello' })).toBeVisible()
   await expectNoViolations(page, 'the chat')
+  await expect(page.getByTestId('lifetime-mark').first()).toBeVisible()
+  await page.getByTestId('lifetime-button').click()
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expectNoViolations(page, 'the composer timer')
+  await page.keyboard.press('Escape')
+  // The thread composer has the same timer, remembered for the thread on its own.
+  const hello = page.locator('[data-msg-id]', { hasText: 'Hello' }).first()
+  await hello.hover()
+  await hello.getByTestId('msg-open-thread').click()
+  const threadTimer = page.locator('aside').filter({ has: page.getByTestId('thread-close') }).getByTestId('lifetime-button')
+  await threadTimer.click()
+  await page.getByRole('menuitem', { name: '1 Std', exact: true }).click()
+  // The narrow thread panel keeps the timer an icon: the choice is in its name and the help line.
+  await expect(threadTimer).toHaveAttribute('aria-label', /1 Std/)
+  await expect(page.locator('aside').filter({ has: page.getByTestId('thread-close') }).getByTestId('lifetime-help')).toBeVisible()
+  await expectNoViolations(page, 'the thread composer timer')
+  await page.getByTestId('thread-close').click()
 
   await page.getByRole('article').filter({ hasText: 'Hello' }).click({ button: 'right' })
   await expect(page.getByRole('menu')).toBeVisible()
@@ -61,7 +80,7 @@ test('the main surfaces meet WCAG AA: chat, menus, settings, admin', async ({ pa
   }
   await page.keyboard.press('Escape')
 
-  for (const tab of ['users', 'roles', 'channels', 'invites']) {
+  for (const tab of ['users', 'roles', 'channels', 'invites', 'messages']) {
     await page.goto(`/admin/${tab}`)
     await expect(page.getByTestId('admin-tabs')).toBeVisible()
     await expectNoViolations(page, `admin ${tab}`)

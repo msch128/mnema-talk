@@ -34,7 +34,9 @@ import (
 
 const (
 	// Identity is the certificate subject of the real release workflow.
-	Identity = "https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main"
+	Identity = "https://github.com/mnema-xyz/talk/.github/workflows/release.yml@refs/heads/main"
+	// LegacyIdentity is the same workflow before the move to mnema-xyz.
+	LegacyIdentity = "https://github.com/msch128/mnema-talk/.github/workflows/release.yml@refs/heads/main"
 	// OtherSource is a repository that is not the policy's.
 	OtherSource = "https://github.com/someone-else/mnema-talk"
 

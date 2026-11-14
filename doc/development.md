@@ -149,8 +149,14 @@ these jobs in parallel (rough wall times with warm caches):
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
 | `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12, 2.9.19): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
+| `e2e-build` | Builds the web bundle and server binary once for all e2e shards | 1–2 min |
 | `e2e` | Verdict of four `e2e-shard (i/4)` jobs: Playwright against the real binary, each shard with its own stack and Owner; all specs on Chromium plus the phone projects. `e2e-report` merges the shards' blob reports into one HTML report artifact | 8–11 min |
 | `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls, <group>)` | Other engines, see above; not required checks | in parallel |
+
+The server binary (with the embedded web bundle) is built once in `e2e-build`
+and shared as an artifact (`e2e-binary`) across all end-to-end test shards
+(`e2e-chromium`, `clip-sweep`, `e2e-browsers`), which run with `SKIP_BUILD=1`
+to avoid redundant builds.
 
 Pull requests that change only README/SECURITY/`doc/` Markdown skip the heavy
 steps (the `changes` job); every required check still reports success, and the
@@ -248,16 +254,26 @@ branch) was waived when it landed there and is not reported again.
    cheaply, but not every edit: no commit trailer, variable or label skips
    it, and the script and the workflow are code-owned paths.
 3. The same workflow then builds the image and pushes it to GHCR:
-   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
+   `ghcr.io/mnema-xyz/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
    provenance and SBOM, and signs every tag keylessly with cosign (verify with
-   [operations.md](operations.md#verifying-a-release-image)). When the
-   repository variable `DOCKERHUB_NAMESPACE` and the secrets
-   `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, the `dockerhub-mirror`
-   job then copies that exact image (same digest, no rebuild) to
-   `docker.io/msch128/mnema-talk` as `:X.Y.Z`, `:X.Y`, `:X` and `:latest`,
-   checks the digests and signs it the same way. Without them the job is
-   skipped with a notice and the release is not affected. To mirror an
+   [operations.md](operations.md#verifying-a-release-image)). The `org-ghcr`
+   job copies that exact image (same digest, no rebuild) to the
+   organization's path `ghcr.io/mnema-xyz/mnema-talk` as `:X.Y.Z`, `:X.Y`,
+   `:X` and `:latest` with the secret `GHCR_MNEMA_XYZ_TOKEN` (a classic PAT,
+   `write:packages` only), signs it there the same way and verifies the
+   signature at both paths; the release fails if the new path is incomplete
+   (the repository moves to the mnema-xyz organization, and GHCR does not
+   redirect). The `dockerhub-mirror` job copies the image to Docker Hub, one
+   leg per account: `docker.io/<DOCKERHUB_NAMESPACE>/mnema-talk` with the
+   secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, and
+   `docker.io/mnemaxyz/mnema-talk` with `DOCKERHUB_MNEMAXYZ_USERNAME` and
+   `DOCKERHUB_MNEMAXYZ_TOKEN` (Docker Hub allows no hyphen in a name). Each
+   leg copies `:X.Y.Z`, `:X.Y`, `:X` and `:latest`, checks the digests, signs
+   the copy the same way; the mnemaxyz leg also sets that repository's short
+   and full description from `deploy/dockerhub/` (its token has the Read,
+   Write, Delete scope this needs). A leg without its secrets is skipped with a notice
+   and the release is not affected. To mirror an
    existing release, run the Release workflow by hand on `main` (`workflow_dispatch`)
    with `mirror_version` set to the version, for example `2.0.0`. Only the mirror job runs: it
    resolves the GHCR digest of that version, mirrors it only if cosign shows that

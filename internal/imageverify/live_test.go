@@ -37,7 +37,7 @@ func TestLiveReleaseImage(t *testing.T) {
 
 	// The same image under a stricter, wrong identity must be refused.
 	p := DefaultPolicy()
-	p.IdentityRegexp = `^https://github\.com/msch128/mnema-talk/\.github/workflows/ci\.yml@refs/heads/main$`
+	p.Origins = []Origin{{IdentityRegexp: `^https://github\.com/msch128/mnema-talk/\.github/workflows/ci\.yml@refs/heads/main$`, Source: LegacySource}}
 	strict, err := New(p, LiveTrust(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)

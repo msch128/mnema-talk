@@ -20,6 +20,7 @@ member GET /me/blocks
 member GET /me/saved
 member GET /members
 member GET /mentions
+member GET /message-settings
 member GET /messages/by-number/{number}
 member GET /messages/{messageID}/forward
 member GET /messages/{messageID}/thread
@@ -64,6 +65,7 @@ member PUT /users/me/privacy
 admin DELETE /categories/{id}
 admin DELETE /channels/{id}
 admin DELETE /reports/{id}
+admin GET /message-settings
 admin GET /reports
 admin GET /reports/open-count
 admin GET /reports/{id}
@@ -72,10 +74,14 @@ admin PATCH /categories/{id}
 admin PATCH /channels/{id}
 admin POST /categories
 admin POST /channels
+admin POST /channels/{id}/auto-delete/preview
 admin POST /channels/{id}/duplicate
+admin POST /message-settings/auto-delete/preview
 admin POST /reports/{id}/resolve
 admin PUT /channels/{id}/auto-delete
 admin PUT /layout
+admin PUT /message-settings/auto-delete
+admin PUT /message-settings/lifetimes
 bot DELETE /channels/{channelID}/messages/{messageID}
 bot DELETE /channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me
 bot GET /channels

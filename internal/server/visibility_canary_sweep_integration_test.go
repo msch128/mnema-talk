@@ -392,14 +392,15 @@ func (s *canarySweep) check(who, route, where string, body []byte) {
 		}
 		seen[word] = true
 		s.found[who][word] = true
-		if !mayRead(who, c) {
+		// A message with a lifetime went out on the sockets while it lived.
+		if !mayRead(who, c) && !(route == "ws" && c == clsEnded) {
 			s.leak(who, route, s.w.wordWhat[word], fmt.Sprintf("%s: %s word of %q (class %s) in %s: %s", who, word, s.w.wordWhat[word], c, where, excerpt(body, word)))
 		}
 	}
 	for _, id := range uuidPattern.FindAllString(string(body), -1) {
 		c, ok := s.w.ids[id]
 		// exstaff learnt the Staff ids while on Staff; only its words are checked.
-		if !ok || seen[id] || strings.Contains(where, id) || mayRead(who, c) || (who == "exstaff" && c == clsStaff) {
+		if !ok || seen[id] || strings.Contains(where, id) || mayRead(who, c) || (who == "exstaff" && c == clsStaff) || (route == "ws" && c == clsEnded) {
 			continue
 		}
 		seen[id] = true

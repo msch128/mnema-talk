@@ -42,7 +42,7 @@ function statusFixture(overrides: Partial<OperatorStatus> = {}): OperatorStatus 
       configured: false,
       image: 'ghcr.io/msch128/mnema-talk:1.2',
       reach: 'yes',
-      reach_reason: 'follows',
+      moved_to: '', reach_reason: 'follows',
       available: false,
       next_allowed_at: null,
     },

@@ -38,7 +38,10 @@ In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
 `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
 later releases add more, among them `messages.nonce` (the server de-duplicates a repeated send by its `nonce`;
-clients send `nonce` only when health lists it, as older servers reject unknown fields)
+clients send `nonce` only when health lists it, as older servers reject unknown fields),
+`messages.lifetime` and `channels.auto_delete.v2` (3.1: messages with a lifetime, auto-delete in hours with a scope
+and a community default, the picture size on attachments; every change additive, see [timed messages](timed-messages.md#api);
+the channel's `auto_delete_days` stays within 0 to 90, the range 3.0 published, whatever the period in hours)
 (`internal/server/health.go`). A name never changes meaning and is never
 removed within a major version; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a

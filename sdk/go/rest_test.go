@@ -87,6 +87,29 @@ func TestCreateMessageSendsTheDocumentedBody(t *testing.T) {
 	}
 }
 
+func TestATimedMessageSendsItsLifetimeAndReadsItsEnd(t *testing.T) {
+	r, reqs := restServer(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"id":"m","channel_id":"c","created_at":"2026-11-13T10:00:00Z","expires_at":"2026-11-13T11:00:00Z"}`))
+	})
+	m, err := r.CreateMessage(context.Background(), "c", MessageCreate{Content: "soon gone", LifetimeSeconds: 3600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(reqs()[0].body); got != `{"content":"soon gone","lifetime_seconds":3600}` {
+		t.Fatalf("body = %s", got)
+	}
+	if m.ExpiresAt == nil || m.ExpiresAt.Sub(m.CreatedAt) != time.Hour {
+		t.Fatalf("ExpiresAt = %v", m.ExpiresAt)
+	}
+
+	r, _ = restServer(t, func(w http.ResponseWriter, _ *http.Request, _ int) { writeJSON(w, 201, map[string]string{"id": "m"}) })
+	if m, err = r.CreateMessage(context.Background(), "c", MessageCreate{Content: "stays"}); err != nil || m.ExpiresAt != nil {
+		t.Fatalf("a message without a lifetime: ExpiresAt = %v, %v", m.ExpiresAt, err)
+	}
+}
+
 func TestEditMessageSendsOnlyTheChangedFields(t *testing.T) {
 	r, reqs := restServer(t, func(w http.ResponseWriter, _ *http.Request, _ int) { writeJSON(w, 200, Message{ID: "m"}) })
 	if _, err := r.EditMessage(context.Background(), "c", "m", MessageEdit{Components: &[]Component{}}); err != nil {

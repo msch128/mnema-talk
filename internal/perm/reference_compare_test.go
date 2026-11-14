@@ -171,7 +171,7 @@ func genCommunity(seed uint64, now time.Time) community {
 	g := community{loaded: now.Add(-time.Duration(r.IntN(120)) * time.Second)}
 	g.st = State{EveryoneID: everyone, Everyone: pick(r, All&^Administrator, 0.6),
 		Roles:     map[uuid.UUID]Role{everyone: {ID: everyone, Name: "@everyone", Everyone: true}},
-		UserRoles: map[uuid.UUID][]uuid.UUID{}, Owners: map[uuid.UUID]bool{}, Bots: map[uuid.UUID]bool{},
+		UserRoles: map[uuid.UUID][]uuid.UUID{}, Owners: map[uuid.UUID]bool{}, Bots: map[uuid.UUID]bool{}, BotsAll: map[uuid.UUID]bool{},
 		ChannelCat: map[uuid.UUID]uuid.UUID{}, Stages: map[uuid.UUID]bool{}, Categories: map[uuid.UUID]bool{},
 		DMs: map[uuid.UUID]map[uuid.UUID]bool{}, DMTalks: map[uuid.UUID]uuid.UUID{},
 		ChannelOv: map[uuid.UUID]Scope{}, CategoryOv: map[uuid.UUID]Scope{},
@@ -230,6 +230,7 @@ func (g *community) genMembers(r *rand.Rand, now time.Time) {
 			g.st.Owners[u] = true
 		case r.IntN(6) == 0:
 			g.st.Bots[u] = true
+			g.st.BotsAll[u] = r.IntN(2) == 0
 		}
 		if r.IntN(5) == 0 {
 			g.st.Timeouts[u] = Timeout{Until: now.Add(time.Duration(r.IntN(7200)-3600) * time.Second)}
@@ -305,8 +306,8 @@ func (g *community) genConversations(r *rand.Rand) {
 }
 
 func (g community) describe() string {
-	return fmt.Sprintf("everyone=%b roles=%v userRoles=%v owners=%v bots=%v channels=%v catOv=%v chanOv=%v dms=%v calls=%v timeouts=%v rules=%d accepted=%v newMember=%+v joined=%v loaded=%v dmsOff=%v",
-		g.st.Everyone, g.st.Roles, g.st.UserRoles, g.st.Owners, g.st.Bots, g.st.ChannelCat, g.st.CategoryOv, g.st.ChannelOv,
+	return fmt.Sprintf("everyone=%b roles=%v userRoles=%v owners=%v bots=%v botsAll=%v channels=%v catOv=%v chanOv=%v dms=%v calls=%v timeouts=%v rules=%d accepted=%v newMember=%+v joined=%v loaded=%v dmsOff=%v",
+		g.st.Everyone, g.st.Roles, g.st.UserRoles, g.st.Owners, g.st.Bots, g.st.BotsAll, g.st.ChannelCat, g.st.CategoryOv, g.st.ChannelOv,
 		g.st.DMs, g.st.DMTalks, g.st.Timeouts, g.st.RulesVersion, g.st.RulesAccepted, g.st.NewMember, g.st.Joined, g.loaded, g.st.DMsDisabled)
 }
 

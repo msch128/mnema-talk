@@ -16,8 +16,12 @@ const text = (v: string): Inline[] => (v ? [{ t: 'text', v }] : [])
  * @name for a member (2 to 32 letters, digits, "_", "." or "-"). With `known`
  * only those members and @all/@here are highlighted, and they get the data
  * the click handler needs. `me` marks the reader's own mentions.
+ *
+ * `known` may be a Map from the lower-cased username to the display name: the
+ * pill then reads "@Display Name" and the "@username" is its tooltip. The
+ * stored text stays "@username", so a rename never breaks a mention.
  */
-export function userMentionRule(known: ReadonlySet<string> | null, me: string): TextRule {
+export function userMentionRule(known: ReadonlySet<string> | ReadonlyMap<string, string> | null, me: string): TextRule {
   const self = me.toLowerCase()
   return {
     re: /(^|[\s(])@([A-Za-z0-9_.-]{2,32})/g,
@@ -32,8 +36,16 @@ export function userMentionRule(known: ReadonlySet<string> | null, me: string): 
       if (group) cls.push('md-mention-group')
       if (lower === self) cls.push('md-mention-me')
       const attrs: Record<string, string> = { class: cls.join(' ') }
-      if (known) Object.assign(attrs, { 'data-mention': lower, role: 'button', tabindex: '0' })
-      return [...text(pre), { t: 'el', tag: 'span', attrs, c: text(`@${name}`) }, ...text(raw.slice(name.length))]
+      let label = `@${name}`
+      if (known) {
+        Object.assign(attrs, { 'data-mention': lower, role: 'button', tabindex: '0' })
+        const display = known instanceof Map ? (known.get(lower) ?? '').trim() : ''
+        if (display && display.toLowerCase() !== lower) {
+          label = `@${display}`
+          attrs['title'] = `@${name}`
+        }
+      }
+      return [...text(pre), { t: 'el', tag: 'span', attrs, c: text(label) }, ...text(raw.slice(name.length))]
     }
   }
 }

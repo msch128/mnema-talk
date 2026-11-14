@@ -1,5 +1,5 @@
 import type { BrowserContext, Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -66,7 +66,6 @@ async function twoMembers(browser: Browser, tag: string) {
   opened.push(aCtx)
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   opened.push(bCtx)
-  await aCtx.addInitScript(trackPeerConnections)
   await aCtx.addInitScript(fakeDisplayMedia, [640, 360] as [number, number])
   await bCtx.addInitScript(fakeDisplayMedia, [480, 360] as [number, number])
   const a = await aCtx.newPage()

@@ -32,6 +32,11 @@ afterEach(() => {
 })
 
 describe('ThreadRootCard', () => {
+  it('shows the time left of a root with a lifetime, like its replies', () => {
+    mountCard({ expires_at: new Date(Date.now() + 3 * 3600_000 - 1000).toISOString() })
+    expect(w.get('[data-testid="lifetime-mark"]').text()).toBe('Disappears in 3 h')
+  })
+
   it('shows the first message and replies to it', async () => {
     const root = mountCard()
     expect(w.text()).toContain('First message')

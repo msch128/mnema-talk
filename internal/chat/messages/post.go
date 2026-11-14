@@ -109,6 +109,9 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 		return uuid.Nil, nil, err
 	}
 	pending.Commit(ctx, id)
+	if nm.LifetimeSeconds > 0 {
+		wakeExpiry(p, time.Now().Add(time.Duration(nm.LifetimeSeconds)*time.Second))
+	}
 	return id, stored, nil
 }
 
