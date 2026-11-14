@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { api, onUnavailable } from '../shared/lib/api'
 import { decodeServerHealth, isServerHealthUnavailable, type ServerHealth, type ServerHealthUnavailable } from '../types/rest'
 import { syncDocumentIcons } from '../shared/lib/communityIcon'
+import { resolveShareOrigin } from '../shared/lib/shareOrigin'
 
 /** How often the server is asked again while it reports a dependency as down. */
 export const OUTAGE_RECHECK_MS = 30000
@@ -102,7 +103,8 @@ function featureFlags(has: (name: string) => boolean) {
     wiki: computed(() => has('wiki')),
     notifyLevelsV2: computed(() => has('notify.levels.v2')),
     messageNonce: computed(() => has('messages.nonce')),
-    reportsOpenCount: computed(() => has('reports.open_count'))
+    reportsOpenCount: computed(() => has('reports.open_count')),
+    memberInvites: computed(() => has('invites.member'))
   }
 }
 
@@ -118,6 +120,10 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   const communityName = ref('')
   // The version of the community icon (GET /api/community/icon); empty while the Owner set none.
   const communityIcon = ref('')
+  // The server's PUBLIC_URL; empty until the answer, on a dev server or an older release.
+  const publicUrl = ref('')
+  /** The base of every link to share (invites, message links): the public address, not the origin of this page (the desktop app has its own). */
+  const shareOrigin = computed(() => resolveShareOrigin(publicUrl.value, window.location.origin))
   // The dependencies the server reports as down (`database`, `storage`); empty while it is healthy.
   const unavailable = ref<string[]>([])
   // Without object storage uploads, attachments and pictures fail; chat and Talks do not need it.
@@ -138,6 +144,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     list.value = health.features ?? []
     communityName.value = health.community_name?.trim() ?? ''
     setCommunityIcon(health.community_icon ?? '')
+    publicUrl.value = health.public_url ?? ''
     unavailable.value = health.status === 'unavailable' ? health.unavailable : []
     loaded.value = true
   }, () => unavailable.value.length > 0)
@@ -157,7 +164,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   listenForFailures(refresh)
 
   return {
-    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load, refresh,
+    list, loaded, unavailable, storageDown, ensureLoaded, communityName, publicUrl, shareOrigin, communityIcon, setCommunityIcon, has, load, refresh,
     ...featureFlags(has)
   }
 })

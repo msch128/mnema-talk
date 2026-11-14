@@ -1,4 +1,3 @@
-import { watch } from 'vue'
 import * as voiceSession from '../../lib/voiceSession'
 import { preloadNoiseSuppressor } from '../../lib/noiseSuppressor'
 import { useToastStore } from '../../../stores/toast'
@@ -21,6 +20,7 @@ import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline }
 import { stopMicTest } from './micTest'
 import { cleanupPeerConnection, handleRemoteCandidate, handleRemoteOffer, setupPeerConnection } from './peer'
 import { stopScreenShare } from './screen'
+import { socketUp } from './socketGap'
 import { cleanupVoiceAudio, startSpeakingDetection } from './voiceAudio'
 
 function registerSignalingHandlers(cx: Cx) {
@@ -134,7 +134,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   cancelPendingLobby(cx)
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
-  const { voice, chat, st } = cx
+  const { st } = cx
   resetMediaAnnouncements()
   closeMediaRoom()
   stopMicTest(cx)
@@ -143,6 +143,18 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
 
   const gen = ++st.joinGeneration
   st.dtx = null
+  // Until the join is sent, a reconnect must not resume this call: the join
+  // that follows would be a second one (see socketGap.ts).
+  st.joinPendingGen = gen
+  try {
+    await runJoin(cx, channelId, gen, takeover)
+  } finally {
+    if (st.joinPendingGen === gen) st.joinPendingGen = null
+  }
+}
+
+async function runJoin(cx: Cx, channelId: string, gen: number, takeover: boolean) {
+  const { voice, chat, st } = cx
   voice.setChannel(channelId)
   startMediaCall(cx, channelId)
   voiceSession.track(channelId)
@@ -155,15 +167,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   // A join sent before the realtime socket is up would be dropped and the call
   // would wait for an answer forever (a Talk picked right after the page
   // loaded): it waits for the socket instead.
-  // The flag keeps the reconnect that brings the socket up from sending a
-  // resume beside this join (rejoinAfterReconnect, run in the same flush as the
-  // wake-up). It drops right after the wait: nothing async runs from there to
-  // the send, and a throw on the way must not leave it up.
-  if (!chat.isConnected) {
-    st.joinAwaitsSocket = true
-    await socketUp(cx)
-    st.joinAwaitsSocket = false
-  }
+  if (!chat.isConnected) await socketUp(cx)
   if (gen !== st.joinGeneration) {
     // A capture that was not routed through the pipeline is stopped by nobody else.
     stopStreams(sendStream)
@@ -173,6 +177,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
+  st.joinPendingGen = null
   chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId() } : { channel_id: channelId, tab: tabId() })
   openMediaRoom()
   attachSubscriptions(cx)
@@ -190,17 +195,6 @@ export function sendMuteState(cx: Cx) {
   chat.sendWSEvent('voice_mute_state', { muted: !!voice.isMuted, deafened: !!voice.isDeafened })
 }
 
-/** Resolves once the realtime socket is connected. */
-function socketUp({ chat }: Cx): Promise<void> {
-  return new Promise((resolve) => {
-    const stop = watch(() => chat.isConnected, (up) => {
-      if (!up) return
-      stop()
-      resolve()
-    })
-  })
-}
-
 // How long the room state after a rejoin gets to arrive.
 const ROOM_STATE_GRACE_MS = 5000
 
@@ -210,8 +204,9 @@ const ROOM_STATE_GRACE_MS = 5000
 export function rejoinAfterReconnect(cx: Cx) {
   const { voice, chat } = cx
   const channelId = voice.currentChannelId
-  // A join still waiting for the socket sends itself now; a resume would be a second join.
-  if (!channelId || cx.st.joinAwaitsSocket) return
+  // A join that is not sent yet sends itself; a resume would be a second join.
+  if (cx.st.joinPendingGen === cx.st.joinGeneration) return
+  if (!channelId) return
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)

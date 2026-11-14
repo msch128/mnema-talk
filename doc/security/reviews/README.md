@@ -14,6 +14,7 @@ audit.
 
 | Report | Change | Subject |
 |---|---|---|
+| [828](2026-11/828.md) | #828 | shared links use the server's public address (`public_url`) |
 | [771-third](2026-11/771-third.md) | #771, merged with #780 | metadata removal for JPEG, PNG and WebP, third round |
 | [775](2026-11/775.md) | #775, merged with #780 | repair of the media group protocol |
 | [777-keys](2026-11/777-keys.md) | #777 | key rotation (`JWT_SECRET_PREVIOUS`, `DATA_KEY`, `rotate-keys`) |
@@ -22,6 +23,7 @@ audit.
 | [779c](2026-11/779c.md) | #779 | group merge, third round |
 | [779d](2026-11/779d.md) | #779 | group merge, fourth round |
 | [779-final](2026-11/779-final.md) | #779 | the three lines that changed after the fourth round, reviewed after the merge |
+| [831](2026-11/831.md) | #831 | members creating invites, and inviting into a channel |
 | [780](2026-11/780.md) | #780 | the merge train as a whole |
 | [780-events](2026-11/780-events.md) | #780 | typed events |
 | [780-outbox](2026-11/780-outbox.md) | #780 | webhook queue written in the transaction, health under a storage outage |
@@ -42,6 +44,7 @@ audit.
 | [824](2026-11/824.md) | #824 | each lower camera layer encodes its own copy of the capture, so a bandwidth-cut best layer no longer shrinks the thumbnail; the clones' lifecycle (camera light), the frame encryption of their lines, and the e2e noise filter turned off from the fixture |
 | [815-delta](2026-11/815-delta.md) | #815 | messages with a lifetime, the last delta: new, duplicated and conversation Talk channels answer the auto-delete they follow (every channel INSERT ... RETURNING checked), the narrow header chip, the admin Messages tab heading and the layout spec; MERGE, two non-blocking suggestions (the GoWaited comment is fixed in the same pull request) |
 | [829](2026-11/829.md) | #829 | a bot can be given access to every channel in one step: the install and settings endpoints under the bot invariant, the snapshot rule that keeps private channels and categories hidden from such a bot, replace semantics when switching back; three rounds, the findings of the first two fixed in the same pull request |
+| [822](2026-11/822.md) | #822 | the lobby's join and a join during the microphone prompt could be dropped or doubled around a socket drop: both wait for the socket and a reconnect sends no resume beside a held join; two replay ideas (a leave, a stop) were rejected in review as ineffective or unsafe, and the lost leave stays a ledger follow-up |
 | [836](2026-11/836.md) | #836 | each lower screen layer encodes its own copy of the capture, as #824 did for the camera: the clones' lifecycle (sharing indicator), a quality change, reconnects, the frame encryption of their lines; two rounds: the required finding of the first (a stale hint after a quality change) was fixed in the same pull request and checked in the second |
 
 ## 2026-11: defect hunt on 3.0.8

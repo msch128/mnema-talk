@@ -85,7 +85,7 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
   items.push({
     label: t('chat.copyLink'),
     icon: LinkIcon,
-    action: () => copy(`${window.location.origin}${chatStore.linkTo(chatStore.activeChannel?.id ?? msg.channel_id, { messageId: msg.id })}`, 'chat.copiedLink')
+    action: () => copy(`${useServerFeaturesStore().shareOrigin}${chatStore.linkTo(chatStore.activeChannel?.id ?? msg.channel_id, { messageId: msg.id })}`, 'chat.copiedLink')
   })
   items.push(markUnreadItem(msg))
   const features = useServerFeaturesStore()

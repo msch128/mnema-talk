@@ -189,7 +189,7 @@ Installing: nothing is on npm or behind a module proxy tag yet.
 
 - The TypeScript SDK is attached to every release as a tarball with its
   SHA-256 next to it
-  (`npm install https://github.com/msch128/mnema-talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`).
+  (`npm install https://github.com/mnema-xyz/talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`).
   The `sdk-package` job of `release.yml` builds it from the tagged commit in
   a sealed container, like the web bundle, and stamps the release's version
   into the package as it packs. The version is not kept in the repository's

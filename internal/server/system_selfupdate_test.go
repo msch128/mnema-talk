@@ -24,7 +24,7 @@ func selfUpdateRequest() *http.Request {
 func TestConcurrentSelfUpdatesReserveOneSlot(t *testing.T) {
 	releases := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"tag_name":"v0.4.0","html_url":"https://github.com/msch128/mnema-talk/releases/tag/v0.4.0"}`))
+		_, _ = w.Write([]byte(`{"tag_name":"v0.4.0","html_url":"https://github.com/mnema-xyz/talk/releases/tag/v0.4.0"}`))
 	}))
 	defer releases.Close()
 	checker := update.NewChecker(releases.URL, "0.3.0")
@@ -50,7 +50,7 @@ func TestConcurrentSelfUpdatesReserveOneSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 	confirmEntered, confirmRelease := make(chan struct{}, 2), make(chan struct{}, 2)
-	h := &systemHandler{cfg: &config.Config{AppImage: "ghcr.io/msch128/mnema-talk:latest"}, version: "0.3.0", updates: checker,
+	h := &systemHandler{cfg: &config.Config{AppImage: "ghcr.io/mnema-xyz/mnema-talk:latest"}, version: "0.3.0", updates: checker,
 		self: selfUpdate{updater: updater, now: time.Now, confirm: func(context.Context, uuid.UUID, string) (time.Duration, error) {
 			confirmEntered <- struct{}{}
 			<-confirmRelease
