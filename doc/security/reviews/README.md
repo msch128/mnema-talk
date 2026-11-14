@@ -41,6 +41,7 @@ audit.
 | [819](2026-11/819.md) | #819 | a Talk join sent before the realtime socket was up was dropped and the call never connected: the join waits for the socket, backs out with its microphone released, and a reconnect sends no resume beside it; two rounds: both findings of the first fixed in the same pull request and checked in the second |
 | [824](2026-11/824.md) | #824 | each lower camera layer encodes its own copy of the capture, so a bandwidth-cut best layer no longer shrinks the thumbnail; the clones' lifecycle (camera light), the frame encryption of their lines, and the e2e noise filter turned off from the fixture |
 | [829](2026-11/829.md) | #829 | a bot can be given access to every channel in one step: the install and settings endpoints under the bot invariant, the snapshot rule that keeps private channels and categories hidden from such a bot, replace semantics when switching back; three rounds, the findings of the first two fixed in the same pull request |
+| [822](2026-11/822.md) | #822 | the lobby's join and a join during the microphone prompt could be dropped or doubled around a socket drop: both wait for the socket and a reconnect sends no resume beside a held join; two replay ideas (a leave, a stop) were rejected in review as ineffective or unsafe, and the lost leave stays a ledger follow-up |
 
 ## 2026-11: defect hunt on 3.0.8
 
