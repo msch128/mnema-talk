@@ -44,6 +44,17 @@ jobs:
         # Odd seeds: no conversation call, so an Administrator's channel list
         # is "all"; even seeds: a call exists.
         parity: [1, 2]
+        # The canary world, and 400 random communities whose every member
+        # must see exactly what the snapshot of the test's own mirror grants.
+        # Each runs in a job of its own: the canary world alone takes about
+        # half an hour (the read limit paces every observer), and both in one
+        # test binary outgrew its timeout.
+        sweep: [canaries, communities]
+        include:
+          - sweep: canaries
+            test: TestNoCanaryReachesAnObserverOutsideItsClass
+          - sweep: communities
+            test: TestRandomCommunitiesShowEachMemberWhatTheSnapshotAllows
     services:
       postgres:
         image: postgres:18-alpine
@@ -73,6 +84,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      # The canary world, and 400 random communities whose every member must
-      # see exactly what the snapshot of the test's own mirror grants.
-      - run: go test -tags=integration -count=1 -timeout=40m -run 'TestNoCanaryReachesAnObserverOutsideItsClass|TestRandomCommunitiesShowEachMemberWhatTheSnapshotAllows' -v ./internal/server
+      - run: go test -tags=integration -count=1 -timeout=50m -run "^${TEST}\$" -v ./internal/server
+        env:
+          TEST: ${{ matrix.test }}
