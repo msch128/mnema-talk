@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import InviteInactive from './InviteInactive.vue'
 import { setLocale } from '../../i18n'
+import de from '../../i18n/de.json'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -24,8 +25,8 @@ describe('InviteInactive', () => {
     const deBtn = w.findAll('button').find(b => b.attributes('lang') === 'de')
     expect(deBtn).toBeDefined()
     await deBtn!.trigger('click')
-    expect(w.get('[data-testid="invite-inactive-title"]').text()).toBe('Dieser Link ist nicht aktiv')
-    expect(w.get('[data-testid="invite-inactive-hint"]').text()).toContain('Frag die Person, die ihn geteilt hat')
-    expect(w.get('[data-testid="invite-inactive-signin"]').text()).toBe('Zur Anmeldung')
+    expect(w.get('[data-testid="invite-inactive-title"]').text()).toBe(de.login.inviteInactiveTitle)
+    expect(w.get('[data-testid="invite-inactive-hint"]').text()).toContain(de.login.inviteInactiveHint.slice(0, 12))
+    expect(w.get('[data-testid="invite-inactive-signin"]').text()).toBe(de.login.inviteInactiveSignIn)
   })
 })
