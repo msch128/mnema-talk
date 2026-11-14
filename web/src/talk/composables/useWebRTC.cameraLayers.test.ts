@@ -9,6 +9,9 @@ installHarness()
 
 const cameraDeclarations = (sent: Parameters<typeof declared>[0]) => declared(sent).filter(p => (p as { source?: string }).source === 'camera')
 
+/** The copies the code made of a capture, in order. */
+const clonesOf = (track: MediaStreamTrack) => vi.mocked(track.clone).mock.results.map(r => r.value as MediaStreamTrack)
+
 function cameraFrom(stream: MediaStream) {
   vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(async () => stream)
 }
@@ -39,9 +42,8 @@ describe('layers of my camera', () => {
     expect(knownThen).toEqual([1])
     expect(cameraDeclarations(sent)).toEqual([{ layers: [{ width: 1280, height: 720, fps: 30 }, { width: 640, height: 360, fps: 30 }, { width: 320, height: 180, fps: 15 }], source: 'camera' }])
     expect(camera.track).toBe(track)
-    // The lower lines carry the same capture, scaled down by the encoder, but stay off.
-    expect(cameraLow1.track).toBe(track)
-    expect(cameraLow2.track).toBe(track)
+    // Each lower line carries a copy of the capture of its own, scaled down by its encoder, but stays off.
+    expect(clonesOf(track)).toEqual([cameraLow1.track, cameraLow2.track])
     expect(encodingOf(cameraLow1)).toMatchObject({ active: false, scaleResolutionDownBy: 2, maxFramerate: 30, maxBitrate: 500_000 })
     expect(encodingOf(cameraLow2)).toMatchObject({ active: false, scaleResolutionDownBy: 4, maxFramerate: 15, maxBitrate: 150_000 })
     expect(encodingOf(camera)).toMatchObject({ active: true })
@@ -128,6 +130,27 @@ describe('layers of my camera', () => {
     expect(encodingOf(cameraLow1).active).toBe(false)
   })
 
+  // The browser adapts one track to the most constrained sender it feeds: on a
+  // shared track, a best layer cut down for bandwidth shrank the thumbnail too.
+  it('gives each lower layer a copy of the capture of its own, kept while the camera runs and stopped with it', async () => {
+    const { rtc, chat, camera, cameraLow1, cameraLow2 } = await joinedWithCameraLayers()
+    const { stream, track } = cameraCapture(1280, 720)
+    cameraFrom(stream)
+    await rtc.startCamera()
+    const [copy1, copy2] = clonesOf(track)
+    expect(copy1).not.toBe(copy2)
+    expect(camera.track).toBe(track)
+
+    chat.handleWSEvent({ type: 'screen_layers_wanted', payload: { channel_id: 'ch-1', layers: [1, 2], source: 'camera' } })
+    await vi.waitFor(() => expect(encodingOf(cameraLow1).active).toBe(true))
+    expect(clonesOf(track)).toHaveLength(2)
+    expect([cameraLow1.track, cameraLow2.track]).toEqual([copy1, copy2])
+
+    rtc.stopCamera()
+    expect(copy1?.stop).toHaveBeenCalled()
+    expect(copy2?.stop).toHaveBeenCalled()
+  })
+
   it('keeps going when a lower line refuses the track or the capture cannot be read', async () => {
     const { rtc, chat, voice, camera, cameraLow1, cameraLow2 } = await joinedWithCameraLayers()
     const { stream, track } = cameraCapture(1280, 720)
@@ -136,7 +159,7 @@ describe('layers of my camera', () => {
     cameraLow1.replaceTrack.mockRejectedValueOnce(new Error('InvalidModificationError'))
     await rtc.startCamera()
     expect(cameraLow1.track).toBeNull()
-    expect(cameraLow2.track).toBe(track)
+    expect(clonesOf(track)).toContain(cameraLow2.track)
     expect(camera.track).toBe(track)
 
     // A capture that cannot be read once does not stop later changes.
@@ -179,8 +202,11 @@ describe('layers of my camera', () => {
     })
     chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_CAMERA_LAYER_OFFER } })
     await vi.waitFor(() => expect(pc.transceivers.length).toBe(8))
-    await vi.waitFor(() => expect(present(pc.senders[6]).track).toBe(track))
-    await vi.waitFor(() => expect(present(pc.senders[7]).track).toBe(track))
+    // The running camera's copies go on the new lines; no new copy is made.
+    const [copy1, copy2] = clonesOf(track)
+    await vi.waitFor(() => expect(present(pc.senders[6]).track).toBe(copy1))
+    await vi.waitFor(() => expect(present(pc.senders[7]).track).toBe(copy2))
+    expect(clonesOf(track)).toHaveLength(2)
     expect(present(pc.senders[2]).track).toBe(track)
     expect(known).toEqual([2])
     expect(cameraDeclarations(sent)).toHaveLength(2)

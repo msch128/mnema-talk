@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, responseString, suiteMember } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -44,8 +44,6 @@ test('a camera whose tile is not on screen is not sent, and comes back with the 
   test.setTimeout(180_000)
   const publisherCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
-  await publisherCtx.addInitScript(trackPeerConnections)
-  await viewerCtx.addInitScript(trackPeerConnections)
   const publisher = await publisherCtx.newPage()
   const viewer = await viewerCtx.newPage()
   const created: string[] = []

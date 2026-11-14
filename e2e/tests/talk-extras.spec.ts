@@ -1,5 +1,5 @@
 import type { BrowserContext, Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -32,8 +32,8 @@ const fakeDisplayMedia = () => {
   }
 }
 
-// A full HD "screen" with sound (a tone), and every peer connection of the
-// page in window.__pcs so a test can look at what is sent.
+// A full HD "screen" with sound (a tone). Every peer connection of the page is
+// in window.__pcs (fixtures.ts), so a test can look at what is sent.
 const fakeDisplayMediaWithSound = () => {
   MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
@@ -56,11 +56,6 @@ const fakeDisplayMediaWithSound = () => {
     if (!audioTrack) throw new Error('Expected oscillator track')
     stream.addTrack(audioTrack)
     return stream
-  }
-  const Native = window.RTCPeerConnection
-  window.__pcs = []
-  window.RTCPeerConnection = class extends Native {
-    constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) { super(...args); window.__pcs.push(this) }
   }
 }
 
@@ -113,7 +108,6 @@ async function twoMembers(browser: Browser, tag: string, { pip = false, sound = 
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   opened.push(bCtx)
   for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(sound ? fakeDisplayMediaWithSound : fakeDisplayMedia)
-  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   if (pip) await aCtx.addInitScript(fakePictureInPicture)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
