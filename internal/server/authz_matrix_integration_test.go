@@ -176,6 +176,7 @@ var adminMatrix = map[string]string{
 	"DELETE /api/admin/bots/{id}/commands/{commandID}":       "Admin,Bots",
 	"PATCH /api/admin/bots/{id}/commands/{commandID}":        "Admin,Bots",
 	"PUT /api/admin/bots/{id}/roles":                         "Admin,Bots",
+	"PUT /api/admin/bots/{id}/access":                        "Admin,Bots",
 	"GET /api/admin/bots/{id}/tokens":                        "Admin,Bots",
 	"POST /api/admin/bots/{id}/tokens":                       "Admin,Bots",
 	"DELETE /api/admin/bots/{id}/tokens/{tokenID}":           "Admin,Bots",

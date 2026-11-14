@@ -25,6 +25,10 @@ func (s *Snapshot) AsRoleOnly(role uuid.UUID) (*Snapshot, Subject, bool) {
 		// Managed roles are held by bots only, and bots do not inherit @everyone.
 		view.bots[member] = true
 	}
+	view.botsAll = map[uuid.UUID]bool{}
+	if r.BotUserID != nil && s.botsAll[*r.BotUserID] {
+		view.botsAll[member] = true // the preview of a bot's own role follows the bot's rule
+	}
 	view.timeouts = map[uuid.UUID]Timeout{}
 	view.userRoles = map[uuid.UUID][]uuid.UUID{}
 	if !r.Everyone {

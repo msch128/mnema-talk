@@ -22,6 +22,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		userRoles:  map[uuid.UUID][]uuid.UUID{},
 		owners:     map[uuid.UUID]bool{},
 		bots:       map[uuid.UUID]bool{},
+		botsAll:    map[uuid.UUID]bool{},
 		channelCat: map[uuid.UUID]uuid.UUID{},
 		stages:     map[uuid.UUID]bool{},
 		dms:        map[uuid.UUID]map[uuid.UUID]bool{},
@@ -140,6 +141,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	// Only while a minimum age is set: when each member joined.
 	joined := load(r, `SELECT id, created_at FROM users WHERE deleted_at IS NULL AND (SELECT GREATEST(min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes) FROM instance_settings) > 0`, pgx.RowToStructByPos[joinedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
+	botsAll := load(r, `SELECT user_id FROM bots WHERE access_all`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
 	dmTalks := load(r, `SELECT id, dm_id FROM channels WHERE dm_id IS NOT NULL`, pgx.RowToStructByPos[dmTalkRow])
@@ -165,6 +167,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		s.joined[j.ID] = j.Joined
 	}
 	s.addEntities(owners, bots, cats, timeouts)
+	for _, id := range botsAll {
+		s.botsAll[id] = true
+	}
 	for _, a := range accepted {
 		s.rulesAccepted[a.ID] = a.Version
 	}

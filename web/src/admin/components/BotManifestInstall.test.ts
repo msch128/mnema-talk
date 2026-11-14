@@ -56,7 +56,7 @@ beforeEach(() => {
     if (path.endsWith('/avatar')) return { ...newBot, avatar_url: '/api/media/avatar' }
     if (path === '/api/admin/bots' && !options?.method) return []
     if (path === '/api/roles') return []
-    if (path.endsWith('/access')) return { permissions: 0, elevated: false, channels: [] }
+    if (path.endsWith('/access')) return { permissions: 0, elevated: false, mode: 'channels', granted: 0, mixed: false, selected_channel_ids: [], channels: [] }
     if (/\/(tokens|commands)$/.test(path)) return []
     return undefined
   })
@@ -115,6 +115,31 @@ describe('adding a bot from a pasted manifest', () => {
     const upload = requestTo(`/api/admin/bots/${newBot.id}/avatar`)
     expect((upload?.form as FormData).get('avatar')).toBeInstanceOf(File)
     expect(w.emitted('installed')?.[0]).toEqual([{ ...newBot, avatar_url: '/api/media/avatar' }, 'mnb_secret'])
+  })
+
+  it('starts with selected channels and offers all channels as one clear choice', async () => {
+    const w = await pasteAndCheck()
+    const choice = w.get('[data-testid="bot-access-choice"]')
+    expect((choice.get('[data-access="channels"]').element as HTMLInputElement).checked).toBe(true)
+    expect((choice.get('[data-access="all"]').element as HTMLInputElement).checked).toBe(false)
+    expect(choice.text()).toContain('Selected channels')
+    expect(choice.text()).toContain('All channels')
+    expect(w.find('[data-testid="bot-access-private-note"]').exists()).toBe(false)
+  })
+
+  it('installs with access to all channels, says private ones stay private and sends the private ones ticked', async () => {
+    const w = await pasteAndCheck()
+    await w.get('[data-access="all"]').setValue(true)
+    expect(w.get('[data-testid="bot-access-private-note"]').text()).toContain('Private channels stay private')
+    await w.get(`[data-channel="${loose.id}"]`).setValue(true)
+    await w.get('[data-permission="add_reactions"]').setValue(false)
+    await w.get('[data-testid="manifest-confirm"]').trigger('submit')
+    await flushPromises()
+    expect(requestTo('/api/admin/bots/install')).toMatchObject({
+      method: 'POST',
+      json: { manifest, permissions: ['view_channel', 'send_messages'], access: 'all', channel_ids: [loose.id] }
+    })
+    expect(w.emitted('installed')).toHaveLength(1)
   })
 
   it('shows a refusal inline and keeps every tick', async () => {

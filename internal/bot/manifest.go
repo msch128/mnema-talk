@@ -93,8 +93,7 @@ var manifestIntents = []ManifestIntent{
 // ManifestPermissions are the only permissions a manifest may ask for: what a
 // bot uses in channels. Administrator, the admin area and voice stay a
 // deliberate grant by hand.
-const ManifestPermissions = perm.ViewChannel | perm.SendMessages | perm.AttachFiles |
-	perm.AddReactions | perm.ManageMessages | perm.MentionEveryone
+const ManifestPermissions = perm.BotChannelPerms
 
 // Check validates the manifest and returns it normalised.
 func (m Manifest) Check() (CheckedManifest, error) {

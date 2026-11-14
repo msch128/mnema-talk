@@ -288,6 +288,7 @@
       "srvABotCanHaveAt": "Ein Bot kann höchstens {a} aktive Tokens haben.",
       "srvABotCanHaveAt2": "Ein Bot kann höchstens {a} Befehle haben.",
       "srvABotHoldsThisRole": "Ein Bot hat diese Rolle. Nur der Owner kann ihr Administrator- oder Admin-Bereich-Berechtigungen geben.",
+      "srvABotSAccessGrants": "Der Zugriff eines Bots kann nur Kanal-Berechtigungen vergeben: ansehen, schreiben, Dateien anhängen, reagieren, Nachrichten verwalten und alle erwähnen.",
       "srvABotSOwnRole": "Die eigene Rolle eines Bots gehört nur diesem Bot.",
       "srvABotSRolesAre": "Die Rollen eines Bots werden in seinen Bot-Einstellungen festgelegt.",
       "srvAChannelCanHaveAt": "Ein Kanal kann höchstens {a} Webhooks haben.",
@@ -306,6 +307,8 @@
       "srvAWordIsTooLong": "Ein Wort ist zu lang.",
       "srvAWordNeedsAtLeast": "Ein Wort braucht außer * mindestens einen Buchstaben oder eine Ziffer.",
       "srvAcceptTheCommunityRulesFirst": "Bitte akzeptiere zuerst die Regeln der Community.",
+      "srvAccessAllNeedsView": "„Alle Kanäle“ braucht die Berechtigung, Kanäle anzusehen: Ohne sie sieht der Bot nichts.",
+      "srvAccessMustBeChannels": "Wähle ausgewählte Kanäle oder alle Kanäle.",
       "srvActionMustBeBlockOr": "Die Aktion muss „block“ oder „flag“ sein.",
       "srvAddAnEMailAddress": "Hinterlege eine E-Mail-Adresse in deinem Konto oder nenne einen Empfänger.",
       "srvAfterMustBeEarlierThan": "„after“ muss vor „before_date“ liegen.",
@@ -667,6 +670,7 @@
       "srvUnknownIntent": "Unbekanntes Ereignis im Manifest: „{intent}“.",
       "srvUnknownPermission": "Unbekannte Berechtigung im Manifest: „{permission}“.",
       "srvBotInstallLacking": "Du hast „{permission}“ in #{channel} nicht, daher kann der Bot es dort nicht bekommen. Nimm den Haken beim Kanal oder bei der Berechtigung weg.",
+      "srvBotInstallLackingEverywhere": "Du hast „{permission}“ nicht in jedem Kanal, daher kann der Bot es nicht überall bekommen. Nimm den Haken bei der Berechtigung weg oder wähle ausgewählte Kanäle.",
       "srvButtonTakesNoValues": "Ein Button nimmt keine Werte.",
       "srvModalSubmitNoModal": "Auf ein gesendetes Formular kann nicht mit einem weiteren Formular geantwortet werden.",
       "srvAnswerInvalidChars": "Eine Antwort enthält Zeichen, die nicht erlaubt sind.",
@@ -3445,6 +3449,7 @@
         "delete": "Bot gelöscht",
         "avatar": "Bot-Avatar geändert",
         "roles": "Bot-Rollen geändert",
+        "access": "Bot-Zugriff geändert",
         "token_create": "Bot-Token erstellt",
         "token_regenerate": "Bot-Token neu erzeugt",
         "token_revoke": "Bot-Token widerrufen",
@@ -4052,6 +4057,26 @@
       "none": "Keine Rechte",
       "noChannels": "Keine Kanal-Überschreibungen aktiv.",
       "elevated": "Dieser Bot hat Administrator- oder Admin-Bereich-Rechte. Er kann den Server weit über das Schreiben von Nachrichten hinaus verändern."
+    },
+    "choice": {
+      "mixedNote": "Der Bot hat in den Kanälen unterschiedliche Berechtigungen. Beim Speichern erhalten die ausgewählten Kanäle die hier angehakten Berechtigungen.",
+      "sectionTitle": "Kanalzugriff",
+      "title": "Zugriff",
+      "settingsHint": "Lege fest, wo dieser Bot arbeiten darf. Administrator- oder Admin-Rechte bekommt er dadurch nie.",
+      "channels": {
+        "name": "Ausgewählte Kanäle",
+        "desc": "Der Bot arbeitet nur in den Kanälen, die du unten anhakst."
+      },
+      "all": {
+        "name": "Alle Kanäle",
+        "desc": "Die Berechtigungen gelten in jedem Kanal, den Mitglieder sehen, auch in später erstellten."
+      },
+      "privateNote": "Private Kanäle bleiben privat: Der Bot sieht keinen Kanal, den Mitglieder nicht sehen, außer du hakst ihn unter „Auch private Kanäle“ an.",
+      "privateTitle": "Auch private Kanäle",
+      "privateHint": "Hake einen privaten Kanal an, damit der Bot auch dort arbeiten darf.",
+      "permissionsTitle": "Berechtigungen",
+      "save": "Zugriff speichern",
+      "saved": "Zugriff gespeichert."
     },
     "tokens": {
       "title": "Tokens",
