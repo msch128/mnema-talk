@@ -288,10 +288,11 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Sessions and view-as-role.** Members see and end their own sessions
   (*Where you are signed in*), and a session unused for 7 days (adjustable)
   signs out. In the role editor, **View server as** previews what a role sees.
-- **Discord import.** An admin can copy the categories, channels, Talks and roles
-  of a Discord server from a template link: additive, after a preview and
+- **Layout import from a template.** An admin can build the categories, channels,
+  Talks and roles of a community from a server template link (the format
+  Discord uses for server templates): additive, after a preview and
   three confirmations, and it can be undone ([doc/import.md](doc/import.md)).
-  A Discord role can be connected to an existing role instead of created anew
+  A template role can be connected to an existing role instead of created anew
   (same-name roles are suggested; the protected Bot role is never overwritten).
 - **Audit log.** An append-only record of administrative and moderation
   actions with who, what, before and after, filterable in the admin console.
@@ -459,9 +460,11 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Product vocabulary (en/de) used in the UI and docs, and voice and network terms | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
-| Talks and Stages, forums, events, the wiki and the Discord import | [doc/talks.md](doc/talks.md), [doc/forums.md](doc/forums.md), [doc/events.md](doc/events.md), [doc/wiki.md](doc/wiki.md), [doc/import.md](doc/import.md) |
+| Talks and Stages, forums, events, the wiki and the layout import from a template | [doc/talks.md](doc/talks.md), [doc/forums.md](doc/forums.md), [doc/events.md](doc/events.md), [doc/wiki.md](doc/wiki.md), [doc/import.md](doc/import.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
+| Bot SDK quick start (TypeScript and Go) and recipes | [doc/bot-sdk-quickstart.md](doc/bot-sdk-quickstart.md), [doc/bot-recipes.md](doc/bot-recipes.md) |
+| Gateway events and their payloads, allowed mentions | [doc/gateway-events.md](doc/gateway-events.md), [doc/allowed-mentions.md](doc/allowed-mentions.md) |
 | What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
 | Where media keys live in the browser | [SECURITY.md](SECURITY.md#security-model-summary) |
 | Web client code (TypeScript) | [doc/typescript.md](doc/typescript.md) |
