@@ -19,7 +19,7 @@ func fakeGitHub(t *testing.T, tag string) (*update.Checker, *atomic.Int32) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(`{"tag_name":"` + tag + `","html_url":"https://github.com/msch128/mnema-talk/releases/tag/` + tag + `","published_at":"2026-10-05T12:00:00Z","body":"* fix"}`)); err != nil {
+		if _, err := w.Write([]byte(`{"tag_name":"` + tag + `","html_url":"https://github.com/mnema-xyz/talk/releases/tag/` + tag + `","published_at":"2026-10-05T12:00:00Z","body":"* fix"}`)); err != nil {
 			t.Errorf("write response: %v", err)
 		}
 	}))
@@ -48,7 +48,7 @@ func assertUpdateStatusAvailable(t *testing.T, st UpdateStatus) {
 	if st.LatestVersion != "0.4.0" || st.CurrentVersion != "0.3.0" {
 		t.Fatalf("unexpected versions: latest %s, current %s", st.LatestVersion, st.CurrentVersion)
 	}
-	if st.ReleaseNotes != "* fix" || st.ReleaseURL != "https://github.com/msch128/mnema-talk/releases/tag/v0.4.0" {
+	if st.ReleaseNotes != "* fix" || st.ReleaseURL != "https://github.com/mnema-xyz/talk/releases/tag/v0.4.0" {
 		t.Fatalf("unexpected release metadata: notes %s, url %s", st.ReleaseNotes, st.ReleaseURL)
 	}
 	if st.CheckedAt == nil {

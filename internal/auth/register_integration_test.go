@@ -16,7 +16,7 @@ func TestAuthRegistrationConcurrentChanges(t *testing.T) {
 		change      func(*testing.T, *db.Pool)
 		want        error
 	}{
-		{"invite removed after precheck", "FROM invites WHERE code = $1 FOR UPDATE", func(t *testing.T, p *db.Pool) {
+		{"invite removed after precheck", "FOR UPDATE OF i", func(t *testing.T, p *db.Pool) {
 			if _, e := p.Exec(ctx, `DELETE FROM invites WHERE code='member-invite-k7x2'`); e != nil {
 				t.Fatal(e)
 			}

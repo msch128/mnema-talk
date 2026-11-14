@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
@@ -100,7 +102,7 @@ func TestConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Policy != imageverify.DefaultPolicy() || cfg.Scope != "mnema-talk" || cfg.RecreatorURL != "http://mnema-recreator:8080" {
+	if !reflect.DeepEqual(cfg.Policy, imageverify.DefaultPolicy()) || cfg.Scope != "mnema-talk" || cfg.RecreatorURL != "http://mnema-recreator:8080" {
 		t.Fatalf("defaults = %+v", cfg)
 	}
 	if _, err := NewServer(cfg, slog.Default()); err != nil {
@@ -153,7 +155,40 @@ func TestConfigRepositoryOverrideDropsTheMirror(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Policy.Repository != "registry.example/team/mnema" || cfg.Policy.Mirror != "" {
+	if cfg.Policy.Repository != "registry.example/team/mnema" || len(cfg.Policy.Mirrors) != 0 {
 		t.Fatalf("policy = %+v", cfg.Policy)
+	}
+}
+
+func TestConfigTrustsBothOriginsByDefaultAndOneWhenOverridden(t *testing.T) {
+	cfg, err := ParseConfig(func(k string) string { return map[string]string{"UPDATER_TOKEN": token}[k] })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(cfg.Policy.Origins, imageverify.DefaultOrigins()) || len(cfg.Policy.Origins) != 2 {
+		t.Fatalf("origins = %+v", cfg.Policy.Origins)
+	}
+	const forkID = `^https://github\.com/fork/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+	env := map[string]string{"UPDATER_TOKEN": token, "UPDATER_CERT_IDENTITY_REGEXP": forkID, "UPDATER_SOURCE_URL": "https://github.com/fork/mnema-talk"}
+	cfg, err = ParseConfig(func(k string) string { return env[k] })
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []imageverify.Origin{{IdentityRegexp: forkID, Source: "https://github.com/fork/mnema-talk"}}
+	if !reflect.DeepEqual(cfg.Policy.Origins, want) {
+		t.Fatalf("an override must be the only origin: %+v", cfg.Policy.Origins)
+	}
+}
+
+func TestConfigRefusesHalfAnOriginOverride(t *testing.T) {
+	for _, key := range []string{"UPDATER_CERT_IDENTITY_REGEXP", "UPDATER_SOURCE_URL"} {
+		value := `^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@refs/heads/main$`
+		if key == "UPDATER_SOURCE_URL" {
+			value = "https://github.com/msch128/mnema-talk"
+		}
+		env := map[string]string{"UPDATER_TOKEN": token, key: value}
+		if _, err := ParseConfig(func(k string) string { return env[k] }); err == nil || !strings.Contains(err.Error(), "together") {
+			t.Errorf("only %s set: err = %v, want a refusal", key, err)
+		}
 	}
 }

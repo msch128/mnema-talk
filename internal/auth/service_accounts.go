@@ -122,7 +122,8 @@ func claimInvite(ctx context.Context, tx pgx.Tx, code string) (uuid.UUID, error)
 	var usesCount int
 	var expiresAt *time.Time
 	err := tx.QueryRow(ctx,
-		`SELECT id, max_uses, uses_count, expires_at FROM invites WHERE code = $1 FOR UPDATE`,
+		`SELECT i.id, i.max_uses, i.uses_count, i.expires_at FROM invites i JOIN users c ON c.id = i.created_by
+		 WHERE i.code = $1 AND `+ActiveSQL("c")+` FOR UPDATE OF i`,
 		code).Scan(&inviteID, &maxUses, &usesCount, &expiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, ErrInvalidInvite

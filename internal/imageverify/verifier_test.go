@@ -158,15 +158,25 @@ func TestPolicyValidation(t *testing.T) {
 		"digest repository":  func(p *imageverify.Policy) { p.Repository += "@sha256:abc" },
 		"no namespace":       func(p *imageverify.Policy) { p.Repository = "mnema-talk" },
 		"empty issuer":       func(p *imageverify.Policy) { p.Issuer = "" },
-		"unanchored pattern": func(p *imageverify.Policy) { p.IdentityRegexp = "release.yml" },
+		"tagged mirror":      func(p *imageverify.Policy) { p.Mirrors = []string{"msch128/mnema-talk:1.0"} },
+		"no origin":          func(p *imageverify.Policy) { p.Origins = nil },
+		"unanchored pattern": func(p *imageverify.Policy) { p.Origins[0].IdentityRegexp = "release.yml" },
 		"top-level alternation": func(p *imageverify.Policy) {
-			p.IdentityRegexp = `^https://github\.com/msch128/.*@refs/heads/main|.*evil$`
+			p.Origins[0].IdentityRegexp = `^https://github\.com/msch128/.*@refs/heads/main|.*evil$`
 		},
-		"multiline anchors": func(p *imageverify.Policy) { p.IdentityRegexp = `(?m)^release\.yml$` },
-		"broken pattern":    func(p *imageverify.Policy) { p.IdentityRegexp = "^(+$" },
-		"plain http source": func(p *imageverify.Policy) { p.Source = "http://example.com" },
+		"multiline anchors": func(p *imageverify.Policy) { p.Origins[0].IdentityRegexp = `(?m)^release\.yml$` },
+		"broken pattern":    func(p *imageverify.Policy) { p.Origins[0].IdentityRegexp = "^(+$" },
+		"plain http source": func(p *imageverify.Policy) { p.Origins[0].Source = "http://example.com" },
+		// The second (legacy) origin is checked as strictly as the first.
+		"unanchored legacy pattern": func(p *imageverify.Policy) { p.Origins[1].IdentityRegexp = "release.yml" },
+		"plain http legacy source":  func(p *imageverify.Policy) { p.Origins[1].Source = "http://example.com" },
+		"source without a path":     func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com" },
+		"bare https source":         func(p *imageverify.Policy) { p.Origins[0].Source = "https://" },
+		"source with a slash":       func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com/mnema-xyz/mnema-talk/" },
+		"source with a query":       func(p *imageverify.Policy) { p.Origins[0].Source = "https://github.com/mnema-xyz/mnema-talk?x" },
+		"bad newest release":        func(p *imageverify.Policy) { p.Origins[1].MaxVersion = "soon" },
 	} {
-		p := good
+		p := imageverify.DefaultPolicy() // fresh slices for each case
 		change(&p)
 		if err := p.Validate(); err == nil {
 			t.Errorf("%s: policy accepted", label)
@@ -182,7 +192,7 @@ func TestPolicyValidation(t *testing.T) {
 
 func TestPolicyAcceptsAnchoredAlternationInAGroup(t *testing.T) {
 	p := imageverify.DefaultPolicy()
-	p.IdentityRegexp = `^(?:https://github\.com/msch128/a|https://github\.com/msch128/b)$`
+	p.Origins[0].IdentityRegexp = `^(?:https://github\.com/msch128/a|https://github\.com/msch128/b)$`
 	if err := p.Validate(); err != nil {
 		t.Fatalf("a grouped alternation is anchored as a whole: %v", err)
 	}
@@ -237,9 +247,13 @@ func TestNormalizeRepositoryTreatsDockerHubSpellingsAsOne(t *testing.T) {
 	}
 }
 
-func TestDefaultPolicyTrustsBothOfficialRepositoriesAndNothingElse(t *testing.T) {
+func TestDefaultPolicyTrustsTheOfficialRepositoriesAndNothingElse(t *testing.T) {
 	p := imageverify.DefaultPolicy()
-	allowed := []string{"ghcr.io/msch128/mnema-talk", "msch128/mnema-talk", "docker.io/msch128/mnema-talk", "index.docker.io/msch128/mnema-talk"}
+	allowed := []string{
+		"ghcr.io/mnema-xyz/mnema-talk", "ghcr.io/msch128/mnema-talk",
+		"msch128/mnema-talk", "docker.io/msch128/mnema-talk", "index.docker.io/msch128/mnema-talk",
+		"mnemaxyz/mnema-talk", "docker.io/mnemaxyz/mnema-talk",
+	}
 	for _, in := range allowed {
 		image, ok := imageverify.NormalizeRepository(in)
 		if !ok || !p.Allows(image) {
@@ -248,6 +262,8 @@ func TestDefaultPolicyTrustsBothOfficialRepositoriesAndNothingElse(t *testing.T)
 	}
 	for _, in := range []string{
 		"ghcr.io/other/mnema-talk", "other/mnema-talk", "docker.io/msch128/other", "msch128/mnema-talk-fork",
+		"ghcr.io/mnemaxyz/mnema-talk", "ghcr.io/mnema-xyz/mnema-talk-fork", "docker.io/mnema-xyz/mnema-talk",
+		"ghcr.io/mnema-xyz/talk", "docker.io/mnemaxyz/talk", "docker.io/mnemaxyz/mnema-talk-fork",
 		"quay.io/msch128/mnema-talk", "evil.example/msch128/mnema-talk", "ghcr.io/msch128/mnema-talk/sub",
 	} {
 		image, ok := imageverify.NormalizeRepository(in)
@@ -259,19 +275,15 @@ func TestDefaultPolicyTrustsBothOfficialRepositoriesAndNothingElse(t *testing.T)
 
 func TestExplicitRepositoryDropsTheMirror(t *testing.T) {
 	p := imageverify.DefaultPolicy()
-	p.Repository, p.Mirror = "registry.example/team/mnema", ""
+	p.Repository, p.Mirrors = "registry.example/team/mnema", nil
 	if err := p.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if p.Allows("index.docker.io/msch128/mnema-talk") || p.Allows("ghcr.io/msch128/mnema-talk") {
+	if p.Allows("index.docker.io/msch128/mnema-talk") || p.Allows("ghcr.io/msch128/mnema-talk") || p.Allows("ghcr.io/mnema-xyz/mnema-talk") {
 		t.Error("a custom repository must not also trust the official ones")
 	}
 	if !p.Allows("registry.example/team/mnema") {
 		t.Error("the custom repository itself must be allowed")
-	}
-	p.Mirror = "msch128/mnema-talk:1.0"
-	if p.Validate() == nil {
-		t.Error("a tagged mirror was accepted")
 	}
 }
 
