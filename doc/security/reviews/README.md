@@ -14,6 +14,7 @@ audit.
 
 | Report | Change | Subject |
 |---|---|---|
+| [828](2026-11/828.md) | #828 | shared links use the server's public address (`public_url`) |
 | [771-third](2026-11/771-third.md) | #771, merged with #780 | metadata removal for JPEG, PNG and WebP, third round |
 | [775](2026-11/775.md) | #775, merged with #780 | repair of the media group protocol |
 | [777-keys](2026-11/777-keys.md) | #777 | key rotation (`JWT_SECRET_PREVIOUS`, `DATA_KEY`, `rotate-keys`) |
@@ -22,6 +23,7 @@ audit.
 | [779c](2026-11/779c.md) | #779 | group merge, third round |
 | [779d](2026-11/779d.md) | #779 | group merge, fourth round |
 | [779-final](2026-11/779-final.md) | #779 | the three lines that changed after the fourth round, reviewed after the merge |
+| [831](2026-11/831.md) | #831 | members creating invites, and inviting into a channel |
 | [780](2026-11/780.md) | #780 | the merge train as a whole |
 | [780-events](2026-11/780-events.md) | #780 | typed events |
 | [780-outbox](2026-11/780-outbox.md) | #780 | webhook queue written in the transaction, health under a storage outage |

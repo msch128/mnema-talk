@@ -14,6 +14,7 @@ import { useCommunityName } from '../../shared/composables/useCommunityName'
 import { communityIconUrl } from '../../shared/lib/communityIcon'
 import { t, locale, chooseLocale, SUPPORTED } from '../../i18n'
 import type { InviteContext } from '../../shared/lib/inviteLink'
+import { rememberInviteLanding } from '../../shared/lib/inviteLanding'
 import { normalizeUsername } from '../lib/username'
 
 const props = defineProps<{ invite?: InviteContext }>()
@@ -136,6 +137,8 @@ async function handleSubmit() {
         isLoading.value = false
         return
       }
+      // Remembered before the account exists: the app reads it as soon as the sign-up lands.
+      rememberInviteLanding(props.invite?.channelId)
       await authStore.register(submittedUsername, submittedDisplayName || submittedUsername, submittedPassword, submittedInviteCode)
     } else {
       const outcome = await authStore.login(submittedUsername, submittedPassword)
@@ -145,6 +148,7 @@ async function handleSubmit() {
       }
     }
   } catch (err) {
+    rememberInviteLanding(undefined)
     if (isRegister.value && vanityCode.value && inviteRefused(err)) {
       vanityRefused.value = true
       inviteCode.value = ''

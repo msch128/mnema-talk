@@ -82,8 +82,10 @@ type Snapshot struct {
 	bots map[uuid.UUID]bool
 	// botsAll are the bots given access to every channel: they also obey
 	// @everyone's View channels overwrite, so a private channel stays private.
-	botsAll    map[uuid.UUID]bool
-	channelCat map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
+	botsAll      map[uuid.UUID]bool
+	botNames     map[uuid.UUID]string
+	channelCat   map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
+	channelNames map[uuid.UUID]string
 	// stages are the Talks that are Stages (doc/talks.md).
 	stages map[uuid.UUID]bool
 	// dms are the direct message conversations with their members (see
@@ -129,6 +131,29 @@ func (s *Snapshot) age(now time.Time) time.Duration { return now.Sub(s.loaded) }
 
 // IsBot reports whether the account is a bot.
 func (s *Snapshot) IsBot(id uuid.UUID) bool { return s.bots[id] }
+
+// BotName is the name of a bot account; empty when unknown.
+func (s *Snapshot) BotName(id uuid.UUID) string {
+	if s.botNames != nil {
+		if name := s.botNames[id]; name != "" {
+			return name
+		}
+	}
+	for _, r := range s.roles {
+		if r.BotUserID != nil && *r.BotUserID == id && r.Name != "" {
+			return r.Name
+		}
+	}
+	return ""
+}
+
+// ChannelName is the name of a channel; empty when unknown.
+func (s *Snapshot) ChannelName(id uuid.UUID) string {
+	if s.channelNames != nil {
+		return s.channelNames[id]
+	}
+	return ""
+}
 
 // IsOwner reports whether sub is the Owner.
 func (s *Snapshot) IsOwner(sub Subject) bool { return sub.Owner || s.owners[sub.ID] }

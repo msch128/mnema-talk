@@ -64,6 +64,10 @@ type ServerInfo struct {
 	// newer release can hide what an older server lacks (for example "blocks").
 	// A server of 1.0.x sends no list. See doc/api-stability.md.
 	Features []string `json:"features" binding:"optional"`
+	// PublicURL is the address this server is reached at (PUBLIC_URL), left
+	// out when none is configured. A client that is not served from that
+	// address, such as the desktop app, builds the links it shares from it.
+	PublicURL string `json:"public_url,omitempty" binding:"optional"`
 }
 
 // Features are the optional capabilities of this build, by name. Each feature
@@ -115,6 +119,10 @@ var Features = []string{
 	// "channels.auto_delete.v2": auto-delete in hours with a scope and a
 	// community default, and the dry runs before a change.
 	"channels.auto_delete.v2",
+	// "invites.member": POST/GET /api/me/invites and DELETE /api/me/invites/{id}
+	// (members creating invites, doc/invites.md). Older servers answer 404, so
+	// a client offers "Invite people" only when this is listed.
+	"invites.member",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
@@ -197,6 +205,7 @@ func health(hc *healthCheck, version string, names *community.Names) http.Handle
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		info := ServerInfo{Version: version, WebClientAPI: WebClientAPI, Features: Features}
+		info.PublicURL = names.PublicURL()
 		down := hc.check(r.Context())
 		if slices.Contains(down, depDatabase) {
 			// No read that would wait for the database: the last known name does.

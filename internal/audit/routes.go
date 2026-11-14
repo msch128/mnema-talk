@@ -54,6 +54,7 @@ type Route struct {
 var Routes = []Route{
 	{Method: "POST", Pattern: "/invites", Action: "invite.create", TargetType: "invite"},
 	{Method: "PUT", Pattern: "/vanity-link", Action: "invite.vanity_link", TargetType: "settings", Snapshot: ResVanity},
+	{Method: "PUT", Pattern: "/invites/limits", Action: "invite.limits", TargetType: "settings"},
 	{Method: "PATCH", Pattern: "/invites/{id}", Action: "invite.update", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 	{Method: "DELETE", Pattern: "/invites/{id}", Action: "invite.revoke", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 
