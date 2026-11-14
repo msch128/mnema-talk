@@ -9619,7 +9619,6 @@
           "available",
           "configured",
           "image",
-          "moved_to",
           "next_allowed_at",
           "reach",
           "reach_reason"

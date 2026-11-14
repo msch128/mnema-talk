@@ -31,7 +31,7 @@ type SelfUpdateStatus struct {
 	// MovedTo is set when Image is on a repository that gets no more releases:
 	// the repository they are published in now (GHCR does not redirect). The
 	// admin changes MNEMA_IMAGE; until then "update now" is not offered.
-	MovedTo     string `json:"moved_to"`
+	MovedTo     string `json:"moved_to,omitempty" binding:"optional"`
 	ReachReason string `json:"reach_reason" enums:"follows,unset,local_build,digest_pinned,version_pinned,track_mismatch,custom_tag"`
 	// Available: configured, an update exists, the image can reach it and no
 	// update ran in the last five minutes.
