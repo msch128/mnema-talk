@@ -1,5 +1,5 @@
 import type { BrowserContext, Locator, Page } from '@playwright/test'
-import { apiFetch, bounds, trackPeerConnections, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, bounds, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 import { fakeDisplayMedia } from './clipping/talk'
 
@@ -224,7 +224,6 @@ for (const labels of LOCALES) {
     const first = SIZES[0] ?? { width: 390, height: 844 }
     const ctx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: first.width, height: first.height }, locale: labels.locale === 'en' ? 'en-US' : 'de-DE' })
     opened.push(ctx)
-    await ctx.addInitScript(trackPeerConnections)
     await ctx.addInitScript(fakeDisplayMedia)
     const page = await ctx.newPage()
     await page.goto('/')

@@ -116,3 +116,41 @@ func TestAScanThatRunsOutOfWorkLeadsAnywhere(t *testing.T) {
 		t.Error("a message past the work budget carried no opaque link")
 	}
 }
+
+// A label that is only the ACE prefix "xn--" is an error in UTS #46, but some
+// URL parsers keep it as it is, and Go's IDNA quietly empties it. The host is
+// judged as written, and never as one that is surely fine.
+func TestAnEmptyACELabelStaysInTheHost(t *testing.T) {
+	for _, c := range []struct{ authority, host string }{
+		{"xn--", "xn--"},
+		{"XN--", "xn--"},
+		{"user@xn--:443", "xn--"},
+		{"allowed.example.xn--", "allowed.example.xn--"},
+		{"xn--.allowed.example", "xn--.allowed.example"},
+		{"a.xn--.allowed.example", "a.xn--.allowed.example"},
+		{"caf\u00e9.xn--", "xn--caf-dma.xn--"},
+		{"\uff58\uff4e\uff0d\uff0d\uff0eallowed.example", "xn--.allowed.example"},
+		{"x\u00adn--.allowed.example", "xn--.allowed.example"},
+	} {
+		r := readAuthority(c.authority)
+		if r.host != c.host || r.exact || r.rejected {
+			t.Errorf("readAuthority(%q) = %+v, want host %q, neither exact nor rejected", c.authority, r, c.host)
+		}
+	}
+	for _, authority := range []string{"allowed.example.", "a..allowed.example", "caf\u00e9.example.", "xn--caf-dma.example"} {
+		if r := readAuthority(authority); !r.exact {
+			t.Errorf("readAuthority(%q) = %+v, want an exact host", authority, r)
+		}
+	}
+	allow := linksRule(LinksAllowList, "allowed.example")
+	for _, msg := range []string{
+		"https://allowed.example.xn--/x",
+		"[https://allowed.example](www.caf\u00e9.example\uff40\ufe65@xn--\u007fcaf-dma.example:443?q)",
+		"x<http://127.1\uff40_@xn--?caf-dma.example:70000#f>\"",
+		"\"[https://allowed.example](www.user@xn--\u00a0caf-dma.exam\u0000ple:#f) now",
+	} {
+		if !allow.matchesLinks(msg) {
+			t.Errorf("%q: a host with an empty ACE label passed the allow list", msg)
+		}
+	}
+}

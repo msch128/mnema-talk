@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, trackPeerConnections, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -34,8 +34,6 @@ test('a call moves between two sessions of one account', async ({ browser }) => 
   opened.push(ctxA)
   const ctxB = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(ctxB)
-  await ctxA.addInitScript(trackPeerConnections)
-  await ctxB.addInitScript(trackPeerConnections)
   const a = await ctxA.newPage()
   const b = await ctxB.newPage()
   await signIn(a)

@@ -16,7 +16,7 @@ import (
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []core.Category, categoryIdx map[uuid.UUID]int) ([]core.Channel, error) {
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels")+`,
 		       is_lobby, is_temp, leader_id, is_stage, COALESCE(slug, ''),
 		       COALESCE((SELECT array_agg(s.slug ORDER BY s.used_at, s.slug) FROM channel_slugs s
 		                 WHERE s.channel_id = channels.id AND s.slug IS DISTINCT FROM channels.slug), '{}')
@@ -29,9 +29,10 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []core.Categor
 	uncategorized := make([]core.Channel, 0)
 	for chanRows.Next() {
 		var ch core.Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
 			return nil, err
 		}
+		ch.FillAutoDeleteDays()
 		if ch.CategoryID != nil {
 			if idx, ok := categoryIdx[*ch.CategoryID]; ok {
 				categories[idx].Channels = append(categories[idx].Channels, ch)
@@ -94,16 +95,16 @@ func lockCategory(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, c
 	return err
 }
 
-// CreateChannelWithStage adds a channel to categoryID (or to no category) and,
-// with asStage, makes it a Stage in the same transaction, so a request that
-// cannot be a Stage (a text channel) creates nothing.
+// CreateChannelWithStage is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It adds a channel to categoryID (or to no
+// category) and, with asStage, makes it a Stage in the same transaction, so a
+// request that cannot be a Stage (a text channel) creates nothing.
 func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	return CreateChannelSeenBy(ctx, p, nil, categoryID, name, chType, topic, sortOrder, asStage)
 }
 
-// CreateChannelSeenBy is CreateChannelWithStage for a caller who sees the
-// categories canSee names (nil: all): any other category answers as a missing one.
-func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
+// CreateChannelTx creates a channel inside tx, including slug assignment and Stage setup.
+func CreateChannelTx(ctx context.Context, tx pgx.Tx, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -111,25 +112,40 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
+	if err := lockCategory(ctx, tx, canSee, categoryID); err != nil {
+		return nil, err
+	}
 	var ch core.Channel
-	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockCategory(ctx, tx, canSee, categoryID); err != nil {
-			return err
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
+		categoryID, name, chType, topic, sortOrder).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
+		return nil, err
+	}
+	ch.FillAutoDeleteDays()
+	if asStage {
+		if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
+			return nil, err
 		}
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
-			categoryID, name, chType, topic, sortOrder).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
-			return err
-		}
-		if asStage {
-			if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
-				return err
-			}
-			ch.IsStage = true
-		}
-		return assignAndFillSlugs(ctx, tx, &ch)
+		ch.IsStage = true
+	}
+	if err := assignAndFillSlugs(ctx, tx, &ch); err != nil {
+		return nil, err
+	}
+	return &ch, nil
+}
+
+// CreateChannelSeenBy is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It is CreateChannelWithStage for a caller who
+// sees the categories canSee names (nil: all): any other category answers as a
+// missing one.
+func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID) bool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
+	var ch *core.Channel
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		var err error
+		ch, err = CreateChannelTx(ctx, tx, canSee, categoryID, name, chType, topic, sortOrder, asStage)
+		return err
 	})
 	var refusal *httpx.APIError
 	if errors.As(err, &refusal) {
@@ -138,7 +154,7 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
-	return &ch, nil
+	return ch, nil
 }
 
 // assignAndFillSlugs gives ch the slug for its name and loads it into ch.
@@ -173,6 +189,13 @@ func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string
 	botIDs, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 	if err != nil {
 		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
+	// The bot accounts' rows are taken before the cascade locks the messages:
+	// a delete of a webhook message takes its author's row before the
+	// message's (messages.lockMessageForDelete), and the other order here, the
+	// messages and then the account, would be a lock cycle with it.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) FOR UPDATE`, botIDs); err != nil {
+		return nil, fmt.Errorf("lock webhook bots: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
 		return nil, fmt.Errorf("delete channel: %w", err)
@@ -256,10 +279,11 @@ func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *core.Cha
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"), id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
 		return err
 	}
+	ch.FillAutoDeleteDays()
 	return assignAndFillSlugs(ctx, tx, ch)
 }
 

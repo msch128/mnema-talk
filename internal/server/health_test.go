@@ -118,6 +118,9 @@ func TestHealthDescribesTheServerWhileStorageIsDown(t *testing.T) {
 	if body.Version != "1.2.3" || body.WebClientAPI != WebClientAPI || body.CommunityName != "talk.example.org" || !slices.Equal(body.Features, Features) {
 		t.Fatalf("the 503 leaves out what the 200 says about the server: %s", rec.Body)
 	}
+	if body.PublicURL != "https://talk.example.org" {
+		t.Fatalf("public_url %q, want the configured PUBLIC_URL", body.PublicURL)
+	}
 	storageErr = nil
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))

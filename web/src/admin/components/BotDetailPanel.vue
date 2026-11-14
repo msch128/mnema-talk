@@ -18,6 +18,7 @@ import { normaliseImage, useStagedImage } from '../../shared/composables/useStag
 import BotRolesPanel from './BotRolesPanel.vue'
 import UnsavedChangesBar from '../../shared/components/UnsavedChangesBar.vue'
 import BotAccessPanel from './BotAccessPanel.vue'
+import BotChannelAccessPanel from './BotChannelAccessPanel.vue'
 import BotTokensPanel from './BotTokensPanel.vue'
 import BotCommandsPanel from './BotCommandsPanel.vue'
 
@@ -137,6 +138,7 @@ async function remove() {
 
     <UnsavedChangesBar sticky :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
 
+    <BotChannelAccessPanel :bot-id="bot.id" @saved="accessVersion++" />
     <BotAccessPanel :bot-id="bot.id" :version="accessVersion" />
     <BotTokensPanel :bot-id="bot.id" :bot-name="bot.name" />
     <BotCommandsPanel :bot-id="bot.id" />

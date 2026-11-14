@@ -106,6 +106,7 @@ use one of its own.
 | `is_bot`, `is_webhook` | present and `true` for a message of a bot (`is_bot`) or of an incoming webhook (both) |
 | `embeds`, `components`, `poll` | present when the message has them |
 | `forward` | `{"forwarded": true}` on a forwarded message; the original's text and ids are not part of the event |
+| `expires_at` | present on a message with a lifetime: when the server deletes it (RFC 3339, see [timed messages](timed-messages.md)) |
 | `title`, `tags`, `is_locked`, `is_resolved`, `last_activity_at` | forum posts |
 | `nonce` | `MESSAGE_CREATE` only, and only when the sender sent one |
 

@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from '@playwright/test'
-import { apiFetch, audioDecodedIn, responseString, suiteMember, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, audioDecodedIn, responseString, suiteMember, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // What every supported engine must do for call media: seal it in the browser
@@ -85,7 +85,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
   opened.push(...contexts)
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
   for (const ctx of contexts) {
-    await ctx.addInitScript(trackPeerConnections)
     await ctx.addInitScript(sendContinuously)
   }
   const admin = await adminCtx.newPage()
@@ -141,7 +140,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
 test('a browser that cannot seal media does not join, and sends nothing', async ({ browser }) => {
   const ctx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(ctx)
-  await ctx.addInitScript(trackPeerConnections)
   // The engine without the frame transform that reaches encoded media.
   await ctx.addInitScript(() => {
     Object.defineProperty(window, 'RTCRtpScriptTransform', { value: undefined, configurable: true })

@@ -6,7 +6,7 @@ import type { Cx } from './state'
 import { setNodeGain } from './audioMath'
 import { applyAudioSettings } from './audioSettings'
 import { syncCameraLayers } from './cameraLayerSync'
-import { syncLayers } from './layers'
+import { stopScreenLayerClones, syncLayers } from './layers'
 import { applyScreenQuality, liveScreenAudioTrack } from './senders'
 import { sendMuteState } from './session'
 import { setGamingPttLease } from './voiceAudio'
@@ -69,7 +69,8 @@ function installAudioWatchers(cx: Cx) {
   })
 
   // The chosen stream quality, applied to the running share.
-  watch(() => voice.screenQuality, () => { void applyScreenQuality(cx).then(() => syncLayers(cx)) })
+  // New constraints on the capture do not reach its clones: the lower lines get new ones.
+  watch(() => voice.screenQuality, () => { void applyScreenQuality(cx).then(() => { stopScreenLayerClones(cx); return syncLayers(cx) }) })
   // The layers viewers need: the others stop being encoded and sent.
   watch(() => voice.layersWanted, () => { void syncLayers(cx) })
   // The same for the camera's layers.

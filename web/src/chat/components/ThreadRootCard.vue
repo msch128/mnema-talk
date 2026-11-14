@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LifetimeMark from './LifetimeMark.vue'
 import type { PropType } from 'vue'
 import { Reply, Pin, Pencil } from '@lucide/vue'
 import type { Message } from '../../types/domain'
@@ -111,6 +112,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
     <!-- A poll that started the thread keeps its options, votes and time left here -->
     <PollCard v-if="root.poll" :msg="root as Message" />
     <span v-if="root.is_edited" class="block text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
+    <LifetimeMark v-if="root.expires_at" :expires-at="root.expires_at" class="flex" />
     <span v-if="root.is_pinned" data-testid="thread-root-pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
       <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
     </span>

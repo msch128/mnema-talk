@@ -1,5 +1,6 @@
 import { cameraLayersKey, declaredCameraLayers, planCameraLayers } from '../../lib/cameraLayers'
 import type { Cx } from './state'
+import { dropAllClones } from './layerClones'
 
 // The camera's lower layers (see talk/lib/cameraLayers): sending the captured track
 // smaller on lines of its own, only the layers viewers need (until the server
@@ -42,7 +43,7 @@ export async function replaceQuietly(sender: RTCRtpSender, track: MediaStreamTra
   }
 }
 
-/** The camera stopped: the lower layers go quiet and the next camera declares afresh. */
+/** The camera stopped: the lower layers go quiet, their clones stop, and the next camera declares afresh. */
 export function releaseCameraLayers(cx: Cx) {
   const { voice, st } = cx
   st.declaredCameraKey = ''
@@ -50,4 +51,5 @@ export function releaseCameraLayers(cx: Cx) {
   for (const sender of st.cameraLayerSenders) {
     if (sender?.track) void replaceQuietly(sender, null)
   }
+  dropAllClones(st.cameraLayerClones)
 }
