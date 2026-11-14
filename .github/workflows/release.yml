@@ -306,7 +306,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: write
+      packages: read # the push uses GHCR_MNEMA_XYZ_TOKEN for now (see the login step)
       id-token: write # keyless cosign signature (Sigstore), this job only
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -324,11 +324,17 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # TODO(org move): the package ghcr.io/mnema-xyz/mnema-talk does not yet
+      # grant this repository write access ("Manage Actions access" in the
+      # package settings, an owner click), so GITHUB_TOKEN is refused
+      # (write_package denied, probed after the transfer). Until then the push
+      # uses GHCR_MNEMA_XYZ_TOKEN, the owner's classic PAT with write:packages
+      # only. Afterwards: log in with GITHUB_TOKEN again and delete the secret.
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: msch128
+          password: ${{ secrets.GHCR_MNEMA_XYZ_TOKEN }}
 
       - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta

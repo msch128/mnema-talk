@@ -257,13 +257,13 @@ branch) was waived when it landed there and is not reported again.
    `ghcr.io/mnema-xyz/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
    provenance and SBOM, and signs every tag keylessly with cosign (verify with
-   [operations.md](operations.md#verifying-a-release-image)). The `org-ghcr`
-   job copies that exact image (same digest, no rebuild) to the
-   organization's path `ghcr.io/mnema-xyz/mnema-talk` as `:X.Y.Z`, `:X.Y`,
-   `:X` and `:latest` with the secret `GHCR_MNEMA_XYZ_TOKEN` (a classic PAT,
-   `write:packages` only), signs it there the same way and verifies the
-   signature at both paths; the release fails if the new path is incomplete
-   (the repository moves to the mnema-xyz organization, and GHCR does not
+   [operations.md](operations.md#verifying-a-release-image)). The image job
+   logs in to GHCR with the secret `GHCR_MNEMA_XYZ_TOKEN` (a classic PAT,
+   `write:packages` only) until the package grants this repository write
+   access ("Manage Actions access" in the package settings); then it goes
+   back to `GITHUB_TOKEN` and the secret is deleted. Releases up to 3.2.1 also
+   exist at the old path `ghcr.io/msch128/mnema-talk`, which gets no new ones
+   (the repository moved to the mnema-xyz organization, and GHCR does not
    redirect). The `dockerhub-mirror` job copies the image to Docker Hub, one
    leg per account: `docker.io/<DOCKERHUB_NAMESPACE>/mnema-talk` with the
    secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, and
