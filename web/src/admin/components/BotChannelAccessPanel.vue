@@ -26,6 +26,7 @@ const mode = ref<AccessMode>('channels')
 const permissions = ref<string[]>([])
 const channels = ref<string[]>([])
 const mixed = ref(false)
+const privateReach = ref(false)
 
 function adopt(access: BotAccess) {
   // A server older than this choice leaves the fields out.
@@ -33,6 +34,7 @@ function adopt(access: BotAccess) {
   permissions.value = botPermissionKeys(access.granted ?? 0)
   channels.value = [...(access.selected_channel_ids ?? [])]
   mixed.value = access.mixed ?? false
+  privateReach.value = access.private_reach ?? false
 }
 
 async function load() {
@@ -72,6 +74,7 @@ onMounted(load)
     <h4 class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.choice.sectionTitle') }}</h4>
     <p class="text-sm text-mnema-tertiary">{{ $t('bots.choice.settingsHint') }}</p>
     <p v-if="mixed" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-muted" data-testid="bot-channel-access-mixed">{{ $t('bots.choice.mixedNote') }}</p>
+    <p v-if="mode === 'channels' && privateReach" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-muted" data-testid="bot-channel-access-private-reach">{{ $t('bots.choice.privateReach') }}</p>
     <fieldset class="stack-2">
       <legend class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('bots.choice.permissionsTitle') }}</legend>
       <label v-for="key in BOT_CHANNEL_PERMISSIONS" :key="key" class="flex items-start gap-2 text-sm text-mnema-text">

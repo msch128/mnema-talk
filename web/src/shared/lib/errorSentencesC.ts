@@ -41,6 +41,8 @@ export const ROWS: readonly SentenceRow[] = [
   ['the bot holds a permission you do not have: %s', 'srvTheBotHoldsAPermission2'],
   ['the bot is not connected', 'srvTheBotIsNotConnected'],
   ['the change would give a bot a permission you do not have', 'srvTheChangeWouldGiveA'],
+  ['the change would give the bot %q a permission you do not have: %s', 'srvTheChangeWouldGiveBotPerm', ['bot', 'permission']],
+  ['the change would give the bot %q a permission you do not have: %s in #%s', 'srvTheChangeWouldGiveBotPermInChannel', ['bot', 'permission', 'channel']],
   ['the code is incorrect', 'codeWrong', []],
   ['the configured image tag cannot reach this release (%s); update manually', 'srvImageTagCannotReach', ['a']],
   ['the configured image tag cannot reach this release; update manually', 'srvImageTagCannotReach', []],

@@ -110,7 +110,13 @@ func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ch, err := CreateChannelSeenBy(r.Context(), a.DB, canSee, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
+	actor := auth.UserFrom(r.Context()).Subject()
+	var ch *core.Channel
+	err = a.runTx(r.Context(), actor, func(tx pgx.Tx) error {
+		var txErr error
+		ch, txErr = CreateChannelTx(r.Context(), tx, canSee, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
+		return txErr
+	})
 	if err != nil {
 		return err
 	}
@@ -145,7 +151,13 @@ func (a *API) ServeDuplicateChannel(w http.ResponseWriter, r *http.Request) erro
 	if err := a.Guard.Require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	ch, err := DuplicateChannel(r.Context(), a.DB, id)
+	actor := auth.UserFrom(r.Context()).Subject()
+	var ch *core.Channel
+	err = a.runTx(r.Context(), actor, func(tx pgx.Tx) error {
+		var txErr error
+		ch, txErr = DuplicateChannelTx(r.Context(), tx, id)
+		return txErr
+	})
 	if err != nil {
 		return err
 	}

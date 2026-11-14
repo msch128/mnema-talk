@@ -176,3 +176,56 @@ func TestCheckBotGrowth(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCheckBotGrowthNamedErrors(t *testing.T) {
+	bot, actor := uuid.New(), uuid.New()
+	ch := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	build := func(botGlobal, botInChannel, actorInChannel Set, actorSeesChannel bool) *Snapshot {
+		f := permtest.NewFixture().BotWithName(bot, "Helper")
+		f.ChannelWithName(ch, uuid.Nil, "general")
+		br := f.Role(1, SendMessages|botGlobal)
+		f.Assign(bot, br)
+		f.RoleOverwrite(true, ch, br, ViewChannel|botInChannel, 0)
+		ar := f.Role(2, SendMessages)
+		f.Assign(actor, ar)
+		var allow, deny Set
+		if actorSeesChannel {
+			allow = ViewChannel | actorInChannel
+		} else {
+			allow, deny = actorInChannel, ViewChannel
+		}
+		f.RoleOverwrite(true, ch, ar, allow, deny)
+		return f.Snapshot()
+	}
+	plain := build(0, 0, 0, true)
+
+	// In-channel growth with actor who sees channel: names bot, perm, channel.
+	err := CheckBotGrowth(plain, build(0, ManageMessages, 0, true), sub(actor))
+	if err == nil || err.Error() != `the change would give the bot "Helper" a permission you do not have: manage messages in #general` {
+		t.Fatalf("unexpected in-channel error: %v", err)
+	}
+
+	// In-channel growth where actor cannot view channel: generic fallback.
+	err = CheckBotGrowth(plain, build(0, ManageMessages, 0, false), sub(actor))
+	if err == nil || err.Error() != "the change would give a bot a permission you do not have" {
+		t.Fatalf("unexpected hidden-channel error: %v", err)
+	}
+
+	// Server-wide growth: names bot and perm, no channel.
+	err = CheckBotGrowth(plain, build(ManageMessages, 0, 0, true), sub(actor))
+	if err == nil || err.Error() != `the change would give the bot "Helper" a permission you do not have: manage messages` {
+		t.Fatalf("unexpected server-wide error: %v", err)
+	}
+
+	// In-channel elevation: names bot, perm, channel.
+	err = CheckBotGrowth(plain, build(0, DisconnectMembers, DisconnectMembers, true), sub(actor))
+	if err == nil || err.Error() != `only the Owner can give the bot "Helper" administrator or admin-area permissions: disconnect members in #general` {
+		t.Fatalf("unexpected elevation channel error: %v", err)
+	}
+
+	// Server-wide elevation: names bot and perm, no channel.
+	err = CheckBotGrowth(plain, build(ManageChannels, 0, 0, true), sub(actor))
+	if err == nil || err.Error() != `only the Owner can give the bot "Helper" administrator or admin-area permissions: manage channels` {
+		t.Fatalf("unexpected elevation server-wide error: %v", err)
+	}
+}

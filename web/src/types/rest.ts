@@ -801,6 +801,7 @@ export type BotAccess = {
   mixed?: boolean
   mode?: "channels" | "all"
   permissions: number
+  private_reach?: boolean
   selected_channel_ids?: Array<string>
 }
 
@@ -812,6 +813,7 @@ export function isBotAccess(value: unknown): value is BotAccess {
     && (!hasOwn(value, "mixed") || typeof value["mixed"] === 'boolean')
     && (!hasOwn(value, "mode") || (value["mode"] === "channels" || value["mode"] === "all"))
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (!hasOwn(value, "private_reach") || typeof value["private_reach"] === 'boolean')
     && (!hasOwn(value, "selected_channel_ids") || isArrayOf(value["selected_channel_ids"], item => isIdentifier(item)))
 }
 

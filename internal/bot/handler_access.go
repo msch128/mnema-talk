@@ -41,6 +41,9 @@ type Access struct {
 	// Mixed is true in mode "channels" when the selected channels allow
 	// different sets (set by hand): saving the choice applies one set to all.
 	Mixed bool `json:"mixed" binding:"optional"`
+	// PrivateReach is true in mode "channels" when the bot can view a channel
+	// that plain members cannot see (@everyone cannot view it).
+	PrivateReach bool `json:"private_reach" binding:"optional"`
 	// SelectedChannelIDs are the channels the caller can view where the bot's
 	// own role has an overwrite: its channels in mode "channels", the private
 	// channels it may also see in mode "all".
@@ -126,6 +129,14 @@ func (h *Handler) currentAccess(r *http.Request, b *Bot, snap *perm.Snapshot) (A
 	out.Elevated = snap.ElevatedFor(sub)
 	if snap.HasAllChannelAccess(b.UserID) {
 		out.Mode = AccessAll
+	}
+	if out.Mode == AccessChannels {
+		for ch := range snap.ChannelPermissions(sub) {
+			if !snap.EveryoneCanView(ch) {
+				out.PrivateReach = true
+				break
+			}
+		}
 	}
 	// Only channels the caller can see: names of others stay theirs.
 	caller := auth.UserFrom(r.Context()).Subject()

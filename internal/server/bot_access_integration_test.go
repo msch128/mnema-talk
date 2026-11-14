@@ -3,6 +3,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
 	"strings"
@@ -384,4 +385,104 @@ func TestInstallWithAccessToAllNamesTheChannelWhereThePermissionIsLacking(t *tes
 	if !strings.Contains(string(res.body), "send messages in #muted") {
 		t.Fatalf("the refusal does not name the channel: %s", res.body)
 	}
+}
+
+func TestChannelCreationAndDuplicationRespectBotInvariant(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+
+	// Owner installs a bot with access "all" and manage_messages.
+	installAll(t, owner, "helper", []string{"view_channel", "send_messages", "manage_messages"})
+
+	// Moderator has Manage channels but NOT Manage messages.
+	mod := a.register(owner, "mod")
+	modRole := createRole(t, owner, "Moderator", perm.ManageChannels)
+	assignRoles(t, owner, mod, modRole)
+
+	// Moderator creating a public channel fails (403), naming the bot, permission and new channel.
+	res := mod.post("/api/admin/channels", map[string]any{"name": "mod-public", "type": "text"})
+	wantStatus(t, "mod create public channel", res, http.StatusForbidden)
+	if !strings.Contains(errorMessage(res), `the change would give the bot "helper" a permission you do not have: manage messages in #mod-public`) {
+		t.Fatalf("unexpected refusal: %s", res.body)
+	}
+	if n := a.count(`SELECT COUNT(*) FROM channels WHERE name = 'mod-public'`); n != 0 {
+		t.Fatalf("channel was created: %d", n)
+	}
+
+	// Moderator duplicating open channel fails (403).
+	res = mod.post("/api/admin/channels/"+open.String()+"/duplicate", nil)
+	wantStatus(t, "mod duplicate public channel", res, http.StatusForbidden)
+	if !strings.Contains(errorMessage(res), `the change would give the bot "helper" a permission you do not have: manage messages in #open`) {
+		t.Fatalf("unexpected refusal: %s", res.body)
+	}
+	if n := a.count(`SELECT COUNT(*) FROM channels WHERE name = 'open'`); n != 1 {
+		t.Fatalf("channel was duplicated: %d", n)
+	}
+
+	// Owner creating a public channel works.
+	wantStatus(t, "owner create public channel", owner.post("/api/admin/channels", map[string]any{"name": "owner-public", "type": "text"}), http.StatusCreated)
+	if n := a.count(`SELECT COUNT(*) FROM channels WHERE name = 'owner-public'`); n != 1 {
+		t.Fatalf("owner channel missing: %d", n)
+	}
+
+	// Owner duplicating open channel works.
+	wantStatus(t, "owner duplicate public channel", owner.post("/api/admin/channels/"+open.String()+"/duplicate", nil), http.StatusCreated)
+	if n := a.count(`SELECT COUNT(*) FROM channels WHERE name = 'open'`); n != 2 {
+		t.Fatalf("owner duplicate missing: %d", n)
+	}
+}
+
+func TestBotAccessPrivateReachWarning(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	open := a.createChannel(owner, "open", "text")
+	privateChannel(t, a, owner, "staff")
+
+	// Install bot in mode "channels" for open channel only.
+	out := installBot(t, owner, installBody(testManifest("Helper"), []string{"view_channel", "send_messages"}, nil, open))
+	b := out.Bot
+
+	// Initially, bot only sees open channel; private staff is not reachable.
+	acc := accessOf(t, owner, b)
+	if acc.PrivateReach {
+		t.Fatalf("expected PrivateReach to be false initially, got %+v", acc)
+	}
+
+	// Assign a role granting ViewChannel server-wide to the bot.
+	viewerRole := createRole(t, owner, "Server Viewer", perm.ViewChannel)
+	role, ok := ownRoleOf(t, owner, b.UserID)
+	if !ok {
+		t.Fatal("missing own role")
+	}
+	managedRole := botRoleOf(t, owner)
+	wantStatus(t, "assign viewer role", owner.put("/api/admin/bots/"+b.ID.String()+"/roles", map[string]any{
+		"role_ids": []uuid.UUID{managedRole.ID, role.ID, viewerRole},
+	}), http.StatusOK)
+
+	// Now in mode "channels", bot can view staff (which everyone cannot view) -> PrivateReach is true.
+	acc = accessOf(t, owner, b)
+	if !acc.PrivateReach {
+		t.Fatalf("expected PrivateReach to be true when another role grants ViewChannel, got %+v", acc)
+	}
+
+	// Switching access to selected channels via PUT also returns PrivateReach: true.
+	path := "/api/admin/bots/" + b.ID.String() + "/access"
+	res := owner.put(path, accessBody("channels", []string{"view_channel", "send_messages"}, open))
+	wantStatus(t, "switch to selected channels", res, http.StatusOK)
+	var putAcc bot.Access
+	res.decode(t, &putAcc)
+	if !putAcc.PrivateReach {
+		t.Fatalf("expected PUT access response to have PrivateReach: true, got %+v", putAcc)
+	}
+}
+
+func errorMessage(r response) string {
+	var e struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	_ = json.Unmarshal(r.body, &e)
+	return e.Error.Message
 }

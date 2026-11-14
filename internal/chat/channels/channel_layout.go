@@ -160,7 +160,23 @@ func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// ServeDuplicateChannel copies a channel's own properties (name, type, topic,
+// DuplicateChannelTx duplicates sourceID channel inside tx.
+func DuplicateChannelTx(ctx context.Context, tx pgx.Tx, sourceID uuid.UUID) (*core.Channel, error) {
+	if err := LockChannelLayout(ctx, tx); err != nil {
+		return nil, err
+	}
+	src, err := LockSourceChannel(ctx, tx, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	newOrder, err := makeRoomBelow(ctx, tx, src)
+	if err != nil {
+		return nil, err
+	}
+	return InsertChannelCopy(ctx, tx, src, newOrder, false)
+}
+
+// DuplicateChannel copies a channel's own properties (name, type, topic,
 // category) into a new channel placed directly below it in the same group
 // (its category, or the uncategorized channels). Messages, reactions and
 // per-user state (read position, notification level) are not copied. Channel
@@ -168,18 +184,8 @@ func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*core.Channel, error) {
 	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := LockChannelLayout(ctx, tx); err != nil {
-			return err
-		}
-		src, err := LockSourceChannel(ctx, tx, sourceID)
-		if err != nil {
-			return err
-		}
-		newOrder, err := makeRoomBelow(ctx, tx, src)
-		if err != nil {
-			return err
-		}
-		ch, err = InsertChannelCopy(ctx, tx, src, newOrder, false)
+		var err error
+		ch, err = DuplicateChannelTx(ctx, tx, sourceID)
 		return err
 	})
 	if err != nil {

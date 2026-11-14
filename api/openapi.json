@@ -1367,6 +1367,10 @@
             "minimum": 0,
             "type": "integer"
           },
+          "private_reach": {
+            "description": "PrivateReach is true in mode \"channels\" when the bot can view a channel\nthat plain members cannot see (@everyone cannot view it).",
+            "type": "boolean"
+          },
           "selected_channel_ids": {
             "description": "SelectedChannelIDs are the channels the caller can view where the bot's\nown role has an overwrite: its channels in mode \"channels\", the private\nchannels it may also see in mode \"all\".",
             "items": {
