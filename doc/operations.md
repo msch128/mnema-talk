@@ -944,7 +944,15 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   blindly replacing database credentials or storage endpoints can make the
   restored deployment inaccessible or target the wrong stores. Client content
   recovery remains separate from a server backup.
-- Nightly via cron, see the backup section above.
+- Nightly via cron. On a server with calls, use the online mode so the app
+  keeps running, for example in `/etc/cron.d/mnema-talk-backup`:
+
+  ```
+  30 3 * * * root cd /opt/mnema-talk && BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh >> /var/log/mnema-talk-backup.log 2>&1
+  ```
+
+  A backup on the same disk does not survive losing the machine: copy the
+  folder off the server as well.
 
 **Restore test and status report.** After the services are back, `backup.sh`
 runs `restore.sh <new backup> --verify`: it imports the dump into a throwaway,
