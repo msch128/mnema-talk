@@ -13,12 +13,12 @@ test('a release PR cannot turn the check red: it does not read version.txt', asy
   const { readFileSync } = await import('node:fs')
   assert.doesNotMatch(readFileSync(new URL('./check-onboarding-docs.mjs', import.meta.url), 'utf8'), /read\('version\.txt'\)/)
   for (const tag of ['2.1', '2.1.1', '2.2', '3.0']) {
-    assert.equal(staleVersions('a.md', '```sh\nMNEMA_IMAGE=ghcr.io/msch128/mnema-talk:' + tag + '\n```\n').length, 0, tag)
+    assert.equal(staleVersions('a.md', '```sh\nMNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:' + tag + '\n```\n').length, 0, tag)
   }
 })
 
 test('a stale image tag in a command block fails, a current or latest tag passes', () => {
-  const md = (tag) => '```sh\nMNEMA_IMAGE=ghcr.io/msch128/mnema-talk:' + tag + '\n```\n'
+  const md = (tag) => '```sh\nMNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:' + tag + '\n```\n'
   assert.equal(staleVersions('a.md', md('1.4'), cur).length, 1)
   assert.equal(staleVersions('a.md', md('1.9.9'), cur).length, 1)
   assert.equal(staleVersions('a.md', md('2.1'), cur).length, 0)

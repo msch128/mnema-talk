@@ -1,6 +1,6 @@
 # AGENTS.md — Mnema Talk Project Rules & AI Guidelines
 
-Welcome to **Mnema Talk** (`https://github.com/msch128/mnema-talk.git`).
+Welcome to **Mnema Talk** (`https://github.com/mnema-xyz/talk.git`).
 This repository is **PUBLIC**. All AI coding agents (Antigravity, Copilot, Claude, etc.) and human contributors MUST strictly adhere to the rules outlined below.
 
 ---

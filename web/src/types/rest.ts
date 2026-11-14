@@ -199,6 +199,21 @@ export function isAuthCreateInviteRequest(value: unknown): value is AuthCreateIn
 
 export const decodeAuthCreateInviteRequest = decoder("auth.CreateInviteRequest", isAuthCreateInviteRequest)
 
+export type AuthCreateMemberInviteRequest = {
+  channel_id?: string | null
+  expires_in_hours?: number | null
+  max_uses?: number | null
+}
+
+export function isAuthCreateMemberInviteRequest(value: unknown): value is AuthCreateMemberInviteRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (!hasOwn(value, "expires_in_hours") || ((isInteger(value["expires_in_hours"]) && value["expires_in_hours"] >= 1 && value["expires_in_hours"] <= 8760) || value["expires_in_hours"] === null))
+    && (!hasOwn(value, "max_uses") || ((isInteger(value["max_uses"]) && value["max_uses"] >= 1 && value["max_uses"] <= 1000) || value["max_uses"] === null))
+}
+
+export const decodeAuthCreateMemberInviteRequest = decoder("auth.CreateMemberInviteRequest", isAuthCreateMemberInviteRequest)
+
 export type AuthDeleteAccountRequest = {
   code?: string
   current_password: string
@@ -247,8 +262,11 @@ export function isAuthExportStatus(value: unknown): value is AuthExportStatus {
 export const decodeAuthExportStatus = decoder("auth.ExportStatus", isAuthExportStatus)
 
 export type AuthInvite = {
+  channel_id?: string | null
   code: string
   created_at: string
+  created_by_id?: string
+  created_by_name?: string
   expires_at: string | null
   id: string
   max_uses: number | null
@@ -258,8 +276,11 @@ export type AuthInvite = {
 
 export function isAuthInvite(value: unknown): value is AuthInvite {
   return isRecord(value)
+    && (!hasOwn(value, "channel_id") || (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
     && (hasOwn(value, "code") && isString(value["code"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by_id") || isIdentifier(value["created_by_id"]))
+    && (!hasOwn(value, "created_by_name") || isString(value["created_by_name"]))
     && (hasOwn(value, "expires_at") && (isTimestamp(value["expires_at"]) || value["expires_at"] === null))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) || value["max_uses"] === null))
@@ -281,6 +302,36 @@ export function isAuthLoginRequest(value: unknown): value is AuthLoginRequest {
 }
 
 export const decodeAuthLoginRequest = decoder("auth.LoginRequest", isAuthLoginRequest)
+
+export type AuthMemberInviteLimits = {
+  max_active: number
+  max_expires_in_hours: number
+  max_per_hour: number
+  max_uses: number
+}
+
+export function isAuthMemberInviteLimits(value: unknown): value is AuthMemberInviteLimits {
+  return isRecord(value)
+    && (hasOwn(value, "max_active") && (isInteger(value["max_active"]) && value["max_active"] >= 1 && value["max_active"] <= 100))
+    && (hasOwn(value, "max_expires_in_hours") && (isInteger(value["max_expires_in_hours"]) && value["max_expires_in_hours"] >= 1 && value["max_expires_in_hours"] <= 8760))
+    && (hasOwn(value, "max_per_hour") && (isInteger(value["max_per_hour"]) && value["max_per_hour"] >= 1 && value["max_per_hour"] <= 100))
+    && (hasOwn(value, "max_uses") && (isInteger(value["max_uses"]) && value["max_uses"] >= 1 && value["max_uses"] <= 1000))
+}
+
+export const decodeAuthMemberInviteLimits = decoder("auth.MemberInviteLimits", isAuthMemberInviteLimits)
+
+export type AuthMemberInviteList = {
+  invites: Array<AuthInvite>
+  limits: AuthMemberInviteLimits
+}
+
+export function isAuthMemberInviteList(value: unknown): value is AuthMemberInviteList {
+  return isRecord(value)
+    && (hasOwn(value, "invites") && isArrayOf(value["invites"], item => isAuthInvite(item)))
+    && (hasOwn(value, "limits") && isAuthMemberInviteLimits(value["limits"]))
+}
+
+export const decodeAuthMemberInviteList = decoder("auth.MemberInviteList", isAuthMemberInviteList)
 
 export type AuthMemberSession = {
   created_at: string
@@ -801,6 +852,7 @@ export type BotAccess = {
   mixed?: boolean
   mode?: "channels" | "all"
   permissions: number
+  private_reach?: boolean
   selected_channel_ids?: Array<string>
 }
 
@@ -812,6 +864,7 @@ export function isBotAccess(value: unknown): value is BotAccess {
     && (!hasOwn(value, "mixed") || typeof value["mixed"] === 'boolean')
     && (!hasOwn(value, "mode") || (value["mode"] === "channels" || value["mode"] === "all"))
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (!hasOwn(value, "private_reach") || typeof value["private_reach"] === 'boolean')
     && (!hasOwn(value, "selected_channel_ids") || isArrayOf(value["selected_channel_ids"], item => isIdentifier(item)))
 }
 
@@ -4549,6 +4602,7 @@ export function isOnboardingFirstRunStep(value: unknown): value is OnboardingFir
 export const decodeOnboardingFirstRunStep = decoder("onboarding.FirstRunStep", isOnboardingFirstRunStep)
 
 export type OnboardingInvitePreview = {
+  channel_id?: string
   community_name?: string
   expires_at?: string
   valid: boolean
@@ -4556,6 +4610,7 @@ export type OnboardingInvitePreview = {
 
 export function isOnboardingInvitePreview(value: unknown): value is OnboardingInvitePreview {
   return isRecord(value)
+    && (!hasOwn(value, "channel_id") || isIdentifier(value["channel_id"]))
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (hasOwn(value, "valid") && typeof value["valid"] === 'boolean')
@@ -5370,6 +5425,7 @@ export type ServerHealth = {
   community_icon?: string
   community_name?: string
   features?: Array<string>
+  public_url?: string
   status: "ok"
   version: string
   web_client_api: number
@@ -5380,6 +5436,7 @@ export function isServerHealth(value: unknown): value is ServerHealth {
     && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
@@ -5392,6 +5449,7 @@ export type ServerHealthUnavailable = {
   community_name?: string
   error: HttpxAPIError
   features?: Array<string>
+  public_url?: string
   status: "unavailable"
   unavailable: Array<string>
   version: string
@@ -5404,6 +5462,7 @@ export function isServerHealthUnavailable(value: unknown): value is ServerHealth
     && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (!hasOwn(value, "public_url") || isString(value["public_url"]))
     && (hasOwn(value, "status") && (value["status"] === "unavailable"))
     && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => isString(item)))
     && (hasOwn(value, "version") && isString(value["version"]))
@@ -5728,6 +5787,7 @@ export type ServerSelfUpdateStatus = {
   available: boolean
   configured: boolean
   image: string
+  moved_to?: string
   next_allowed_at: string | null
   reach: "yes" | "no" | "unknown"
   reach_reason: "follows" | "unset" | "local_build" | "digest_pinned" | "version_pinned" | "track_mismatch" | "custom_tag"
@@ -5738,6 +5798,7 @@ export function isServerSelfUpdateStatus(value: unknown): value is ServerSelfUpd
     && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
     && (hasOwn(value, "configured") && typeof value["configured"] === 'boolean')
     && (hasOwn(value, "image") && isString(value["image"]))
+    && (!hasOwn(value, "moved_to") || isString(value["moved_to"]))
     && (hasOwn(value, "next_allowed_at") && (isTimestamp(value["next_allowed_at"]) || value["next_allowed_at"] === null))
     && (hasOwn(value, "reach") && (value["reach"] === "yes" || value["reach"] === "no" || value["reach"] === "unknown"))
     && (hasOwn(value, "reach_reason") && (value["reach_reason"] === "follows" || value["reach_reason"] === "unset" || value["reach_reason"] === "local_build" || value["reach_reason"] === "digest_pinned" || value["reach_reason"] === "version_pinned" || value["reach_reason"] === "track_mismatch" || value["reach_reason"] === "custom_tag"))
