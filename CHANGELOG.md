@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/msch128/mnema-talk/compare/v3.2.0...v3.2.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* trust releases from before and after the move to mnema-xyz; images default to ghcr.io/mnema-xyz/mnema-talk ([#832](https://github.com/msch128/mnema-talk/issues/832)) ([5701278](https://github.com/msch128/mnema-talk/commit/5701278aa8abe8ee990451d7153e664db719624c))
+
 ## [3.2.0](https://github.com/msch128/mnema-talk/compare/v3.1.1...v3.2.0) (2026-11-14)
 
 
