@@ -149,14 +149,8 @@ these jobs in parallel (rough wall times with warm caches):
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
 | `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12, 2.9.19): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
-| `e2e-build` | Builds the web bundle and server binary once for all e2e shards | 1–2 min |
 | `e2e` | Verdict of four `e2e-shard (i/4)` jobs: Playwright against the real binary, each shard with its own stack and Owner; all specs on Chromium plus the phone projects. `e2e-report` merges the shards' blob reports into one HTML report artifact | 8–11 min |
 | `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls, <group>)` | Other engines, see above; not required checks | in parallel |
-
-The server binary (with the embedded web bundle) is built once in `e2e-build`
-and shared as an artifact (`e2e-binary`) across all end-to-end test shards
-(`e2e-chromium`, `clip-sweep`, `e2e-browsers`), which run with `SKIP_BUILD=1`
-to avoid redundant builds.
 
 Pull requests that change only README/SECURITY/`doc/` Markdown skip the heavy
 steps (the `changes` job); every required check still reports success, and the

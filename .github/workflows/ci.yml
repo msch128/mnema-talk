@@ -876,64 +876,16 @@ jobs:
           scripts/backup-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/backup-drill.log"
           echo "- restore ${{ matrix.from }}: $(grep -E '^==> backup drill passed' "$RUNNER_TEMP/backup-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
-  # -- Shared e2e build: compile the web bundle and server binary once -------
-  e2e-build:
-    name: e2e-build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        id: go
-        with:
-          go-version-file: go.mod
-          cache: false
-
-      - name: Go module + build cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
-          restore-keys: |
-            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build the web app and the server binary
-        run: |
-          set -euo pipefail
-          (cd web && npm ci --no-audit --no-fund && MNEMA_E2E=1 npm run build) && mkdir -p bin && CGO_ENABLED=0 go build -o bin/mnema-talk-e2e ./cmd/server
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: e2e-binary
-          path: bin/mnema-talk-e2e
-          if-no-files-found: error
-          retention-days: 1
-
   # -- Browser smoke test: login, chat message, talk, against the real binary -
   # Four jobs, each with a server, database and Owner of its own: the 85-odd
   # specs used to run one after another on one worker, all as the same account
   # and so on one API rate budget (tests/fixtures.ts paces them). A shard is a
-  # fresh stack, so nothing is shared between them and fixtures.ts is untouched;
-  # the e2e binary and web bundle are built once in e2e-build and shared as an
-  # artifact. Playwright deals the spec files out evenly (--shard=i/4). The
-  # required check `e2e` is the job at the end of this section.
+  # fresh stack, so nothing is shared between them and fixtures.ts is untouched.
+  # Playwright deals the spec files out evenly (--shard=i/4). The required check
+  # `e2e` is the job at the end of this section.
   e2e-chromium:
     name: e2e-shard (${{ matrix.shard }}/4)
-    needs: [changes, e2e-build]
-    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') }}
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -946,11 +898,33 @@ jobs:
           persist-credentials: false
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          # Cached per job below: setup-go's cache key is the same for every
+          # job, so whichever job finished first decided what all of them got.
+          cache: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
-          cache-dependency-path: e2e/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
 
       # Browsers only; the system packages come from the step below, and
       # e2e/run.sh skips the browser download when the cached revision is present.
@@ -984,18 +958,8 @@ jobs:
         run: e2e/ci-install-deps.sh chromium webkit
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: e2e-binary
-          path: bin
-
-      - if: ${{ needs.changes.outputs.code == 'true' }}
-        run: chmod +x bin/mnema-talk-e2e
-
-      - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Run browser smoke test
         env:
-          SKIP_BUILD: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: chromium webkit
           E2E_BLOB: "1"
@@ -1027,8 +991,8 @@ jobs:
 
   # One readable report (failures with traces and screenshots) for all shards.
   e2e-report:
-    needs: [changes, e2e-build, e2e-chromium]
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.e2e-build.result == 'success' }}
+    needs: [changes, e2e-chromium]
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -1064,19 +1028,16 @@ jobs:
 
   # The required check: unchanged name, succeeds only if every shard did.
   e2e:
-    needs: [e2e-build, e2e-chromium]
+    needs: [e2e-chromium]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: All e2e shards succeeded
         env:
-          BUILD_RESULT: ${{ needs.e2e-build.result }}
           RESULT: ${{ needs.e2e-chromium.result }}
         run: |
-          echo "build: $BUILD_RESULT"
           echo "result: $RESULT"
-          [ "$BUILD_RESULT" != failure ] && [ "$BUILD_RESULT" != cancelled ]
           [ "$RESULT" = success ]
 
   # -- Visual clipping sweep: e2e/tests/clipping.spec.ts over the whole matrix
@@ -1087,8 +1048,8 @@ jobs:
   # in the e2e-clip-results artifact. Not a required check.
   clip-sweep:
     name: clip-sweep (${{ matrix.shard }}/4)
-    needs: [changes, e2e-build]
-    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') && needs.changes.outputs.code == 'true' }}
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -1100,11 +1061,29 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
-          cache-dependency-path: e2e/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
 
       - name: Playwright version
         id: playwright
@@ -1127,16 +1106,8 @@ jobs:
         timeout-minutes: 10
         run: e2e/ci-install-deps.sh chromium
 
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: e2e-binary
-          path: bin
-
-      - run: chmod +x bin/mnema-talk-e2e
-
       - name: Run the full clipping sweep
         env:
-          SKIP_BUILD: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: chromium
           CLIP_SWEEP: full
@@ -1158,8 +1129,7 @@ jobs:
   # Safari, installed PWAs) and a smoke subset on Firefox. Not a required check
   # until both have run stable (see doc/product-status.md).
   e2e-browsers:
-    needs: [changes, e2e-build]
-    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') }}
+    needs: changes
     name: e2e (${{ matrix.browser }}${{ matrix.browser == 'webkit' && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1198,11 +1168,33 @@ jobs:
           persist-credentials: false
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          # Cached per job below: setup-go's cache key is the same for every
+          # job, so whichever job finished first decided what all of them got.
+          cache: false
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: npm
-          cache-dependency-path: e2e/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
 
       # Browsers only; the system packages come from the step below, and
       # e2e/run.sh skips the browser download when the cached revision is present.
@@ -1236,18 +1228,8 @@ jobs:
         run: e2e/ci-install-deps.sh ${{ matrix.browser }}
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: e2e-binary
-          path: bin
-
-      - if: ${{ needs.changes.outputs.code == 'true' }}
-        run: chmod +x bin/mnema-talk-e2e
-
-      - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Run browser smoke test
         env:
-          SKIP_BUILD: "1"
           E2E_INSTALL_BROWSER: "1"
           E2E_BROWSERS: ${{ matrix.browser }}
           E2E_ONLY: ${{ matrix.only }} ${{ matrix.browser == 'webkit' && format('--shard={0}', matrix.shard) || '' }}
