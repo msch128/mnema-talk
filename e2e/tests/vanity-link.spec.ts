@@ -45,12 +45,18 @@ test('vanity invite link: Owner activates it for sign-ups and switches it off to
     await activeSwitch.click()
     await expect(activeSwitch).toHaveAttribute('aria-checked', 'false')
     await admin.getByTestId('vanity-save').click()
+    // Saved when the bar has nothing left to save: the reload below must see the stored state.
+    await expect(admin.getByTestId('vanity-save')).toBeDisabled()
 
     // The same visitor reloads and sees "Dieser Link ist nicht aktiv".
     await visitor.reload()
     await expect(visitor.getByTestId('invite-inactive')).toBeVisible()
     await expect(visitor.getByTestId('invite-inactive-title')).toHaveText('Dieser Link ist nicht aktiv')
   } finally {
+    // Leave no link behind, so a second run against the same database starts clean.
+    await admin.getByTestId('vanity-slug').fill('')
+    await admin.getByTestId('vanity-save').click()
+    await expect(admin.getByTestId('vanity-save')).toBeDisabled()
     await adminCtx.close()
     await visitorCtx.close()
   }

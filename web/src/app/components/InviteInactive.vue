@@ -14,7 +14,7 @@ const titleId = useId()
     <div
       role="region"
       :aria-labelledby="titleId"
-      class="dialog-panel my-auto bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5 text-center focus:outline-hidden"
+      class="dialog-panel my-auto bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5 text-center"
       data-testid="invite-inactive"
     >
       <div class="space-y-2">

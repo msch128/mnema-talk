@@ -26,7 +26,7 @@ describe('InviteInactive', () => {
     expect(deBtn).toBeDefined()
     await deBtn!.trigger('click')
     expect(w.get('[data-testid="invite-inactive-title"]').text()).toBe(de.login.inviteInactiveTitle)
-    expect(w.get('[data-testid="invite-inactive-hint"]').text()).toContain(de.login.inviteInactiveHint.slice(0, 12))
+    expect(w.get('[data-testid="invite-inactive-hint"]').text()).toBe(de.login.inviteInactiveHint)
     expect(w.get('[data-testid="invite-inactive-signin"]').text()).toBe(de.login.inviteInactiveSignIn)
   })
 })
