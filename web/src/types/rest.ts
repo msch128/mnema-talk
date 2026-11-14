@@ -5602,6 +5602,7 @@ export type ServerSelfUpdateStatus = {
   available: boolean
   configured: boolean
   image: string
+  moved_to?: string
   next_allowed_at: string | null
   reach: "yes" | "no" | "unknown"
   reach_reason: "follows" | "unset" | "local_build" | "digest_pinned" | "version_pinned" | "track_mismatch" | "custom_tag"
@@ -5612,6 +5613,7 @@ export function isServerSelfUpdateStatus(value: unknown): value is ServerSelfUpd
     && (hasOwn(value, "available") && typeof value["available"] === 'boolean')
     && (hasOwn(value, "configured") && typeof value["configured"] === 'boolean')
     && (hasOwn(value, "image") && isString(value["image"]))
+    && (!hasOwn(value, "moved_to") || isString(value["moved_to"]))
     && (hasOwn(value, "next_allowed_at") && (isTimestamp(value["next_allowed_at"]) || value["next_allowed_at"] === null))
     && (hasOwn(value, "reach") && (value["reach"] === "yes" || value["reach"] === "no" || value["reach"] === "unknown"))
     && (hasOwn(value, "reach_reason") && (value["reach_reason"] === "follows" || value["reach_reason"] === "unset" || value["reach_reason"] === "local_build" || value["reach_reason"] === "digest_pinned" || value["reach_reason"] === "version_pinned" || value["reach_reason"] === "track_mismatch" || value["reach_reason"] === "custom_tag"))

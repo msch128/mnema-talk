@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/verify"
@@ -136,17 +137,63 @@ func (v *Verifier) Verify(ctx context.Context, image string) (*Result, error) {
 		return nil, fmt.Errorf("sigstore trusted root: %w", err)
 	}
 	pinned := repo.Digest(desc.Digest.String())
-	if err := v.verifySignature(pinned, desc.Digest, trust, opts); err != nil {
-		return nil, err
+	// Each origin is checked as a whole: its identity must have signed the
+	// digest and its source must be in the provenance. A failure to read the
+	// registry ends the check at once (no verdict); a refusal moves on to the
+	// next origin, and only when every origin refused is the image untrusted.
+	var refusals []error
+	for _, o := range v.policy.Origins {
+		platforms, version, err := v.verifyOrigin(pinned, desc.Digest, trust, o, opts)
+		if err == nil {
+			err = withinMaxVersion(o, version)
+		}
+		if err == nil {
+			return &Result{Repository: repo.Name(), Digest: desc.Digest.String(), Platforms: platforms, Version: version}, nil
+		}
+		if !errors.Is(err, ErrUntrusted) {
+			return nil, err
+		}
+		refusals = append(refusals, err)
 	}
-	platforms, version, err := v.verifyProvenance(pinned, opts)
-	if err != nil {
-		return nil, err
-	}
-	return &Result{Repository: repo.Name(), Digest: desc.Digest.String(), Platforms: platforms, Version: version}, nil
+	return nil, joinRefusals(refusals, v.policy.Origins)
 }
 
-func (v *Verifier) verifySignature(pinned name.Digest, digest v1.Hash, trust root.TrustedMaterial, opts []remote.Option) error {
+// verifyOrigin checks the signature and the provenance of pinned against one origin.
+func (v *Verifier) verifyOrigin(pinned name.Digest, digest v1.Hash, trust root.TrustedMaterial, o Origin, opts []remote.Option) ([]string, string, error) {
+	if err := v.verifySignature(pinned, digest, trust, o, opts); err != nil {
+		return nil, "", err
+	}
+	return v.verifyProvenance(pinned, o, opts)
+}
+
+// withinMaxVersion refuses a release newer than the origin's MaxVersion.
+func withinMaxVersion(o Origin, version string) error {
+	if o.MaxVersion == "" {
+		return nil
+	}
+	maxV, _ := update.ParseSemver(o.MaxVersion) // checked by Validate
+	got, ok := update.ParseSemver(strings.TrimPrefix(version, "v"))
+	if !ok || got.Compare(maxV) > 0 {
+		return untrusted("release %q is newer than the last release %s of %s", version, o.MaxVersion, o.Source)
+	}
+	return nil
+}
+
+// joinRefusals is one untrusted error for all origins, on one line. With a
+// single origin it is that origin's refusal unchanged.
+func joinRefusals(refusals []error, origins []Origin) error {
+	if len(refusals) == 1 {
+		return refusals[0]
+	}
+	prefix := ErrUntrusted.Error() + ": "
+	parts := make([]string, len(refusals))
+	for i, err := range refusals {
+		parts[i] = fmt.Sprintf("as %s: %s", origins[i].Source, strings.TrimPrefix(err.Error(), prefix))
+	}
+	return untrusted("%s", strings.Join(parts, "; "))
+}
+
+func (v *Verifier) verifySignature(pinned name.Digest, digest v1.Hash, trust root.TrustedMaterial, o Origin, opts []remote.Option) error {
 	referrers, err := remote.Referrers(pinned, opts...)
 	if err != nil {
 		return fmt.Errorf("list signatures of %s: %w", digest, err)
@@ -155,7 +202,7 @@ func (v *Verifier) verifySignature(pinned name.Digest, digest v1.Hash, trust roo
 	if err != nil {
 		return fmt.Errorf("read signatures of %s: %w", digest, err)
 	}
-	verifier, policy, err := v.sigstorePolicy(trust, digest)
+	verifier, policy, err := v.sigstorePolicy(trust, digest, o.IdentityRegexp)
 	if err != nil {
 		return err
 	}
@@ -238,7 +285,7 @@ func (v *Verifier) tryBundle(ref name.Digest, verifier *verify.Verifier, policy 
 	return nil
 }
 
-func (v *Verifier) sigstorePolicy(trust root.TrustedMaterial, digest v1.Hash) (*verify.Verifier, verify.PolicyBuilder, error) {
+func (v *Verifier) sigstorePolicy(trust root.TrustedMaterial, digest v1.Hash, identity string) (*verify.Verifier, verify.PolicyBuilder, error) {
 	// A transparency log entry and a timestamp (log or RFC 3161) are both
 	// required, as cosign does: the short-lived certificate is only valid
 	// for the minutes around the signing.
@@ -246,7 +293,7 @@ func (v *Verifier) sigstorePolicy(trust root.TrustedMaterial, digest v1.Hash) (*
 	if err != nil {
 		return nil, verify.PolicyBuilder{}, fmt.Errorf("sigstore verifier: %w", err)
 	}
-	id, err := verify.NewShortCertificateIdentity(v.policy.Issuer, "", "", v.policy.IdentityRegexp)
+	id, err := verify.NewShortCertificateIdentity(v.policy.Issuer, "", "", identity)
 	if err != nil {
 		return nil, verify.PolicyBuilder{}, fmt.Errorf("certificate identity: %w", err)
 	}

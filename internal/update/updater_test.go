@@ -139,3 +139,21 @@ func TestImageReach(t *testing.T) {
 		}
 	}
 }
+
+func TestMovedToNamesTheNewRepositoryOfTheOldGHCRPath(t *testing.T) {
+	for image, want := range map[string]string{
+		"ghcr.io/msch128/mnema-talk:3.1":          "ghcr.io/mnema-xyz/mnema-talk",
+		"ghcr.io/msch128/mnema-talk":              "ghcr.io/mnema-xyz/mnema-talk",
+		"GHCR.io/msch128/mnema-talk:latest":       "ghcr.io/mnema-xyz/mnema-talk",
+		"ghcr.io/msch128/mnema-talk@sha256:abc":   "ghcr.io/mnema-xyz/mnema-talk",
+		"ghcr.io/mnema-xyz/mnema-talk:3.1":        "",
+		"docker.io/msch128/mnema-talk:3.1":        "", // the Docker Hub mirror did not move
+		"ghcr.io/msch128/mnema-talk-fork:3.1":     "",
+		"registry.example/msch128/mnema-talk:3.1": "",
+		"": "",
+	} {
+		if got := MovedTo(image); got != want {
+			t.Errorf("MovedTo(%q) = %q, want %q", image, got, want)
+		}
+	}
+}

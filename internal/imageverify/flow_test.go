@@ -216,7 +216,7 @@ func TestUpdateStaysOnTheRegistryTheContainerRunsFrom(t *testing.T) {
 	d := daemontest.New(t, f.Repo+":1.0")
 
 	p := f.Policy()
-	p.Repository, p.Mirror = "ghcr.invalid/msch128/mnema-talk", f.Repo
+	p.Repository, p.Mirrors = "ghcr.invalid/mnema-xyz/mnema-talk", []string{f.Repo}
 	s := flow(t, f, d)
 	s.Verifier = f.VerifierFor(p, f.Trust())
 

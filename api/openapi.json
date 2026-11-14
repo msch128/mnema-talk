@@ -9581,6 +9581,10 @@
             "description": "Image is MNEMA_IMAGE, the image reference the app container runs.",
             "type": "string"
           },
+          "moved_to": {
+            "description": "MovedTo is set when Image is on a repository that gets no more releases:\nthe repository they are published in now (GHCR does not redirect). The\nadmin changes MNEMA_IMAGE; until then \"update now\" is not offered.",
+            "type": "string"
+          },
           "next_allowed_at": {
             "description": "NextAllowedAt is set during the cooldown after an update request.",
             "format": "date-time",
@@ -20394,7 +20398,7 @@
                 }
               }
             },
-            "description": "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, or an update is already running."
+            "description": "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, the image repository moved (moved_to), or an update is already running."
           },
           "429": {
             "content": {

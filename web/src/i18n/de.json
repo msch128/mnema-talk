@@ -611,6 +611,7 @@
       "srvInvalidId": "Ungültige ID.",
       "srvInvalidScheduledId": "Ungültige ID der geplanten Nachricht.",
       "srvImageTagCannotReach": "Der konfigurierte Image-Tag erreicht diese Version nicht. Aktualisiere manuell.",
+      "srvImageRepositoryMoved": "Die Images sind nach {a} umgezogen. Setze MNEMA_IMAGE in .env darauf (gleicher Tag) und führe dann docker compose pull && docker compose up -d aus.",
       "srvImageCannotBeRead": "Das Bild kann nicht gelesen werden.",
       "srvBanned": "Dieses Konto ist gesperrt.",
       "srvBannedUntil": "Dieses Konto ist bis {a} gesperrt.",
@@ -2025,6 +2026,7 @@
           "gc": "GC-Läufe (Gesamtpause)"
         }
       },
+      "image_moved": "Die Releases sind von {image} nach {moved_to} umgezogen (GitHub-Organisation mnema-xyz). In .env MNEMA_IMAGE auf {moved_to} mit demselben Tag setzen, dann docker compose pull && docker compose up -d ausführen.",
       "reach": {
         "follows": "Das Image {image} folgt neuen Versionen.",
         "unset": "MNEMA_IMAGE ist nicht gesetzt.",
