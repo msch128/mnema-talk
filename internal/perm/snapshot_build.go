@@ -23,8 +23,10 @@ type State struct {
 	Roles          map[uuid.UUID]Role
 	UserRoles      map[uuid.UUID][]uuid.UUID
 	Owners, Bots   map[uuid.UUID]bool
-	BotsAll        map[uuid.UUID]bool      // bots given access to every channel (a subset of Bots)
+	BotsAll        map[uuid.UUID]bool // bots given access to every channel (a subset of Bots)
+	BotNames       map[uuid.UUID]string
 	ChannelCat     map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
+	ChannelNames   map[uuid.UUID]string
 	Stages         map[uuid.UUID]bool
 	Categories     map[uuid.UUID]bool
 	DMs            map[uuid.UUID]map[uuid.UUID]bool
@@ -50,7 +52,13 @@ func NewSnapshot(st State, loaded time.Time) *Snapshot {
 	if st.BotsAll != nil {
 		s.botsAll = st.BotsAll
 	}
+	if st.BotNames != nil {
+		s.botNames = st.BotNames
+	}
 	s.channelCat, s.stages, s.categories, s.dms = st.ChannelCat, st.Stages, st.Categories, st.DMs
+	if st.ChannelNames != nil {
+		s.channelNames = st.ChannelNames
+	}
 	s.dmEnabled = !st.DMsDisabled
 	if st.DMTalks != nil {
 		s.dmTalks = st.DMTalks

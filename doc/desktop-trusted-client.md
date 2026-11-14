@@ -2,7 +2,7 @@
 
 Status: implemented and shipped. The release tooling is in this repository and
 needs no server change. The hosts that verify and load the bundle are in
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop): a Tauri
+[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop): a Tauri
 host for Windows and macOS and an Electron client for Linux.
 
 ## Why
@@ -210,7 +210,7 @@ desktop client. It signs one small statement:
   of `trust.json`.
 
 Both files are served from
-`https://raw.githubusercontent.com/msch128/mnema-talk/main/desktop-trust/`.
+`https://raw.githubusercontent.com/mnema-xyz/talk/main/desktop-trust/`.
 The transport is untrusted; only the signature counts. No release is needed:
 merging a new statement to `main` publishes it.
 
@@ -330,7 +330,7 @@ updater key works the same with `-updater-key` and `-revoke-updater-key`.
    unverified bytes are served: modifying one byte of a cached file makes
    that bundle unusable and the client falls back to the next verified one.
 3. **Update.** The host asks
-   `api.github.com/repos/msch128/mnema-talk/releases/latest` (at most every
+   `api.github.com/repos/mnema-xyz/talk/releases/latest` (at most every
    six hours, and immediately when no bundle fits the server) and downloads
    `mnema-web-<version>.zip` when its version is newer than everything held.
    Redirects to GitHub's asset hosts are followed, HTTPS only, with a size
@@ -678,9 +678,9 @@ an installer by hand after the first time.
 
 * **Feed and key.** On Windows the installer is a per-user NSIS package; macOS
   has a signed `.app.tar.gz` and Linux signed AppImages. All are built by the
-  [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) release
+  [mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) release
   workflow on a `vX.Y.Z` tag. Installed clients read
-  `https://github.com/msch128/mnema-talk-desktop/releases/latest/download/latest.json`
+  `https://github.com/mnema-xyz/talk-desktop/releases/latest/download/latest.json`
   at every start and every six hours (the interval of the bundle check). The
   feed is not trusted: it only names an installer and a minisign signature.
   The updater key (Ed25519, minisign format; the official Tauri updater) is a

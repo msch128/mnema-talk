@@ -16,8 +16,8 @@ import (
 // The masks are restated here from their documentation, not imported, so a
 // changed constant shows up as a disagreement.
 const (
-	refTimeout   = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki
-	refWriteWait = SendMessages | AttachFiles | MentionEveryone | EditWiki
+	refTimeout   = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki | CreateMemberInvites
+	refWriteWait = SendMessages | AttachFiles | MentionEveryone | EditWiki | CreateMemberInvites
 	refReactWait = AddReactions
 	refSpeakWait = Speak | Video
 	refCallWait  = Connect | Speak | Video // a conversation's call: joining waits too

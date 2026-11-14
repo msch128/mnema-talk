@@ -32,6 +32,10 @@ are `database` and `storage` today; the list may grow in a later release, so a
 client ignores a name it does not know. `GET /api/health/live` is
 the liveness probe and never depends on the database or object storage.
 
+`GET /api/health` also carries `public_url`, the server's `PUBLIC_URL` (left out
+when none is set). A client that is not served from that address, such as the
+desktop app, builds the links it shares (invites, message links) from it.
+
 `GET /api/health` also lists the optional features a server has in `features`.
 In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,

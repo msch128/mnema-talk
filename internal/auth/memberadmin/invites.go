@@ -14,6 +14,7 @@ import (
 // own permission (RequireUser must already apply).
 func (h *API) MountAdmin(r chi.Router) {
 	invites := r.With(auth.RequirePerm(h.Perms, perm.CreateInvites))
+	h.memberInviteLimitsRoutes(invites)
 	invites.Get("/invites", httpx.Handle(h.listInvites))
 	invites.Post("/invites", httpx.Handle(h.createInvite))
 	invites.Patch("/invites/{id}", httpx.Handle(h.updateInvite))

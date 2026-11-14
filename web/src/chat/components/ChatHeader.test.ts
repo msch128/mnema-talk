@@ -9,6 +9,7 @@ import { useFirstRunStore } from '../../stores/firstRun'
 import { useOnboardingStore } from '../../stores/onboarding'
 import { i18nPlugin, setLocale } from '../../i18n'
 import { tooltip } from '../../directives/tooltip'
+import { channelInviteFor } from '../lib/channelInvite'
 import { channelFixture, onboardingStateFixture, userFixture } from '../../test-fixtures.fixture'
 
 const openSearch = vi.fn()
@@ -30,6 +31,32 @@ beforeEach(() => {
   setLocale('en')
 })
 afterEach(() => { document.body.innerHTML = '' })
+
+describe('ChatHeader channel menu', () => {
+  async function menuItems() {
+    const chat = useChatStore()
+    chat.uncategorized = [channelFixture({ id: 'chan-1', name: 'general' })]
+    chat.activeChannel = chat.uncategorized[0]!
+    const wrapper = mount(ChatHeader, { global: { plugins: [i18nPlugin], directives: { tooltip } } })
+    await wrapper.find('[data-testid="channel-menu-button"]').trigger('click')
+    const items = wrapper.emitted('menu')?.[0]?.[2] as { id?: string | number; action?: () => void }[]
+    return items
+  }
+
+  it('offers Invite people beside the notification settings when the member may invite', async () => {
+    useServerFeaturesStore().list = ['invites.member']
+    const items = await menuItems()
+    const invite = items.find(i => i.id === 'invite-people')
+    expect(invite).toBeDefined()
+    invite?.action?.()
+    expect(channelInviteFor.value).toBe('chan-1')
+  })
+
+  it('has no such entry on a server without member invites', async () => {
+    useServerFeaturesStore().list = []
+    expect((await menuItems()).some(i => i.id === 'invite-people')).toBe(false)
+  })
+})
 
 describe('ChatHeader search button', () => {
   it('opens the search limited to the active channel', async () => {

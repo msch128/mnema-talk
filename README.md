@@ -3,10 +3,10 @@
 **A small, self-hosted home for one community: text channels, drop-in Talks
 and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
-[![CI](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msch128/mnema-talk/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/msch128/mnema-talk)](https://github.com/msch128/mnema-talk/releases/latest)
-[![License: AGPL v3](https://img.shields.io/github/license/msch128/mnema-talk)](LICENSE)
-[![Go version](https://img.shields.io/github/go-mod/go-version/msch128/mnema-talk)](go.mod)
+[![CI](https://github.com/mnema-xyz/talk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mnema-xyz/talk/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/mnema-xyz/talk)](https://github.com/mnema-xyz/talk/releases/latest)
+[![License: AGPL v3](https://img.shields.io/github/license/mnema-xyz/talk)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/mnema-xyz/talk)](go.mod)
 
 ![Mnema Talk: the #dev-log channel of a small game studio, with a code block, reactions, an @mention and a thread under a bug report](doc/images/chat.png)
 
@@ -17,7 +17,7 @@ design. It keeps the parts that make a community server useful: roles, private
 channels, webhooks, bots and a call you can join with one click. Invite-only,
 no accounts on someone else's platform.
 
-**[Download the desktop app (Beta, unsigned)](https://github.com/msch128/mnema-talk-desktop/releases/latest)**: Windows installer and portable ZIP, a macOS disk image and Linux AppImages and .deb packages live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
+**[Download the desktop app (Beta, unsigned)](https://github.com/mnema-xyz/talk-desktop/releases/latest)**: Windows installer and portable ZIP, a macOS disk image and Linux AppImages and .deb packages live in their own repository; releases here carry the Docker image and the signed web bundle. Prefer the browser? Nothing to install, see [Quick start](#quick-start) to host it.
 
 [Why Mnema](#why-mnema) · [Features](#features) · [Quick start](#quick-start) ·
 [Desktop (Beta)](#desktop-beta) · [Documentation](#documentation) ·
@@ -360,7 +360,7 @@ writes the configuration, including every secret:
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
 docker compose up -d --wait
 ```
 
@@ -437,7 +437,7 @@ The full model, its limits and how to report a vulnerability privately are in
 
 ## Desktop (Beta)
 
-The [desktop client](https://github.com/msch128/mnema-talk-desktop) for Windows,
+The [desktop client](https://github.com/mnema-xyz/talk-desktop) for Windows,
 macOS (Apple silicon) and Linux (**Beta**, unsigned; Windows installer and
 portable ZIP, macOS disk image, Linux AppImage and .deb) wraps the same web app. Instead of loading code from
 your server it runs a **signed bundle** that it verifies on every start, with
@@ -465,6 +465,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Product vocabulary (en/de) used in the UI and docs, and voice and network terms | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
+| Invites, and members creating them | [doc/invites.md](doc/invites.md) |
 | Messages with a lifetime, auto-delete, removed files | [doc/timed-messages.md](doc/timed-messages.md) |
 | Talks and Stages, forums, events, the wiki and the layout import from a template | [doc/talks.md](doc/talks.md), [doc/forums.md](doc/forums.md), [doc/events.md](doc/events.md), [doc/wiki.md](doc/wiki.md), [doc/import.md](doc/import.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
