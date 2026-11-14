@@ -13,11 +13,7 @@ import type { LayerClone } from './state'
  */
 export function layerClone(slots: (LayerClone | null)[], index: number, source: MediaStreamTrack): MediaStreamTrack {
   const held = slots[index]
-  if (held && held.source === source && held.clone.readyState === 'live') {
-    // The capture's hint can change while it runs (the screen's "optimise for" choice).
-    held.clone.contentHint = source.contentHint
-    return held.clone
-  }
+  if (held && held.source === source && held.clone.readyState === 'live') return held.clone
   dropLayerClone(slots, index)
   const clone = source.clone()
   clone.contentHint = source.contentHint
