@@ -5,6 +5,7 @@ import { talkPath } from '../../../shared/lib/routePaths'
 import { navigate } from '../../../shared/lib/router'
 import type { ServerEventPayloads } from '../../../types/events'
 import type { Cx } from './state'
+import { socketUp } from './socketGap'
 
 // Create-a-Talk lobbies. Joining a lobby seats nobody: the server opens a
 // temporary Talk and answers talk_moved; this module then joins that Talk like
@@ -79,6 +80,9 @@ export async function joinViaLobby(cx: Cx, lobbyId: string, join: (talkId: strin
   // A second lobby replaces the first: the first must not join anything when it is settled.
   cancelPendingLobby(cx)
   const generation = lobbyGeneration
+  // A request sent before the socket is up would be dropped: it waits.
+  if (!cx.chat.isConnected) await socketUp(cx)
+  if (generation !== lobbyGeneration) return
   const talk = await openFromLobby(cx, lobbyId)
   if (!talk || generation !== lobbyGeneration) return
   // The new Talk is not in the channel list or the permissions yet; the join
