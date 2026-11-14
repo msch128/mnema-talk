@@ -520,6 +520,10 @@ running a changed version as a network service: its users must be able to get
 the source (the legal dialog in the app links to it; point `SOURCE_URL` in
 `web/src/shared/lib/thirdParty.ts` at your own repository).
 
+**Go SDK:** the Go SDK under [`sdk/go`](sdk/go) is the exception. It is licensed
+under the [MIT License](sdk/go/LICENSE), so bots built with it can use any
+license.
+
 **Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
 obligations (for example in a closed-source product or service), get a
 separate commercial license from the copyright holder. Contact
@@ -527,3 +531,4 @@ separate commercial license from the copyright holder. Contact
 
 Contributions are accepted under the AGPL-3.0, and their authors agree that
 Marius Schröder may also distribute them under a commercial license.
+Contributions to `sdk/go` are accepted under the MIT License.
