@@ -18,6 +18,7 @@ audit.
 | [775](2026-11/775.md) | #775, merged with #780 | repair of the media group protocol |
 | [777-keys](2026-11/777-keys.md) | #777 | key rotation (`JWT_SECRET_PREVIOUS`, `DATA_KEY`, `rotate-keys`) |
 | [777-ws](2026-11/777-ws.md) | #777 | panic isolation in the hub and the SFU |
+| [838](2026-11/838.md) | #838 | the vanity link's *Link active* switch and the inactive page |
 | [779](2026-11/779.md) | #779 | group merge, first round (rejected) |
 | [779c](2026-11/779c.md) | #779 | group merge, third round |
 | [779d](2026-11/779d.md) | #779 | group merge, fourth round |
