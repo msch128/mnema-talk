@@ -38,6 +38,21 @@ describe('screen layers without a running share', () => {
     await syncLayers(cx)
     expect(st.screenSender.setParameters).not.toHaveBeenCalled()
   })
+
+  it('stops clones of lines that have no sender', async () => {
+    const { cx, st } = room()
+    const stop0 = vi.fn()
+    const stop1 = vi.fn()
+    st.screenLayerClones = [
+      { source: {} as MediaStreamTrack, clone: { stop: stop0, readyState: 'live' } as unknown as MediaStreamTrack },
+      { source: {} as MediaStreamTrack, clone: { stop: stop1, readyState: 'live' } as unknown as MediaStreamTrack },
+    ]
+    st.layerSenders = [null, null]
+    await syncLayers(cx)
+    expect(stop0).toHaveBeenCalled()
+    expect(stop1).toHaveBeenCalled()
+    expect(st.screenLayerClones).toEqual([null, null])
+  })
 })
 
 describe('layer changes that fail', () => {

@@ -16,7 +16,7 @@ import (
 
 func populateChannels(ctx context.Context, p *db.Pool, categories []core.Category, categoryIdx map[uuid.UUID]int) ([]core.Channel, error) {
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels")+`,
 		       is_lobby, is_temp, leader_id, is_stage, COALESCE(slug, ''),
 		       COALESCE((SELECT array_agg(s.slug ORDER BY s.used_at, s.slug) FROM channel_slugs s
 		                 WHERE s.channel_id = channels.id AND s.slug IS DISTINCT FROM channels.slug), '{}')
@@ -29,9 +29,10 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []core.Categor
 	uncategorized := make([]core.Channel, 0)
 	for chanRows.Next() {
 		var ch core.Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
 			return nil, err
 		}
+		ch.FillAutoDeleteDays()
 		if ch.CategoryID != nil {
 			if idx, ok := categoryIdx[*ch.CategoryID]; ok {
 				categories[idx].Channels = append(categories[idx].Channels, ch)
@@ -118,11 +119,12 @@ func CreateChannelSeenBy(ctx context.Context, p *db.Pool, canSee func(uuid.UUID)
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
 			categoryID, name, chType, topic, sortOrder).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
 			return err
 		}
+		ch.FillAutoDeleteDays()
 		if asStage {
 			if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
 				return err
@@ -173,6 +175,13 @@ func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string
 	botIDs, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 	if err != nil {
 		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
+	// The bot accounts' rows are taken before the cascade locks the messages:
+	// a delete of a webhook message takes its author's row before the
+	// message's (messages.lockMessageForDelete), and the other order here, the
+	// messages and then the account, would be a lock cycle with it.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) FOR UPDATE`, botIDs); err != nil {
+		return nil, fmt.Errorf("lock webhook bots: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
 		return nil, fmt.Errorf("delete channel: %w", err)
@@ -256,10 +265,11 @@ func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *core.Cha
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND type <> 'dm' AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, name, topic, userLimit, slowMode).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays); err != nil {
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"), id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault); err != nil {
 		return err
 	}
+	ch.FillAutoDeleteDays()
 	return assignAndFillSlugs(ctx, tx, ch)
 }
 

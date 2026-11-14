@@ -77,7 +77,7 @@ func TestTheBotLearnsItsHandle(t *testing.T) {
 	if err := f.a.db.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, f.bot.UserID).Scan(&handle); err != nil {
 		t.Fatal(err)
 	}
-	if r.User.Handle != handle || !strings.HasPrefix(handle, "bot-") || r.User.Username != "helper" {
+	if r.User.Handle != handle || !strings.HasPrefix(handle, "helper") || r.User.Username != "helper" {
 		t.Fatalf("READY user: %+v, handle %q", r.User, handle)
 	}
 	var me bot.Self

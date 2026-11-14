@@ -18,10 +18,13 @@ import EmptyState from '../../shared/components/EmptyState.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
 import EditInviteDialog from './EditInviteDialog.vue'
 import AdminVanityLink from './AdminVanityLink.vue'
+import AdminMemberInviteLimits from './AdminMemberInviteLimits.vue'
 import { usePermissionsStore } from '../../stores/permissions'
+import { useChatStore } from '../../stores/chat'
 
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
+const serverFeatures = useServerFeaturesStore()
 
 const invites = ref<Invite[]>([])
 const loaded = ref(false)
@@ -116,6 +119,10 @@ async function copyInviteLink(code: string) {
   }
 }
 
+// The channel an invite lands in, by name; empty for none (or a channel this member does not see).
+const chat = useChatStore()
+const channelName = (inv: Invite) => (inv.channel_id ? chat.allChannels.find(c => c.id === inv.channel_id)?.name ?? '' : '')
+
 function inviteStatus(inv: Invite) {
   if (inv.expires_at && new Date(inv.expires_at) < new Date()) return t('admin.expired')
   if (inv.max_uses != null && inv.uses_count >= inv.max_uses) return t('admin.usedUp')
@@ -154,6 +161,7 @@ onMounted(loadInvites)
     </div>
 
     <AdminVanityLink v-if="permissions.can('administrator')" />
+    <AdminMemberInviteLimits v-if="serverFeatures.memberInvites" />
 
     <form class="flex flex-wrap items-start gap-3" data-testid="invite-form" @submit.prevent="createInvite">
       <div class="block min-w-0 flex-1 basis-48 space-y-1">
@@ -198,6 +206,8 @@ onMounted(loadInvites)
           <span v-if="inv.weak" class="text-mnema-danger cursor-help" data-testid="invite-weak" :title="$t('admin.weakInviteHint')">{{ $t('admin.weakInvite') }}</span>
           <span class="text-mnema-muted whitespace-nowrap">{{ inv.max_uses == null ? $t('admin.usesUnlimited', { used: inv.uses_count }) : $t('admin.uses', { used: inv.uses_count, max: inv.max_uses }) }}</span>
           <span class="text-mnema-tertiary">{{ inviteStatus(inv) }}</span>
+          <span v-if="inv.created_by_name" class="text-mnema-tertiary" data-testid="invite-creator">{{ $t('memberInvites.by', { name: inv.created_by_name }) }}</span>
+          <span v-if="channelName(inv)" class="text-mnema-tertiary" data-testid="invite-channel">{{ $t('memberInvites.into', { name: channelName(inv) }) }}</span>
         </div>
         <div class="flex items-center gap-3 shrink-0 ml-auto">
           <button

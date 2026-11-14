@@ -10,6 +10,7 @@ import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin, Bookmark } fr
 import UserAvatar from '../../shared/components/UserAvatar.vue'
 import { isRemovedMessage, shownName } from '../../shared/lib/deletedUser'
 import MarkdownContent from '../../shared/components/MarkdownContent.vue'
+import LifetimeMark from './LifetimeMark.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ForwardedQuote from './ForwardedQuote.vue'
 import ReactionPalette from '../../shared/components/ReactionPalette.vue'
@@ -204,6 +205,7 @@ defineExpose({ el: row })
         <BotBadge v-if="msg.is_bot" :webhook="msg.is_webhook === true" />
         <span class="text-xs text-mnema-tertiary shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
         <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic shrink-0">{{ $t('chat.edited') }}</span>
+        <LifetimeMark v-if="msg.expires_at" :expires-at="msg.expires_at" />
         <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />
         <button
           v-if="isSaved"
@@ -248,6 +250,7 @@ defineExpose({ el: row })
         v-if="grouped && msg.is_edited && !editing"
         class="block text-xs text-mnema-tertiary italic"
       >{{ $t('chat.edited') }}</span>
+      <LifetimeMark v-if="grouped && msg.expires_at && !editing" :expires-at="msg.expires_at" class="flex" />
       <span v-if="grouped && msg.is_pinned && !editing" data-testid="pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
         <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
       </span>

@@ -18,6 +18,7 @@ function world(channels: { id: string; is_lobby?: boolean }[] = [{ id: LOBBY, is
   const st = createRtcState()
   const chat = {
     allChannels: channels,
+    isConnected: true,
     sendWSEvent: vi.fn(),
     fetchChannels: vi.fn(async () => {}),
     selectChannel: vi.fn()

@@ -1,6 +1,7 @@
 package media
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -110,7 +111,7 @@ func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 // delete handles DELETE /api/admin/media/{id}.
 //
 // @Summary Delete a media object
-// @Description Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Owner only (403 otherwise).
+// @Description Removes the object from storage and marks it deleted; chat shows a placeholder. Broadcasts message_update for the message the file was attached to. Idempotent. Owner only (403 otherwise).
 // @ID deleteMedia
 // @Tags Admin
 // @Produce json
@@ -134,6 +135,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 	if err := DeleteMedia(r.Context(), h.DB, h.Store, id); err != nil {
 		return err
 	}
+	h.announceRemoved(context.WithoutCancel(r.Context()), id)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

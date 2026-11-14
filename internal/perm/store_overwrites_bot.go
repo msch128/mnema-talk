@@ -28,12 +28,8 @@ func AllowBotRoleInChannel(ctx context.Context, tx pgx.Tx, role, ch uuid.UUID, a
 	if allow&^ChannelScoped != 0 {
 		return httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
 	}
-	var own bool
-	if err := tx.QueryRow(ctx, `SELECT bot_user_id IS NOT NULL FROM roles WHERE id = $1`, role).Scan(&own); err != nil {
-		return fmt.Errorf("load bot role: %w", err)
-	}
-	if !own {
-		return errNotBotOwnRole
+	if err := requireBotOwnRole(ctx, tx, role); err != nil {
+		return err
 	}
 	if err := refuseTempTalk(ctx, tx, TargetChannel, ch); err != nil {
 		return err
@@ -47,4 +43,16 @@ func AllowBotRoleInChannel(ctx context.Context, tx pgx.Tx, role, ch uuid.UUID, a
 		return fmt.Errorf("allow bot role: %w", err)
 	}
 	return syncTempTalks(ctx, tx, ch)
+}
+
+// requireBotOwnRole refuses a role that is not a bot's own.
+func requireBotOwnRole(ctx context.Context, tx pgx.Tx, role uuid.UUID) error {
+	var own bool
+	if err := tx.QueryRow(ctx, `SELECT bot_user_id IS NOT NULL FROM roles WHERE id = $1`, role).Scan(&own); err != nil {
+		return fmt.Errorf("load bot role: %w", err)
+	}
+	if !own {
+		return errNotBotOwnRole
+	}
+	return nil
 }

@@ -80,6 +80,21 @@ describe('mention rules', () => {
     expect(html).not.toContain('data-mention')
   })
 
+  it('show the display name with the username as tooltip, and keep the stored text', () => {
+    const names = new Map([['bot-fceaf0', 'Mnemo'], ['max', 'Max Mustermann'], ['same', 'Same'], ['blank', ' '], ['quote', 'A "<b>" & B']])
+    const html = renderMarkdown('@bot-fceaf0, @max @same @blank @quote @gone', { known: names })
+    expect(html).toContain('<span class="md-mention" data-mention="bot-fceaf0" role="button" tabindex="0" title="@bot-fceaf0">@Mnemo</span>,')
+    expect(html).toContain('title="@max">@Max Mustermann</span>')
+    // Nothing to add: no tooltip when the name is the display name, or none is set.
+    expect(html).toContain('data-mention="same" role="button" tabindex="0">@same</span>')
+    expect(html).toContain('data-mention="blank" role="button" tabindex="0">@blank</span>')
+    // A display name is text, never markup.
+    expect(html).toContain('@A &quot;&lt;b&gt;&quot; &amp; B</span>')
+    // Unknown (deleted) members stay plain text.
+    expect(html).toContain(' @gone')
+    expect(html).not.toContain('data-mention="gone"')
+  })
+
   it('highlight any name when no member list is known, without click data', () => {
     expect(renderMarkdown('@Anyone')).toBe('<span class="md-mention">@Anyone</span>')
   })

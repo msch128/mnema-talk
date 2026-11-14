@@ -70,6 +70,8 @@ var trees = []layered{
 			"reports":   {"core", "messages", "blocks"},
 			"forum":     {"core", "messages", "search", "mentions", "readstate", "blocks"},
 			"saved":     {"core", "messages", "blocks"},
+			// expiry only decides when; the delete is the messages package's.
+			"expiry": {"core", "messages", "readstate"},
 			// talks never imports dm: it takes a consumer-defined CallStarter.
 			"talks":  {"core", "messages", "channels", "mentions", "stage"},
 			"botapi": {"core", "messages", "channels", "mentions"},
@@ -79,7 +81,7 @@ var trees = []layered{
 		// talks never imports dm in production (CallStarter); its integration
 		// tests start conversations the real way.
 		testAllowed: map[string][]string{"talks": {"dm"}},
-		mustExist:   []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi", "account"},
+		mustExist:   []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi", "account", "expiry"},
 		importers: map[string][]string{
 			"botapi":  {"internal/server", "internal/chat", "internal/bot"},
 			"account": {"internal/server", "internal/chat"},

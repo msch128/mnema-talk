@@ -12,6 +12,8 @@ export interface ViewerItem {
   mimeType?: string
   width?: number
   height?: number
+  /** The file was removed: the viewer shows the "File removed" tile in its place. */
+  removed?: boolean
 }
 
 export interface ViewerMessage {
@@ -53,6 +55,11 @@ export function closeViewer(): void {
   state.items = []
   state.index = 0
   state.message = null
+}
+
+/** Closes the viewer when it shows the pictures of a message that is gone (deleted, ended) or of a reply under it. */
+export function closeViewerFor(messageId: string): void {
+  if (state.open && state.message && (state.message.id === messageId || state.message.parentId === messageId)) closeViewer()
 }
 
 export function setViewerIndex(index: number): void {

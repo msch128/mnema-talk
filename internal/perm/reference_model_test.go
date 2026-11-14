@@ -16,8 +16,8 @@ import (
 // The masks are restated here from their documentation, not imported, so a
 // changed constant shows up as a disagreement.
 const (
-	refTimeout   = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki
-	refWriteWait = SendMessages | AttachFiles | MentionEveryone | EditWiki
+	refTimeout   = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki | CreateMemberInvites
+	refWriteWait = SendMessages | AttachFiles | MentionEveryone | EditWiki | CreateMemberInvites
 	refReactWait = AddReactions
 	refSpeakWait = Speak | Video
 	refCallWait  = Connect | Speak | Video // a conversation's call: joining waits too
@@ -192,6 +192,9 @@ func (m refModel) community(u, ch uuid.UUID) Set {
 		return base
 	}
 	p := base
+	if m.st.BotsAll[u] && !m.everyoneSees(ch) {
+		p &^= ViewChannel
+	}
 	if cat != uuid.Nil {
 		sc, ok := m.st.CategoryOv[cat]
 		p = m.overwrite(sc, ok, u, p)
@@ -213,8 +216,23 @@ func (m refModel) categoryVisible(u, cat uuid.UUID) bool {
 	if m.owner(u) || g&Administrator != 0 {
 		return true
 	}
+	if m.st.BotsAll[u] && !m.everyoneSeesCategory(cat) {
+		g &^= ViewChannel
+	}
 	sc, ok := m.st.CategoryOv[cat]
 	return m.overwrite(sc, ok, u, g)&ViewChannel != 0
+}
+
+// everyoneSeesCategory: @everyone alone keeps View channels under the category.
+func (m refModel) everyoneSeesCategory(cat uuid.UUID) bool {
+	if m.st.Everyone&Administrator != 0 {
+		return true
+	}
+	v := m.st.Everyone&ViewChannel != 0
+	if o, has := m.st.CategoryOv[cat].Roles[m.st.EveryoneID]; has {
+		v = (v && o.Deny&ViewChannel == 0) || o.Allow&ViewChannel != 0
+	}
+	return v
 }
 
 // everyoneSees: a member with no role and no overwrite of their own would see

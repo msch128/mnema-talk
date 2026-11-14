@@ -82,6 +82,9 @@ type PostCommand struct {
 	// posts unattended and must ask for the wide mentions. A member's mentions
 	// follow their permissions and ignore this field.
 	AllowedMentions *AllowedMentions
+	// LifetimeSeconds, when above 0, is the lifetime the sender chose: the
+	// server deletes the message that long after it stored it.
+	LifetimeSeconds int
 	// Nonce is the client's id of this send. A second post with it returns
 	// the first message instead of storing another (Posted.Replayed). Only the
 	// app sends one: it retries on its own after a lost connection.

@@ -103,7 +103,8 @@ function featureFlags(has: (name: string) => boolean) {
     wiki: computed(() => has('wiki')),
     notifyLevelsV2: computed(() => has('notify.levels.v2')),
     messageNonce: computed(() => has('messages.nonce')),
-    reportsOpenCount: computed(() => has('reports.open_count'))
+    reportsOpenCount: computed(() => has('reports.open_count')),
+    memberInvites: computed(() => has('invites.member'))
   }
 }
 

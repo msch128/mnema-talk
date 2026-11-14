@@ -18,12 +18,12 @@ import { closeThread } from './threads'
  * A text message that cannot be sent because the connection is down is kept in the outbox
  * (see outbox.ts) and answers with that pending entry; the composer clears as for a sent one.
  */
-export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = [], targetChannelId?: string) {
+export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = [], targetChannelId?: string, lifetimeSeconds = 0) {
   const { cs } = cx
   const community = cs.communityGeneration
   const channelId = targetChannelId ?? cs.activeChannel.value?.id
   if (!channelId || (!messageText(content) && !attachmentIds.length)) return null
-  const send: TextSend = { content, parentId, replyToId, nonce: newNonce(), attachmentIds }
+  const send: TextSend = { content, parentId, replyToId, nonce: newNonce(), attachmentIds, ...(lifetimeSeconds > 0 ? { lifetimeSeconds } : {}) }
   // Files are not kept for later; a message with them fails as it always did.
   if (!attachmentIds.length && hasQueued(cx, channelId)) return enqueue(cx, channelId, send, true)
   let msg: Message

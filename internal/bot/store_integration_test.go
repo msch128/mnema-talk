@@ -87,3 +87,41 @@ func TestBotStoreEdges(t *testing.T) {
 	}
 	assertCancelledContextFailsStatements(t, ctx, e, f)
 }
+
+func TestNewBotsGetReadableUniqueUsernames(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	username := func(b *Bot) string {
+		var u string
+		if err := e.p.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, b.UserID).Scan(&u); err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	create := func(name string) string {
+		b, err := Create(ctx, e.p, name, 0, e.owner.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return username(b)
+	}
+	if got := create("Mnemo"); got != "mnemo" {
+		t.Fatalf("first: %q", got)
+	}
+	if got := create("MNEMO"); got != "mnemo_2" {
+		t.Fatalf("second: %q", got)
+	}
+	// A member who holds the name counts as a collision, too.
+	if _, err := e.p.Exec(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('helper', 'h', 'x')`); err != nil {
+		t.Fatal(err)
+	}
+	if got := create("Helper"); got != "helper_2" {
+		t.Fatalf("against a member: %q", got)
+	}
+	// Reserved words and unusable names get the random fallback.
+	for _, name := range []string{"all", "!?"} {
+		if got := create(name); len(got) != len("bot-")+12 || got[:4] != "bot-" {
+			t.Fatalf("%q: %q", name, got)
+		}
+	}
+}

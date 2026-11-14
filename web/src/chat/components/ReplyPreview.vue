@@ -58,6 +58,7 @@ const name = computed(() => (props.reply ? shownName(props.reply) : '') || t('ch
         @click.stop="$emit('jump')"
       >
         <span v-if="text" class="truncate">{{ text }}</span>
+        <span v-else-if="reply.attachments_removed" class="italic truncate">{{ $t('media.fileRemoved') }}</span>
         <template v-else-if="reply.has_attachments">
           <span class="italic truncate">{{ $t('chat.seeAttachment') }}</span>
           <ImageIcon class="w-4 h-4 shrink-0" />
