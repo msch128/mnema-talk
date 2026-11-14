@@ -225,6 +225,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['you cannot open your own moderation history', 'srvYouCannotOpenYourOwn'],
   ['you cannot view this Talk channel', 'srvYouCannotViewThisTalk'],
   ['you do not have %s in #%s, so the bot cannot get it there', 'srvBotInstallLacking', ['permission', 'channel']],
+  ['you do not have %s everywhere, so the bot cannot get it in every channel', 'srvBotInstallLackingEverywhere', ['permission']],
   ['you have %d open reports; wait for the moderators to handle some', 'srvYouHaveOpenReportsWait'],
   ['you have already voted in this anonymous poll; a vote there cannot be changed', 'pollAlreadyVoted', []],
   ['you have no message in this channel to start a thread on', 'srvYouHaveNoMessageIn'],
