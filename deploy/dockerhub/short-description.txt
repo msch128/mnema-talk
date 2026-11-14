@@ -1,0 +1,1 @@
+Mnema Talk: self-hosted community chat with voice, video and 4K screen sharing in one Go binary.
