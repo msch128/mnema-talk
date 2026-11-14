@@ -221,6 +221,14 @@ describe('host adapter', () => {
     expect(() => adapter.setBadge(1)).not.toThrow()
   })
 
+  it('tells the host which of draft, upload and Talk keep the page busy, and swallows host errors', () => {
+    const adapter = createHostNotify()
+    adapter.reportBusy?.({ draft: true, upload: false, talk: true })
+    expect(host.invoke).toHaveBeenCalledWith('desktop_report_busy', { draft: true, upload: false, talk: true })
+    host.invoke.mockRejectedValueOnce(new Error('x'))
+    expect(() => adapter.reportBusy?.({ draft: false, upload: false, talk: false })).not.toThrow()
+  })
+
   it('reports bounded whole-number counts for the server rail and swallows host errors', () => {
     const adapter = createHostNotify()
     adapter.reportUnread?.({ unread: 2.9, mentions: -1 })

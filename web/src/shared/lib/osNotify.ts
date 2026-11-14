@@ -38,6 +38,15 @@ export interface NotifyAdapter {
   setBadge(count: number): void
   /** Tells the host what is waiting in this instance (the multi-instance client shows it on its server rail). */
   reportUnread?(counts: UnreadCounts): void
+  /** Tells the host whether this page is busy, so it does not close it to save memory. */
+  reportBusy?(flags: BusyFlags): void
+}
+
+/** What keeps a page from being closed without losing something: unsent text, a running upload, a Talk. */
+export interface BusyFlags {
+  draft: boolean
+  upload: boolean
+  talk: boolean
 }
 
 /** What an instance has waiting: channels with unread messages that may notify, and mentions. */
@@ -179,6 +188,9 @@ export function createHostNotify(hostShowsCalls: () => boolean = () => false): N
     },
     reportUnread({ unread, mentions }) {
       invoke('desktop_report_unread', { unread: boundedCount(unread), mentions: boundedCount(mentions) }).catch(() => {})
+    },
+    reportBusy({ draft, upload, talk }) {
+      invoke('desktop_report_busy', { draft, upload, talk }).catch(() => {})
     },
   }
 }

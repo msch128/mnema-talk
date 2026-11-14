@@ -56,6 +56,7 @@ import { useResizable } from './shared/composables/useResizable'
 import { useWebRTC } from './talk/composables/useWebRTC'
 import { useAppRouting } from './app/composables/useAppRouting'
 import { useAppBadge } from './app/composables/useAppBadge'
+import { useDesktopBusy } from './app/composables/useDesktopBusy'
 import { useCompactLayout } from './shared/composables/useCompactLayout'
 import { useSideColumns } from './app/composables/useSideColumns'
 import { usePushBridge } from './app/composables/usePushBridge'
@@ -125,6 +126,7 @@ onMounted(() => window.addEventListener('keydown', onWindowKeydown, true))
 onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown, true))
 const routing = useAppRouting(() => alive)
 useAppBadge()
+useDesktopBusy()
 usePushBridge()
 usePttHint()
 useShortcutsKey(() => !!authStore.user)

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { TrayItem } from '../lib/attachmentTray'
-import { aborts, clearAllTrays, clearSlot, itemsOf, release, trays } from './attachmentTrayState'
+import { aborts, anyAttachmentHeld, clearAllTrays, clearSlot, itemsOf, release, trays } from './attachmentTrayState'
 
 const item = (key: string): TrayItem => ({
   key, file: new File(['x'], `${key}.png`), channelId: 'ch1', kind: 'image', previewUrl: `blob:${key}`,
@@ -8,6 +8,19 @@ const item = (key: string): TrayItem => ({
 })
 
 describe('attachmentTrayState', () => {
+  it('holds an attachment while any tray holds any file: waiting, uploading, uploaded and not sent, or failed', () => {
+    clearAllTrays()
+    expect(anyAttachmentHeld()).toBe(false)
+    trays.set('a', [])
+    expect(anyAttachmentHeld()).toBe(false)
+    for (const status of ['queued', 'uploading', 'ready', 'error'] as const) {
+      trays.set('b', [{ ...item(status), status }])
+      expect(anyAttachmentHeld(), status).toBe(true)
+    }
+    clearAllTrays()
+    expect(anyAttachmentHeld()).toBe(false)
+  })
+
   it('makes an empty tray on first use', () => {
     expect(itemsOf('fresh')).toEqual([])
     expect(trays.has('fresh')).toBe(true)
