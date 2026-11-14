@@ -876,10 +876,13 @@ jobs:
           scripts/backup-drill.sh mnema-talk:ci | tee "$RUNNER_TEMP/backup-drill.log"
           echo "- restore ${{ matrix.from }}: $(grep -E '^==> backup drill passed' "$RUNNER_TEMP/backup-drill.log")" >> "$GITHUB_STEP_SUMMARY"
 
+  # The Playwright jobs run on ubuntu-24.04, not ubuntu-latest: the latest label moved
+  # to 26.04, where Playwright's WebKit build does not start (missing libicu 74).
+  # Move them back to ubuntu-latest once Playwright ships a 26.04 build.
   # -- Shared e2e build: compile the web bundle and server binary once -------
   e2e-build:
     name: e2e-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
@@ -934,7 +937,7 @@ jobs:
     name: e2e-shard (${{ matrix.shard }}/4)
     needs: [changes, e2e-build]
     if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -1089,7 +1092,7 @@ jobs:
     name: clip-sweep (${{ matrix.shard }}/4)
     needs: [changes, e2e-build]
     if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') && needs.changes.outputs.code == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -1161,7 +1164,7 @@ jobs:
     needs: [changes, e2e-build]
     if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.e2e-build.result == 'success' || needs.e2e-build.result == 'skipped') }}
     name: e2e (${{ matrix.browser }}${{ matrix.browser == 'webkit' && format(' {0}', matrix.shard) || '' }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
