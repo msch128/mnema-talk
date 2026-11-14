@@ -17,24 +17,25 @@ import (
 )
 
 // MessageSelect loads messages with author, reply count and the quoted reply
-// preview in one round trip. rm/ru are the replied-to message and its author;
+// preview in one round trip, of messages whose lifetime has not ended
+// (core.LiveMessages), even before the sweeper removed an ended one. rm/ru are the replied-to message and its author;
 // the quoted snippet sent with every reply is mdplain.Snippet of the whole
 // replied-to message (at most core.MaxMessageLen characters are read).
 const MessageSelect = `
 	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
-	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
+	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id AND (r.expires_at IS NULL OR r.expires_at > now())),
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
 	       rm.content,
-	       CASE WHEN rm.id IS NULL THEN FALSE
-	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE NOT EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id AND NOT md.is_deleted) END,
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
 	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key,
-	       m.forwarded
-	FROM messages m
+	       m.forwarded, m.expires_at
+	FROM ` + core.LiveMessages + ` m
 	JOIN users u ON u.id = m.user_id
-	LEFT JOIN messages rm ON rm.id = m.reply_to_id
+	LEFT JOIN ` + core.LiveMessages + ` rm ON rm.id = m.reply_to_id
 	LEFT JOIN users ru ON ru.id = rm.user_id
 	LEFT JOIN users pu ON pu.id = m.pinned_by AND m.is_pinned`
 
@@ -50,9 +51,9 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 		var fwd rawForward
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
+			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &r.allRemoved, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook,
 			&m.PinnedAt, &pin.id, &pin.username, &pin.displayName, &pin.avatar,
-			&fwd.forwarded); err != nil {
+			&fwd.forwarded, &m.ExpiresAt); err != nil {
 			return nil, err
 		}
 		var err error
@@ -95,7 +96,7 @@ func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
 // position in msgs.
 func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
-		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted
+		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted, width, height
 		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
 	if err != nil {
 		return fmt.Errorf("load attachments: %w", err)
@@ -104,7 +105,7 @@ func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx
 	for rows.Next() {
 		var a core.MediaAttachment
 		var msgID uuid.UUID
-		if err := rows.Scan(&a.ID, &msgID, &a.OriginalFilename, &a.MimeType, &a.SizeBytes, &a.IsDeleted); err != nil {
+		if err := rows.Scan(&a.ID, &msgID, &a.OriginalFilename, &a.MimeType, &a.SizeBytes, &a.IsDeleted, &a.Width, &a.Height); err != nil {
 			return err
 		}
 		a.URL = "/api/media/" + a.ID.String()
@@ -345,6 +346,8 @@ type NewMessage struct {
 	// Nonce is the client's id for this send; a second send with it returns
 	// the first message (message_nonces, migration 0100).
 	Nonce *uuid.UUID
+	// LifetimeSeconds, when above 0, is the sender's lifetime (gateLifetime).
+	LifetimeSeconds int
 }
 
 // ServeCreateMessage inserts a message and returns its ID.
@@ -369,11 +372,12 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, created_at) OVERRIDING SYSTEM VALUE
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, created_at, expires_at) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
-		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, clock_timestamp()
-		FROM channels c WHERE c.id = $1
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked).Scan(&id)
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, t.at,
+		       CASE WHEN $12::int > 0 THEN t.at + make_interval(secs => $12::int) END
+		FROM channels c, (SELECT clock_timestamp() AS at) t WHERE c.id = $1
+		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked, nm.LifetimeSeconds).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrChannelNotFound
 	}

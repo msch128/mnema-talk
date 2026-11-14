@@ -36,7 +36,7 @@ describe('a deleted attachment', () => {
     const w = mount(MessageAttachments, { props: { attachments: [{ ...image, is_deleted: true }] } })
     expect(w.find('img').exists()).toBe(false)
     expect(w.find('button').exists()).toBe(false)
-    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('This image was deleted')
+    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('File removed')
     expect(w.get('[data-media-placeholder="gone"]').attributes('role')).toBe('img')
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -45,7 +45,7 @@ describe('a deleted attachment', () => {
     const second = { ...image, id: '00000000-0000-4000-8000-0000000003f9', url: '/api/media/second' }
     const w = mount(MessageAttachments, { props: { attachments: [{ ...image, is_deleted: true }, second] } })
     expect(w.findAll('[data-gallery-cell]')).toHaveLength(1)
-    expect(w.get('[data-media-placeholder="gone"]').attributes('title')).toBe('This image was deleted')
+    expect(w.get('[data-media-placeholder="gone"]').attributes('title')).toBe('File removed: shot.png')
   })
 
   it.each([['chat', 'h-40'], ['reply', 'h-24'], ['root', 'h-28']] as const)('keeps a size of its own in the %s layout', (variant, height) => {
@@ -60,7 +60,7 @@ describe('a deleted attachment', () => {
     await flushPromises()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(w.find('img').exists()).toBe(false)
-    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('This image was deleted')
+    expect(w.get('[data-media-placeholder="gone"]').text()).toBe('File removed')
   })
 
   it('offers a retry instead of "deleted" when the server only failed, and loads the image again', async () => {

@@ -10,7 +10,9 @@ import { ref, computed } from 'vue'
 import { useChatStore } from '../../stores/chat'
 import { useToastStore } from '../../stores/toast'
 import { nextSortOrder } from '../../shared/lib/channelLayout'
-import { confirmAutoDelete } from '../../shared/lib/autoDelete'
+import { confirmAutoDelete, decodeSetting, encodeSetting, requestBody, settingOf } from '../../shared/lib/autoDelete'
+import { previewChannelAutoDelete } from '../lib/autoDeletePreview'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { saveKeys } from '../../shared/composables/draftGuard'
 import { confirmDiscard, normalise, useSettingsDraft } from '../../shared/composables/useSettingsDraft'
 import { useLeaveGuard } from '../../shared/composables/draftGuard'
@@ -20,7 +22,7 @@ import SlowModePicker from './SlowModePicker.vue'
 import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
 import UnsavedChangesBar from '../../shared/components/UnsavedChangesBar.vue'
 
-interface ChannelForm { name: string; topic: string; slow: number; autoDelete: number }
+interface ChannelForm { name: string; topic: string; slow: number; autoDelete: string }
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, default: 'channel' }, // 'channel' | 'category'
@@ -29,6 +31,7 @@ const props = defineProps({
 const emit = defineEmits<{ close: []; created: [category: Category] }>()
 
 const chatStore = useChatStore()
+const features = useServerFeaturesStore()
 const toasts = useToastStore()
 const isCreate = computed(() => !props.entity)
 const isChannel = computed(() => !isCreate.value && props.kind === 'channel')
@@ -50,10 +53,10 @@ const form = useSettingsDraft<ChannelForm>({
       name: e?.name || '',
       topic: (e && 'topic' in e ? e.topic : '') || '',
       slow: e && 'slow_mode_seconds' in e ? e.slow_mode_seconds : 0,
-      autoDelete: (e && 'auto_delete_days' in e ? e.auto_delete_days : 0) ?? 0
+      autoDelete: encodeSetting(settingOf(e && 'type' in e ? e : null))
     }
   },
-  normalisers: { name: normalise.text, topic: normalise.text, slow: normalise.count, autoDelete: normalise.count },
+  normalisers: { name: normalise.text, topic: normalise.text, slow: normalise.count, autoDelete: value => encodeSetting(decodeSetting(String(value))) },
   validate: draft => (normalise.text(draft.name) ? {} : { name: t('channel.nameRequired') }),
   blocked: () => !slowModeValid.value,
   save: async ({ changed, draft, commit }) => {
@@ -68,7 +71,7 @@ const form = useSettingsDraft<ChannelForm>({
       commit(changed.filter(k => k !== 'autoDelete'))
     }
     if (changed.includes('autoDelete')) {
-      await chatStore.setChannelAutoDelete(entity.id, normalise.count(draft.autoDelete))
+      await chatStore.setChannelAutoDelete(entity.id, requestBody(decodeSetting(draft.autoDelete), features.has('channels.auto_delete.v2')))
       commit(['autoDelete'])
     }
   },
@@ -105,12 +108,24 @@ async function create() {
   }
 }
 
-// Saving asks first when auto-delete is switched on: it destroys messages.
+// Saving asks first when the new auto-delete would remove something at once:
+// the dry run counts it (an older server cannot count, and asks for any period).
 async function submit() {
   if (isCreate.value) return create()
   if (!form.canSave.value) return
-  if (form.changed.value.includes('autoDelete') && !(await confirmAutoDelete(live.value?.name ?? '', normalise.count(draft.autoDelete)))) return
+  if (form.changed.value.includes('autoDelete') && !(await confirmChange())) return
   await form.save()
+}
+
+async function confirmChange(): Promise<boolean> {
+  const entity = props.entity
+  if (!entity) return false
+  const setting = decodeSetting(draft.autoDelete)
+  const v2 = features.has('channels.auto_delete.v2')
+  const counts = v2
+    ? await previewChannelAutoDelete(entity.id, requestBody(setting, true))
+    : { messages: setting.mode === 'period' ? 1 : 0, attachments: 0 }
+  return confirmAutoDelete(live.value?.name ?? '', counts)
 }
 
 // A new category asks before it drops a typed name; an edit asks while it has unsaved changes.
@@ -182,7 +197,7 @@ const label = 'text-xs font-medium text-mnema-tertiary uppercase tracking-wider 
           <SlowModePicker v-model="draft.slow" v-model:valid="slowModeValid" />
         </div>
 
-        <ChannelAutoDeleteField v-if="isChannel && entity && 'type' in entity" v-model="draft.autoDelete" />
+        <ChannelAutoDeleteField v-if="isChannel && entity && 'type' in entity" v-model="draft.autoDelete" :channel-id="entity.id" />
       </div>
 
       <div v-if="isCreate" class="flex items-center justify-end gap-2 border-t border-mnema-hairline bg-mnema-raised px-5 py-3">

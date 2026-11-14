@@ -234,12 +234,13 @@ func InsertChannelCopy(ctx context.Context, tx pgx.Tx, src *core.Channel, sortOr
 	var ch core.Channel
 	err := tx.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
 		src.CategoryID, src.Name, src.Type, src.Topic, sortOrder, src.UserLimit, src.SlowModeSeconds).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault)
 	if err != nil {
 		return nil, fmt.Errorf("duplicate channel: %w", err)
 	}
+	ch.FillAutoDeleteDays()
 	if temp {
 		// A temporary Talk gets its fixed slug and no history.
 		if _, err := tx.Exec(ctx, `UPDATE channels SET slug = $2 WHERE id = $1`, ch.ID, TempTalkSlug(ch.ID)); err != nil {

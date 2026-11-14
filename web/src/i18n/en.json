@@ -90,7 +90,9 @@
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
     "sizeMb": "{size} MB",
-    "sizeGb": "{size} GB"
+    "sizeGb": "{size} GB",
+    "fileRemoved": "File removed",
+    "fileRemovedNamed": "File removed: {name}"
   },
   "menu": {
     "adminConsole": "Admin console",
@@ -487,6 +489,17 @@
       "srvSessionNotFound": "That session wasn’t found.",
       "srvSessionInactivityDaysMustBe": "“session_inactivity_days” must be between 1 and 365.",
       "srvSinceMustBeAnRfc": "“since” must be a time in RFC 3339 format.",
+      "autoDeleteNoPeriod": "Choose a period, off or the community default.",
+      "autoDeleteHoursRange": "The period must be between 1 hour and 365 days.",
+      "lifetimeTooLong": "This community allows lifetimes of up to {seconds} seconds.",
+      "lifetimeRange": "A lifetime must be between 1 minute and 30 days.",
+      "lifetimeMaxRange": "The longest lifetime must be between 1 minute and 30 days.",
+      "lifetimesOff": "Messages with a lifetime are turned off in this community.",
+      "autoDeleteScope": "Choose what to delete: messages or only files.",
+      "lifetimeInvalid": "The lifetime must be a number of seconds.",
+      "lifetimeForumPost": "A forum post can’t have a lifetime. Replies in it can.",
+      "lifetimeNoForward": "A message with a lifetime can’t be forwarded.",
+      "lifetimeNoPin": "A message with a lifetime can’t be pinned.",
       "srvSizeMustBe128Or": "The size must be 128 or 512.",
       "srvSlowModeSecondsMustBe": "Slow mode must be between 0 (off) and {a} seconds.",
       "srvSortMustBeLatestActivity": "“sort” must be latest_activity or newest.",
@@ -1919,7 +1932,8 @@
       "reports": "Reports",
       "automod": "Automod",
       "status": "Status",
-      "import": "Import"
+      "import": "Import",
+      "messages": "Messages"
     },
     "system": {
       "heading": "System & version",
@@ -2616,7 +2630,24 @@
     "renameChannelNamed": "Edit channel {name}",
     "renameCategoryNamed": "Edit category {name}",
     "deleteChannelNamed": "Delete channel {name}",
-    "deleteCategoryNamed": "Delete category {name}"
+    "deleteCategoryNamed": "Delete category {name}",
+    "messages": {
+      "title": "Messages",
+      "intro": "Messages with a lifetime and the community’s auto-delete default.",
+      "lifetimesTitle": "Messages with a lifetime",
+      "lifetimesEnabled": "Members may send messages that disappear after a time they choose",
+      "longest": "Longest lifetime",
+      "lifetimesHint": "Holds for everyone, the Owner included. Now: {max}. A lifetime does not stop copies, screenshots or notifications.",
+      "maxInvalid": "Choose between 1 minute and 30 days.",
+      "defaultTitle": "Auto-delete default",
+      "defaultHint": "Channels without a setting of their own follow it. Conversations are never affected.",
+      "defaultOn": "Delete old content in channels that follow the default",
+      "defaultOff": "Off: nothing is deleted unless a channel sets its own period.",
+      "periodInvalid": "Choose between 1 hour and 365 days.",
+      "saved": "Settings saved.",
+      "defaultAll": "Channels that follow the default delete messages older than {period}, with their files.",
+      "defaultFiles": "Channels that follow the default remove files older than {period}; the messages stay."
+    }
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -3419,6 +3450,8 @@
         "sessions_revoke_others": "Signed out all other sessions"
       },
       "settings": {
+        "message_lifetimes_set": "Message lifetimes changed",
+        "auto_delete_default_set": "Auto-delete default changed",
         "upload_limit": "Upload limit changed",
         "onboarding": "Welcome and rules changed",
         "raid": "Raid protection changed",
@@ -4771,7 +4804,49 @@
     "failed": "Couldn’t change auto-delete. Try again.",
     "chip": "Auto-delete: {period}",
     "tooltip": "Messages older than {period} are deleted automatically.",
-    "line": "Messages in this channel are deleted automatically once they are older than {period}."
+    "line": "Messages in this channel are deleted automatically once they are older than {period}.",
+    "units": {
+      "hours": {
+        "one": "{n} hour",
+        "other": "{n} hours"
+      },
+      "days": {
+        "one": "{n} day",
+        "other": "{n} days"
+      },
+      "weeks": {
+        "one": "{n} week",
+        "other": "{n} weeks"
+      }
+    },
+    "unitNames": {
+      "hours": "hours",
+      "days": "days",
+      "weeks": "weeks"
+    },
+    "useDefault": "Use the community default",
+    "custom": "After a period",
+    "amount": "Period",
+    "unit": "Unit",
+    "scope": "What to delete",
+    "scopeAll": "Messages and their files",
+    "scopeFiles": "Only files",
+    "followsDefault": "This channel follows the community default.",
+    "offSummary": "Nothing is deleted automatically in this channel.",
+    "lineFiles": "Files in this channel are removed automatically once they are older than {period}. The messages stay.",
+    "nextRun": "The next check is at {time}.",
+    "confirmCounts": "This removes {what} in {name} now, and keeps removing what gets older.",
+    "confirmDefaultBody": "Every channel without a setting of its own follows the default. This removes {what} across those channels now, and keeps removing what gets older.",
+    "confirmNoUndo": "This can’t be undone.",
+    "messagesCount": {
+      "one": "{n} message",
+      "other": "{n} messages"
+    },
+    "filesCount": {
+      "one": "{n} file",
+      "other": "{n} files"
+    },
+    "and": " and "
   },
   "discordImport": {
     "title": "Import a Discord server structure",
@@ -5258,6 +5333,45 @@
     "retryAnywayFor": "Send the message again, even though it may already have arrived: {excerpt}",
     "expired": "it may have arrived earlier, so it was not sent again by itself",
     "editLabel": "Edit the message that hasn’t been sent yet"
+  },
+  "lifetime": {
+    "button": "Message lifetime",
+    "chosen": "Messages disappear after {time}",
+    "menuTitle": "Delete for everyone after",
+    "off": "Off",
+    "custom": "Custom…",
+    "customTitle": "Custom lifetime",
+    "amount": "Amount",
+    "unit": "Unit",
+    "units": {
+      "minutes": "minutes",
+      "hours": "hours",
+      "days": "days"
+    },
+    "limits": "Between 1 minute and {max}.",
+    "use": "Use",
+    "help": "Disappears for everyone after {time}. Copies, screenshots and notifications can keep it.",
+    "minutes": "{n} min",
+    "hours": "{n} h",
+    "days": {
+      "one": "{n} day",
+      "other": "{n} days"
+    },
+    "weeks": {
+      "one": "{n} week",
+      "other": "{n} weeks"
+    },
+    "leftSeconds": "{n} s",
+    "leftMinutes": "{n} min",
+    "leftHours": "{n} h",
+    "leftDays": {
+      "one": "{n} d",
+      "other": "{n} d"
+    },
+    "markLabel": "Disappears in {time}",
+    "noPin": "A message with a lifetime can’t be pinned.",
+    "markPrefix": "Disappears in",
+    "hoursMinutes": "{h} h {m} min"
   },
   "components": {
     "notConnected": "{bot} is not connected right now. Try again later.",

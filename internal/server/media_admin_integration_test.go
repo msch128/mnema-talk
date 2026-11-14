@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -151,4 +152,70 @@ func TestConfiguredRetentionAppliesToManualPrune(t *testing.T) {
 	if r.status != http.StatusOK || res.CutoffDays != 30 {
 		t.Fatalf("prune with configured retention: %d %s", r.status, r.body)
 	}
+}
+
+// A file the Owner removes is shown as removed at once: the members who see
+// its channel get message_update with the attachment marked deleted, and a
+// reply to the message says in its preview that the files are gone.
+func TestAdminMediaDeleteAnnouncesTheMessage(t *testing.T) {
+	a := newApp(t, true)
+	admin := a.seedAdmin()
+	member := a.register(admin, "max")
+	ch := a.createChannel(admin, "medien", "text")
+	res := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "one.png", "image/png", pngBytes, nil)
+	if res.status != http.StatusCreated {
+		t.Fatalf("upload: %d %s", res.status, res.body)
+	}
+	var msg uploaded
+	res.decode(t, &msg)
+	reply := postMessage(t, member, ch, map[string]any{"content": "nice", "reply_to_id": msg.ID})
+	if p := replyPreviewOf(t, member, ch, reply); !p.HasAttachments || p.AttachmentsRemoved {
+		t.Fatalf("preview before the removal: %+v", p)
+	}
+	ws := mustDial(t, member)
+
+	if r := admin.delete("/api/admin/media/" + msg.Attachments[0].ID.String()); r.status != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", r.status, r.body)
+	}
+	p, ok := ws.expect("message_update", soon)
+	if !ok {
+		t.Fatal("no message_update after the file was removed")
+	}
+	var upd struct {
+		ID          uuid.UUID `json:"id"`
+		Attachments []struct {
+			ID        uuid.UUID `json:"id"`
+			IsDeleted bool      `json:"is_deleted"`
+		} `json:"attachments"`
+	}
+	if err := json.Unmarshal(p, &upd); err != nil {
+		t.Fatal(err)
+	}
+	if upd.ID != msg.ID || len(upd.Attachments) != 1 || !upd.Attachments[0].IsDeleted {
+		t.Fatalf("message_update does not show the file removed: %s", p)
+	}
+	if p := replyPreviewOf(t, member, ch, reply); !p.AttachmentsRemoved {
+		t.Fatalf("the reply preview does not say the file was removed: %+v", p)
+	}
+}
+
+type replyPreviewFlags struct {
+	HasAttachments     bool `json:"has_attachments"`
+	AttachmentsRemoved bool `json:"attachments_removed"`
+}
+
+func replyPreviewOf(t *testing.T, c *client, ch, id uuid.UUID) replyPreviewFlags {
+	t.Helper()
+	var list []struct {
+		ID      uuid.UUID          `json:"id"`
+		ReplyTo *replyPreviewFlags `json:"reply_to"`
+	}
+	c.get("/api/channels/"+ch.String()+"/messages").decode(t, &list)
+	for _, m := range list {
+		if m.ID == id && m.ReplyTo != nil {
+			return *m.ReplyTo
+		}
+	}
+	t.Fatalf("reply %s with a preview not in the list", id)
+	return replyPreviewFlags{}
 }

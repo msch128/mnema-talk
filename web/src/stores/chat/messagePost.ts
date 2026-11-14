@@ -58,7 +58,8 @@ export function landSent(cx: Cx, msg: Message, isRepeat = false) {
   markReadBySending(cx, msg, isRepeat)
 }
 
-export interface TextSend { content: string; parentId: string | null; replyToId: string | null; nonce: string; attachmentIds?: readonly string[] }
+/** lifetimeSeconds: the lifetime the sender chose (the server deletes the message that long after storing it). */
+export interface TextSend { content: string; parentId: string | null; replyToId: string | null; nonce: string; attachmentIds?: readonly string[]; lifetimeSeconds?: number | undefined }
 
 /** One text POST. The nonce makes a repeat of it (after a lost answer) return the first message. */
 /** `onStatus` hears the answer's HTTP status: 200 means the nonce was replayed (an earlier try had been stored), 201 a new message. */
@@ -78,6 +79,8 @@ function postLoaded(channelId: string, send: TextSend, signal?: AbortSignal, onS
     if (useServerFeaturesStore().messageNonce) json.nonce = send.nonce
     if (send.attachmentIds?.length) json.attachment_ids = [...send.attachmentIds]
     if (send.parentId) json.parent_id = send.parentId
+    // Only a server that lists messages.lifetime knows the field (older ones reject unknown fields).
+    if (send.lifetimeSeconds && useServerFeaturesStore().has('messages.lifetime')) json.lifetime_seconds = send.lifetimeSeconds
     if (reply) json.reply_to_id = reply
     return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage, ...(signal ? { signal } : {}), ...(onStatus ? { onStatus } : {}) })
   })

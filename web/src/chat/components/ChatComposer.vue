@@ -4,7 +4,7 @@ import type { PropType } from 'vue'
 import type { DraftReply } from '../lib/drafts'
 import type { ContextMenuItem } from '../../shared/components/menuTypes'
 import { computed, ref } from 'vue'
-import { Plus, ArrowUp, ChartNoAxesColumn, ChevronDown, CalendarClock, Paperclip } from '@lucide/vue'
+import { ArrowUp, ChartNoAxesColumn, ChevronDown, CalendarClock, Paperclip } from '@lucide/vue'
 import { useChatStore } from '../../stores/chat'
 import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { usePermissionsStore } from '../../stores/permissions'
@@ -20,9 +20,14 @@ import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
 import PollDialog from './PollDialog.vue'
+import LifetimeButton from './LifetimeButton.vue'
+import ComposerLeadTools from './ComposerLeadTools.vue'
+import { useLifetimeStore } from '../../stores/lifetime'
+import { lifetimeLabel } from '../../shared/lib/lifetime'
 import { useCompactLayout } from '../../shared/composables/useCompactLayout'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
+import { useFieldFirst } from '../composables/useFieldFirst'
 import { useComposerFiles } from '../composables/useComposerFiles'
 import { useAttachmentTray } from '../composables/useAttachmentTray'
 import { useComposerAssist } from '../composables/useComposerAssist'
@@ -46,6 +51,9 @@ const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cance
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
+// The lifetime chosen for this conversation; the line under the composer says what it does and what it does not.
+const lifetimes = useLifetimeStore()
+const lifetime = computed(() => lifetimes.forChannel(chatStore.activeChannel?.id))
 const permissions = usePermissionsStore()
 // The upload limit is told before a file is picked, not after it was refused.
 const uploadLabel = computed(() => (isCompact.value ? t('chat.moreActions') : permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
@@ -83,8 +91,6 @@ const canScheduleLater = computed(() => !!messageText(text.value) && !tray.count
 // On a phone the composer has room for the text: file, poll and "send later"
 // share the one "+" button instead of three buttons of their own.
 const { isCompact } = useCompactLayout()
-const plusButton = ref<HTMLElement | null>(null)
-const plusMenuOpen = ref(false)
 const plusItems = computed<ContextMenuItem[]>(() => [
   ...(props.canAttach ? [{ label: t('chat.upload'), icon: Paperclip, disabled: props.sending, action: () => fileInput.value?.click() }] : []),
   ...(props.canSend ? [{ label: t('poll.create'), icon: ChartNoAxesColumn, disabled: props.sending, action: () => { pollOpen.value = true } }] : []),
@@ -95,10 +101,11 @@ const slashOpen = computed(() => slash.open.value && props.canSend)
 const listboxId = computed(() => (slashOpen.value ? 'chat-slash' : assist.open.value ? 'chat-mentions' : undefined))
 const activeOptionId = computed(() => (slashOpen.value ? `chat-slash-${slash.active.value}` : assist.open.value ? `chat-mentions-${assist.active.value}` : undefined))
 const hasPlus = computed(() => (isCompact.value ? plusItems.value.length > 0 : props.canAttach))
-function onPlus() {
-  if (isCompact.value) plusMenuOpen.value = !plusMenuOpen.value
-  else fileInput.value?.click()
-}
+// In a narrow composer the field takes the first row and the tools the second;
+// "+" and poll then follow the field in the DOM too.
+const row = ref<HTMLElement | null>(null)
+const fieldFirst = useFieldFirst(row, textAreaEl)
+const leadTools = computed(() => ({ hasPlus: hasPlus.value, compact: isCompact.value, canSend: props.canSend, sending: props.sending, uploadLabel: uploadLabel.value, plusItems: plusItems.value }))
 defineExpose({ textArea: textAreaEl, tray, attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
@@ -111,7 +118,8 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 max-md:px-2 pb-1 shrink-0">
+  <!-- A container: on a narrow screen the field takes the first row and the tools the second -->
+  <div class="@container px-4 max-md:px-2 pb-1 shrink-0" data-testid="chat-composer">
     <SlashCommandBar
       v-if="slash.picked.value && canSend"
       :command="slash.picked.value"
@@ -124,8 +132,9 @@ function handleKeyDown(e: KeyboardEvent) {
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <AttachmentTray :items="tray.items.value" @remove="tray.remove" @retry="tray.retry" @view="tray.view" />
     <div
+      ref="row"
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex gap-1 sm:gap-2 shadow-xs field-focus-within transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex @max-[32rem]:flex-wrap gap-1 sm:gap-2 shadow-xs field-focus-within transition',
         multiline ? 'items-end' : 'items-center',
         replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
@@ -156,37 +165,8 @@ function handleKeyDown(e: KeyboardEvent) {
         @change="onPick"
       />
 
-      <!-- Attachment Button -->
-      <button
-        v-if="hasPlus"
-        ref="plusButton"
-        type="button"
-        data-testid="composer-plus"
-        @click="onPlus"
-        :disabled="isCompact ? false : sending"
-        :aria-haspopup="isCompact ? 'menu' : undefined"
-        :aria-expanded="isCompact ? (plusMenuOpen ? 'true' : 'false') : undefined"
-        class="focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-        v-tooltip="uploadLabel"
-        :aria-label="uploadLabel"
-      >
-        <Plus class="w-5 h-5" />
-      </button>
-      <ContextMenu v-if="isCompact" v-model="plusMenuOpen" :anchor="plusButton" :items="plusItems" :aria-label="$t('chat.moreActions')" />
-
-      <!-- Poll Button -->
-      <button
-        v-if="canSend && !isCompact"
-        type="button"
-        data-testid="poll-button"
-        @click="pollOpen = true"
-        :disabled="sending"
-        class="focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-        v-tooltip="$t('poll.create')"
-        :aria-label="$t('poll.create')"
-      >
-        <ChartNoAxesColumn class="w-5 h-5" />
-      </button>
+      <!-- File and poll, in front of the field on one row -->
+      <ComposerLeadTools v-if="!fieldFirst" v-bind="leadTools" @upload="fileInput?.click()" @poll="pollOpen = true" />
 
       <!-- Text Input -->
       <textarea
@@ -208,18 +188,23 @@ function handleKeyDown(e: KeyboardEvent) {
         :disabled="!canSend"
         :aria-label="placeholder"
         rows="1"
-        class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
+        class="bg-transparent flex-1 min-w-0 @max-[32rem]:basis-full @max-[32rem]:order-first @max-[32rem]:px-1 @max-[32rem]:pt-2 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
+
+      <!-- File and poll, after the field when it has a row of its own -->
+      <ComposerLeadTools v-if="fieldFirst" v-bind="leadTools" @upload="fileInput?.click()" @poll="pollOpen = true" />
 
       <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
+      <LifetimeButton v-if="chatStore.activeChannel && canSend" :memory-key="chatStore.activeChannel.id" :disabled="sending" />
+
       <!-- Send Button -->
       <button
         @click="emit('send')"
         :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending || !!limit?.blocks"
-        class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
+        class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 @max-[32rem]:ml-auto flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />
@@ -252,6 +237,8 @@ function handleKeyDown(e: KeyboardEvent) {
       @close="pollOpen = false; textAreaEl?.focus()"
     />
 
+    <!-- What a lifetime does and does not do: the whole line, wrapping on a narrow screen -->
+    <p v-if="lifetime" class="px-1 pt-1 text-xs text-mnema-tertiary" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</p>
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
     <div class="h-5 px-1 pt-0.5 flex items-center justify-between gap-3 text-xs text-mnema-tertiary">
       <span class="truncate" role="status" aria-live="polite" data-testid="typing-indicator">{{ typingText }}</span>

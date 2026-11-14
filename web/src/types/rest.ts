@@ -1356,13 +1356,47 @@ export function isChatAddDMMemberRequest(value: unknown): value is ChatAddDMMemb
 
 export const decodeChatAddDMMemberRequest = decoder("chat.AddDMMemberRequest", isChatAddDMMemberRequest)
 
+export type ChatAutoDeleteDefaultRequest = {
+  hours: number
+  scope?: "all" | "attachments"
+}
+
+export function isChatAutoDeleteDefaultRequest(value: unknown): value is ChatAutoDeleteDefaultRequest {
+  return isRecord(value)
+    && (hasOwn(value, "hours") && (isInteger(value["hours"]) && value["hours"] >= 0 && value["hours"] <= 8760))
+    && (!hasOwn(value, "scope") || (value["scope"] === "all" || value["scope"] === "attachments"))
+}
+
+export const decodeChatAutoDeleteDefaultRequest = decoder("chat.AutoDeleteDefaultRequest", isChatAutoDeleteDefaultRequest)
+
+export type ChatAutoDeletePreview = {
+  attachments: number
+  messages: number
+  next_run_at: string
+}
+
+export function isChatAutoDeletePreview(value: unknown): value is ChatAutoDeletePreview {
+  return isRecord(value)
+    && (hasOwn(value, "attachments") && isInteger(value["attachments"]))
+    && (hasOwn(value, "messages") && isInteger(value["messages"]))
+    && (hasOwn(value, "next_run_at") && isTimestamp(value["next_run_at"]))
+}
+
+export const decodeChatAutoDeletePreview = decoder("chat.AutoDeletePreview", isChatAutoDeletePreview)
+
 export type ChatAutoDeleteRequest = {
-  days: 0 | 1 | 7 | 30 | 90
+  days?: 0 | 1 | 7 | 30 | 90
+  hours?: number | null
+  scope?: "all" | "attachments"
+  use_default?: boolean
 }
 
 export function isChatAutoDeleteRequest(value: unknown): value is ChatAutoDeleteRequest {
   return isRecord(value)
-    && (hasOwn(value, "days") && (value["days"] === 0 || value["days"] === 1 || value["days"] === 7 || value["days"] === 30 || value["days"] === 90))
+    && (!hasOwn(value, "days") || (value["days"] === 0 || value["days"] === 1 || value["days"] === 7 || value["days"] === 30 || value["days"] === 90))
+    && (!hasOwn(value, "hours") || ((isInteger(value["hours"]) && value["hours"] >= 0 && value["hours"] <= 8760) || value["hours"] === null))
+    && (!hasOwn(value, "scope") || (value["scope"] === "all" || value["scope"] === "attachments"))
+    && (!hasOwn(value, "use_default") || typeof value["use_default"] === 'boolean')
 }
 
 export const decodeChatAutoDeleteRequest = decoder("chat.AutoDeleteRequest", isChatAutoDeleteRequest)
@@ -1387,6 +1421,7 @@ export type ChatBotCreateMessageRequest = {
   components?: Array<ChatActionRow>
   content: string
   embeds: Array<ChatEmbed>
+  lifetime_seconds?: number
   message_reference: ChatBotMessageReference
   parent_id?: string | null
 }
@@ -1397,6 +1432,7 @@ export function isChatBotCreateMessageRequest(value: unknown): value is ChatBotC
     && (!hasOwn(value, "components") || isArrayOf(value["components"], item => isChatActionRow(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatEmbed(item)))
+    && (!hasOwn(value, "lifetime_seconds") || (isInteger(value["lifetime_seconds"]) && value["lifetime_seconds"] >= 60 && value["lifetime_seconds"] <= 2592000))
     && (hasOwn(value, "message_reference") && isChatBotMessageReference(value["message_reference"]))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
 }
@@ -1523,6 +1559,9 @@ export const decodeChatCategoryOrder = decoder("chat.CategoryOrder", isChatCateg
 
 export type ChatChannel = {
   auto_delete_days?: number
+  auto_delete_follows_default?: boolean
+  auto_delete_hours?: number
+  auto_delete_scope?: "all" | "attachments"
   category_id: string | null
   created_at: string
   id: string
@@ -1544,6 +1583,9 @@ export type ChatChannel = {
 export function isChatChannel(value: unknown): value is ChatChannel {
   return isRecord(value)
     && (!hasOwn(value, "auto_delete_days") || (isInteger(value["auto_delete_days"]) && value["auto_delete_days"] >= 0 && value["auto_delete_days"] <= 90))
+    && (!hasOwn(value, "auto_delete_follows_default") || typeof value["auto_delete_follows_default"] === 'boolean')
+    && (!hasOwn(value, "auto_delete_hours") || (isInteger(value["auto_delete_hours"]) && value["auto_delete_hours"] >= 0 && value["auto_delete_hours"] <= 8760))
+    && (!hasOwn(value, "auto_delete_scope") || (value["auto_delete_scope"] === "all" || value["auto_delete_scope"] === "attachments"))
     && (hasOwn(value, "category_id") && (isIdentifier(value["category_id"]) || value["category_id"] === null))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
@@ -1730,6 +1772,7 @@ export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagReque
 export type ChatCreateMessageRequest = {
   attachment_ids?: Array<string>
   content: string
+  lifetime_seconds?: number
   nonce?: string
   parent_id?: string | null
   reply_to_id?: string | null
@@ -1739,6 +1782,7 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
   return isRecord(value)
     && (!hasOwn(value, "attachment_ids") || isArrayOf(value["attachment_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "lifetime_seconds") || (isInteger(value["lifetime_seconds"]) && value["lifetime_seconds"] >= 60 && value["lifetime_seconds"] <= 2592000))
     && (!hasOwn(value, "nonce") || isIdentifier(value["nonce"]))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
@@ -2173,6 +2217,32 @@ export function isChatLayoutRequest(value: unknown): value is ChatLayoutRequest 
 
 export const decodeChatLayoutRequest = decoder("chat.LayoutRequest", isChatLayoutRequest)
 
+export type ChatLifetimeSettings = {
+  message_lifetime_max_seconds: number
+  message_lifetimes_enabled: boolean
+}
+
+export function isChatLifetimeSettings(value: unknown): value is ChatLifetimeSettings {
+  return isRecord(value)
+    && (hasOwn(value, "message_lifetime_max_seconds") && (isInteger(value["message_lifetime_max_seconds"]) && value["message_lifetime_max_seconds"] >= 60 && value["message_lifetime_max_seconds"] <= 2592000))
+    && (hasOwn(value, "message_lifetimes_enabled") && typeof value["message_lifetimes_enabled"] === 'boolean')
+}
+
+export const decodeChatLifetimeSettings = decoder("chat.LifetimeSettings", isChatLifetimeSettings)
+
+export type ChatLifetimeSettingsRequest = {
+  message_lifetime_max_seconds?: number | null
+  message_lifetimes_enabled?: boolean | null
+}
+
+export function isChatLifetimeSettingsRequest(value: unknown): value is ChatLifetimeSettingsRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "message_lifetime_max_seconds") || ((isInteger(value["message_lifetime_max_seconds"]) && value["message_lifetime_max_seconds"] >= 60 && value["message_lifetime_max_seconds"] <= 2592000) || value["message_lifetime_max_seconds"] === null))
+    && (!hasOwn(value, "message_lifetimes_enabled") || (typeof value["message_lifetimes_enabled"] === 'boolean' || value["message_lifetimes_enabled"] === null))
+}
+
+export const decodeChatLifetimeSettingsRequest = decoder("chat.LifetimeSettingsRequest", isChatLifetimeSettingsRequest)
+
 export type ChatMarkAllReadRequest = {
   category_id?: string | null
 }
@@ -2207,22 +2277,26 @@ export function isChatMarkUnreadRequest(value: unknown): value is ChatMarkUnread
 export const decodeChatMarkUnreadRequest = decoder("chat.MarkUnreadRequest", isChatMarkUnreadRequest)
 
 export type ChatMediaAttachment = {
+  height?: number
   id: string
   is_deleted: boolean
   mime_type: string
   original_filename: string
   size_bytes: number
   url: string
+  width?: number
 }
 
 export function isChatMediaAttachment(value: unknown): value is ChatMediaAttachment {
   return isRecord(value)
+    && (!hasOwn(value, "height") || isInteger(value["height"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "is_deleted") && typeof value["is_deleted"] === 'boolean')
     && (hasOwn(value, "mime_type") && isString(value["mime_type"]))
     && (hasOwn(value, "original_filename") && isString(value["original_filename"]))
     && (hasOwn(value, "size_bytes") && isInteger(value["size_bytes"]))
     && (hasOwn(value, "url") && isString(value["url"]))
+    && (!hasOwn(value, "width") || isInteger(value["width"]))
 }
 
 export const decodeChatMediaAttachment = decoder("chat.MediaAttachment", isChatMediaAttachment)
@@ -2297,6 +2371,7 @@ export type ChatMessage = {
   direct_mentions?: Array<string>
   display_name: string
   embeds?: Array<ChatEmbed>
+  expires_at?: string
   forward?: ChatForwardRef
   id: string
   is_bot?: boolean
@@ -2336,6 +2411,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (!hasOwn(value, "direct_mentions") || isArrayOf(value["direct_mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
     && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatEmbed(item)))
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
     && (!hasOwn(value, "forward") || isChatForwardRef(value["forward"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
@@ -2395,6 +2471,25 @@ export function isChatMessageEditHistory(value: unknown): value is ChatMessageEd
 }
 
 export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", isChatMessageEditHistory)
+
+export type ChatMessageSettingsView = {
+  auto_delete_default_hours: number
+  auto_delete_default_scope: "all" | "attachments"
+  auto_delete_next_run_at: string
+  message_lifetime_max_seconds: number
+  message_lifetimes_enabled: boolean
+}
+
+export function isChatMessageSettingsView(value: unknown): value is ChatMessageSettingsView {
+  return isRecord(value)
+    && (hasOwn(value, "auto_delete_default_hours") && (isInteger(value["auto_delete_default_hours"]) && value["auto_delete_default_hours"] >= 0 && value["auto_delete_default_hours"] <= 8760))
+    && (hasOwn(value, "auto_delete_default_scope") && (value["auto_delete_default_scope"] === "all" || value["auto_delete_default_scope"] === "attachments"))
+    && (hasOwn(value, "auto_delete_next_run_at") && isTimestamp(value["auto_delete_next_run_at"]))
+    && (hasOwn(value, "message_lifetime_max_seconds") && (isInteger(value["message_lifetime_max_seconds"]) && value["message_lifetime_max_seconds"] >= 60 && value["message_lifetime_max_seconds"] <= 2592000))
+    && (hasOwn(value, "message_lifetimes_enabled") && typeof value["message_lifetimes_enabled"] === 'boolean')
+}
+
+export const decodeChatMessageSettingsView = decoder("chat.MessageSettingsView", isChatMessageSettingsView)
 
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
@@ -2588,6 +2683,7 @@ export function isChatReorderForumTagsRequest(value: unknown): value is ChatReor
 export const decodeChatReorderForumTagsRequest = decoder("chat.ReorderForumTagsRequest", isChatReorderForumTagsRequest)
 
 export type ChatReplyPreview = {
+  attachments_removed?: boolean
   avatar_url?: string
   content?: string
   deleted: boolean
@@ -2602,6 +2698,7 @@ export type ChatReplyPreview = {
 
 export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
   return isRecord(value)
+    && (!hasOwn(value, "attachments_removed") || typeof value["attachments_removed"] === 'boolean')
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (!hasOwn(value, "content") || isString(value["content"]))
     && (hasOwn(value, "deleted") && typeof value["deleted"] === 'boolean')
@@ -4026,6 +4123,7 @@ export const decodeLaterCreateReminderRequest = decoder("later.CreateReminderReq
 
 export type LaterCreateScheduledRequest = {
   content: string
+  lifetime_seconds?: number
   parent_id?: string | null
   reply_to_id?: string | null
   send_at: string
@@ -4034,6 +4132,7 @@ export type LaterCreateScheduledRequest = {
 export function isLaterCreateScheduledRequest(value: unknown): value is LaterCreateScheduledRequest {
   return isRecord(value)
     && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "lifetime_seconds") || (isInteger(value["lifetime_seconds"]) && value["lifetime_seconds"] >= 60 && value["lifetime_seconds"] <= 2592000))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
     && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))
@@ -4106,6 +4205,7 @@ export type LaterScheduled = {
   dm: boolean
   failure_reason: "" | "slow_mode" | "not_allowed" | "unavailable" | "refused"
   id: string
+  lifetime_seconds?: number
   parent_id: string | null
   reply_to_id: string | null
   send_at: string
@@ -4122,6 +4222,7 @@ export function isLaterScheduled(value: unknown): value is LaterScheduled {
     && (hasOwn(value, "dm") && typeof value["dm"] === 'boolean')
     && (hasOwn(value, "failure_reason") && (value["failure_reason"] === "" || value["failure_reason"] === "slow_mode" || value["failure_reason"] === "not_allowed" || value["failure_reason"] === "unavailable" || value["failure_reason"] === "refused"))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "lifetime_seconds") || isInteger(value["lifetime_seconds"]))
     && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (hasOwn(value, "reply_to_id") && (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
     && (hasOwn(value, "send_at") && isTimestamp(value["send_at"]))

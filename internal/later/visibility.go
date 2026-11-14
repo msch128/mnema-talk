@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mdplain"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -46,7 +47,7 @@ func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]
 	rows, err := s.DB.Query(ctx, `
 		SELECT m.id, m.channel_id, m.parent_id, c.name, m.in_dm, m.user_id, COALESCE(m.author_name, u.display_name), m.content
 		FROM messages m JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id
-		WHERE m.id = ANY($1)`, ids)
+		WHERE m.id = ANY($1) AND `+core.LiveSQL("m"), ids)
 	if err != nil {
 		return nil, fmt.Errorf("load message: %w", err)
 	}

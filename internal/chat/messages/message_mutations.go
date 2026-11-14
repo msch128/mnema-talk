@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -76,7 +74,7 @@ func editTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messag
 	err := tx.QueryRow(ctx, `
 		SELECT user_id, channel_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &channel, &hasMedia, &isPoll, &forwarded)
+		FROM messages WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()) FOR NO KEY UPDATE`, messageID).Scan(&author, &channel, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrMessageNotFound
 	}
@@ -109,96 +107,6 @@ func editTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messag
 		return uuid.Nil, fmt.Errorf("update message: %w", err)
 	}
 	return channel, mentions.RecordMentions(ctx, tx, online, messageID, userID, content)
-}
-
-// DeleteMessageAs removes a message (and its thread replies) if user is its
-// author or canManage says they may delete other members' messages (the Manage
-// messages permission in the message's channel, or being the Owner). It returns
-// the storage keys of the media that went with it; their rows are removed by
-// cascade, the caller deletes the objects.
-func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
-	keys, _, err := deleteMessageAs(ctx, p, messageID, user, canManage, nil)
-	return keys, err
-}
-
-// deleteMessageAs is DeleteMessageAs with audited, if set, run in the
-// deletion's transaction once the message is locked and the deletion allowed,
-// while the message can still be read (the audit entry). It also returns when
-// the newest of the removed messages (the message or one of its replies) was
-// written: members who had read the channel up to then were not counting any.
-func deleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool, audited func(pgx.Tx) error) ([]string, time.Time, error) {
-	var keys []string
-	var newest time.Time
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// Locking the message first blocks a concurrent thread reply or
-		// upload (their foreign keys need a share lock on it) until we are
-		// done, so every attachment the cascade removes is in keys.
-		m, err := lockMessageForDelete(ctx, tx, messageID)
-		if err != nil {
-			return err
-		}
-		newest = m.newest
-		if err := checkDeleteAuthorized(user, m.author, m.ownerContent, canManage); err != nil {
-			return err
-		}
-		if audited != nil {
-			if err := audited(tx); err != nil {
-				return err
-			}
-		}
-		if err := CollectKeys(ctx, tx, &keys, `
-			SELECT s3_key FROM media WHERE message_id IN
-				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID); err != nil {
-			return fmt.Errorf("delete message: %w", err)
-		}
-		return RecordMessageDelete(ctx, p, tx, m.channel, messageID, m.parent)
-	})
-	if err != nil {
-		return nil, newest, err
-	}
-	return keys, newest, nil
-}
-
-// lockedMessage is what deleting a message needs to know about it.
-type lockedMessage struct {
-	author, channel uuid.UUID
-	parent          *uuid.UUID
-	ownerContent    bool
-	// newest is when the newest of the message and its replies was written,
-	// read once the lock is held (no reply can be added after that).
-	newest time.Time
-}
-
-func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (lockedMessage, error) {
-	var m lockedMessage
-	err := tx.QueryRow(ctx, `SELECT user_id, channel_id, parent_id FROM messages WHERE id = $1 FOR UPDATE`, messageID).
-		Scan(&m.author, &m.channel, &m.parent)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return m, core.ErrMessageNotFound
-	}
-	if err != nil {
-		return m, fmt.Errorf("lock message: %w", err)
-	}
-	// The Owner's words, read after the lock in a statement of its own
-	// (ownerWords), then the newest message the delete removes.
-	if m.ownerContent, err = ownerWords(ctx, tx, messageID, m.author); err != nil {
-		return m, err
-	}
-	m.newest, err = newestOfThread(ctx, tx, messageID)
-	return m, err
-}
-
-func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canManage bool) error {
-	if author != user.ID && !canManage {
-		return httpx.ErrForbidden("only the author or a moderator can delete this message")
-	}
-	if ownerContent && !user.IsAdmin() && author != user.ID {
-		return httpx.ErrForbidden("the Owner's messages can only be deleted by the Owner")
-	}
-	return nil
 }
 
 // CollectKeys appends the first column of query's rows to keys.
@@ -311,7 +219,7 @@ func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID,
 // gone) and returns its channel.
 func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (uuid.UUID, error) {
 	var channel uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&channel)
+	err := tx.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()) FOR NO KEY UPDATE`, messageID).Scan(&channel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrMessageNotFound
 	}

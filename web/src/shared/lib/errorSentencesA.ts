@@ -2,6 +2,9 @@
 import type { SentenceRow } from './errorSentences'
 
 export const ROWS: readonly SentenceRow[] = [
+  ['a forum post cannot have a lifetime', 'lifetimeForumPost'],
+  ['a message with a lifetime cannot be forwarded', 'lifetimeNoForward'],
+  ['a message with a lifetime cannot be pinned', 'lifetimeNoPin'],
   ['%d created channel(s) have messages now; confirm that they are deleted too', 'srvCreatedChannelSHaveMessages'],
   ['%q is not a domain', 'srvIsNotADomain'],
   ['%s contains invalid characters', 'fieldInvalidChars', ['field']],

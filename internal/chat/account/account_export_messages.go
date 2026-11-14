@@ -33,7 +33,8 @@ type exportedMessage struct {
 const messagePageSQL = `SELECT m.id, m.channel_id, c.name AS channel_name, m.parent_id, m.reply_to_id, m.in_dm AS direct_message,
 	m.title, m.content, m.is_edited, m.is_pinned, m.created_at, m.updated_at
 	FROM messages m JOIN channels c ON c.id = m.channel_id
-	WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) ORDER BY m.created_at, m.id LIMIT $4`
+	WHERE m.user_id = $1 AND (m.created_at, m.id) > ($2, $3) AND (m.expires_at IS NULL OR m.expires_at > now())
+	ORDER BY m.created_at, m.id LIMIT $4`
 
 func messageFile(ctx context.Context, q db.Querier, user uuid.UUID, channels userdata.Channels, limits userdata.Limits) userdata.File {
 	return userdata.File{

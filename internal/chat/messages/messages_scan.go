@@ -21,6 +21,7 @@ type rawReplyFields struct {
 	avatar      *string
 	content     *string
 	hasMedia    bool
+	allRemoved  bool
 	isBot       *bool
 	isWebhook   *bool
 }
@@ -34,6 +35,7 @@ func buildReplyPreview(replyToID uuid.UUID, r rawReplyFields) *core.ReplyPreview
 		p.AvatarURL = auth.AvatarURL(r.avatar)
 		p.Content = mdplain.Snippet(Deref(r.content), mdplain.SnippetLen)
 		p.HasAttachments = r.hasMedia
+		p.AttachmentsRemoved = r.hasMedia && r.allRemoved
 		p.IsBot = r.isBot != nil && *r.isBot
 		p.IsWebhook = r.isWebhook != nil && *r.isWebhook
 	}

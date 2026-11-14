@@ -9,6 +9,9 @@ import AttachmentTray from './AttachmentTray.vue'
 import EmojiButton from '../../shared/components/EmojiButton.vue'
 import MarkdownHelp from '../../shared/components/MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import LifetimeButton from './LifetimeButton.vue'
+import { threadLifetimeKey, useLifetimeStore } from '../../stores/lifetime'
+import { lifetimeLabel } from '../../shared/lib/lifetime'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
 import { useComposerFiles } from '../composables/useComposerFiles'
@@ -44,6 +47,10 @@ const tray = useAttachmentTray(() => (chatStore.activeThread && chatStore.active
   : null))
 const { attachFiles, onPaste, onPick } = useComposerFiles({ add: tray.add, canAttach: () => props.canAttach, busy: () => props.sending })
 defineExpose({ tray, attachFiles, focus: () => textAreaEl.value?.focus() })
+// A thread keeps a lifetime of its own, apart from its channel's.
+const lifetimes = useLifetimeStore()
+const lifetimeKey = computed(() => (chatStore.activeThread ? threadLifetimeKey(chatStore.activeThread.id) : ''))
+const lifetime = computed(() => lifetimes.forChannel(lifetimeKey.value))
 
 function handleKeyDown(e: KeyboardEvent) {
   handleComposerKeydown(e, { consumers: [assist.onKeydown, k => tray.onKeydown(k, text.value)], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
@@ -51,12 +58,13 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="px-4 pb-6 pt-1 shrink-0">
+  <!-- A container: in a narrow panel the field takes the first row and the tools the second, so typing never wraps a word per line -->
+  <div class="@container px-4 pb-6 pt-1 shrink-0">
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
     <AttachmentTray :items="tray.items.value" @remove="tray.remove" @retry="tray.retry" @view="tray.view" />
     <div
       :class="[
-        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+        'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex @max-[28rem]:flex-wrap gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
         multiline ? 'items-end' : 'items-center',
         replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
@@ -107,22 +115,25 @@ function handleKeyDown(e: KeyboardEvent) {
         :disabled="!canSend"
         :aria-label="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
         rows="1"
-        class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
+        class="bg-transparent flex-1 min-w-0 @max-[28rem]:basis-full @max-[28rem]:order-first resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
       <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
+      <LifetimeButton v-if="lifetimeKey && canSend" :memory-key="lifetimeKey" :disabled="sending" icon-only />
+
       <button
         @click="emit('send')"
         :disabled="!canSend || (!messageText(text) && !tray.count.value) || sending"
-        class="btn btn-primary w-8 h-8 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
+        class="btn btn-primary w-8 h-8 @max-[28rem]:ml-auto flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
         <ArrowUp class="w-4 h-4" />
       </button>
     </div>
+    <p v-if="lifetime" class="mt-1 px-1 text-xs text-mnema-tertiary" data-testid="lifetime-help">{{ $t('lifetime.help', { time: lifetimeLabel(lifetime) }) }}</p>
     <p v-if="looksLikeCommand" data-testid="thread-command-hint" role="status" class="mt-1 px-1 text-xs text-mnema-tertiary">{{ $t('thread.commandHint') }}</p>
   </div>
 </template>

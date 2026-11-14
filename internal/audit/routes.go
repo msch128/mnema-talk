@@ -27,6 +27,7 @@ const (
 	ResOnboarding Resource = "onboarding"
 	ResVanity     Resource = "vanity"
 	ResEmoji      Resource = "emoji"
+	ResMessages   Resource = "message_settings"
 )
 
 // Route describes one mutating admin route.
@@ -82,6 +83,7 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/channels", Action: "channel.create", TargetType: "channel"},
 	{Method: "PATCH", Pattern: "/channels/{id}", Action: "channel.update", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "PUT", Pattern: "/channels/{id}/auto-delete", Action: "channel.auto_delete_set", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
+	{Method: "POST", Pattern: "/channels/{id}/auto-delete/preview", Skip: true},
 	{Method: "DELETE", Pattern: "/channels/{id}", Action: "channel.delete", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/channels/{id}/duplicate", Action: "channel.duplicate", TargetType: "channel", IDParam: "id", Snapshot: ResChannel},
 	{Method: "POST", Pattern: "/categories", Action: "category.create", TargetType: "category"},
@@ -120,6 +122,10 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/import/discord/preview", Skip: true},
 	{Method: "POST", Pattern: "/import/discord/apply", Skip: true},
 	{Method: "POST", Pattern: "/import/discord/imports/{id}/undo", Skip: true},
+
+	{Method: "PUT", Pattern: "/message-settings/lifetimes", Action: "settings.message_lifetimes_set", TargetType: "settings", Snapshot: ResMessages},
+	{Method: "PUT", Pattern: "/message-settings/auto-delete", Action: "settings.auto_delete_default_set", TargetType: "settings", Snapshot: ResMessages},
+	{Method: "POST", Pattern: "/message-settings/auto-delete/preview", Skip: true},
 
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 

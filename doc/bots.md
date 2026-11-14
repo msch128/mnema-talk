@@ -423,7 +423,7 @@ security scheme `botAuth`).
 | `GET /channels` | the channels the bot can view, with their categories |
 | `GET /channels/{id}/messages` (`limit`, `before`, `after`, `around`) | View channels |
 | `GET /channels/{id}/messages/{id}` | View channels |
-| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id` |
+| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id`, `lifetime_seconds` (60 to 2,592,000 and at most the community's ceiling: the server deletes the message that long after; `400` when lifetimes are off or out of bounds. Such a message carries `expires_at` (RFC 3339) in the answer, in the gateway's events and on reads, which leave it out once that has passed; [timed messages](timed-messages.md)) |
 | `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only; `content`, `components` (each optional, absent ones stay; `"components": []` removes them) and `allowed_mentions` (as on a post; an edit that sends it counts towards the 5 posts per 5 seconds of the channel, one without it notifies the members it names and never `@all`, `@here` or a role) |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
 | `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
@@ -557,7 +557,7 @@ and loses a channel's events the moment its access ends.
 |---|---|---|
 | `GUILDS` | 1 | `CHANNELS_UPDATE` `{}`: the channel layout or the bot's access changed, fetch `GET /channels` again |
 | `GUILD_MEMBERS` | 2 | `GUILD_MEMBER_ADD` (`id`, `username`, `display_name`, `avatar_url`), for new members who share a channel with the bot |
-| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
+| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message: an edit, or a file of it removed by the Owner or by auto-delete, which then has `is_deleted`), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
 | `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
 
 The bot's own messages are dispatched to it as well. Message content is always

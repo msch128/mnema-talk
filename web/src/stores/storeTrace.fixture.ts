@@ -4,6 +4,8 @@
 // delivery plan perturbs the order (a dropped connection, an answer that comes
 // early or late, a repeated frame). The canonical state of the stores is then
 // compared with that of a client that has just loaded the same snapshot.
+import { serverOffset } from '../shared/lib/clock'
+import { noteServerTime, resetServerTime } from '../shared/lib/serverTime'
 import { vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
@@ -16,6 +18,8 @@ export interface TraceFrame { type: string; payload: unknown }
 export interface TraceSnapshot { op: number; frames: number; bodies: Record<string, unknown> }
 export interface StoreTrace {
   seed: number
+  /** When the trace was made; messages with a lifetime end by the server clock of that moment. */
+  recorded_at?: string
   me: { id: string; username: string }
   snapshots: TraceSnapshot[]
   frames: TraceFrame[]
@@ -143,6 +147,11 @@ type Chat = ReturnType<typeof useChatStore>
 
 function install(server: TraceServer): Chat {
   setActivePinia(createPinia())
+  // The client's server clock is the recording's, so a lifetime does not end on the replay's own clock.
+  const recorded = server.trace.recorded_at ? Date.parse(server.trace.recorded_at) : NaN
+  serverOffset.value = Number.isFinite(recorded) ? recorded - Date.now() : 0
+  resetServerTime()
+  if (Number.isFinite(recorded)) noteServerTime(recorded)
   FakeSocket.instances = []
   vi.stubGlobal('WebSocket', FakeSocket)
   vi.stubGlobal('fetch', vi.fn((input: unknown) => server.fetch(input)))

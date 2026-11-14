@@ -6,6 +6,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Copy, Download, ExternalLink, MessageSquare, Minus, Plus, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import MediaPlaceholder from './MediaPlaceholder.vue'
 import { useDialog } from '../composables/useDialog'
 import { useZoomPan } from '../composables/useZoomPan'
 import { closeViewer, setViewerIndex, viewerState } from '../composables/useMediaViewer'
@@ -21,6 +22,8 @@ const stage = ref<HTMLElement | null>(null)
 useDialog(root, { onClose: closeViewer, initialFocus: '[data-autofocus]' })
 const zoom = useZoomPan(stage)
 
+// The picture whose file could not be fetched (removed, missing in storage): it shows as removed.
+const failedSrc = ref('')
 const items = computed(() => viewerState.items)
 const index = computed(() => viewerState.index)
 const item = computed(() => items.value[index.value])
@@ -168,7 +171,9 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
         data-testid="viewer-prev"
         @click.stop="go(-1)"
       ><ChevronLeft class="h-6 w-6" /></button>
+      <MediaPlaceholder v-if="item.removed || failedSrc === item.src" state="gone" kind="image" :name="item.name" class="h-64 w-96 max-w-[90vw]" data-testid="viewer-removed" />
       <img
+        v-else
         :key="item.src"
         :src="item.src"
         :alt="item.name"
@@ -178,6 +183,7 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
         :style="zoom.style.value"
         data-testid="viewer-image"
         @load="onLoad"
+        @error="failedSrc = item.src"
         @click.stop
         @dblclick.stop="zoom.onDoubleClick"
       />

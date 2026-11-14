@@ -113,7 +113,8 @@ export function enqueue(cx: Cx, channelId: string, send: TextSend, behindOthers 
   commit(cx, [...cs.outbox.value, {
     nonce: send.nonce, channelId, userId: authStore.user?.id ?? '', parentId: send.parentId, replyToId: send.replyToId,
     content: messageText(send.content), createdAt: new Date().toISOString(), status: 'waiting', error: '',
-    cause: 'offline', attempts: 0, possiblyDelivered: !behindOthers, notBefore: 0
+    cause: 'offline', attempts: 0, possiblyDelivered: !behindOthers, notBefore: 0,
+    ...(send.lifetimeSeconds ? { lifetimeSeconds: send.lifetimeSeconds } : {})
   }])
   scheduleRetry(cx)
   if (behindOthers) void flushOutbox(cx)

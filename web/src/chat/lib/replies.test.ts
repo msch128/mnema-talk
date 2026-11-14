@@ -1,4 +1,4 @@
-import { requireValue, messageFixture, fixtureId } from '../../test-fixtures.fixture'
+import { requireValue, messageFixture, attachmentFixture, fixtureId } from '../../test-fixtures.fixture'
 import type { Message } from '../../types/domain'
 import { describe, it, expect } from 'vitest'
 import { replySnippet, previewText, stripMarkdown, markPreviewEdited, markPreviewDeleted, REPLY_PREVIEW_LEN } from './replies'
@@ -46,6 +46,20 @@ describe('reply previews', () => {
     expect(requireValue(requireValue(roots[1]).reply_to)).toMatchObject({ deleted: true, content: '' })
     expect(requireValue(requireValue(thread[0]).reply_to).deleted).toBe(true)
     expect(other).toEqual(unchanged)
+  })
+
+  it('shows "File removed" in a reply once every file of the original is removed, without a reload', () => {
+    const reply = messageFixture({ id: 'r', reply_to_id: 'o', reply_to: { id: 'o', content: '', deleted: false, has_attachments: true } })
+    const preview = () => requireValue(reply.reply_to)
+
+    markPreviewEdited([[reply]], { id: 'o', attachments: [attachmentFixture({ id: 'a', is_deleted: true }), attachmentFixture({ id: 'b', is_deleted: false })] })
+    expect(preview()).toMatchObject({ has_attachments: true, attachments_removed: false })
+
+    markPreviewEdited([[reply]], { id: 'o', attachments: [attachmentFixture({ id: 'a', is_deleted: true }), attachmentFixture({ id: 'b', is_deleted: true })] })
+    expect(preview()).toMatchObject({ has_attachments: true, attachments_removed: true })
+
+    markPreviewEdited([[reply]], { id: 'o', attachments: [] })
+    expect(preview()).toMatchObject({ has_attachments: false, attachments_removed: false })
   })
 })
 
