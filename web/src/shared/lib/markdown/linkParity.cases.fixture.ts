@@ -37,7 +37,11 @@ export const AGREED: readonly string[] = [
   'https://other\u3002example/x', 'https://OTHER.example:/x', 'https://[0:0::1]/x', 'https://user:pw@other.example:443/x',
   // Found by the deep run of the fix: a cut right after the "]" of an IPv6 literal.
   '__http://ALLOWED.EXAMPLE_@[::1]__.allowed.example__', 'x*HTTPS://[0:0::1]\'*@allowed.example.:443/a(b)* now',
-  "'__http://1.@2.3.25)6_@[::1]:__.allowed.example__"
+  "'__http://1.@2.3.25)6_@[::1]:__.allowed.example__",
+  // Found by the nightly deep run: a label that is only the ACE prefix, which some URL parsers keep.
+  'https://allowed.example.xn--/x', 'https://xn--.allowed.example.xn--/x', 'x<http://127.1\uff40_@xn--?caf-dma.example:70000#f>"',
+  '[https://allowed.example](www.caf\u00e9.example\uff40\ufe65@xn--\u007fcaf-dma.example:443?q)',
+  '"[https://allowed.example](www.user@xn--\u00a0caf-dma.exam\u0000ple:#f) now'
 ]
 
 /** Links to allowed.example only: the allow list and the block list must let these through. */

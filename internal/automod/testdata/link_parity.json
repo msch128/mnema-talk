@@ -699,6 +699,63 @@
   ]
  },
  {
+  "msg": "https://allowed.example.xn--/x",
+  "server": [
+   {
+    "host": "allowed.example.xn--",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "https://xn--.allowed.example.xn--/x",
+  "server": [
+   {
+    "host": "xn--.allowed.example.xn--",
+    "ok": false
+   }
+  ]
+ },
+ {
+  "msg": "x\u003chttp://127.1\uff40_@xn--?caf-dma.example:70000#f\u003e\"",
+  "server": [
+   {
+    "host": "xn--",
+    "ok": false
+   },
+   {
+    "host": "127.1`",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "[https://allowed.example](www.caf\u00e9.example\uff40\ufe65@xn--\u007fcaf-dma.example:443?q)",
+  "server": [
+   {
+    "host": "xn--",
+    "ok": false
+   },
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
+  "msg": "\"[https://allowed.example](www.user@xn--\u00a0caf-dma.exam\u0000ple:#f) now",
+  "server": [
+   {
+    "host": "xn--",
+    "ok": false
+   },
+   {
+    "host": "allowed.example",
+    "ok": true
+   }
+  ]
+ },
+ {
   "msg": "https://allowed.example/x",
   "server": [
    {
