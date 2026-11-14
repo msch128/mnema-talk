@@ -169,8 +169,10 @@ least every minute) is counted from the moment that snapshot was loaded (at most
 ## Auto-delete
 
 *Manage channels* can let a channel forget: **Channel settings > Delete old
-messages** with *1 day*, *7 days*, *30 days* or *90 days* (off by default, and
-never for direct messages, which the database refuses). Turning it on asks
+messages** with a period of hours, days or weeks (1 hour to 365 days), of the
+messages with their files or of the files only, or *Use the community default*
+(off by default, and never for direct messages or their call Talks, which the
+database refuses; see [timed messages](timed-messages.md)). Turning it on asks
 for confirmation, because the deletion cannot be undone. The channel then
 shows a timer chip in its header and a line under it, so nobody writes
 unaware.
@@ -181,7 +183,11 @@ run) and deletes their attachments through the same path as a deleted message.
 Clients get `message_delete` for each. **Pinned messages stay**, and so does a
 thread root while it has a reply that is newer than the period or pinned (also
 one that is written or pinned while a run is underway); the old replies of such
-a thread go. Turning auto-delete off stops a run at once.
+a thread go. With *Files only* the files of the old messages are removed
+instead and each shows a "File removed" tile; the text stays, and files of
+pinned messages stay. Turning auto-delete off stops a run at once. The Owner
+and Administrators can set a community default that every channel without a
+setting of its own follows.
 Every run that removed something is one `channel.auto_delete_run` audit entry
 with the counts; changing the setting is `channel.auto_delete_set`. The
 audit entries of `message.delete` are *not* written for these deletions (they
@@ -551,8 +557,10 @@ after any handler), so it cannot join them.
 | `message.edit_history_view` | A moderator opens the earlier versions of **someone else's** message | Message, author, channel and how many versions were shown, not their text. One entry per reader and message every ten minutes; reading your own message leaves none |
 | `poll.end` | A moderator ends a poll that someone else posted | Message, author, channel and the question. An author ending their own poll is not audited. No entry of any poll ever holds a vote: an anonymous poll does not store who chose what |
 | `role.self_assign`, `role.self_remove` | A member takes or drops a role an admin opened to everyone (see [Roles members choose themselves](roles-and-permissions.md#roles-members-choose-themselves)) | The role. The member is the actor; the same request again, which changes nothing, is not recorded |
-| `channel.auto_delete_set` | Someone with *Manage channels* turns a channel's auto-delete on, off or to another period | The channel with its settings before and after (`auto_delete_days`) |
-| `channel.auto_delete_run` | The sweeper removed messages of a channel | The channel, the period (`days`), how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
+| `channel.auto_delete_set` | Someone with *Manage channels* turns a channel's auto-delete on, off, to another period or scope, or back to the community default | The channel with its settings before and after (`auto_delete_hours`, `auto_delete_scope`; NULL hours: follows the default) |
+| `settings.auto_delete_default_set` | The Owner or an Administrator changes the community's auto-delete default | The settings before and after (`auto_delete_default_hours`, `auto_delete_default_scope`) |
+| `settings.message_lifetimes_set` | The Owner or an Administrator switches messages with a lifetime on or off or changes the longest lifetime | The settings before and after (`message_lifetimes_enabled`, `message_lifetime_max_seconds`) |
+| `channel.auto_delete_run` | The sweeper removed messages or files of a channel | The channel, the period (`hours`, and `days` for older readers), the `scope`, whether it came from the community `default`, how many `messages` and `attachments` went, and whether the run finished (`complete`). Written by the server itself, without an actor; a run that removes nothing writes nothing. Never the text |
 | `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group. Under a burst of more than about a thousand joins and leaves in a moment, the audit log may not record every one (the hub's `voice join` and `voice leave` log lines name the member and the Talk of each one at the default log level, and `mnema_ws_dropped_total{reason="audit_presence"}` counts the misses) |
 | `voice.disconnect` | A moderator removes a member from one Talk (*Disconnect members* there) | The moderator, the member and the Talk. It says who was in which Talk, so it is read like `voice.join`; the moderation history lists it as a Talk removal without the Talk. A removal from a conversation's call Talk is not recorded, like `voice.join` there |
 | `report.create`, `report.resolve`, `report.delete` | A member reports a message; a moderator closes or deletes the report | The report id and category (and the closing status). Never message text or notes. See [Blocking and reports](#blocking-and-reports) |

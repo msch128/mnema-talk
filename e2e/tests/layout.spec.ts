@@ -15,7 +15,7 @@ const suffix = Date.now().toString(36)
 // 20 characters: the longest name that must stay whole beside the open member list at 1000px.
 const LONG_NAME = `no-topic-channel-${suffix.slice(-3)}`
 const IMAGE_CHANNEL = `bilder-${suffix}`
-const TABS = ['users', 'roles', 'channels', 'invites', 'onboarding', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']
+const TABS = ['users', 'roles', 'channels', 'invites', 'onboarding', 'messages', 'emoji', 'bans', 'bots', 'media', 'audit', 'system']
 
 // Channels these tests make are removed again: other specs count unread channels.
 const made: string[] = []
@@ -97,16 +97,25 @@ for (const width of [1440, 1000]) {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     const first = await bounds(dialog)
-    const barTop = (await bounds(page.getByTestId('admin-tabs'))).y
+    // Where the tab bar sits in what scrolls it: switching tabs must not move it.
+    const barAt = () => page.getByTestId('admin-tabs').evaluate((el) => {
+      let scroller = el.parentElement
+      while (scroller && scroller.scrollHeight <= scroller.clientHeight) scroller = scroller.parentElement
+      return el.getBoundingClientRect().y + (scroller?.scrollTop ?? 0)
+    })
+    const barTop = await barAt()
     for (const tab of TABS) {
+      // The tab list scrolls when the window is shorter than it: in reach means
+      // whole once scrolled to, never covered or cut by the dialog.
       const button = page.getByTestId(`tab-${tab}`)
+      await button.scrollIntoViewIfNeeded()
       await expect(button).toBeInViewport({ ratio: 1 })
       await button.click()
       await expect(button).toHaveAttribute('aria-pressed', 'true')
       await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(/Admin/)
       const box = await bounds(dialog)
       expect(box.height, `${tab} dialog height`).toBe(first.height)
-      expect((await bounds(page.getByTestId('admin-tabs'))).y, `${tab} tab bar position`).toBe(barTop)
+      expect(await barAt(), `${tab} tab bar position`).toBe(barTop)
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow).toBeLessThanOrEqual(0)

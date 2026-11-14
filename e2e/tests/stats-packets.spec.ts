@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, responseString, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -36,8 +36,6 @@ test('the connection panel counts audio packets up while the microphone sends', 
   opened.push(ctxA)
   const ctxB = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(ctxB)
-  await ctxA.addInitScript(trackPeerConnections)
-  await ctxB.addInitScript(trackPeerConnections)
   const admin = await ctxA.newPage()
   const member = await ctxB.newPage()
 

@@ -90,7 +90,9 @@
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
     "sizeMb": "{size} MB",
-    "sizeGb": "{size} GB"
+    "sizeGb": "{size} GB",
+    "fileRemoved": "Datei entfernt",
+    "fileRemovedNamed": "Datei entfernt: {name}"
   },
   "menu": {
     "adminConsole": "Admin-Konsole",
@@ -295,6 +297,7 @@
       "srvABotCanHaveAt": "Ein Bot kann höchstens {a} aktive Tokens haben.",
       "srvABotCanHaveAt2": "Ein Bot kann höchstens {a} Befehle haben.",
       "srvABotHoldsThisRole": "Ein Bot hat diese Rolle. Nur der Owner kann ihr Administrator- oder Admin-Bereich-Berechtigungen geben.",
+      "srvABotSAccessGrants": "Der Zugriff eines Bots kann nur Kanal-Berechtigungen vergeben: ansehen, schreiben, Dateien anhängen, reagieren, Nachrichten verwalten und alle erwähnen.",
       "srvABotSOwnRole": "Die eigene Rolle eines Bots gehört nur diesem Bot.",
       "srvABotSRolesAre": "Die Rollen eines Bots werden in seinen Bot-Einstellungen festgelegt.",
       "srvAChannelCanHaveAt": "Ein Kanal kann höchstens {a} Webhooks haben.",
@@ -313,6 +316,8 @@
       "srvAWordIsTooLong": "Ein Wort ist zu lang.",
       "srvAWordNeedsAtLeast": "Ein Wort braucht außer * mindestens einen Buchstaben oder eine Ziffer.",
       "srvAcceptTheCommunityRulesFirst": "Bitte akzeptiere zuerst die Regeln der Community.",
+      "srvAccessAllNeedsView": "„Alle Kanäle“ braucht die Berechtigung, Kanäle anzusehen: Ohne sie sieht der Bot nichts.",
+      "srvAccessMustBeChannels": "Wähle ausgewählte Kanäle oder alle Kanäle.",
       "srvActionMustBeBlockOr": "Die Aktion muss „block“ oder „flag“ sein.",
       "srvAddAnEMailAddress": "Hinterlege eine E-Mail-Adresse in deinem Konto oder nenne einen Empfänger.",
       "srvAfterMustBeEarlierThan": "„after“ muss vor „before_date“ liegen.",
@@ -489,6 +494,17 @@
       "srvSessionNotFound": "Diese Sitzung wurde nicht gefunden.",
       "srvSessionInactivityDaysMustBe": "„session_inactivity_days“ muss zwischen 1 und 365 liegen.",
       "srvSinceMustBeAnRfc": "„since“ muss eine Zeitangabe im Format RFC 3339 sein.",
+      "autoDeleteNoPeriod": "Wähle einen Zeitraum, Aus oder die Vorgabe der Community.",
+      "autoDeleteHoursRange": "Der Zeitraum muss zwischen 1 Stunde und 365 Tagen liegen.",
+      "lifetimeTooLong": "Diese Community erlaubt Lebensdauern bis {seconds} Sekunden.",
+      "lifetimeRange": "Eine Lebensdauer muss zwischen 1 Minute und 30 Tagen liegen.",
+      "lifetimeMaxRange": "Die längste Lebensdauer muss zwischen 1 Minute und 30 Tagen liegen.",
+      "lifetimesOff": "Nachrichten mit Lebensdauer sind in dieser Community ausgeschaltet.",
+      "autoDeleteScope": "Wähle, was gelöscht wird: Nachrichten oder nur Dateien.",
+      "lifetimeInvalid": "Die Lebensdauer muss eine Zahl von Sekunden sein.",
+      "lifetimeForumPost": "Ein Forenbeitrag kann keine Lebensdauer haben. Antworten darin schon.",
+      "lifetimeNoForward": "Eine Nachricht mit Lebensdauer kann nicht weitergeleitet werden.",
+      "lifetimeNoPin": "Eine Nachricht mit Lebensdauer kann nicht angeheftet werden.",
       "srvSizeMustBe128Or": "Die Größe muss 128 oder 512 sein.",
       "srvSlowModeSecondsMustBe": "Der Langsammodus muss zwischen 0 (aus) und {a} Sekunden liegen.",
       "srvSortMustBeLatestActivity": "„sort“ muss latest_activity oder newest sein.",
@@ -672,6 +688,7 @@
       "srvUnknownIntent": "Unbekanntes Ereignis im Manifest: „{intent}“.",
       "srvUnknownPermission": "Unbekannte Berechtigung im Manifest: „{permission}“.",
       "srvBotInstallLacking": "Du hast „{permission}“ in #{channel} nicht, daher kann der Bot es dort nicht bekommen. Nimm den Haken beim Kanal oder bei der Berechtigung weg.",
+      "srvBotInstallLackingEverywhere": "Du hast „{permission}“ nicht in jedem Kanal, daher kann der Bot es nicht überall bekommen. Nimm den Haken bei der Berechtigung weg oder wähle ausgewählte Kanäle.",
       "srvButtonTakesNoValues": "Ein Button nimmt keine Werte.",
       "srvModalSubmitNoModal": "Auf ein gesendetes Formular kann nicht mit einem weiteren Formular geantwortet werden.",
       "srvAnswerInvalidChars": "Eine Antwort enthält Zeichen, die nicht erlaubt sind.",
@@ -1920,7 +1937,8 @@
       "reports": "Meldungen",
       "automod": "Automod",
       "status": "Status",
-      "import": "Import"
+      "import": "Import",
+      "messages": "Nachrichten"
     },
     "system": {
       "heading": "System & Version",
@@ -2617,7 +2635,24 @@
     "renameChannelNamed": "Kanal {name} bearbeiten",
     "renameCategoryNamed": "Kategorie {name} bearbeiten",
     "deleteChannelNamed": "Kanal {name} löschen",
-    "deleteCategoryNamed": "Kategorie {name} löschen"
+    "deleteCategoryNamed": "Kategorie {name} löschen",
+    "messages": {
+      "title": "Nachrichten",
+      "intro": "Nachrichten mit Lebensdauer und die Vorgabe der Community für automatisches Löschen.",
+      "lifetimesTitle": "Nachrichten mit Lebensdauer",
+      "lifetimesEnabled": "Mitglieder dürfen Nachrichten senden, die nach einer selbst gewählten Zeit verschwinden",
+      "longest": "Längste Lebensdauer",
+      "lifetimesHint": "Gilt für alle, auch für den Owner. Derzeit: {max}. Eine Lebensdauer verhindert keine Kopien, Screenshots oder Benachrichtigungen.",
+      "maxInvalid": "Wähle zwischen 1 Minute und 30 Tagen.",
+      "defaultTitle": "Vorgabe für automatisches Löschen",
+      "defaultHint": "Kanäle ohne eigene Einstellung folgen ihr. Unterhaltungen sind nie betroffen.",
+      "defaultOn": "Alte Inhalte in Kanälen löschen, die der Vorgabe folgen",
+      "defaultOff": "Aus: Es wird nichts gelöscht, außer ein Kanal legt einen eigenen Zeitraum fest.",
+      "periodInvalid": "Wähle zwischen 1 Stunde und 365 Tagen.",
+      "saved": "Einstellungen gespeichert.",
+      "defaultAll": "Kanäle, die der Vorgabe folgen, löschen Nachrichten, die älter als {period} sind, mit ihren Dateien.",
+      "defaultFiles": "Kanäle, die der Vorgabe folgen, entfernen Dateien, die älter als {period} sind; die Nachrichten bleiben."
+    }
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -3464,6 +3499,8 @@
         "sessions_revoke_others": "Alle anderen Sitzungen abgemeldet"
       },
       "settings": {
+        "message_lifetimes_set": "Lebensdauer von Nachrichten geändert",
+        "auto_delete_default_set": "Vorgabe für automatisches Löschen geändert",
         "upload_limit": "Upload-Limit geändert",
         "onboarding": "Willkommen und Regeln geändert",
         "raid": "Raid-Schutz geändert",
@@ -3494,6 +3531,7 @@
         "delete": "Bot gelöscht",
         "avatar": "Bot-Avatar geändert",
         "roles": "Bot-Rollen geändert",
+        "access": "Bot-Zugriff geändert",
         "token_create": "Bot-Token erstellt",
         "token_regenerate": "Bot-Token neu erzeugt",
         "token_revoke": "Bot-Token widerrufen",
@@ -4101,6 +4139,26 @@
       "none": "Keine Rechte",
       "noChannels": "Keine Kanal-Überschreibungen aktiv.",
       "elevated": "Dieser Bot hat Administrator- oder Admin-Bereich-Rechte. Er kann den Server weit über das Schreiben von Nachrichten hinaus verändern."
+    },
+    "choice": {
+      "mixedNote": "Der Bot hat in den Kanälen unterschiedliche Berechtigungen. Beim Speichern erhalten die ausgewählten Kanäle die hier angehakten Berechtigungen.",
+      "sectionTitle": "Kanalzugriff",
+      "title": "Zugriff",
+      "settingsHint": "Lege fest, wo dieser Bot arbeiten darf. Administrator- oder Admin-Rechte bekommt er dadurch nie.",
+      "channels": {
+        "name": "Ausgewählte Kanäle",
+        "desc": "Der Bot arbeitet nur in den Kanälen, die du unten anhakst."
+      },
+      "all": {
+        "name": "Alle Kanäle",
+        "desc": "Die Berechtigungen gelten in jedem Kanal, den Mitglieder sehen, auch in später erstellten."
+      },
+      "privateNote": "Private Kanäle bleiben privat: Der Bot sieht keinen Kanal, den Mitglieder nicht sehen, außer du hakst ihn unter „Auch private Kanäle“ an.",
+      "privateTitle": "Auch private Kanäle",
+      "privateHint": "Hake einen privaten Kanal an, damit der Bot auch dort arbeiten darf.",
+      "permissionsTitle": "Berechtigungen",
+      "save": "Zugriff speichern",
+      "saved": "Zugriff gespeichert."
     },
     "tokens": {
       "title": "Tokens",
@@ -4795,7 +4853,49 @@
     "failed": "Automatisches Löschen konnte nicht geändert werden. Versuche es erneut.",
     "chip": "Auto-Löschen: {period}",
     "tooltip": "Nachrichten, die älter sind als {period}, werden automatisch gelöscht.",
-    "line": "Nachrichten in diesem Kanal werden automatisch gelöscht, sobald sie älter sind als {period}."
+    "line": "Nachrichten in diesem Kanal werden automatisch gelöscht, sobald sie älter sind als {period}.",
+    "units": {
+      "hours": {
+        "one": "{n} Stunde",
+        "other": "{n} Stunden"
+      },
+      "days": {
+        "one": "{n} Tag",
+        "other": "{n} Tage"
+      },
+      "weeks": {
+        "one": "{n} Woche",
+        "other": "{n} Wochen"
+      }
+    },
+    "unitNames": {
+      "hours": "Stunden",
+      "days": "Tage",
+      "weeks": "Wochen"
+    },
+    "useDefault": "Vorgabe der Community verwenden",
+    "custom": "Nach einem Zeitraum",
+    "amount": "Zeitraum",
+    "unit": "Einheit",
+    "scope": "Was gelöscht wird",
+    "scopeAll": "Nachrichten mit ihren Dateien",
+    "scopeFiles": "Nur Dateien",
+    "followsDefault": "Dieser Kanal folgt der Vorgabe der Community.",
+    "offSummary": "In diesem Kanal wird nichts automatisch gelöscht.",
+    "lineFiles": "Dateien in diesem Kanal werden automatisch entfernt, sobald sie älter als {period} sind. Die Nachrichten bleiben.",
+    "nextRun": "Die nächste Prüfung ist um {time}.",
+    "confirmCounts": "Das entfernt jetzt {what} in {name} und danach laufend, was älter wird.",
+    "confirmDefaultBody": "Jeder Kanal ohne eigene Einstellung folgt der Vorgabe. Das entfernt jetzt {what} in diesen Kanälen und danach laufend, was älter wird.",
+    "confirmNoUndo": "Das lässt sich nicht rückgängig machen.",
+    "messagesCount": {
+      "one": "{n} Nachricht",
+      "other": "{n} Nachrichten"
+    },
+    "filesCount": {
+      "one": "{n} Datei",
+      "other": "{n} Dateien"
+    },
+    "and": " und "
   },
   "discordImport": {
     "title": "Struktur eines Discord-Servers importieren",
@@ -5282,6 +5382,45 @@
     "retryAnywayFor": "Die Nachricht erneut senden, obwohl sie schon angekommen sein kann: {excerpt}",
     "expired": "sie ist möglicherweise schon angekommen und wurde deshalb nicht von selbst erneut gesendet",
     "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
+  },
+  "lifetime": {
+    "button": "Lebensdauer der Nachricht",
+    "chosen": "Nachrichten verschwinden nach {time}",
+    "menuTitle": "Für alle löschen nach",
+    "off": "Aus",
+    "custom": "Eigene …",
+    "customTitle": "Eigene Lebensdauer",
+    "amount": "Anzahl",
+    "unit": "Einheit",
+    "units": {
+      "minutes": "Minuten",
+      "hours": "Stunden",
+      "days": "Tage"
+    },
+    "limits": "Zwischen 1 Minute und {max}.",
+    "use": "Übernehmen",
+    "help": "Verschwindet für alle nach {time}. Kopien, Screenshots und Benachrichtigungen können sie behalten.",
+    "minutes": "{n} Min",
+    "hours": "{n} Std",
+    "days": {
+      "one": "{n} Tag",
+      "other": "{n} Tage"
+    },
+    "weeks": {
+      "one": "{n} Woche",
+      "other": "{n} Wochen"
+    },
+    "leftSeconds": "{n} s",
+    "leftMinutes": "{n} Min",
+    "leftHours": "{n} Std",
+    "leftDays": {
+      "one": "{n} Tag",
+      "other": "{n} Tage"
+    },
+    "markLabel": "Verschwindet in {time}",
+    "noPin": "Eine Nachricht mit Lebensdauer kann nicht angeheftet werden.",
+    "markPrefix": "Verschwindet in",
+    "hoursMinutes": "{h} Std {m} Min"
   },
   "components": {
     "notConnected": "{bot} ist gerade nicht verbunden. Versuch es später noch einmal.",

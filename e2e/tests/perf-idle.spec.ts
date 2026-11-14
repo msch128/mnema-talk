@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
-import { apiFetch, trackPeerConnections, expectTalkLive, leaveTalks } from './helpers'
+import { apiFetch, expectTalkLive, leaveTalks } from './helpers'
 import { test, expect } from './fixtures'
 import { installPerfProbe } from './perf-probe'
 import type { ProbeSnapshot } from './perf-probe'
@@ -63,7 +63,6 @@ const setHidden = (page: Page, hidden: boolean) => page.evaluate((h) => (window 
 test('an open app is idle when nobody uses it', async ({ browser }) => {
   test.setTimeout((WINDOW_S * 4 + 120) * 1000)
   const context = await browser.newContext({ permissions: ['microphone', 'camera'] })
-  await context.addInitScript(trackPeerConnections)
   // The real noise filter, so a worker or worklet left behind by a call shows up.
   await context.addInitScript(() => localStorage.setItem('mnema_noise', 'ai'))
   await context.addInitScript(installPerfProbe)

@@ -218,8 +218,10 @@ func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID,
 	rows, err := tx.Query(ctx, `
 		SELECT m.id, m.parent_id, m.content, m.created_at FROM messages m
 		WHERE m.channel_id = $1 AND m.user_id = $2
+		  -- an ended message is the sweeper's: it is not counted, nor its text audited
+		  AND (m.expires_at IS NULL OR m.expires_at > now())
 		  AND ($4 OR NOT EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
-		                         WHERE r.parent_id = m.id AND ru.role = 'admin'))
+		                         WHERE r.parent_id = m.id AND ru.role = 'admin' AND (r.expires_at IS NULL OR r.expires_at > now())))
 		ORDER BY m.created_at DESC, m.id DESC LIMIT $3 FOR UPDATE OF m`, chID, userID, n, byOwner)
 	if err != nil {
 		return nil, fmt.Errorf("select messages: %w", err)

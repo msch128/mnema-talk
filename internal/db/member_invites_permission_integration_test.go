@@ -10,7 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-//go:embed migrations/0108_member_invites_permission.sql
+//go:embed migrations/0109_member_invites_permission.sql
 var memberInvitesPermissionSQL string
 
 // A fresh install gives @everyone the right to create invites; an existing

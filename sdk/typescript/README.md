@@ -199,7 +199,7 @@ interaction sees it, and it is never stored. It belongs to `reply`,
 `allowed_mentions` works as on `createMessage`: without it an answer notifies
 the members it names, never `@all`, `@here` or a role. `i.user` is always
 set: the server sends the member with every interaction. `client.user.handle`
-(from READY) is the name members mention the bot by (`@bot-...`);
+(from READY) is the name members mention the bot by (for example `@mnemo`);
 `client.user.username` is its display name.
 
 ## Components and modals

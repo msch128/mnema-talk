@@ -62,7 +62,8 @@ function asPending(value: unknown, uid: string): PendingMessage | null {
     attempts: typeof v['attempts'] === 'number' ? v['attempts'] : 0,
     // Entries from before this flag had `attempted`: that stays the cautious answer.
     possiblyDelivered: interrupted || (v['possiblyDelivered'] ?? v['attempted']) !== false,
-    notBefore: typeof v['notBefore'] === 'number' ? v['notBefore'] : 0
+    notBefore: typeof v['notBefore'] === 'number' ? v['notBefore'] : 0,
+    ...(typeof v['lifetimeSeconds'] === 'number' && v['lifetimeSeconds'] > 0 ? { lifetimeSeconds: v['lifetimeSeconds'] } : {})
   }
 }
 

@@ -91,10 +91,11 @@ describe('ChatArea boundary and teardown behavior', () => {
   })
 
   it('handles a pending resize notification after observer disconnection', async () => {
-    let notify = () => {}
+    const observers: (() => void)[] = []
+    const notify = () => { for (const each of observers) each() }
     const disconnected = vi.fn()
     vi.stubGlobal('ResizeObserver', class implements ResizeObserver {
-      constructor(callback: ResizeObserverCallback) { notify = () => callback([], this) }
+      constructor(callback: ResizeObserverCallback) { observers.push(() => callback([], this)) }
       observe = vi.fn()
       unobserve = vi.fn()
       disconnect = disconnected
@@ -105,8 +106,8 @@ describe('ChatArea boundary and teardown behavior', () => {
     const timeline = w.find<HTMLElement>('.overflow-y-auto').element
     const rectangle = vi.spyOn(timeline, 'getBoundingClientRect')
     w.unmount()
-    // The timeline, the header and the composer's textarea each watch their size.
-    expect(disconnected).toHaveBeenCalledTimes(3)
+    // The timeline, the header, the composer's textarea and the composer's row each watch their size.
+    expect(disconnected).toHaveBeenCalledTimes(4)
     rectangle.mockClear()
     notify()
     expect(rectangle).not.toHaveBeenCalled()

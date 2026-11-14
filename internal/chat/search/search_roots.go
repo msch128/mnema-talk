@@ -45,7 +45,7 @@ func searchRoots(ctx context.Context, p *db.Pool, msgs []core.Message) (map[stri
 	rows, err := p.Query(ctx, `
 		SELECT m.id, m.channel_id, m.user_id, u.username, COALESCE(m.author_name, u.display_name), m.content
 		FROM messages m JOIN users u ON u.id = m.user_id
-		WHERE m.id = ANY($1::uuid[])`, ids)
+		WHERE m.id = ANY($1::uuid[]) AND `+core.LiveSQL("m"), ids)
 	if err != nil {
 		return nil, err
 	}

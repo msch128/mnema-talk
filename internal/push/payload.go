@@ -96,6 +96,10 @@ type Notice struct {
 	Mention bool
 	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
 	Addressed bool
+	// Short marks a message whose lifetime is under ten minutes: its push
+	// carries no text and no names, only "New message", and a burst that ends
+	// in one only the count (doc/timed-messages.md).
+	Short bool
 	// Count is how many messages this push stands for (1 or more).
 	Count int
 	At    time.Time
@@ -109,6 +113,10 @@ func build(n Notice, locale string, preview bool) Payload {
 		ChannelID: &n.ChannelID, ChannelSlug: n.ChannelSlug, MessageID: &n.MessageID, ParentID: n.ParentID,
 		Mention: n.Mention, Timestamp: n.At.UnixMilli(),
 	}
+	if n.Short && n.Count <= 1 {
+		p.Title = text(locale, "new")
+		return p
+	}
 	sender, channel := clean(n.Sender, maxNameRunes), clean(n.ChannelName, maxNameRunes)
 	line := previewLine(n, locale, preview)
 	if n.DM {
@@ -117,7 +125,7 @@ func build(n Notice, locale string, preview bool) Payload {
 	if n.Count > 1 {
 		p.Title = "#" + channel
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
-		if preview {
+		if preview && !n.Short {
 			p.Body += "\n" + sender + ": " + line
 		}
 		return p
@@ -148,7 +156,7 @@ func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Pay
 	if n.Count > 1 {
 		p.Title = text(locale, "dm")
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
-		if preview {
+		if preview && !n.Short {
 			p.Body += "\n" + sender + ": " + line
 		}
 		return p
@@ -164,6 +172,8 @@ func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Pay
 // text must not be shown.
 func previewLine(n Notice, locale string, preview bool) string {
 	switch {
+	case n.Short:
+		return text(locale, "new")
 	case !preview && n.Mention && !n.DM:
 		return text(locale, "mention")
 	case !preview:

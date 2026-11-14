@@ -37,7 +37,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		chattest.RequireError(t, err, "query channels")
 	})
 	t.Run("channel decoding", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_hours,auto_delete_scope,dm_id,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
 		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})
@@ -61,18 +61,20 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		}
 	})
 	t.Run("attachments query", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id FROM public.media`})
+		// is_deleted stays: the message query reads it for the reply preview,
+		// so the attachment loader is what meets the missing columns.
+		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id,is_deleted FROM public.media`})
 		msgs := []core.Message{{ID: f.m}}
 		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
 		_, _, err := search.Search(ctx, p, search.SearchQuery{Text: "hello", Limit: 10})
 		chattest.RequireError(t, err, "load attachments")
 	})
 	t.Run("attachment decoding", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position,NULL::int width,NULL::int height FROM public.messages`})
 		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "NULL")
 	})
 	t.Run("attachment stream", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position,NULL::int width,NULL::int height FROM public.messages`})
 		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("reaction query", func(t *testing.T) {

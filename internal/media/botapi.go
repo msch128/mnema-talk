@@ -33,6 +33,7 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Param parent_id formData string false "Thread root message ID (reply in a thread)." Format(uuid)
 // @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
 // @Param allowed_mentions formData string false "The allowed_mentions object of the message route (parse, users, roles), JSON-encoded. Without it the caption notifies the members it names, never @all, @here or a role."
+// @Param lifetime_seconds formData integer false "The message's lifetime: the server deletes it that long after storing it (60 to 2592000, at most the community's ceiling). Needs the messages.lifetime feature." minimum(60) maximum(2592000)
 // @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."

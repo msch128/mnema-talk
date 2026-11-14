@@ -10,7 +10,7 @@
 --  * member_invite_creations: one row per invite a member created, kept for
 --    a day. The per-hour limit counts it, not the invites table, so revoking
 --    an invite and creating the next one does not get around the limit.
--- The permission that goes with them is granted in 0108.
+-- The permission that goes with them is granted in 0109.
 ALTER TABLE invites
     ADD COLUMN channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
 

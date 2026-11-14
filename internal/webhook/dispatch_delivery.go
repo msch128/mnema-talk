@@ -153,6 +153,15 @@ func (d *Dispatcher) recordDeliveryResult(ctx context.Context, rec *outgoingRec,
 func (d *Dispatcher) process(ctx context.Context, j job) {
 	// Bookkeeping completes even while shutting down.
 	wctx := context.WithoutCancel(ctx)
+	if messageEnded(j.event, time.Now()) {
+		// A message whose lifetime ended is gone for every reader; a row that
+		// waited for a retry does not carry its text out afterwards.
+		if err := dropRow(wctx, d.DB, j.seq); err != nil {
+			slog.Warn("outgoing webhooks: drop ended message", "err", err)
+		}
+		d.count("message_ended", 1)
+		return
+	}
 	rec, ok := d.loadActiveWebhook(wctx, j)
 	if !ok {
 		return
@@ -167,6 +176,18 @@ func (d *Dispatcher) process(ctx context.Context, j job) {
 	}
 
 	d.recordDeliveryResult(wctx, rec, j, del, retryAfter)
+}
+
+// messageEnded says whether ev is the creation or edit of a message whose
+// lifetime ended by now (doc/timed-messages.md): its payload names the end.
+func messageEnded(ev Event, now time.Time) bool {
+	if ev.Type != EventMessageCreate && ev.Type != EventMessageUpdate {
+		return false
+	}
+	var m struct {
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	return json.Unmarshal(ev.Data, &m) == nil && m.ExpiresAt != nil && !m.ExpiresAt.After(now)
 }
 
 // afterFinal refreshes the cached list after a failure for good, which may

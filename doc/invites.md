@@ -18,7 +18,7 @@ people in without the admin area. It is a separate permission from *Manage
 invites*: it never lists, edits or revokes someone else's invite.
 
 - **Who holds it.** On a fresh install @everyone holds it. An **existing**
-  install keeps what its members could do: migration 0108 gives the permission
+  install keeps what its members could do: migration 0109 gives the permission
   only to the roles that already hold *Manage invites*, and not to @everyone.
   The Owner turns it on for @everyone or for a role in *Roles*, and can allow
   or deny it per category and channel (an invite that lands in a channel needs

@@ -15,8 +15,8 @@ vi.mock('../../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 let requests: { url: string; method: string; body: unknown }[]
 
-function enable() {
-  useServerFeaturesStore().list = ['channels.auto_delete']
+function enable(v2 = true) {
+  useServerFeaturesStore().list = v2 ? ['channels.auto_delete', 'channels.auto_delete.v2'] : ['channels.auto_delete']
 }
 
 beforeEach(() => {
@@ -26,8 +26,7 @@ beforeEach(() => {
   requests = []
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (url, init) => {
     requests.push({ url: String(url), method: init?.method || 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined })
-    const body = String(url).endsWith('/auto-delete') ? channelFixture({ auto_delete_days: 7 }) : { categories: [], uncategorized: [] }
-    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ categories: [], uncategorized: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }))
 })
 afterEach(() => {
@@ -36,44 +35,51 @@ afterEach(() => {
 })
 
 describe('ChannelAutoDeleteField', () => {
-  const mountField = (days = 0) => mount(ChannelAutoDeleteField, { props: { modelValue: days }, global: { plugins: [i18nPlugin] } })
+  const mountField = (value = 'off') => mount(ChannelAutoDeleteField, { props: { modelValue: value }, global: { plugins: [i18nPlugin] } })
 
   it('is absent on a server without the feature', () => {
     expect(mountField().find('[data-testid="auto-delete-field"]').exists()).toBe(false)
   })
 
-  it('offers the periods, has no button of its own and reports the choice', async () => {
+  it('offers the default, off and a period of the messages or only the files, and says what will happen', async () => {
     enable()
-    const w = mountField()
-    expect(w.find('[data-testid="auto-delete-apply"]').exists()).toBe(false)
-    expect(w.findAll('option').map(o => o.text())).toEqual(['Off, keep messages', 'After 1 day', 'After 7 days', 'After 30 days', 'After 90 days'])
-    await w.get('[data-testid="auto-delete-select"]').setValue('7')
-    expect(w.emitted('update:modelValue')).toEqual([[7]])
+    const w = mountField('default')
+    expect(w.get('[data-testid="auto-delete-summary"]').text()).toBe('This channel follows the community default.')
+    await w.get('[data-testid="auto-delete-mode"]').setValue('period')
+    expect(w.emitted('update:modelValue')!.at(-1)).toEqual(['168:all'])
+    await w.setProps({ modelValue: '36:attachments' })
+    expect(w.get('[data-testid="auto-delete-summary"]').text()).toBe('Files in this channel are removed automatically once they are older than 36 hours. The messages stay.')
+    expect(w.text()).toContain('The next check is at')
+    await w.get('[data-testid="auto-delete-scope"]').setValue('all')
+    expect(w.emitted('update:modelValue')!.at(-1)).toEqual(['36:all'])
     expect(requests).toEqual([])
   })
 
-  it('shows the value it is given', () => {
-    enable()
-    expect((mountField(30).get('[data-testid="auto-delete-select"]').element as HTMLSelectElement).value).toBe('30')
+  it('offers an older server only the days it takes', async () => {
+    enable(false)
+    const w = mountField('off')
+    expect(w.findAll('option').map(o => o.text())).toEqual(['Off, keep messages', 'After 1 day', 'After 7 days', 'After 30 days', 'After 90 days'])
+    await w.get('[data-testid="auto-delete-select"]').setValue('7')
+    expect(w.emitted('update:modelValue')!.at(-1)).toEqual(['168:all'])
   })
 })
 
 describe('confirmAutoDelete', () => {
-  it('asks before switching deletion on and not before switching it off', async () => {
+  it('asks with the counts of the dry run, and not when nothing would go', async () => {
     const { confirmAutoDelete } = await import('../../shared/lib/autoDelete')
-    expect(await confirmAutoDelete('general', 0)).toBe(true)
+    expect(await confirmAutoDelete('general', { messages: 0, attachments: 0 })).toBe(true)
     expect(confirmMock).not.toHaveBeenCalled()
     confirmMock.mockResolvedValueOnce(false)
-    expect(await confirmAutoDelete('general', 7)).toBe(false)
+    expect(await confirmAutoDelete('general', { messages: 12, attachments: 3 })).toBe(false)
     expect(confirmMock).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('auto-delete in the channel header and under it', () => {
-  function mountWith(days: number, features = true) {
+  function mountWith(channel: Parameters<typeof channelFixture>[0], features = true) {
     if (features) enable()
     const chat = useChatStore()
-    chat.activeChannel = channelFixture({ name: 'general', auto_delete_days: days })
+    chat.activeChannel = channelFixture({ name: 'general', ...channel })
     return {
       header: mount(ChatHeader, { global: { plugins: [i18nPlugin], directives: { tooltip } } }),
       note: mount(ChannelAutoDeleteNote, { global: { plugins: [i18nPlugin] } })
@@ -81,25 +87,30 @@ describe('auto-delete in the channel header and under it', () => {
   }
 
   it('states the rule with an icon chip in the header and a line under it', () => {
-    const { header, note } = mountWith(7)
-    expect(header.get('[data-testid="auto-delete-chip"]').text()).toBe('7 days')
-    expect(note.get('[data-testid="auto-delete-note"]').text()).toBe('Messages in this channel are deleted automatically once they are older than 7 days.')
+    const { header, note } = mountWith({ auto_delete_days: 1, auto_delete_hours: 36, auto_delete_scope: 'all' })
+    expect(header.get('[data-testid="auto-delete-chip"]').text()).toBe('36 hours')
+    expect(note.get('[data-testid="auto-delete-note"]').text()).toBe('Messages in this channel are deleted automatically once they are older than 36 hours.')
+  })
+
+  it('reads the days of an older server', () => {
+    const { header } = mountWith({ auto_delete_days: 30 })
+    expect(header.get('[data-testid="auto-delete-chip"]').text()).toBe('30 days')
   })
 
   it('shows nothing when it is off or the server does not know the feature', () => {
-    const off = mountWith(0)
+    const off = mountWith({ auto_delete_days: 0, auto_delete_hours: 0 })
     expect(off.header.find('[data-testid="auto-delete-chip"]').exists()).toBe(false)
     expect(off.note.find('[data-testid="auto-delete-note"]').exists()).toBe(false)
     setActivePinia(createPinia())
-    const old = mountWith(7, false)
+    const old = mountWith({ auto_delete_days: 7 }, false)
     expect(old.header.find('[data-testid="auto-delete-chip"]').exists()).toBe(false)
     expect(old.note.find('[data-testid="auto-delete-note"]').exists()).toBe(false)
   })
 
   it('speaks German', () => {
     setLocale('de')
-    const { note } = mountWith(30)
-    expect(note.text()).toContain('30')
-    expect(note.text()).not.toContain('Messages')
+    const { note } = mountWith({ auto_delete_days: 14, auto_delete_hours: 336, auto_delete_scope: 'attachments' })
+    expect(note.text()).toContain('2 Wochen')
+    expect(note.text()).not.toContain('Files')
   })
 })

@@ -179,11 +179,11 @@ export async function updateChannel(cx: Cx, channelId: string, { name, topic, sl
   return updated
 }
 
-/** Sets how long a channel keeps its messages: 1, 7, 30 or 90 days; 0 keeps them for good. */
-export async function setChannelAutoDelete(cx: Cx, channelId: string, days: number) {
+/** Sets a channel's auto-delete: the body of PUT .../auto-delete (shared/lib/autoDelete requestBody). */
+export async function setChannelAutoDelete(cx: Cx, channelId: string, json: Record<string, unknown>) {
   const { cs } = cx
   const community = cs.communityGeneration
-  const updated = await api(`/api/admin/channels/${channelId}/auto-delete`, { method: 'PUT', json: { days }, decode: decodeChannel })
+  const updated = await api(`/api/admin/channels/${channelId}/auto-delete`, { method: 'PUT', json, decode: decodeChannel })
   assertCommunity(cx, community)
   await fetchChannels(cx)
   assertCommunity(cx, community)

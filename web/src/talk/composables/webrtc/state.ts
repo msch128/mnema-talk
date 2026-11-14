@@ -8,6 +8,9 @@ import { createStatsPolling } from './statsPolling'
 import { playPausedRemoteAudio } from './remoteAudio'
 import type { AudioGuard } from './senderTuning'
 import { setGamingPttLease } from './voiceAudio'
+
+/** A lower layer's own copy of the capture (camera or screen share), and the capture it copies. */
+export interface LayerClone { source: MediaStreamTrack; clone: MediaStreamTrack }
 import type { PendingLobby } from './lobby'
 
 export type VoiceStore = ReturnType<typeof useVoiceStore>
@@ -61,8 +64,12 @@ export interface RtcState {
   screenAudioSender: RTCRtpSender | null
   /** Senders of the screen's lower layers (see talk/lib/screenLayers), on the SFU's third and fourth video line; null where the server offers none. */
   layerSenders: (RTCRtpSender | null)[]
+  /** The copy of the screen capture each lower layer encodes, by line (see layerClones.ts). */
+  screenLayerClones: (LayerClone | null)[]
   /** Senders of the camera's lower layers (see talk/lib/cameraLayers), on the video lines after the screen's; null where the server offers none. */
   cameraLayerSenders: (RTCRtpSender | null)[]
+  /** The copy of the camera's capture each lower layer encodes, by line (see layerClones.ts). */
+  cameraLayerClones: (LayerClone | null)[]
   /** The layers last declared to the server (lib/screenLayers.layersKey). */
   declaredKey: string
   /** The same for the camera's layers. */
@@ -90,6 +97,8 @@ export interface RtcState {
   pendingCandidates: RTCIceCandidateInit[]
   /** Bumped by every join and leave: an older join that is still awaiting the microphone sees the change and backs out instead of finishing. */
   joinGeneration: number
+  // A join is waiting for the realtime socket; it sends itself once the socket is up.
+  joinAwaitsSocket: boolean
   /** Whether this call's microphone uses DTX: decided once, with the first offer, and kept (see callDtx). */
   dtx: boolean | null
   /** The join of a Create-a-Talk lobby that waits for its Talk (lobby.ts). */
@@ -157,7 +166,7 @@ export function createRtcState(): RtcState {
     screenSender: null,
     cameraSender: null,
     screenAudioSender: null,
-    layerSenders: [null, null], cameraLayerSenders: [null, null],
+    layerSenders: [null, null], screenLayerClones: [null, null], cameraLayerSenders: [null, null], cameraLayerClones: [null, null],
     declaredKey: '', declaredCameraKey: '',
     captureWatch: null,
     captureSettle: null,
@@ -174,7 +183,7 @@ export function createRtcState(): RtcState {
     audioSettingsBusy: 0,
     signalingChain: Promise.resolve(),
     pendingCandidates: [],
-    joinGeneration: 0, dtx: null,
+    joinGeneration: 0, joinAwaitsSocket: false, dtx: null,
     pendingLobby: null,
     screenAudioGuard: null,
     warnedScreenAudioTracks: new WeakSet(),

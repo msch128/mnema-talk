@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 const contractIntents = IntentGuilds | IntentGuildMessages | IntentGuildMessageReactions
@@ -60,6 +61,7 @@ func TestContractWithARunningServer(t *testing.T) {
 		{"Me answers the bot with its allowed intents", b.me},
 		{"Run identifies and READY carries the session and the granted intents", b.connect},
 		{"a posted message comes back as MESSAGE_CREATE", b.postAndReceive},
+		{"a message with a lifetime carries its end, in the answer, the event and a read", b.timed},
 		{"a command is registered, run by the member and replied to", b.command},
 		{"a button click reaches the bot, which updates the message the member sees", b.button},
 		{"a modal opened on a click is submitted by the member and answered", b.modal},
@@ -91,7 +93,7 @@ func (b *contractBot) me(t *testing.T) {
 	if me.AllowedIntents&contractIntents != contractIntents {
 		t.Fatalf("allowed_intents %d lacks %d", me.AllowedIntents, contractIntents)
 	}
-	if !strings.HasPrefix(me.Handle, "bot-") {
+	if me.Handle == "" {
 		t.Fatalf("handle = %q, want the name members mention", me.Handle)
 	}
 	b.self = me
@@ -127,6 +129,26 @@ func (b *contractBot) postAndReceive(t *testing.T) {
 	}
 	again, err := b.c.REST.Message(ctx, b.env.channel, posted.ID)
 	if err != nil || again.Content != content {
+		t.Fatalf("Message = %+v, %v", again, err)
+	}
+}
+
+func (b *contractBot) timed(t *testing.T) {
+	ctx := background(t)
+	content := "contract go " + b.run + ": gone in an hour"
+	posted, err := b.c.REST.CreateMessage(ctx, b.env.channel, MessageCreate{Content: content, LifetimeSeconds: 3600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if posted.ExpiresAt == nil || posted.ExpiresAt.Sub(posted.CreatedAt) != time.Hour {
+		t.Fatalf("expires_at = %v, created_at = %v, want an hour later", posted.ExpiresAt, posted.CreatedAt)
+	}
+	got := await(t, b.messages, "MESSAGE_CREATE", func(m *Message) bool { return m.Content == content })
+	if got.ExpiresAt == nil || !got.ExpiresAt.Equal(*posted.ExpiresAt) {
+		t.Fatalf("event expires_at = %v, want %v", got.ExpiresAt, posted.ExpiresAt)
+	}
+	again, err := b.c.REST.Message(ctx, b.env.channel, posted.ID)
+	if err != nil || again.ExpiresAt == nil || !again.ExpiresAt.Equal(*posted.ExpiresAt) {
 		t.Fatalf("Message = %+v, %v", again, err)
 	}
 }

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, responseString, suiteMember, leaveTalks, audioDecodedIn, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -95,8 +95,6 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   const firstCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const lateCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(firstCtx, lateCtx)
-  await firstCtx.addInitScript(trackPeerConnections)
-  await lateCtx.addInitScript(trackPeerConnections)
   await firstCtx.addInitScript(trackAudioFilters)
   await lateCtx.addInitScript(trackAudioFilters)
   const first = await firstCtx.newPage()
@@ -168,8 +166,6 @@ test('a member who reloads inside the grace period is heard again and hears agai
   const firstCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const secondCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(firstCtx, secondCtx)
-  await firstCtx.addInitScript(trackPeerConnections)
-  await secondCtx.addInitScript(trackPeerConnections)
   const first = await firstCtx.newPage()
   const second = await secondCtx.newPage()
   await signIn(first, ADMIN_USER, ADMIN_PASSWORD)

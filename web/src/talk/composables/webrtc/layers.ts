@@ -1,9 +1,10 @@
 import { toRaw } from 'vue'
 import { streamTuning } from '../../lib/streamQuality'
 import { declaredLayers, layersKey, planScreenLayers } from '../../lib/screenLayers'
-import type { Cx } from './state'
+import type { Cx, LayerClone } from './state'
 import { tuneSender } from './senderTuning'
 import { qosPriority, screenSenderParams } from './senders'
+import { dropAllClones, dropLayerClone, dropMissingSenderClones, layerClone } from './layerClones'
 
 // The size and rate a capture delivers change under a running share (a resized
 // window, a new display mode), and a track fires no event for it, so they are
@@ -51,22 +52,32 @@ export function syncLayers(cx: Cx) {
   return st.qualityChain
 }
 
-const dropTrack = async (sender: RTCRtpSender) => {
+/** Stops the clone for a lower screen line and silences the sender. */
+const dropTrack = async (sender: RTCRtpSender, clones: (LayerClone | null)[], index: number) => {
+  dropLayerClone(clones, index)
   if (sender.track) await sender.replaceTrack(null).catch(() => {})
 }
 
 /** No share (or no best-layer sender): the lower layers go quiet and the next share starts on its best layer alone. */
 async function releaseLayers(cx: Cx, senders: (RTCRtpSender | null | undefined)[]) {
   const { st } = cx
-  for (const sender of senders) if (sender) await dropTrack(sender)
+  for (let i = 0; i < senders.length; i++) {
+    const sender = senders[i]
+    if (sender) await dropTrack(sender, st.screenLayerClones, i)
+  }
   if (st.screenSender) await tuneSender(st.screenSender, { active: true })
   st.declaredKey = ''
 }
 
 type LayerPlan = ReturnType<typeof planScreenLayers>[number]
 
-/** Tunes one lower layer's sender and feeds it the capture. Resolves to false when the share changed meanwhile. */
-async function feedLayer(cx: Cx, sender: RTCRtpSender, plan: LayerPlan, active: boolean, track: MediaStreamTrack, gen: number) {
+/**
+ * Tunes one lower layer's sender and feeds it a clone of the capture.
+ * Each lower line gets its own clone so its encoder adapts independently
+ * (a shared track adapts to the most constrained sender, which shrinks every layer).
+ * Resolves to false when the share changed meanwhile.
+ */
+async function feedLayer(cx: Cx, index: number, sender: RTCRtpSender, plan: LayerPlan, active: boolean, track: MediaStreamTrack, gen: number) {
   const { voice, st } = cx
   const prio = qosPriority(cx)
   const { degradationPreference } = streamTuning(voice.screenQuality)
@@ -75,7 +86,8 @@ async function feedLayer(cx: Cx, sender: RTCRtpSender, plan: LayerPlan, active: 
     degradationPreference, priority: prio, networkPriority: prio
   })
   if (gen !== st.joinGeneration || toRaw(st.localScreenStream.value)?.getVideoTracks()[0] !== track) return false
-  if (sender.track !== track) await sender.replaceTrack(track).catch(() => {})
+  const clone = layerClone(st.screenLayerClones, index, track)
+  if (sender.track !== clone) await sender.replaceTrack(clone).catch(() => {})
   return true
 }
 
@@ -101,15 +113,16 @@ async function syncSenderLayers(
   gen: number,
   wanted: number[] | null
 ): Promise<boolean> {
+  const { st } = cx
   for (let i = 0; i < senders.length; i++) {
     const sender = senders[i]
     if (!sender) continue
     const plan = plans[i + 1]
     if (!plan) {
-      await dropTrack(sender)
+      await dropTrack(sender, st.screenLayerClones, i)
       continue
     }
-    if (!(await feedLayer(cx, sender, plan, isLayerActive(wanted, i + 1), track, gen))) {
+    if (!(await feedLayer(cx, i, sender, plan, isLayerActive(wanted, i + 1), track, gen))) {
       return false
     }
   }
@@ -118,6 +131,7 @@ async function syncSenderLayers(
 
 async function runSyncLayers(cx: Cx) {
   const { voice, st } = cx
+  dropMissingSenderClones(st.layerSenders, st.screenLayerClones)
   if (!st.layerSenders.some(Boolean)) return
   const track = st.localScreenStream.value?.getVideoTracks()[0]
   const gen = st.joinGeneration
@@ -134,14 +148,21 @@ async function runSyncLayers(cx: Cx) {
   declareLayers(cx, plans)
 }
 
+/** Stops all screen lower-layer clones synchronously (keeps the browser's sharing indicator off). */
+export function stopScreenLayerClones(cx: Cx) {
+  dropAllClones(cx.st.screenLayerClones)
+}
+
 // The capture changed size or rate: the best layer is sized for the new
 // picture, the lower ones are re-planned and the layers declared again (the
 // server and the viewers' pickers only hear of it if the sizes differ).
+// The lower lines get new clones, which copy the capture as it is now.
 export async function retuneForCapture(cx: Cx, track: MediaStreamTrack) {
   const { st } = cx
+  // A clone keeps the constraints the capture had when it was made.
+  stopScreenLayerClones(cx)
   st.qualityChain = st.qualityChain.then(async () => {
     if (st.screenSender) await tuneSender(st.screenSender, screenSenderParams(cx, track))
   }).catch(() => {})
   await syncLayers(cx)
 }
-

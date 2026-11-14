@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
+import { setMentionLabels } from '../shared/lib/markdown'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import { useSocketStore } from './socket'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
 import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
+import { memberLabel } from './chat/mentionLabel'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, patchOpenProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
 import { fetchMessages, goToMessage, jumpToLatest, jumpToMessage, loadNewer, loadOlder, showToast } from './chat/messageWindow'
@@ -14,6 +16,7 @@ import { fetchFollowedThreads, setThreadFollow } from './chat/threadFollow'
 import { closeThread, openThread, sendThreadReply, uploadThreadMedia } from './chat/threads'
 import { closeWebSocket, initWebSocket, installVisibilityRetry, retryNow, sendWSEvent, setWebRTCHandlers } from './chat/socket'
 import { handleWSEvent } from './chat/events'
+import { installExpiry } from './chat/expiry'
 import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
 import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel, setServerNotification } from './chat/notifySettings'
 import { sendTyping } from './chat/typing'
@@ -175,7 +178,10 @@ export const useChatStore = defineStore('chat', () => {
 
   installVisibilityRetry(cx)
   installActivityListeners(cx)
+  installExpiry(cx)
   setReturnToTabHandler(() => markActiveChannelReadIfReading(cx))
+  // Previews (replies, saved, notifications) name a mentioned member by display name.
+  setMentionLabels(name => memberLabel(cs.members.value, name))
 
   return { ...exposedState(cs), ...exposedActions(cx) }
 })

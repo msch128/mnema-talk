@@ -295,16 +295,21 @@ func deleteWebhookRecords(ctx context.Context, p *db.Pool, webhookID, botUserID 
 	var key string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		key = ""
+		// The account row is taken before the webhook goes: its delete sets
+		// webhook_id NULL on every message of it, which locks them, and a
+		// delete of one of those messages takes its author's row first
+		// (messages.lockMessageForDelete). The other order is a lock cycle.
+		var locked uuid.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 AND is_bot FOR UPDATE`, botUserID).Scan(&locked)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		accountLeft := err == nil
 		if _, err := tx.Exec(ctx, `DELETE FROM webhooks WHERE id = $1`, webhookID); err != nil {
 			return err
 		}
-		var locked uuid.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 AND is_bot FOR UPDATE`, botUserID).Scan(&locked)
-		if errors.Is(err, pgx.ErrNoRows) {
+		if !accountLeft {
 			return nil
-		}
-		if err != nil {
-			return err
 		}
 		var hasMessages bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, botUserID).Scan(&hasMessages); err != nil {

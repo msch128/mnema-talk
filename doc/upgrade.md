@@ -9,6 +9,20 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Messages with a lifetime, auto-delete in hours (migration 0106)
+
+Members can send messages that the server deletes after a lifetime they
+choose, and auto-delete works in hours, days or weeks, can remove only the
+files, and can follow a community default ([timed messages](timed-messages.md)).
+Lifetimes are on by default (Server settings > Messages switches them off);
+the auto-delete default is off. Channels keep their period; a channel whose
+auto-delete was turned off in its settings stays off, every other channel
+without a period follows the default once one is set, which the confirmation
+of the default says. A channel whose entry the audit retention has
+already removed cannot be told from one never set: it follows the default too. The column `channels.auto_delete_days` is replaced by
+`auto_delete_hours`; the API still answers `auto_delete_days` (whole days
+between 1 and 90 while auto-delete is on). See the 0106 row below.
+
 ## Nothing new may name an erased account (migration 0103)
 
 Migration 0103 adds triggers: one on every table with a foreign key to
@@ -606,14 +620,15 @@ of the pre-update backup (see "Rollback" above).
 | 0098 | `messages.counted`: messages in the chat of a conversation's call are left out of the public message total. Existing rows are marked and the totals on `users.message_count` are recomputed. |
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
+| 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
 | 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
 | 0103 | Triggers that refuse a row naming an erased account (or write another member's row without it), keep a deleted member's messages and profile empty, write report copies without an erased account's text, and write audit entries about an erased account without names and details. Adds functions and triggers only. |
 | 0104 | `channels.last_message_number`: the number of each channel's newest message, written while a new message holds the channel's lock, so `GET /api/read-state` can say exactly which messages its counts include. Adds a column and fills it once from the stored messages (one pass over `messages`); an older release ignores it. |
 | 0105 | The bot platform: `bots.description` and `bots.homepage` (empty by default, filled when a bot is added from a manifest) and `message_components`, the buttons and select menus of bot messages (a new, empty table that goes with its message). Adds two columns with defaults and a table only; an older release ignores them. |
-| 0107 | Member invites: `invites.channel_id` (an invite that lands the joiner in a channel; empty for every existing invite), the `member_invite_*` limits on `instance_settings` (7 days, 25 uses, 10 active, 10 per hour) and `member_invite_creations`, a table that counts the invites a member created in the last hour. Adds columns with defaults and a table only; an older release ignores them. |
-| 0108 | The permission *Create invites* (`1 << 30`, see [invites](invites.md)). **A fresh install** gives it to @everyone. **An existing install** does not: members cannot create invites after the upgrade, and only the roles that already hold *Manage invites* get it, so nothing changes for members until the Owner turns it on. |
-
-| 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
+| 0106 | Messages with a lifetime and auto-delete in hours ([timed messages](timed-messages.md)). `messages.expires_at` (with two checks added without a scan and a partial index, the one pass over `messages`), `scheduled_messages.lifetime_seconds`, `media.width` and `height`, the lifetime and auto-delete default settings in `instance_settings`, and `channels.auto_delete_hours` and `auto_delete_scope`. **`channels.auto_delete_days` is dropped**: a period of 1, 7, 30 or 90 days becomes 24, 168, 720 or 2160 hours; 0 becomes 0 (off for this channel, the opt-out) when the channel's last `channel.auto_delete_set` audit entry turned it off, and otherwise "follows the community default", which is off until the Owner or an Administrator sets one. A call Talk's old period, never applied, is dropped. The API keeps `auto_delete_days`; `PUT /api/admin/channels/{id}/auto-delete` with an empty body (`{}`) now answers 400 (before, it read as `days: 0`). An older release refuses to start on the migrated database. |
+| 0107 | `bots.access_all`: whether a bot was given access to every channel in one step (false for every existing bot, so nothing changes for them). Adds a column with a default only; an older release ignores it. |
+| 0108 | Member invites: `invites.channel_id` (an invite that lands the joiner in a channel; empty for every existing invite), the `member_invite_*` limits on `instance_settings` (7 days, 25 uses, 10 active, 10 per hour) and `member_invite_creations`, a table that counts the invites a member created in the last hour. Adds columns with defaults and a table only; an older release ignores them. |
+| 0109 | The permission *Create invites* (`1 << 30`, see [invites](invites.md)). **A fresh install** gives it to @everyone. **An existing install** does not: members cannot create invites after the upgrade, and only the roles that already hold *Manage invites* get it, so nothing changes for members until the Owner turns it on. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

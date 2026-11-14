@@ -56,3 +56,11 @@ export function endOfDayIso(date: string): string | undefined {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number]
   return new Date(y, m - 1, d, 23, 59, 59).toISOString().replace(/\.\d+Z$/, 'Z')
 }
+
+/** The channel permissions a bot's access choice can grant (a manifest's set); never Administrator or the admin area. */
+export const BOT_CHANNEL_PERMISSIONS = ['view_channel', 'send_messages', 'attach_files', 'add_reactions', 'manage_messages', 'mention_everyone'] as const
+
+/** The keys of BOT_CHANNEL_PERMISSIONS that a permission bit set holds. */
+export function botPermissionKeys(bits: number): string[] {
+  return BOT_CHANNEL_PERMISSIONS.filter(key => (bits & PERMISSION_BITS[key]) === PERMISSION_BITS[key])
+}

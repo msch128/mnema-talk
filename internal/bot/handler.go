@@ -69,6 +69,7 @@ func (h *Handler) routes(r chi.Router) {
 	r.Delete("/bots/{id}", httpx.Handle(h.delete))
 	r.Put("/bots/{id}/roles", httpx.Handle(h.setRoles))
 	r.Get("/bots/{id}/access", httpx.Handle(h.access))
+	r.Put("/bots/{id}/access", httpx.Handle(h.setAccess))
 	r.Get("/bots/{id}/tokens", httpx.Handle(h.listTokens))
 	r.Post("/bots/{id}/tokens", httpx.Handle(h.createToken))
 	r.Post("/bots/{id}/tokens/{tokenID}/regenerate", httpx.Handle(h.regenerateToken))

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import LifetimeMark from './LifetimeMark.vue'
 import type { Message } from '../../types/domain'
 import { Pencil, Trash2, Smile, Reply } from '@lucide/vue'
 import { useChatStore } from '../../stores/chat'
@@ -130,6 +131,7 @@ const { pickerId, editingId, editText } = props.actions
           <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
           <span class="text-xs text-mnema-tertiary shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
           <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
+          <LifetimeMark v-if="reply.expires_at" :expires-at="reply.expires_at" />
         </div>
 
         <!-- Inline Reply Editor -->

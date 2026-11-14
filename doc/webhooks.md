@@ -36,7 +36,7 @@ creating the webhook or later (`PATCH /api/admin/webhooks/{id}`):
 | `allow_embeds` | on | a post may carry embeds; otherwise it is refused with `400` |
 | `allow_identity_override` | on | a post may set its own `username`; otherwise the webhook's name is used |
 
-Roles: `@Role Name` notifies the role's members only when the request asks for it, with `allowed_mentions.parse: ["roles"]` (every role the webhook may mention) or `allowed_mentions.roles` (role IDs, UUIDs). Without `allowed_mentions`, or with `parse` leaving `roles` out, the text stays plain. A webhook may mention roles marked mentionable; its `allow_everyone` setting extends that to every custom role (not `@everyone` or the managed Bot roles). This is the webhook's own setting, not any user's rights. Only members who can view the channel are notified, and the per-message mention cap applies: a post whose `allow_everyone` is off notifies at most 50 members in total (named users first, then role members, in a fixed order; the rest stay unnotified, the text and role pills stay). With `allow_everyone` on there is no cap, since `@all` reaches everyone anyway. Members and bots follow the same rule, by their right to mention everyone. At most 100 distinct `@names` are read from one message.
+The full rules for bots and webhooks are on one page: [allowed mentions](allowed-mentions.md). Roles: `@Role Name` notifies the role's members only when the request asks for it, with `allowed_mentions.parse: ["roles"]` (every role the webhook may mention) or `allowed_mentions.roles` (role IDs, UUIDs). Without `allowed_mentions`, or with `parse` leaving `roles` out, the text stays plain. A webhook may mention roles marked mentionable; its `allow_everyone` setting extends that to every custom role (not `@everyone` or the managed Bot roles). This is the webhook's own setting, not any user's rights. Only members who can view the channel are notified, and the per-message mention cap applies: a post whose `allow_everyone` is off notifies at most 50 members in total (named users first, then role members, in a fixed order; the rest stay unnotified, the text and role pills stay). With `allow_everyone` on there is no cap, since `@all` reaches everyone anyway. Members and bots follow the same rule, by their right to mention everyone. At most 100 distinct `@names` are read from one message.
 Nobody who cannot see the channel is ever notified, whatever the settings say.
 The limits that protect the server stay global: sizes, rate limits, sanitizing
 of text and links, the file type checks.
@@ -158,8 +158,7 @@ and whether it is enabled. Deleting the channel deletes it.
 | Event | When | `d` |
 |---|---|---|
 | `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages`; it carries `nonce` when the sender's client sent one (the id of an offline-outbox send, see [api-stability.md](api-stability.md#300-changes)) |
-| `MESSAGE_UPDATE` | a message is edited | the message |
-
+| `MESSAGE_UPDATE` | a message is edited, or a file of it is removed (by the Owner in Admin > Media, or by auto-delete with *Files only*); the removed file has `is_deleted` | the message |
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
 | `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
 | `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
+import { apiFetch, responseString, responseUserId, leaveTalks, leaveAndClose } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -54,13 +54,29 @@ const sendingLayers = (page: Page) => page.evaluate(() => {
   return senders.flatMap(s => s.getParameters().encodings ?? []).filter(e => e.active !== false).map(e => e.scaleResolutionDownBy ?? 1)
 })
 
+// What the sharer's video lines send: the picture size, why the encoder
+// limits it (cpu, bandwidth or none), how often it changed resolution, and the
+// estimate of what the connection can carry. A layer that arrives smaller than
+// planned is otherwise a bare number.
+const sentVideo = (page: Page) => page.evaluate(async () => {
+  const out: string[] = []
+  for (const pc of window.__pcs) {
+    for (const stat of (await pc.getStats()).values()) {
+      if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
+        out.push(`${stat.mid ?? '?'}:${stat.frameWidth ?? 0}x${stat.frameHeight ?? 0} limit=${stat.qualityLimitationReason ?? ''} changes=${stat.qualityLimitationResolutionChanges ?? 0} target=${Math.round((stat.targetBitrate ?? 0) / 1000)}k fps=${stat.framesPerSecond ?? 0} active=${String(stat.active ?? '')}`)
+      }
+      if (stat.type === 'candidate-pair' && stat.nominated) out.push(`available=${Math.round((stat.availableOutgoingBitrate ?? 0) / 1000)}k`)
+    }
+  }
+  return out.join(' | ')
+})
+
 test('a small tile gets the camera\'s thumbnail layer and the stage its best one, without a break', async ({ browser }) => {
   test.setTimeout(180_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(sharerCtx)
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   opened.push(viewerCtx)
-  await sharerCtx.addInitScript(trackPeerConnections)
   await sharerCtx.addInitScript(fakeDisplayMedia)
   const sharer = await sharerCtx.newPage()
   const viewer = await viewerCtx.newPage()
@@ -113,6 +129,7 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
     await stage.getByTestId('stage-unfocus-camera').click()
     await expect(stage).toHaveAttribute('data-stage-source', sharerId)
     await expect.poll(async () => (await showing(viewer, tileVideo)).height, { timeout: 45_000, intervals: [500, 1000, 2000] }).toBe(180)
+      .catch(async (err: unknown) => { console.log(`[sharer] ${await sentVideo(sharer)}`); throw err })
 
     await leaveTalks([sharer, viewer])
   } finally {

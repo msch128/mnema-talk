@@ -119,6 +119,8 @@ export interface Message {
   poll?: Poll
   pinned_at?: string
   pinned_by?: UserRef
+  /** When the server deletes the message, the end of its lifetime (doc/timed-messages.md); absent on a message without one. */
+  expires_at?: string
   last_activity_at?: string
   title?: string
   tags?: unknown[]
@@ -177,7 +179,7 @@ export interface BotSelf {
   /** The bot's name as members see it (its display name). */
   username: string
   /**
-   * The account's unique name, the one members mention (@bot-...); Discord
+   * The account's unique name, the one members mention (for example @mnemo); Discord
    * calls this the username. Servers before 3.1 do not send it: recognise a
    * mention of the bot by its id in a message's `mentions` instead.
    */
@@ -213,6 +215,12 @@ export interface CreateMessageData {
   allowed_mentions?: AllowedMentions
   message_reference?: MessageReference
   parent_id?: string
+  /**
+   * Seconds after which the server deletes the message, as for a member: 60 to
+   * 2,592,000 and at most the community's ceiling (doc/timed-messages.md).
+   * Refused with 400 when lifetimes are off or out of bounds.
+   */
+  lifetime_seconds?: number
 }
 
 /** Body of PATCH /channels/{id}/messages/{id}: absent fields stay. */

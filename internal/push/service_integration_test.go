@@ -442,7 +442,7 @@ func TestAMuteLetsThroughWhatIsAddressedToTheMemberButNotAtAll(t *testing.T) {
 
 	e.publish(e.stored(message(alice, e.general, "@bob are you there?"), 0, bob))
 	p := e.content(bob, e.pushedTo("/device/bob", 1)[0])
-	if !p.Mention || p.Body != "@bob are you there?" {
+	if !p.Mention || p.Body != "@Display bob are you there?" {
 		t.Fatalf("push for a mention in a muted channel: %+v", p)
 	}
 }
@@ -456,5 +456,17 @@ func TestADoNotDisturbStillSilencesAMentionInAMutedChannel(t *testing.T) {
 	settle()
 	if got := e.requestsTo("/device/bob"); len(got) != 0 {
 		t.Fatalf("%d pushes during do not disturb", len(got))
+	}
+}
+
+func TestAPushShowsMentionsAsDisplayNames(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	alice, bob, carol := e.member("alice"), e.member("bob"), e.member("carol")
+
+	e.publish(message(alice, e.general, "ping @carol and @nobody", carol))
+
+	e.pushedTo("/device/bob", 1)
+	if body := e.content(bob, e.requestsTo("/device/bob")[0]).Body; body != "ping @Display carol and @nobody" {
+		t.Fatalf("body %q", body)
 	}
 }

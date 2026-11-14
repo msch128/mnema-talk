@@ -52,12 +52,16 @@ type traceSnapshot struct {
 }
 
 type storeTrace struct {
-	Seed      int             `json:"seed"`
-	Me        map[string]any  `json:"me"`
-	Snapshots []traceSnapshot `json:"snapshots"`
-	Frames    []traceFrame    `json:"frames"`
-	Ops       map[string]int  `json:"ops"`
-	Log       []string        `json:"log"`
+	Seed int `json:"seed"`
+	// RecordedAt is when the trace was made: the replay sets the client's
+	// server clock to it, so messages with a lifetime do not end on the
+	// replay's own clock (doc/timed-messages.md).
+	RecordedAt time.Time       `json:"recorded_at"`
+	Me         map[string]any  `json:"me"`
+	Snapshots  []traceSnapshot `json:"snapshots"`
+	Frames     []traceFrame    `json:"frames"`
+	Ops        map[string]int  `json:"ops"`
+	Log        []string        `json:"log"`
 }
 
 type traceMessage struct {
@@ -66,6 +70,7 @@ type traceMessage struct {
 	author  *client
 	parent  uuid.UUID // uuid.Nil for a top-level message
 	content string
+	timed   bool // it has a lifetime: the expire operation may end it
 }
 
 // traceWorld is the community the operations run in: the Owner and two
@@ -100,7 +105,7 @@ func newTraceWorld(t *testing.T, seed int) *traceWorld {
 	a.createChannel(owner, "lobby", "text")
 	w.channels = []uuid.UUID{a.createChannel(owner, "one", "text"), a.createChannel(owner, "two", "text")}
 	w.observer = a.register(owner, "max")
-	w.trace = &storeTrace{Seed: seed, Ops: map[string]int{},
+	w.trace = &storeTrace{Seed: seed, Ops: map[string]int{}, RecordedAt: time.Now().UTC(),
 		Me: map[string]any{"id": w.observer.user.ID, "username": w.observer.user.Username}}
 	return w
 }
@@ -198,9 +203,14 @@ func (w *traceWorld) post(t *testing.T) {
 		body["reply_to_id"] = mine[w.pick(len(mine))]
 		kind = "answer"
 	}
+	// Some messages have a lifetime; the expire operation ends them.
+	timed := w.pick(6) == 0
+	if timed {
+		body["lifetime_seconds"] = 3600
+	}
 	id := postMessage(t, author, ch, body)
 	parent, _ := body["parent_id"].(uuid.UUID)
-	w.live = append(w.live, traceMessage{id: id, channel: ch, author: author, parent: parent, content: body["content"].(string)})
+	w.live = append(w.live, traceMessage{id: id, channel: ch, author: author, parent: parent, content: body["content"].(string), timed: timed})
 	w.note(kind, fmt.Sprintf("%s %s %v", id, author.user.Username, body))
 }
 
@@ -220,7 +230,7 @@ func (w *traceWorld) edit(t *testing.T) {
 }
 
 func (w *traceWorld) remove(t *testing.T) {
-	if len(w.live) == 0 {
+	if len(w.live) == 0 || (w.pick(3) == 0 && w.expire(t)) {
 		return
 	}
 	m := w.live[w.pick(len(w.live))]
@@ -241,6 +251,35 @@ func (w *traceWorld) remove(t *testing.T) {
 	}
 	w.live = kept
 	w.note("delete", fmt.Sprintf("%s by %s (%q)", m.id, by.user.Username, m.content))
+}
+
+// expire lets the lifetime of one message end and runs the sweep, which
+// publishes message_delete as an own delete would. It reports whether a
+// message with a lifetime was there.
+func (w *traceWorld) expire(t *testing.T) bool {
+	var timed []traceMessage
+	for _, m := range w.live {
+		if m.timed {
+			timed = append(timed, m)
+		}
+	}
+	if len(timed) == 0 {
+		return false
+	}
+	m := timed[w.pick(len(timed))]
+	w.a.endLifetimeInPlace(m.id)
+	if err := w.a.router.Expiry.RemoveEnded(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	kept := w.live[:0]
+	for _, x := range w.live {
+		if x.id != m.id && x.parent != m.id {
+			kept = append(kept, x)
+		}
+	}
+	w.live = kept
+	w.note("expire", fmt.Sprintf("%s (%q)", m.id, m.content))
+	return true
 }
 
 // later makes a reminder or a scheduled message, or lets everything pending

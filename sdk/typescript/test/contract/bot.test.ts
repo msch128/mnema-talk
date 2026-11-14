@@ -62,7 +62,7 @@ describe('contract with a running server', { skip }, () => {
     assert.equal(me.bot, true)
     assert.match(me.id, /^[0-9a-f-]{36}$/)
     assert.equal(me.allowed_intents & intents, intents, `allowed_intents ${me.allowed_intents} lacks ${intents}`)
-    assert.match(me.handle ?? "", /^bot-/, 'the handle is the name members mention')
+    assert.match(me.handle ?? "", /^[a-z0-9_.-]{2,32}$/, 'the handle is the name members mention')
     botUserId = me.id
     botHandle = me.handle ?? ""
   })
@@ -89,6 +89,17 @@ describe('contract with a running server', { skip }, () => {
     const [event] = await seen
     assert.equal(event.id, posted.id)
     assert.equal((await client.rest.getMessage(env.channel, posted.id)).content, content)
+  })
+
+  test('a message with a lifetime carries its end, in the answer, the event and a read', async () => {
+    const content = `contract ${run}: gone in an hour`
+    const seen = next(client, 'messageCreate', (m) => m.content === content)
+    const posted = await client.rest.createMessage(env.channel, { content, lifetime_seconds: 3600 })
+    assert.ok(posted.expires_at, 'expires_at is set')
+    assert.equal(Date.parse(posted.expires_at) - Date.parse(posted.created_at), 3_600_000)
+    const [event] = await seen
+    assert.equal(event.expires_at, posted.expires_at)
+    assert.equal((await client.rest.getMessage(env.channel, posted.id)).expires_at, posted.expires_at)
   })
 
   let commandId = ''

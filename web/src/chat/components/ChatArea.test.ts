@@ -632,10 +632,12 @@ describe('ChatArea history scrolling', () => {
   })
 
   it('keeps the bottom pinned across resizes, leaves history alone, and cancels frames on unmount', async () => {
-    let notifyResize!: () => void
+    // Every observer hears the resize: the timeline's and the composer's.
+    const observers: (() => void)[] = []
+    const notifyResize = () => { for (const notify of observers) notify() }
     const disconnect = vi.fn()
     vi.stubGlobal('ResizeObserver', class implements ResizeObserver {
-      constructor(cb: ResizeObserverCallback) { notifyResize = () => cb([], this) }
+      constructor(cb: ResizeObserverCallback) { observers.push(() => cb([], this)) }
       observe = vi.fn()
       unobserve = vi.fn()
       disconnect = disconnect
@@ -661,8 +663,8 @@ describe('ChatArea history scrolling', () => {
     const cancel = vi.spyOn(window, 'cancelAnimationFrame')
     el.dispatchEvent(new Event('scroll'))
     w.unmount()
-    // The timeline, the header and the composer's textarea each watch their size.
-    expect(disconnect).toHaveBeenCalledTimes(3)
+    // The timeline, the header, the composer's textarea and the composer's row each watch their size.
+    expect(disconnect).toHaveBeenCalledTimes(4)
     expect(cancel).toHaveBeenCalled()
   })
 })

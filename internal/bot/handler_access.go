@@ -30,6 +30,21 @@ type Access struct {
 	// the admin area: the interface warns about it.
 	Elevated bool            `json:"elevated"`
 	Channels []ChannelAccess `json:"channels"`
+	// Mode is the bot's access choice: "all" (its own role holds its channel
+	// permissions server-wide) or "channels" (only overwrites of its own
+	// role in the listed channels).
+	Mode string `json:"mode" binding:"optional" enums:"channels,all"`
+	// Granted is the set the choice grants (a bit set of channel
+	// permissions); in mode "channels" what every one of SelectedChannelIDs
+	// allows.
+	Granted perm.Set `json:"granted" binding:"optional" swaggertype:"integer" minimum:"0"`
+	// Mixed is true in mode "channels" when the selected channels allow
+	// different sets (set by hand): saving the choice applies one set to all.
+	Mixed bool `json:"mixed" binding:"optional"`
+	// SelectedChannelIDs are the channels the caller can view where the bot's
+	// own role has an overwrite: its channels in mode "channels", the private
+	// channels it may also see in mode "all".
+	SelectedChannelIDs []uuid.UUID `json:"selected_channel_ids" binding:"optional" format:"uuid"`
 }
 
 // ChannelAccess is what a bot may do in one channel it can view.
@@ -96,9 +111,22 @@ func (h *Handler) access(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	out, err := h.currentAccess(r, b, snap)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+	return nil
+}
+
+// currentAccess is what the bot reaches now, for the caller.
+func (h *Handler) currentAccess(r *http.Request, b *Bot, snap *perm.Snapshot) (Access, error) {
 	sub := perm.Subject{ID: b.UserID}
-	out := Access{Permissions: snap.Global(sub), Channels: []ChannelAccess{}}
+	out := Access{Permissions: snap.Global(sub), Channels: []ChannelAccess{}, Mode: AccessChannels}
 	out.Elevated = snap.ElevatedFor(sub)
+	if snap.HasAllChannelAccess(b.UserID) {
+		out.Mode = AccessAll
+	}
 	// Only channels the caller can see: names of others stay theirs.
 	caller := auth.UserFrom(r.Context()).Subject()
 	perms := map[uuid.UUID]perm.Set{}
@@ -109,7 +137,10 @@ func (h *Handler) access(w http.ResponseWriter, r *http.Request) error {
 	}
 	names, err := channelNames(r.Context(), h.DB)
 	if err != nil {
-		return err
+		return Access{}, err
+	}
+	if err := h.addChoice(r, snap, b.UserID, &out); err != nil {
+		return Access{}, err
 	}
 	for id, p := range perms {
 		out.Channels = append(out.Channels, ChannelAccess{ChannelID: id, Name: names[id], Permissions: p})
@@ -117,8 +148,7 @@ func (h *Handler) access(w http.ResponseWriter, r *http.Request) error {
 	slices.SortFunc(out.Channels, func(a, b ChannelAccess) int {
 		return cmp.Or(strings.Compare(a.Name, b.Name), bytes.Compare(a.ChannelID[:], b.ChannelID[:]))
 	})
-	httpx.WriteJSON(w, http.StatusOK, out)
-	return nil
+	return out, nil
 }
 
 func channelNames(ctx context.Context, q db.Querier) (map[uuid.UUID]string, error) {

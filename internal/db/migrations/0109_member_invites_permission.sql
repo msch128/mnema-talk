@@ -1,5 +1,5 @@
 -- Permission CreateMemberInvites (1 << 30), "create invites": lets a member
--- create invites within the bounds of 0107 and see and revoke their own. It is
+-- create invites within the bounds of 0108 and see and revoke their own. It is
 -- separate from CreateInvites (1 << 13, "manage invites"), which stays the
 -- right to list, edit and revoke every invite.
 --

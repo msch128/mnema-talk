@@ -112,6 +112,13 @@ var Features = []string{
 	// read that path as a report id and answer 400, so a client asks for the
 	// count only when this is listed.
 	"reports.open_count",
+	// "messages.lifetime": messages, uploads, scheduled messages and bot
+	// posts take lifetime_seconds and carry expires_at; GET
+	// /api/message-settings says whether and how long (doc/timed-messages.md).
+	"messages.lifetime",
+	// "channels.auto_delete.v2": auto-delete in hours with a scope and a
+	// community default, and the dry runs before a change.
+	"channels.auto_delete.v2",
 	// "invites.member": POST/GET /api/me/invites and DELETE /api/me/invites/{id}
 	// (members creating invites, doc/invites.md). Older servers answer 404, so
 	// a client offers "Invite people" only when this is listed.

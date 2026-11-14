@@ -96,7 +96,8 @@ function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMe
       action: () => openLater({ kind: 'remind', messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') })
     })
   }
-  if (features.has('forward')) {
+  // A message with a lifetime is not forwarded: the forward would outlive it.
+  if (features.has('forward') && !msg.expires_at) {
     items.push({ label: t('forward.menu'), icon: Forward, action: () => openForward({ messageId: msg.id, excerpt: previewText(msg.content) || t('chat.attachment') }) })
   }
   const safety = messageSafetyItems(msg)
@@ -110,6 +111,8 @@ function pinItem(msg: Message, channelId: string): ContextMenuItem {
   return {
     label: t(msg.is_pinned ? 'moderation.unpinMessage' : 'moderation.pinMessage'),
     icon: msg.is_pinned ? PinOff : Pin,
+    // A message with a lifetime is never pinned; the row says why.
+    ...(msg.expires_at ? { disabled: true, disabledReason: t('lifetime.noPin') } : {}),
     action: async () => {
       try {
         await chatStore.setPinned(channelId, msg.id, !msg.is_pinned)

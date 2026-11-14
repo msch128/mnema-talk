@@ -84,8 +84,14 @@ tag instead.
   one) and is part of the connect-time `presence_snapshot`. Bots are not counted
   in the online total and are never reached by `@here`. The gateway does not
   dispatch other members' presence to bots in v1.
-- **Mentions.** Mention a bot by its username (`@bot-…`, shown in the picker
-  under its name). The message's `mentions` list then contains the bot's user
+- **Mentions.** Mention a bot by its username (shown in the picker under its
+  name). A new bot's username follows its name: lower case letters and digits,
+  other runs as `_` (`Mnema Bot` is `@mnema_bot`), numbered on a collision with
+  any account (`@mnema_bot_2`); a name with nothing usable, or a reserved word,
+  gets `@bot-` and 12 hex digits. Bots created earlier keep the name they have.
+  The stored message text keeps `@username`, so a rename of the display name
+  never breaks a mention; readers see the display name in the pill (the
+  username on hover), in previews and in push text. The message's `mentions` list then contains the bot's user
   id, which `READY` gave the bot as `user.id`, so a bot recognises a mention of
   itself in `MESSAGE_CREATE` (the bot must be able to view the channel, like
   anyone). `@all` and `@here` never include bots. `GET /members` lists bots too,
@@ -104,7 +110,8 @@ for members, bots, the REST API and the gateway.
 
 `GET /api/admin/bots/{id}/access` (the *Access* view of the Bots tab) shows
 the effective result: the server-wide permissions and, per viewable channel,
-what the bot may do.
+what the bot may do, with the bot's *access choice* (`mode`: `channels` or
+`all`; see [Give a bot access to every channel](#give-a-bot-access-to-every-channel)).
 
 Voice is out of scope in v1: bots cannot join Talks (their roles' Connect,
 Speak and Video bits do nothing for them).
@@ -127,9 +134,30 @@ common paths.
 | Editing a role a bot holds | the usual role rules, and adding Administrator or admin-area bits is Owner-only |
 | Reordering roles | moves positions only, grants no permission |
 | Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one elevated channel permission) is Owner-only |
-| Adding a bot from a manifest (`POST /bots/install`) | *Manage bots* (checked again under the permission lock); channel permissions only, never elevated; allow overwrites of the new bot's own role in the channels the installer ticked and can view, each within what the installer holds there (the refusal names the permission and the channel) |
+| Adding a bot from a manifest (`POST /bots/install`) | *Manage bots* (checked again under the permission lock); channel permissions only, never elevated; allow overwrites of the new bot's own role in the channels the installer ticked and can view, each within what the installer holds there (the refusal names the permission and the channel); with access `all` instead the permissions on the own role server-wide, within what the installer holds in every channel the bot reaches |
+| Choosing a bot's access (`PUT /bots/{id}/access`) | *Manage bots* and the authority over the bot; only the manifest's channel permissions, never elevated; bounded by the bot invariant like every change |
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
+
+## What a bot cannot do
+
+A bot reads and writes messages, reactions, slash commands and components, and
+nothing that manages people or the server. The routes under `/api/bot/v1` are
+the full list ([REST API](#rest-api)): there is none for roles, members,
+bans or timeouts, webhooks, channels, bots or settings, and no role or
+permission a bot holds adds one, not even Administrator. Besides, a bot cannot
+join a Talk (voice), reads no direct messages, and is not told about other
+members' presence.
+
+In particular a bot **cannot give or take a role**, so there are no *reaction
+roles* (a reaction that gives a role): the reaction event reaches the bot, but
+nothing it could call changes a member's roles. The way to let members choose
+their own roles is a **self-assignable role**: an admin with *Manage roles*
+turns on *Members can assign this role to themselves*, and members switch it on
+or off under *Settings > Roles*, without any bot or admin involved. It is
+limited to harmless roles ([roles members choose
+themselves](roles-and-permissions.md#roles-members-choose-themselves)); bots
+cannot use it either.
 
 ## Tokens
 
@@ -242,10 +270,11 @@ built-in, not instead of it), and the channels the installer can see (none
 ticked). Nothing is created until **Add bot**:
 
 - The requested permissions become **allow overwrites of the bot's own
-  role** in the ticked channels (and nothing server-wide: bots do not inherit
-  `@everyone`, so a server-wide grant would include private channels). A
-  bot added without a ticked channel can see nothing yet, like a bot created
-  by hand.
+  role** in the ticked channels (and nothing server-wide, the default
+  **Selected channels**). A bot added without a ticked channel can see
+  nothing yet, like a bot created by hand. With **All channels** they become
+  server-wide permissions of the bot's own role instead (see
+  [Give a bot access to every channel](#give-a-bot-access-to-every-channel)).
 - The allowed intents are the ticked ones; the commands are registered as
   if the bot had sent them.
 - A token named after the manifest is issued and shown once.
@@ -274,8 +303,8 @@ manifest; it is validated and answered normalised: cleaned text, `intents` as
 `{"name", "bit"}` in bit order, `permissions` as `{"key", "name", "bit"}` in
 the order of the permission list, no duplicates, without the avatar; no side
 effects) and `POST /api/admin/bots/install`
-(`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...]}`,
-the lists being what the installer kept ticked, at most 500 channels; answers
+(`{"manifest": {...}, "permissions": [...], "intents": [...], "channel_ids": [...], "access": "channels"}`,
+`access` is `channels` (the default when absent) or `all`; the lists being what the installer kept ticked, at most 500 channels; answers
 `201` with `{"bot": {...}, "token": {...}}`, the token as when issuing one,
 its `secret` shown once). A refusal creates nothing: `400` for an invalid
 manifest or a kept permission or intent that is not in it (the message names
@@ -285,6 +314,82 @@ kept permission the installer does not hold in a listed channel (the message
 names both), `409` at the bot limit or for a temporary Talk (it follows its
 lobby). The manifest's description and homepage are part of the bot
 (`description`, `homepage`, absent for a bot created by hand).
+
+### Give a bot access to every channel
+
+Ticking channel after channel is right for a bot that should work in two
+places. For a bot that should see and answer everywhere, the **Access**
+choice does it in one step, when adding the bot and later in the bot's
+settings (**Admin area > Bots**):
+
+- **Selected channels** (the default): the permissions are allow overwrites of
+  the bot's own role in exactly the ticked channels, as above.
+- **All channels**: the permissions the manifest asks for and the admin ticks
+  (for example View channels, Send messages, Add reactions) are held
+  **server-wide by the bot's own role**, so the bot works in every channel
+  members can see, including channels created later.
+
+**Private channels stay private.** A channel counts as private when
+`@everyone` alone does not leave *View channels* in place (on the channel, its
+category or server-wide): members see it only through a role or a member
+overwrite. A bot with access to all channels follows that one rule, which
+other bots do not: the bot does not see such a channel, whatever the
+server-wide grant says, until the channel is listed explicitly (the bot's own
+role then gets an allow overwrite there, exactly as with *Selected channels*).
+The same holds for a private category. In the add dialog and the bot's
+settings the channels are listed under "private channels too". Nothing else of
+`@everyone` applies to bots, with or without this choice: a bot with access to
+all channels may therefore write in a channel where `@everyone` is denied
+*Send messages* (an announcement channel); a member who lacks *Send messages*
+there cannot give the bot that permission everywhere, and the refusal names the
+channel. If `@everyone` does not hold *View channels* server-wide and members
+get it through a role, every channel counts as private for this choice: list
+the channels the bot should work in.
+
+Nothing about who may grant what changes. *All channels* only ever grants
+channel permissions a manifest may ask for (view, send, attach, react, manage
+messages, mention everyone), never Administrator or anything of the admin
+area; the choice goes through the same transaction, permission lock and bot
+invariant as every other change. A member who holds *Manage bots* but not,
+say, *Manage messages* gets a `403` naming it when they try to give it to a
+bot, and cannot give *Send messages* to a bot everywhere if they are
+denied it in any channel. For the same reason they cannot change a bot that
+reaches a channel they cannot view.
+
+*All channels* needs *View channels* among the permissions (the server answers
+`400` otherwise). Because the bot follows what members see, opening a private
+channel to `@everyone` (or giving `@everyone` *View channels*) widens where the
+bot works. The bot invariant therefore applies to that edit as to every other:
+a member without a permission the bot holds, such as *Manage messages*, cannot
+open a channel to everyone while such a bot exists. Likewise, switching back to
+*Selected channels* only removes what the choice gave; *View channels* that a
+role the bot holds besides its own (or the shared Bot role) grants server-wide
+keeps working, private channels included, and the same invariant guards that
+switch.
+
+**Switching back** to *Selected channels* removes the server-wide grants and
+writes overwrites for the channels chosen at that moment. What the bot's own
+role allowed before, in channels and categories the caller can view in full,
+is replaced, so the chosen channels are the only way in. A deny that an admin
+set on the own role stays, except for a permission that is ticked and listed:
+the explicit choice wins there. Switching to *All channels* replaces the bot's
+server-wide channel permissions with the chosen ones. Other permissions of the
+own role (and any role the bot holds) are not touched. If the selected
+channels allow different sets (set by hand), the access view says `mixed` and
+the settings say so: saving gives every selected channel the ticked set.
+
+`PUT /api/admin/bots/{id}/access` takes
+`{"access": "all" | "channels", "permissions": ["view_channel", ...], "channel_ids": [...]}`:
+`permissions` are permission keys (the six channel permissions of a manifest) and replace what the choice granted
+before; `channel_ids` are the channels of the bot's own overwrites (with
+`all`: the private channels it may also see), at most 500, each one the caller
+can view. It answers `200` with the access view (`mode`, `granted`, `mixed` and
+`selected_channel_ids` next to what `GET` already showed), `400` for an
+unknown access or a key that is not a manifest permission, `404` for a channel
+the caller cannot view, `403` for the bot invariant, and is logged as
+`bot.access`. The choice is stored as `bots.access_all`; a bot whose own role
+was given server-wide permissions by hand in the role editor is still
+`channels` and still reaches private channels, as before.
 
 ## REST API
 
@@ -318,7 +423,7 @@ security scheme `botAuth`).
 | `GET /channels` | the channels the bot can view, with their categories |
 | `GET /channels/{id}/messages` (`limit`, `before`, `after`, `around`) | View channels |
 | `GET /channels/{id}/messages/{id}` | View channels |
-| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id` |
+| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `components`, `allowed_mentions`, `message_reference`, `parent_id`, `lifetime_seconds` (60 to 2,592,000 and at most the community's ceiling: the server deletes the message that long after; `400` when lifetimes are off or out of bounds. Such a message carries `expires_at` (RFC 3339) in the answer, in the gateway's events and on reads, which leave it out once that has passed; [timed messages](timed-messages.md)) |
 | `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only; `content`, `components` (each optional, absent ones stay; `"components": []` removes them) and `allowed_mentions` (as on a post; an edit that sends it counts towards the 5 posts per 5 seconds of the channel, one without it notifies the members it names and never `@all`, `@here` or a role) |
 | `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
 | `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works); one emoji with and without U+FE0F is one reaction |
@@ -330,9 +435,9 @@ that posts (a message, an upload, the response to a command): a post inside the
 wait answers `429` with `retry_after`. A bot whose roles give it Manage messages
 is exempt, again like a member, and may also reply under a locked forum post.
 
-Mentions: `@username` notifies members who can view the channel; `@all` and
+Mentions (all the rules in one place: [allowed mentions](allowed-mentions.md)): `@username` notifies members who can view the channel; `@all` and
 `@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
-contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention @all and @here it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit (which takes no `allowed_mentions`, so editing a message removes its role mentions instead of adding them). Only members who can view the channel are notified. The upload route takes the same object as the form field `allowed_mentions` (JSON-encoded, for example `{"parse":["everyone","roles"]}`) and applies the same rules to its caption: without the field the caption notifies the members it names, never `@all`, `@here` or a role. Bots cannot join Talks (voice) in v1.
+contains `"everyone"`. `@Role Name` notifies the role's members when `allowed_mentions.parse` contains `"roles"`, or `allowed_mentions.roles` lists the role's ID (UUID). A bot may mention roles marked mentionable; with Mention @all and @here it may mention any custom role (not `@everyone` or the managed Bot roles). Role mentions are **off by default**: a message without `allowed_mentions` mentions no role, and so does an edit without the field; an edit that sends `allowed_mentions` follows the same rules as a post. Only members who can view the channel are notified. The upload route takes the same object as the form field `allowed_mentions` (JSON-encoded, for example `{"parse":["everyone","roles"]}`) and applies the same rules to its caption: without the field the caption notifies the members it names, never `@all`, `@here` or a role. Bots cannot join Talks (voice) in v1.
 
 Custom emoji travel as the token the app stores, `<:name:id>` (a bot can copy
 one from a message it reads); a plain `:name:` in a message posted through the
@@ -342,7 +447,8 @@ tokens. Unicode emoji work as typed.
 ## Gateway
 
 The gateway pushes events to a bot over a WebSocket, with Discord's opcodes
-and flow. OpenAPI cannot describe it, so this page is its reference.
+and flow. OpenAPI cannot describe it, so this page is its reference; the payload of each
+event is in [gateway events](gateway-events.md).
 `GET /api/bot/v1/gateway` (with the token) returns its address, the
 heartbeat interval and the connection cap; the same path is the gateway when
 the request is a WebSocket upgrade.
@@ -451,7 +557,7 @@ and loses a channel's events the moment its access ends.
 |---|---|---|
 | `GUILDS` | 1 | `CHANNELS_UPDATE` `{}`: the channel layout or the bot's access changed, fetch `GET /channels` again |
 | `GUILD_MEMBERS` | 2 | `GUILD_MEMBER_ADD` (`id`, `username`, `display_name`, `avatar_url`), for new members who share a channel with the bot |
-| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
+| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message: an edit, or a file of it removed by the Owner or by auto-delete, which then has `is_deleted`), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
 | `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
 
 The bot's own messages are dispatched to it as well. Message content is always
@@ -777,6 +883,11 @@ registration, interactions (`reply`, `deferReply`, `editReply`, `followUp`,
 link. Each README shows how to install it and has three examples: an echo
 bot, a slash command bot, and a buttons and modal bot.
 
+A complete first bot in both languages is in the
+[SDK quick start](bot-sdk-quickstart.md); [recipes](bot-recipes.md) answer common
+tasks, [gateway events](gateway-events.md) shows every event's payload and
+[allowed mentions](allowed-mentions.md) whom a message may notify.
+
 ```ts
 import { Client, Intents, actionRow, button, ButtonStyle } from 'mnema-talk-sdk'
 
@@ -945,7 +1056,8 @@ mutation is reported to the audit log.
 | `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete; renaming renames the bot's own role, deleting deletes it |
 | `POST /bots/{id}/avatar` | avatar (multipart, field `avatar`) |
 | `PUT /bots/{id}/roles` | the bot's roles (the Bot role and its own role stay, whatever the list says; another bot's own role is refused) |
-| `GET /bots/{id}/access` | effective permissions |
+| `GET /bots/{id}/access` | effective permissions and the access choice |
+| `PUT /bots/{id}/access` | the access choice: selected channels or all channels (see [Give a bot access to every channel](#give-a-bot-access-to-every-channel)) |
 | `GET`, `POST /bots/{id}/tokens` | list, issue |
 | `POST /bots/{id}/tokens/{tokenID}/regenerate`, `DELETE ...` | rotate, revoke |
 

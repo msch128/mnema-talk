@@ -1,3 +1,4 @@
+import { watch } from 'vue'
 import * as voiceSession from '../../lib/voiceSession'
 import { preloadNoiseSuppressor } from '../../lib/noiseSuppressor'
 import { useToastStore } from '../../../stores/toast'
@@ -151,6 +152,24 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   const sendStream = await prepareAudioPipeline(cx, gen)
   if (sendStream === false) return
 
+  // A join sent before the realtime socket is up would be dropped and the call
+  // would wait for an answer forever (a Talk picked right after the page
+  // loaded): it waits for the socket instead.
+  // The flag keeps the reconnect that brings the socket up from sending a
+  // resume beside this join (rejoinAfterReconnect, run in the same flush as the
+  // wake-up). It drops right after the wait: nothing async runs from there to
+  // the send, and a throw on the way must not leave it up.
+  if (!chat.isConnected) {
+    st.joinAwaitsSocket = true
+    await socketUp(cx)
+    st.joinAwaitsSocket = false
+  }
+  if (gen !== st.joinGeneration) {
+    // A capture that was not routed through the pipeline is stopped by nobody else.
+    stopStreams(sendStream)
+    return
+  }
+
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
@@ -171,6 +190,17 @@ export function sendMuteState(cx: Cx) {
   chat.sendWSEvent('voice_mute_state', { muted: !!voice.isMuted, deafened: !!voice.isDeafened })
 }
 
+/** Resolves once the realtime socket is connected. */
+function socketUp({ chat }: Cx): Promise<void> {
+  return new Promise((resolve) => {
+    const stop = watch(() => chat.isConnected, (up) => {
+      if (!up) return
+      stop()
+      resolve()
+    })
+  })
+}
+
 // How long the room state after a rejoin gets to arrive.
 const ROOM_STATE_GRACE_MS = 5000
 
@@ -180,7 +210,8 @@ const ROOM_STATE_GRACE_MS = 5000
 export function rejoinAfterReconnect(cx: Cx) {
   const { voice, chat } = cx
   const channelId = voice.currentChannelId
-  if (!channelId) return
+  // A join still waiting for the socket sends itself now; a resume would be a second join.
+  if (!channelId || cx.st.joinAwaitsSocket) return
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)
