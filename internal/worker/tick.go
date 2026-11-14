@@ -22,6 +22,7 @@ const (
 	JobSlowMode        = "slow_mode_prune"
 	JobEditHistory     = "edit_history"
 	JobAutoDelete      = "auto_delete"
+	JobMessageExpiry   = "message_expiry"
 	JobPollFold        = "poll_fold"
 	JobLater           = "later"
 	JobAuditRetention  = "audit_retention"

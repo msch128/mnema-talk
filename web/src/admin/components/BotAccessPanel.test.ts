@@ -26,7 +26,7 @@ beforeEach(() => {
 
 describe('BotAccessPanel', () => {
   it('shows server-wide and per-channel permissions', async () => {
-    apiMock.mockResolvedValueOnce({ permissions: PERMISSION_BITS.view_channel, elevated: false, channels: [chan(1, PERMISSION_BITS.view_channel | PERMISSION_BITS.send_messages), chan(2, 0)] })
+    apiMock.mockResolvedValueOnce({ permissions: PERMISSION_BITS.view_channel, elevated: false, mode: 'channels', granted: 0, mixed: false, selected_channel_ids: [], channels: [chan(1, PERMISSION_BITS.view_channel | PERMISSION_BITS.send_messages), chan(2, 0)] })
     const w = mount(BotAccessPanel, { props: { botId } })
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/bots/${botId}/access`, { decode: expect.any(Function) })
@@ -38,7 +38,7 @@ describe('BotAccessPanel', () => {
   })
 
   it('warns when the bot is elevated and reports nothing granted', async () => {
-    apiMock.mockResolvedValueOnce({ permissions: 0, elevated: true, channels: [] })
+    apiMock.mockResolvedValueOnce({ permissions: 0, elevated: true, mode: 'channels', granted: 0, mixed: false, selected_channel_ids: [], channels: [] })
     const w = mount(BotAccessPanel, { props: { botId } })
     await flushPromises()
     expect(w.get('[data-testid="bot-elevated"]').text()).toContain('Administrator or admin-area')
@@ -47,7 +47,7 @@ describe('BotAccessPanel', () => {
   })
 
   it('reloads when the version changes and reports failures', async () => {
-    apiMock.mockResolvedValueOnce({ permissions: 0, elevated: false, channels: [] })
+    apiMock.mockResolvedValueOnce({ permissions: 0, elevated: false, mode: 'channels', granted: 0, mixed: false, selected_channel_ids: [], channels: [] })
     const w = mount(BotAccessPanel, { props: { botId, version: 0 } })
     await flushPromises()
     apiMock.mockRejectedValueOnce(new Error('access failed'))

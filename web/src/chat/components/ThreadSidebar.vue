@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { messageText } from '../../shared/lib/textLength'
+import { threadLifetimeKey, useLifetimeStore } from '../../stores/lifetime'
 import type { Message } from '../../types/domain'
 import { caughtErrorMessage } from '../../shared/lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
@@ -185,6 +186,7 @@ function isReplyBlocked(text: string): boolean {
   return isSending.value
 }
 
+const lifetimes = useLifetimeStore()
 async function handleSendReply() {
   const text = messageText(replyInput.value)
   if (isReplyBlocked(text)) return
@@ -200,7 +202,8 @@ async function handleSendReply() {
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    const sent = await chatStore.sendThreadReply(thread.id, channelId, text, target, ids)
+    const lifetime = lifetimes.forChannel(threadLifetimeKey(thread.id))
+    const sent = await (lifetime ? chatStore.sendThreadReply(thread.id, channelId, text, target, ids, lifetime) : chatStore.sendThreadReply(thread.id, channelId, text, target, ids))
     // Nothing was posted: keep the tray and the draft for another try.
     if (!sent) return
     files?.clear()

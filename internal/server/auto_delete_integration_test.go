@@ -77,7 +77,7 @@ func TestOnlyChannelManagersSetAutoDeleteAndOnlyToKnownPeriods(t *testing.T) {
 	if n := f.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'channel.auto_delete_set'`); n != 2 {
 		t.Fatalf("audit entries for the setting: %d", n)
 	}
-	if f.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'channel.auto_delete_set' AND details::text LIKE '%auto_delete_days%'`) == 0 {
+	if f.a.countRows(`SELECT COUNT(*) FROM audit_log WHERE action = 'channel.auto_delete_set' AND details::text LIKE '%auto_delete_hours%'`) == 0 {
 		t.Fatal("the audit entry does not say what changed")
 	}
 }
@@ -101,7 +101,7 @@ func TestAutoDeleteNeverAppliesToDirectMessages(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Even a forced value is refused by the schema.
-	if _, err := f.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_days = 1 WHERE id = $1`, dm.ID); err == nil {
+	if _, err := f.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_hours = 24 WHERE id = $1`, dm.ID); err == nil {
 		t.Fatal("the database accepted auto-delete on a direct message")
 	}
 	f.sweep(t)
@@ -129,7 +129,8 @@ func TestTheSweeperWaitsForARunningBackup(t *testing.T) {
 	ctx, stop := context.WithTimeout(t.Context(), 300*time.Millisecond)
 	defer stop()
 	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
-	d.Run(ctx, 10*time.Millisecond)
+	d.Next = func(now time.Time) time.Time { return now.Add(10 * time.Millisecond) }
+	d.Run(ctx)
 	if !f.exists(old) {
 		t.Fatal("the sweeper deleted a message during a backup")
 	}
@@ -255,7 +256,8 @@ func TestAutoDeleteLoopSweepsOnScheduleAndStops(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
-	go func() { d.Run(ctx, 20*time.Millisecond); close(done) }()
+	d.Next = func(now time.Time) time.Time { return now.Add(20 * time.Millisecond) }
+	go func() { d.Run(ctx); close(done) }()
 	deadline := time.Now().Add(10 * time.Second)
 	for f.exists(id) && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)

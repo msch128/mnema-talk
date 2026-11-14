@@ -8,6 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -51,9 +54,12 @@ type Scheduled struct {
 	State string `json:"state" enums:"pending,failed"`
 	// FailureReason is set when State is failed: slow_mode, not_allowed,
 	// unavailable or refused.
-	FailureReason string    `json:"failure_reason" enums:",slow_mode,not_allowed,unavailable,refused"`
-	CreatedAt     time.Time `json:"created_at" format:"date-time"`
-	UpdatedAt     time.Time `json:"updated_at" format:"date-time"`
+	FailureReason string `json:"failure_reason" enums:",slow_mode,not_allowed,unavailable,refused"`
+	// LifetimeSeconds is the lifetime the message gets when it is posted;
+	// absent for none.
+	LifetimeSeconds *int      `json:"lifetime_seconds,omitempty" binding:"optional"`
+	CreatedAt       time.Time `json:"created_at" format:"date-time"`
+	UpdatedAt       time.Time `json:"updated_at" format:"date-time"`
 }
 
 // ScheduledEvent is the payload of scheduled_message_update, sent to the
@@ -68,11 +74,11 @@ type ScheduledEvent struct {
 
 func (ScheduledEvent) EventName() string { return events.ScheduledUpdate }
 
-const scheduledColumns = `s.id, s.channel_id, c.name, c.type = 'dm', s.parent_id, s.reply_to_id, s.content, s.send_at, s.state, s.failure_reason, s.created_at, s.updated_at`
+const scheduledColumns = `s.id, s.channel_id, c.name, c.type = 'dm', s.parent_id, s.reply_to_id, s.content, s.send_at, s.state, s.failure_reason, s.created_at, s.updated_at, s.lifetime_seconds`
 
 func scanScheduled(row pgx.Row) (Scheduled, error) {
 	var e Scheduled
-	err := row.Scan(&e.ID, &e.ChannelID, &e.ChannelName, &e.DM, &e.ParentID, &e.ReplyToID, &e.Content, &e.SendAt, &e.State, &e.FailureReason, &e.CreatedAt, &e.UpdatedAt)
+	err := row.Scan(&e.ID, &e.ChannelID, &e.ChannelName, &e.DM, &e.ParentID, &e.ReplyToID, &e.Content, &e.SendAt, &e.State, &e.FailureReason, &e.CreatedAt, &e.UpdatedAt, &e.LifetimeSeconds)
 	if e.DM {
 		e.ChannelName = ""
 	}
@@ -88,6 +94,8 @@ type NewScheduled struct {
 	ReplyToID *uuid.UUID
 	Content   string
 	SendAt    time.Time
+	// LifetimeSeconds is the lifetime of the posted message, 0 for none.
+	LifetimeSeconds int
 }
 
 // AddScheduled stores n for sending at n.SendAt.
@@ -109,8 +117,9 @@ func (s *Service) AddScheduled(ctx context.Context, n NewScheduled) (Scheduled, 
 			return errTooManyScheduled
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO scheduled_messages (user_id, channel_id, parent_id, reply_to_id, content, send_at) VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING id`, n.User, n.Channel, n.ParentID, n.ReplyToID, n.Content, n.SendAt).Scan(&id)
+			INSERT INTO scheduled_messages (user_id, channel_id, parent_id, reply_to_id, content, send_at, lifetime_seconds)
+			VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0))
+			RETURNING id`, n.User, n.Channel, n.ParentID, n.ReplyToID, n.Content, n.SendAt, n.LifetimeSeconds).Scan(&id)
 	})
 	if err != nil {
 		return Scheduled{}, err
@@ -203,4 +212,18 @@ func (s *Service) RemoveScheduled(ctx context.Context, user, id uuid.UUID) error
 	}
 	s.notify(user, ScheduledEvent{ID: id, ChannelID: channel, State: "deleted"})
 	return nil
+}
+
+// checkScheduledLifetime checks a lifetime against the community's settings
+// now; the door checks it again when the message is posted.
+func checkScheduledLifetime(ctx context.Context, q db.Querier, seconds *int) (int, error) {
+	n := messages.LifetimeOf(seconds)
+	if n == 0 {
+		return 0, nil
+	}
+	settings, err := core.LoadMessageSettings(ctx, q)
+	if err != nil {
+		return 0, err
+	}
+	return n, settings.CheckLifetime(n)
 }

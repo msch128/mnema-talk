@@ -160,26 +160,33 @@ func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// ServeDuplicateChannel copies a channel's own properties (name, type, topic,
-// category) into a new channel placed directly below it in the same group
-// (its category, or the uncategorized channels). Messages, reactions and
-// per-user state (read position, notification level) are not copied. Channel
-// names need not be unique, so the copy keeps the source name unchanged.
+// DuplicateChannelTx duplicates sourceID channel inside tx.
+func DuplicateChannelTx(ctx context.Context, tx pgx.Tx, sourceID uuid.UUID) (*core.Channel, error) {
+	if err := LockChannelLayout(ctx, tx); err != nil {
+		return nil, err
+	}
+	src, err := LockSourceChannel(ctx, tx, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	newOrder, err := makeRoomBelow(ctx, tx, src)
+	if err != nil {
+		return nil, err
+	}
+	return InsertChannelCopy(ctx, tx, src, newOrder, false)
+}
+
+// DuplicateChannel is for tests and the importer; request handlers use the
+// *Tx variants under Perms.Locked. It copies a channel's own properties (name,
+// type, topic, category) into a new channel placed directly below it in the
+// same group (its category, or the uncategorized channels). Messages, reactions
+// and per-user state (read position, notification level) are not copied.
+// Channel names need not be unique, so the copy keeps the source name unchanged.
 func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*core.Channel, error) {
 	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := LockChannelLayout(ctx, tx); err != nil {
-			return err
-		}
-		src, err := LockSourceChannel(ctx, tx, sourceID)
-		if err != nil {
-			return err
-		}
-		newOrder, err := makeRoomBelow(ctx, tx, src)
-		if err != nil {
-			return err
-		}
-		ch, err = InsertChannelCopy(ctx, tx, src, newOrder, false)
+		var err error
+		ch, err = DuplicateChannelTx(ctx, tx, sourceID)
 		return err
 	})
 	if err != nil {
@@ -234,12 +241,13 @@ func InsertChannelCopy(ctx context.Context, tx pgx.Tx, src *core.Channel, sortOr
 	var ch core.Channel
 	err := tx.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"),
 		src.CategoryID, src.Name, src.Type, src.Topic, sortOrder, src.UserLimit, src.SlowModeSeconds).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault)
 	if err != nil {
 		return nil, fmt.Errorf("duplicate channel: %w", err)
 	}
+	ch.FillAutoDeleteDays()
 	if temp {
 		// A temporary Talk gets its fixed slug and no history.
 		if _, err := tx.Exec(ctx, `UPDATE channels SET slug = $2 WHERE id = $1`, ch.ID, TempTalkSlug(ch.ID)); err != nil {

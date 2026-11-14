@@ -1,6 +1,7 @@
 // The browser client retains same-origin cookies. A separately constructed client
 // can inject its own transport without sharing unauthorized listeners or credentials.
 // Response JSON stays unknown until an explicit runtime decoder accepts it.
+import { noteServerTime } from './serverTime'
 import { t } from '../../i18n'
 import { formatDetailMessage } from './errorDetails'
 import { xhrUpload } from './xhrUpload'
@@ -276,6 +277,8 @@ const browserTransport: ApiTransport = async (path, { method, json, form, signal
     init.body = form
   }
   const response = await fetch(path, init)
+  // The server's Date header (whole seconds, so never ahead) keeps the clock that ends messages with a lifetime fresh.
+  noteServerTime(response.headers?.get?.('Date'))
   return { status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) }
 }
 

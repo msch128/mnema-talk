@@ -91,12 +91,14 @@ seed_090() {
 # @everyone and Edit the wiki and Manage the wiki (bits 1 << 27 and 1 << 28) to
 # the roles that hold Timeout members. Migration 0097 gives the seeded Moderator
 # and Admin roles Manage reports (1 << 21) and Kick members (1 << 23).
-ROLES_JQ='def strip($bit): (. as $p | if (($p / $bit | floor) % 2) == 1 then $p - $bit else $p end); map({id, name, color, permissions: (.permissions | strip(4194304) | strip(33554432) | strip(67108864) | strip(134217728) | strip(268435456) | strip(536870912) | strip(2097152) | strip(8388608)), mentionable, position}) | sort_by(.id)'
+ROLES_JQ='def strip($bit): (. as $p | if (($p / $bit | floor) % 2) == 1 then $p - $bit else $p end); map({id, name, color, permissions: (.permissions | strip(4194304) | strip(33554432) | strip(67108864) | strip(134217728) | strip(268435456) | strip(536870912) | strip(2097152) | strip(8388608) | strip(1073741824)), mentionable, position}) | sort_by(.id)'
 # Holds Manage events exactly when it can time members out.
 EVENTS_GRANT_JQ='all(.[]; (((.permissions / 33554432 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 # Holds Bypass new member limits exactly when it can time members out.
 BYPASS_GRANT_JQ='all(.[]; (((.permissions / 67108864 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 # Holds Edit the wiki and Manage the wiki exactly when it can time members out.
+# Holds Create invites only if it holds Manage invites (8192): migration 0109 grants it to those roles, never to @everyone on an existing install.
+INVITES_GRANT_JQ='all(.[]; (((.permissions / 1073741824 | floor) % 2) == 0) or ((.permissions / 8192 | floor) % 2) == 1) and all(.[] | select(.is_everyone); ((.permissions / 1073741824 | floor) % 2) == 0)'
 WIKI_GRANT_JQ='all(.[]; (((.permissions / 134217728 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1) and (((.permissions / 268435456 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 
 snapshot_integrations() {
@@ -133,6 +135,8 @@ verify_roles() {
     fail 'Bypass new member limits does not match Timeout members after the upgrade (migration 0083)'
   api cool_guy "$BASE/api/roles" | jq -e "$WIKI_GRANT_JQ" >/dev/null ||
     fail 'Edit the wiki and Manage the wiki do not match Timeout members after the upgrade (migration 0089)'
+  api cool_guy "$BASE/api/roles" | jq -e "$INVITES_GRANT_JQ" >/dev/null ||
+    fail 'Create invites went to a role without Manage invites, or to @everyone, after the upgrade (migration 0109)'
   api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 536870912 | floor) % 2) == 1)' >/dev/null ||
     fail 'no role holds View the wiki after the upgrade (migration 0089 gives it to @everyone)'
   api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; .name == "Moderator" and ((.permissions / 2097152 | floor) % 2) == 1 and ((.permissions / 8388608 | floor) % 2) == 1)' >/dev/null ||

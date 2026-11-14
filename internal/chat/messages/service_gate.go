@@ -98,7 +98,7 @@ func (s *Service) prepare(ctx context.Context, actor Actor, cmd PostCommand) (Ne
 	}
 	nm := NewMessage{
 		ChannelID: cmd.ChannelID, UserID: actor.ID, Content: content, ParentID: cmd.ParentID, ReplyToID: cmd.ReplyToID,
-		Embeds: embeds, HasAttachment: len(cmd.AttachmentIDs) > 0, Nonce: cmd.Nonce,
+		Embeds: embeds, HasAttachment: len(cmd.AttachmentIDs) > 0, Nonce: cmd.Nonce, LifetimeSeconds: cmd.LifetimeSeconds,
 	}
 	return nm, g.rules(actor, cmd.ChannelID, cmd.AllowedMentions), nil
 }

@@ -106,9 +106,9 @@ func (h *Handler) insertStaged(ctx context.Context, chID, userID uuid.UUID, in *
 			return httpx.ErrInvalidInput(fmt.Sprintf("too many unsent files (at most %d); send or remove some first", maxStagedPerMember))
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO media (id, uploader_id, channel_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, staged)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)`,
-			in.id, userID, chID, h.Bucket, in.key, in.filename, in.mime, in.size); err != nil {
+			INSERT INTO media (id, uploader_id, channel_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, staged, width, height)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9, $10)`,
+			in.id, userID, chID, h.Bucket, in.key, in.filename, in.mime, in.size, in.width, in.height); err != nil {
 			return err
 		}
 		return RecordUploadUsage(ctx, tx, userID, in.size)

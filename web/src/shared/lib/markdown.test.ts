@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { renderMarkdown, escapeHtml } from './markdown'
+import { afterEach, describe, it, expect } from 'vitest'
+import { renderMarkdown, escapeHtml, previewText, setMentionLabels } from './markdown'
 
 function dom(html: string) {
   const div = document.createElement('div')
@@ -140,5 +140,18 @@ describe('runtime edges of pure chat helpers', () => {
     expect(renderMarkdown(null)).toBe('')
     expect(renderMarkdown('before\u00009999\u0000after')).toBe('before9999after')
     expect(renderMarkdown('@a..')).toBe('@a..')
+  })
+})
+
+describe('previewText mentions', () => {
+  afterEach(() => setMentionLabels(null))
+
+  it('names a mentioned member by display name, leaving other names and the end of a sentence', () => {
+    setMentionLabels(name => ({ 'bot-fceaf0': 'Mnemo', max: 'Max M.' })[name])
+    expect(previewText('**hi** @bot-fceaf0, ask (@Max).\n@gone a@max.example')).toBe('hi @Mnemo, ask (@Max M.). @gone a@max.example')
+  })
+
+  it('shows the username when no names are registered', () => {
+    expect(previewText('hi @bot-fceaf0')).toBe('hi @bot-fceaf0')
   })
 })

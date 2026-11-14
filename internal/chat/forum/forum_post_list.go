@@ -110,7 +110,7 @@ func postFilterWhere(channelID uuid.UUID, f PostFilter) (string, []any, error) {
 		}
 		args = append(args, "%"+likeEscaper.Replace(clean)+"%")
 		n := len(args)
-		where += fmt.Sprintf(` AND (m.title ILIKE $%[1]d OR m.content ILIKE $%[1]d OR EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND r.content ILIKE $%[1]d))`, n)
+		where += fmt.Sprintf(` AND (m.title ILIKE $%[1]d OR m.content ILIKE $%[1]d OR EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND (r.expires_at IS NULL OR r.expires_at > now()) AND r.content ILIKE $%[1]d))`, n)
 	}
 	return where, args, nil
 }
@@ -166,10 +166,10 @@ func (l postList) byCreation(ctx context.Context, where string, args []any, befo
 	return l.query(ctx, sql, args...)
 }
 
-const activityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id), m.created_at)`
+const activityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id AND (r.expires_at IS NULL OR r.expires_at > now())), m.created_at)`
 
 // cursorActivityExpr is activityExpr evaluated for the cursor row (alias a).
-const cursorActivityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = a.id), a.created_at)`
+const cursorActivityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = a.id AND (r.expires_at IS NULL OR r.expires_at > now())), a.created_at)`
 
 // byActivity pages by (activity, id). A client that sends the
 // activity it saw for the cursor post (BeforeActivity) gets exactly the posts

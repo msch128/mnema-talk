@@ -35,7 +35,7 @@ function wireExample(input: Schema): unknown {
     case 'object': return Object.fromEntries(Object.entries(schema.properties ?? {}).map(([key, property]) => [key, wireExample(property)]))
     case 'array': return [wireExample(schema.items ?? {})]
     case 'string': return schema.format === 'uuid' ? fixtureId(1) : schema.format === 'date-time' ? FIXTURE_TIMESTAMP : 'synthetic'
-    case 'integer': return 7
+    case 'integer': return Math.max(7, schema.minimum ?? 7)
     case 'number': return 1.5
     case 'boolean': return false
     default: throw new Error(`Unsupported OpenAPI example type ${type}`)
