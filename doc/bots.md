@@ -138,6 +138,7 @@ common paths.
 | Choosing a bot's access (`PUT /bots/{id}/access`) | *Manage bots* and the authority over the bot; only the manifest's channel permissions, never elevated; bounded by the bot invariant like every change |
 | `@everyone` | not inherited, its overwrites do not apply |
 | Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
+| Command `default_member_permissions` (REST and manifest) | only restricts who may run the command; grants no permissions to the bot, so elevated bits are allowed |
 
 ## What a bot cannot do
 
@@ -242,7 +243,7 @@ configuration.
 | `avatar` | optional `data:` URL of a PNG, JPEG or WebP image of at most 256 KB; the web app uploads it through the avatar route, the server never fetches anything |
 | `intents` | optional, names from [Intents and events](#intents-and-events): `GUILDS`, `GUILD_MEMBERS`, `GUILD_MESSAGES`, `GUILD_MESSAGE_REACTIONS`; another name is refused |
 | `permissions` | optional, channel permissions only: `view_channel`, `send_messages`, `attach_files`, `add_reactions`, `manage_messages`, `mention_everyone`. Anything else (Administrator, admin-area permissions, voice) is refused: the Owner grants those by hand |
-| `commands` | optional, at most 50, each as for `PUT /api/bot/v1/commands` |
+| `commands` | optional, at most 50, each as for `PUT /api/bot/v1/commands` (can include `default_member_permissions`) |
 
 Unknown fields are ignored, so a newer manifest still installs on an older
 server with what that server understands.
@@ -633,7 +634,8 @@ overwrite; `POST` adds or updates one by name; `GET`, `DELETE
 
 ```json
 {"name": "ping", "description": "Replies with pong",
- "options": [{"name": "text", "description": "What to say", "type": 3, "required": true}]}
+ "options": [{"name": "text", "description": "What to say", "type": 3, "required": true}],
+ "default_member_permissions": "6"}
 ```
 
 Names are 1 to 32 lowercase letters, digits, `-` or `_`; at most 50 commands
@@ -649,11 +651,93 @@ any other value.
 **Where they show.** Commands are not tied to channels by the bot. A member
 sees a command in the composer of every channel where the **bot can view and
 send** (its roles and overwrites decide, so the admin's channel scoping is the
-command scoping), and only while neither the command nor the bot is disabled.
-The composer lists them with the bot's name and avatar. Running one needs *Send
-messages* in the channel. The admin sees all of a bot's commands (Bots tab) and
-can **disable** any of them or delete them; a disabled command stays off even
-when the bot registers it again.
+command scoping), only while neither the command nor the bot is disabled, and
+only when the member holds the command's `default_member_permissions` in that
+channel. The composer lists them with the bot's name and avatar. Running one
+needs *Send messages* in the channel. The admin sees all of a bot's commands
+(Bots tab) and can **disable** any of them or delete them; a disabled command
+stays off even when the bot registers it again.
+
+### Command permissions (default_member_permissions)
+
+Like Discord, a command may declare `default_member_permissions` as a decimal
+string bitfield of required permissions (e.g. `"6"` for *View channels* and
+*Send messages*, `"1"` for *Administrator*, `"524288"` for *Ban members*), or
+as an array of permission keys (e.g. `["ban_members"]` or `["view_channel", "send_messages"]`).
+
+> [!WARNING]
+> Mnema's permission bit values are **not** Discord's bit values (e.g. `discord.js`'s `PermissionFlagsBits`). Do not reuse Discord's permission constants; a ported bot must not reuse Discord's PermissionFlagsBits, and must compute bit values from Mnema's catalogue or pass an array of permission keys.
+
+- **`null` or omitted:** available to everyone who may use commands in the
+  channel (requires *Send messages*). Re-registering a command without
+  `default_member_permissions` (or with `null`) clears the requirement back to `null`,
+  making it available to everyone again.
+- **`"0"` or `[]`:** available to nobody except the **Owner** and members with
+  **Administrator**.
+- **A decimal bitfield string or array of permission keys:** the member must hold
+  every requested permission in the channel where the command is used. Unknown
+  permission bits or unknown permission keys are rejected on registration with
+  `400` (`INVALID_INPUT`, e.g. "unknown permission: ..."). Elevated bits
+  (Administrator, admin-area permissions, Disconnect members) are allowed here
+  because this field only restricts who may run the command; it grants no rights
+  to the bot. The REST API always returns the decimal string bitfield (or `null`).
+
+Enforcement is strictly server-side:
+
+1. **Picker filtering:** `GET /api/channels/{id}/commands` (the composer picker
+   source) omits any command whose `default_member_permissions` the invoking
+   member lacks in that channel.
+2. **Invocation check:** Running a command (`POST /api/channels/{id}/interactions`)
+   re-checks the invoking member's permissions in that channel. If the member
+   lacks any required permission, execution is refused with `403` (`FORBIDDEN`,
+   naming the missing permission, e.g. `missing permission: ban members`), even if
+   the command ID is known. Running a command that is hidden from the member in
+   that channel by its ID fails with this `403`.
+3. **Owner and Administrator:** Always pass all permission checks (the snapshot
+   grants them all bits).
+
+Updating a command over the REST API updates `default_member_permissions`
+immediately. Re-registering a command without `default_member_permissions` clears
+it to `null`. A command disabled by an administrator stays disabled regardless of
+re-registration.
+
+### Permission bit values
+
+The bit values used in `default_member_permissions` and interaction `member.permissions`
+follow Mnema's permission catalogue (`GET /api/permissions`):
+
+| Permission key | Bit value | Name |
+|---|---|---|
+| `administrator` | `1` | administrator |
+| `view_channel` | `2` | view channels |
+| `send_messages` | `4` | send messages |
+| `attach_files` | `8` | attach files |
+| `add_reactions` | `16` | add reactions |
+| `manage_messages` | `32` | manage messages |
+| `mention_everyone` | `64` | mention everyone |
+| `connect` | `128` | connect to Talks |
+| `speak` | `256` | speak |
+| `video` | `512` | share video and screen |
+| `disconnect_members` | `1024` | disconnect members |
+| `manage_channels` | `2048` | manage channels |
+| `manage_roles` | `4096` | manage roles |
+| `create_invites` | `8192` | manage invites |
+| `manage_webhooks` | `16384` | manage webhooks |
+| `manage_members` | `32768` | manage members |
+| `manage_bots` | `65536` | manage bots |
+| `view_audit_log` | `131072` | view the audit log |
+| `timeout_members` | `262144` | timeout members |
+| `ban_members` | `524288` | ban members |
+| `manage_emoji` | `1048576` | manage emoji |
+| `manage_reports` | `2097152` | manage reports |
+| `send_direct_messages` | `4194304` | send direct messages |
+| `kick_members` | `8388608` | kick members |
+| `manage_stage` | `16777216` | manage Stages |
+| `manage_events` | `33554432` | manage events |
+| `bypass_new_member_limits` | `67108864` | bypass new member limits |
+| `edit_wiki` | `134217728` | edit the wiki |
+| `manage_wiki` | `268435456` | manage the wiki |
+| `view_wiki` | `536870912` | view the wiki |
 
 **Run.** `POST /api/channels/{id}/interactions {"command_id": "...",
 "options": {"text": "hello"}}` validates the options (types, required ones,
@@ -666,7 +750,7 @@ member.
 {"op": 0, "t": "INTERACTION_CREATE", "s": 7, "d": {
   "id": "...", "token": "...", "type": 2, "channel_id": "...", "application_id": "<bot id>",
   "data": {"id": "<command id>", "name": "ping", "options": [{"name": "text", "type": 3, "value": "hello"}]},
-  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}}}}
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "6"}}}
 ```
 
 **Respond** within 15 minutes, with `id` and `token` from the event:
@@ -781,7 +865,7 @@ delivered.
   "id": "...", "token": "...", "type": 3, "channel_id": "...", "application_id": "<bot id>",
   "message": {"id": "...", "content": "Deploy v2.4 to production?", "components": [...], "...": "..."},
   "data": {"custom_id": "env", "component_type": 3, "values": ["prod"]},
-  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}}}}
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}, "permissions": "6"}}}
 ```
 
 User, role and channel selects add `data.resolved` with what was picked:
@@ -832,6 +916,26 @@ refused for its answers (`400`) or because the bot is not connected (`409`)
 leaves the modal open. Closing it sends nothing to the bot.
 
 ## Interactions in detail
+
+### Interaction payload
+
+Every `INTERACTION_CREATE` dispatch shares this structure:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique interaction ID |
+| `token` | string | 15-minute secret token to respond or follow up |
+| `type` | integer | Interaction type: `2` (command), `3` (component), `5` (modal submit) |
+| `channel_id` | string | ID of the channel where the interaction was invoked |
+| `application_id` | string | The bot's ID |
+| `data` | object | Interaction data (`id`, `name`, `options` for commands; `custom_id`, `component_type`, `values`, `resolved` for components; `custom_id`, `components` for modals) |
+| `member.user` | object | The invoking member (`id`, `username`, `display_name`, `avatar_url`) |
+| `member.permissions` | string | Invoking member's effective channel permissions at invocation time as a decimal string bitfield (Owner: all bits). Bits follow Mnema's catalogue ([Roles and permissions](roles-and-permissions.md) and `GET /api/permissions`), not Discord's (a ported bot must not reuse Discord's `PermissionFlagsBits`) |
+| `message` | object | The message a component or modal was attached to (types `3` and `5`) |
+
+The interaction payload is delivered **only** to the bot that owns the
+interaction over its gateway connection; it is never broadcast and never exposed
+through member-facing endpoints.
 
 | Interaction `type` | When |
 |---|---|

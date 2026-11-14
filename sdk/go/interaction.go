@@ -45,7 +45,8 @@ type Interaction struct {
 
 // InteractionMember wraps the member of an interaction, as Discord does.
 type InteractionMember struct {
-	User User `json:"user"`
+	User        User   `json:"user"`
+	Permissions string `json:"permissions,omitempty"`
 }
 
 // InteractionData is the data of an interaction; which fields are set

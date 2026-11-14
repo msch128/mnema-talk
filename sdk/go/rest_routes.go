@@ -76,19 +76,21 @@ type Upload struct {
 
 // Command is a registered slash command.
 type Command struct {
-	ID          string          `json:"id"`
-	BotID       string          `json:"bot_id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Options     []CommandOption `json:"options"`
-	Disabled    bool            `json:"disabled"`
+	ID                       string          `json:"id"`
+	BotID                    string          `json:"bot_id"`
+	Name                     string          `json:"name"`
+	Description              string          `json:"description"`
+	Options                  []CommandOption `json:"options"`
+	Disabled                 bool            `json:"disabled"`
+	DefaultMemberPermissions *string         `json:"default_member_permissions,omitempty"`
 }
 
 // CommandInput is a command to register.
 type CommandInput struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Options     []CommandOption `json:"options"`
+	Name                     string          `json:"name"`
+	Description              string          `json:"description"`
+	Options                  []CommandOption `json:"options"`
+	DefaultMemberPermissions any             `json:"default_member_permissions,omitempty"`
 }
 
 // OptionType is the type of a command option.

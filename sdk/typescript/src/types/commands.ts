@@ -18,6 +18,7 @@ export interface CommandInput {
   name: string
   description: string
   options?: CommandOption[]
+  default_member_permissions?: string | string[] | null
 }
 
 /** A registered command (GET /commands). */
@@ -29,6 +30,7 @@ export interface Command {
   options: CommandOption[]
   disabled: boolean
   created_at: string
+  default_member_permissions?: string | null
 }
 
 /** The `data` of callback 4 and the body of a follow-up: a message to post. */

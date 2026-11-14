@@ -922,6 +922,7 @@ export type BotChannelCommand = {
   bot_name: string
   builtin?: boolean
   created_at: string
+  default_member_permissions?: string | null
   description: string
   disabled: boolean
   id: string
@@ -936,6 +937,7 @@ export function isBotChannelCommand(value: unknown): value is BotChannelCommand 
     && (hasOwn(value, "bot_name") && isString(value["bot_name"]))
     && (!hasOwn(value, "builtin") || typeof value["builtin"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "default_member_permissions") || (isString(value["default_member_permissions"]) || value["default_member_permissions"] === null))
     && (hasOwn(value, "description") && isString(value["description"]))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
@@ -971,6 +973,7 @@ export const decodeBotCheckedManifest = decoder("bot.CheckedManifest", isBotChec
 export type BotCommand = {
   bot_id: string
   created_at: string
+  default_member_permissions?: string | null
   description: string
   disabled: boolean
   id: string
@@ -982,6 +985,7 @@ export function isBotCommand(value: unknown): value is BotCommand {
   return isRecord(value)
     && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "default_member_permissions") || (isString(value["default_member_permissions"]) || value["default_member_permissions"] === null))
     && (hasOwn(value, "description") && isString(value["description"]))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
@@ -992,6 +996,7 @@ export function isBotCommand(value: unknown): value is BotCommand {
 export const decodeBotCommand = decoder("bot.Command", isBotCommand)
 
 export type BotCommandInput = {
+  default_member_permissions?: string
   description: string
   name: string
   options: Array<BotOption>
@@ -999,6 +1004,7 @@ export type BotCommandInput = {
 
 export function isBotCommandInput(value: unknown): value is BotCommandInput {
   return isRecord(value)
+    && (!hasOwn(value, "default_member_permissions") || isString(value["default_member_permissions"]))
     && (hasOwn(value, "description") && isString(value["description"], 100))
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "options") && isArrayOf(value["options"], item => isBotOption(item)))
