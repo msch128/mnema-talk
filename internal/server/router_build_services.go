@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/expiry"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
@@ -35,7 +36,7 @@ import (
 
 // newChat builds the chat handler with its rate limits and the background
 // jobs that belong to messages: edit-history retention, poll folding and the
-// per-channel auto-delete.
+// per-channel auto-delete and the end of messages with a lifetime.
 func (c *components) newChat() {
 	d, cfg, hub := c.d, c.cfg, c.hub
 	// The engine is handed to the message service here. The paths that still
@@ -60,7 +61,22 @@ func (c *components) newChat() {
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}
-	safego.Go("auto_delete", safego.Crash, func() { autoDelete.Run(c.ctx, channels.AutoDeleteEvery) })
+	safego.Go("auto_delete", safego.Crash, func() { autoDelete.Run(c.ctx) })
+	if !d.HoldExpiry {
+		c.startExpiry()
+	}
+}
+
+// startExpiry starts the sweeper that deletes messages at the end of their
+// lifetime; the message door of the database wakes it.
+func (c *components) startExpiry() {
+	d := c.d
+	timed := expiry.Config{DB: d.DB, Events: c.pub, Recount: c.recount}
+	if d.Store != nil {
+		timed.Objects = d.Store
+	}
+	c.expiry = expiry.New(timed)
+	safego.Go("message_expiry", safego.Crash, func() { c.expiry.Run(c.ctx) })
 }
 
 // newImport builds the Discord structure import.

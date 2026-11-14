@@ -195,7 +195,7 @@ func (a *API) ListFollowedThreads(w http.ResponseWriter, r *http.Request) error 
 func FollowedThreadIDs(ctx context.Context, q db.Querier, user uuid.UUID, visible []uuid.UUID, limit int) ([]uuid.UUID, error) {
 	rows, err := q.Query(ctx, `
 		SELECT f.thread_id FROM thread_follows f JOIN messages m ON m.id = f.thread_id
-		WHERE f.user_id = $1 AND f.following AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2::uuid[]))
+		WHERE f.user_id = $1 AND f.following AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2::uuid[])) AND `+core.LiveSQL("m")+`
 		ORDER BY f.created_at DESC, f.thread_id LIMIT $3`, user, visible, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list followed threads: %w", err)

@@ -158,8 +158,7 @@ and whether it is enabled. Deleting the channel deletes it.
 | Event | When | `d` |
 |---|---|---|
 | `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages`; it carries `nonce` when the sender's client sent one (the id of an offline-outbox send, see [api-stability.md](api-stability.md#300-changes)) |
-| `MESSAGE_UPDATE` | a message is edited | the message |
-
+| `MESSAGE_UPDATE` | a message is edited, or a file of it is removed (by the Owner in Admin > Media, or by auto-delete with *Files only*); the removed file has `is_deleted` | the message |
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
 | `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
 | `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |

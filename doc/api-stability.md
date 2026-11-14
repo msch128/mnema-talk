@@ -32,13 +32,20 @@ are `database` and `storage` today; the list may grow in a later release, so a
 client ignores a name it does not know. `GET /api/health/live` is
 the liveness probe and never depends on the database or object storage.
 
+`GET /api/health` also carries `public_url`, the server's `PUBLIC_URL` (left out
+when none is set). A client that is not served from that address, such as the
+desktop app, builds the links it shares (invites, message links) from it.
+
 `GET /api/health` also lists the optional features a server has in `features`.
 In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,
 `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
 `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
 later releases add more, among them `messages.nonce` (the server de-duplicates a repeated send by its `nonce`;
-clients send `nonce` only when health lists it, as older servers reject unknown fields)
+clients send `nonce` only when health lists it, as older servers reject unknown fields),
+`messages.lifetime` and `channels.auto_delete.v2` (3.1: messages with a lifetime, auto-delete in hours with a scope
+and a community default, the picture size on attachments; every change additive, see [timed messages](timed-messages.md#api);
+the channel's `auto_delete_days` stays within 0 to 90, the range 3.0 published, whatever the period in hours)
 (`internal/server/health.go`). A name never changes meaning and is never
 removed within a major version; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a

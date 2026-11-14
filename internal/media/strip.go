@@ -20,11 +20,16 @@ const stripBufferBytes = MaxAvatarBytes
 type storedBody struct {
 	r io.Reader
 	n int64
+	// head keeps the first pictureHeadBytes stored, to read a picture's size.
+	head []byte
 }
 
 func (s *storedBody) Read(p []byte) (int, error) {
 	n, err := s.r.Read(p)
 	s.n += int64(n)
+	if room := pictureHeadBytes - len(s.head); room > 0 {
+		s.head = append(s.head, p[:min(n, room)]...)
+	}
 	return n, err
 }
 

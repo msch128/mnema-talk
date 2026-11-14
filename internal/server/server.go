@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"github.com/msch128/mnema-talk/internal/chat/expiry"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"log/slog"
 	"net/http"
@@ -68,6 +69,9 @@ type Deps struct {
 	// WebIndex replaces the built app shell that gets link preview tags
 	// (tests, where the web app is not built); nil uses the embedded one.
 	WebIndex []byte
+	// HoldExpiry leaves the sweeper of messages with a lifetime stopped
+	// (tests that read an ended message the sweeper has not removed yet).
+	HoldExpiry bool
 
 	// Setup holds what the server learned about its surroundings at startup
 	// (announced voice address, clock skew) for the setup checks; nil = none.
@@ -88,6 +92,9 @@ type Router struct {
 	Gateway *gateway.Gateway
 	// Later runs reminders and scheduled messages (tests call Sweep).
 	Later *later.Service
+	// Expiry deletes messages at the end of their lifetime (tests call
+	// RemoveEnded); nil with Deps.HoldExpiry.
+	Expiry *expiry.Sweeper
 	// Events serves community events.
 	Events *communityevents.Handler
 	// EventsScheduler manages event activation and reminders.
@@ -146,6 +153,7 @@ func NewRouter(d Deps) (*Router, error) {
 		Bots:            c.botAuthn,
 		Gateway:         c.gw,
 		Later:           c.later,
+		Expiry:          c.expiry,
 		Events:          c.eventsH,
 		EventsScheduler: c.eventsScheduler,
 		cancel: func() {

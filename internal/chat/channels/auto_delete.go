@@ -17,60 +17,19 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
-// AutoDeleteChoices are the retention periods a channel can be set to, in
-// days. 0 turns auto-delete off.
-var AutoDeleteChoices = []int{0, 1, 7, 30, 90}
-
 const (
-	// autoDeleteBatch is how many messages one transaction removes.
+	// autoDeleteBatch is how many messages (or files) one transaction removes.
 	autoDeleteBatch = 200
 	// autoDeleteBatchesPerRun bounds one channel's work per sweep, so a huge
 	// backlog is worked off over several sweeps without hogging the database.
 	autoDeleteBatchesPerRun = 25
-	// AutoDeleteEvery is how often the sweeper runs.
-	AutoDeleteEvery = 10 * time.Minute
 )
 
-func validAutoDeleteDays(days int) bool {
-	for _, c := range AutoDeleteChoices {
-		if c == days {
-			return true
-		}
-	}
-	return false
-}
-
-// ServeSetAutoDelete changes how long a channel keeps its messages (0 = forever).
-// Direct messages never take part. It returns the channel as it is now.
-func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*core.Channel, error) {
-	if !validAutoDeleteDays(days) {
-		return nil, httpx.ErrInvalidInput("days must be 0 (off), 1, 7, 30 or 90")
-	}
-	var ch core.Channel
-	err := p.QueryRow(ctx, `
-		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND NOT `+core.PrivateChannelSQL("channels")+`
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, days).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, core.ErrChannelNotFound
-	}
-	if err != nil {
-		return nil, fmt.Errorf("set auto-delete: %w", err)
-	}
-	if err := FillTalkFields(ctx, p, &ch); err != nil {
-		return nil, err
-	}
-	if err := FillSlugs(ctx, p, &ch); err != nil {
-		return nil, err
-	}
-	return &ch, nil
-}
-
-// AutoDeleter removes the messages that outlived their channel's retention.
+// AutoDeleter removes the messages, or only the files, that outlived their
+// channel's auto-delete period.
 type AutoDeleter struct {
 	DB     *db.Pool
 	Events events.Publisher
@@ -81,17 +40,30 @@ type AutoDeleter struct {
 	// Recount tells the members who had not read the removed messages their
 	// counts again, once per channel and run; nil tells nobody.
 	Recount *readstate.Recounter
+	// Next is when the run after now is; nil runs at NextAutoDeleteRun.
+	Next func(now time.Time) time.Time
+}
+
+func (a *AutoDeleter) next(now time.Time) time.Time {
+	if a.Next != nil {
+		return a.Next(now)
+	}
+	return NextAutoDeleteRun(now)
 }
 
 type autoDeleteChannel struct {
-	id   uuid.UUID
-	name string
-	days int
+	id    uuid.UUID
+	name  string
+	hours int
+	scope string
+	// followsDefault: the period is the community default's.
+	followsDefault bool
 }
 
-// Run sweeps every interval until ctx ends.
-func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
-	t := time.NewTicker(every)
+// Run sweeps at every multiple of AutoDeleteEvery (or as Next says) until
+// ctx ends.
+func (a *AutoDeleter) Run(ctx context.Context) {
+	t := time.NewTimer(time.Until(a.next(time.Now())))
 	defer t.Stop()
 	for {
 		select {
@@ -106,20 +78,25 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 				}
 				return worker.IgnoreDone(ctx, err)
 			})
+			t.Reset(time.Until(a.next(time.Now())))
 		}
 	}
 }
 
-// Sweep runs one pass over all channels that have auto-delete on.
+// Sweep runs one pass over all channels that have auto-delete on, by their
+// own setting or the community default.
 func (a *AutoDeleter) Sweep(ctx context.Context) error {
 	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
-	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND NOT `+core.PrivateChannelSQL("channels"))
+	rows, err := a.DB.Query(ctx, `
+		SELECT id, name, hours, scope, follows
+		FROM (SELECT id, name, `+core.AutoDeleteSQL("channels")+` FROM channels) c(id, name, hours, scope, follows)
+		WHERE hours > 0`)
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)
 	}
 	chans, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (autoDeleteChannel, error) {
 		var c autoDeleteChannel
-		return c, r.Scan(&c.id, &c.name, &c.days)
+		return c, r.Scan(&c.id, &c.name, &c.hours, &c.scope, &c.followsDefault)
 	})
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)
@@ -139,40 +116,54 @@ func (a *AutoDeleter) Sweep(ctx context.Context) error {
 }
 
 func (a *AutoDeleter) sweepChannel(ctx context.Context, c autoDeleteChannel) error {
-	cutoff := time.Now().Add(-time.Duration(c.days) * 24 * time.Hour)
+	cutoff := time.Now().Add(-time.Duration(c.hours) * time.Hour)
+	batch := a.sweepBatch
+	if c.scope == core.AutoDeleteScopeAttachments {
+		batch = a.purgeFilesBatch
+	}
 	var messages, attachments int
 	var failure error
 	for i := 0; i < autoDeleteBatchesPerRun; i++ {
-		n, files, err := a.sweepBatch(ctx, c, cutoff)
+		n, files, err := batch(ctx, c, cutoff)
 		messages += n
 		attachments += files
 		if err != nil {
 			failure = err
 			break
 		}
-		if n < autoDeleteBatch {
+		if max(n, files) < autoDeleteBatch {
 			break
 		}
 	}
-	if messages > 0 {
+	if messages == 0 && attachments == 0 {
+		return failure
+	}
+	if c.scope == core.AutoDeleteScopeAll {
 		// Every removed message and every reply that went with it is older than the cutoff.
 		a.Recount.Tell(c.id, &cutoff, nil)
-		a.Audit.RecordOrLog(ctx, audit.Entry{
-			Action: "channel.auto_delete_run", TargetType: "channel", TargetID: c.id.String(), TargetName: c.name, ChannelID: &c.id,
-			Details: map[string]any{"days": c.days, "messages": messages, "attachments": attachments, "complete": failure == nil},
-		})
 	}
+	a.Audit.RecordOrLog(ctx, audit.Entry{
+		Action: "channel.auto_delete_run", TargetType: "channel", TargetID: c.id.String(), TargetName: c.name, ChannelID: &c.id,
+		Details: map[string]any{
+			"hours": c.hours, "scope": c.scope, "default": c.followsDefault, "days": core.AutoDeleteDays(c.hours, core.AutoDeleteScopeAll),
+			"messages": messages, "attachments": attachments, "complete": failure == nil,
+		},
+	})
 	return failure
 }
 
 // sweepBatch removes up to autoDeleteBatch expired messages of the channel.
 // Pinned messages stay, and so does a thread root that still has a reply
 // younger than the cutoff or a pinned one. The channel's setting is checked
-// again inside the transaction, so turning auto-delete off stops a run at once.
+// again inside the transaction, so turning auto-delete off or changing it
+// stops a run at once.
 func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutoff time.Time) (int, int, error) {
 	var removed []expiredMessage
 	var keys []string
 	err := pgx.BeginFunc(ctx, a.DB, func(tx pgx.Tx) error {
+		if set, err := stillSet(ctx, tx, c); err != nil || !set {
+			return err
+		}
 		var err error
 		removed, err = selectExpired(ctx, tx, c, cutoff)
 		if err != nil || len(removed) == 0 {
@@ -186,11 +177,7 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	if err != nil {
 		return 0, 0, err
 	}
-	if a.Objects != nil && len(keys) > 0 {
-		if err := a.Objects.DeleteBatch(ctx, keys); err != nil {
-			slog.Warn("auto-delete: delete media objects", "count", len(keys), "err", err)
-		}
-	}
+	core.DeleteObjects(ctx, a.Objects, keys)
 	if a.Events != nil {
 		for _, g := range removed {
 			a.Events.BroadcastChannel(c.id, wire.MessageDelete{ID: g.id, ChannelID: c.id, ParentID: g.parent})
@@ -223,10 +210,9 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 		SELECT m.id, m.parent_id FROM messages m
 		WHERE m.channel_id = $1 AND m.created_at < $2 AND NOT m.is_pinned
 		  AND NOT EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND (r.created_at >= $2 OR r.is_pinned))
-		  AND EXISTS (SELECT 1 FROM channels c WHERE c.id = m.channel_id AND c.auto_delete_days = $3 AND NOT `+core.PrivateChannelSQL("c")+`)
 		ORDER BY m.created_at
-		LIMIT $4
-		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, c.days, autoDeleteBatch)
+		LIMIT $3
+		FOR UPDATE OF m SKIP LOCKED`, c.id, cutoff, autoDeleteBatch)
 	if err != nil {
 		return nil, fmt.Errorf("select expired messages: %w", err)
 	}
@@ -241,6 +227,35 @@ func selectExpired(ctx context.Context, tx pgx.Tx, c autoDeleteChannel, cutoff t
 		return out, nil
 	}
 	return dropKeptThreads(ctx, tx, out, cutoff)
+}
+
+// stillSet holds the channel's row and the community settings with a share
+// lock for the batch (a change of the setting waits for it), then reads in a
+// statement of its own whether the channel is still set to the run's period
+// and scope: turning auto-delete off or changing it stops a run at once.
+func stillSet(ctx context.Context, tx pgx.Tx, c autoDeleteChannel) (bool, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR SHARE`, c.id); err != nil {
+		return false, fmt.Errorf("lock channel: %w", err)
+	}
+	// The settings row too: a change of the default waits for the batch.
+	// No cycle: no transaction updates instance_settings and then a channel
+	// or a message, and the batch takes this row after the channel's and
+	// before any message's. A change of another setting waits for the short
+	// batch as well (at most 200 rows).
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM instance_settings FOR SHARE`); err != nil {
+		return false, fmt.Errorf("lock settings: %w", err)
+	}
+	var hours int
+	var scope string
+	var follows bool
+	err := tx.QueryRow(ctx, `SELECT `+core.AutoDeleteSQL("c")+` FROM channels c WHERE c.id = $1`, c.id).Scan(&hours, &scope, &follows)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read auto-delete: %w", err)
+	}
+	return hours == c.hours && scope == c.scope, nil
 }
 
 // dropKeptThreads leaves out the locked roots that now have a reply younger
@@ -273,8 +288,9 @@ func deleteExpired(ctx context.Context, tx pgx.Tx, removed []expiredMessage, key
 	for i, g := range removed {
 		ids[i] = g.id
 	}
+	// A file removed before (is_deleted) has no object left and is not counted.
 	if err := messages.CollectKeys(ctx, tx, keys, `
-		SELECT s3_key FROM media WHERE message_id IN
+		SELECT s3_key FROM media WHERE NOT is_deleted AND message_id IN
 			(SELECT id FROM messages WHERE id = ANY($1) OR parent_id = ANY($1))`, ids); err != nil {
 		return err
 	}

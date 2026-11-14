@@ -91,13 +91,13 @@ type ReportSnapshot struct {
 // channel ($1) in one statement, oldest first: ReportContextBefore before and
 // ReportContextAfter after.
 var reportMessagesSQL = fmt.Sprintf(`
-	WITH anchor AS (SELECT created_at, id FROM messages WHERE id = $2 AND channel_id = $1),
+	WITH anchor AS (SELECT created_at, id FROM messages m WHERE id = $2 AND channel_id = $1 AND (m.expires_at IS NULL OR m.expires_at > now())),
 	picked AS (
-	    (SELECT m.id FROM messages m, anchor a WHERE m.channel_id = $1 AND (m.created_at, m.id) < (a.created_at, a.id)
+	    (SELECT m.id FROM messages m, anchor a WHERE m.channel_id = $1 AND (m.expires_at IS NULL OR m.expires_at > now()) AND (m.created_at, m.id) < (a.created_at, a.id)
 	     ORDER BY m.created_at DESC, m.id DESC LIMIT %d)
 	    UNION ALL SELECT id FROM anchor
 	    UNION ALL
-	    (SELECT m.id FROM messages m, anchor a WHERE m.channel_id = $1 AND (m.created_at, m.id) > (a.created_at, a.id)
+	    (SELECT m.id FROM messages m, anchor a WHERE m.channel_id = $1 AND (m.expires_at IS NULL OR m.expires_at > now()) AND (m.created_at, m.id) > (a.created_at, a.id)
 	     ORDER BY m.created_at, m.id LIMIT %d)
 	)
 	SELECT m.id, m.user_id, u.username, COALESCE(m.author_name, u.display_name), m.content, m.parent_id, m.created_at,

@@ -79,7 +79,10 @@ type Snapshot struct {
 	userRoles  map[uuid.UUID][]uuid.UUID
 	owners     map[uuid.UUID]bool
 	// bots are bot accounts: they do not inherit @everyone.
-	bots       map[uuid.UUID]bool
+	bots map[uuid.UUID]bool
+	// botsAll are the bots given access to every channel: they also obey
+	// @everyone's View channels overwrite, so a private channel stays private.
+	botsAll    map[uuid.UUID]bool
 	channelCat map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
 	// stages are the Talks that are Stages (doc/talks.md).
 	stages map[uuid.UUID]bool

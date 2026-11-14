@@ -20,6 +20,7 @@ import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline }
 import { stopMicTest } from './micTest'
 import { cleanupPeerConnection, handleRemoteCandidate, handleRemoteOffer, setupPeerConnection } from './peer'
 import { stopScreenShare } from './screen'
+import { socketUp } from './socketGap'
 import { cleanupVoiceAudio, startSpeakingDetection } from './voiceAudio'
 
 function registerSignalingHandlers(cx: Cx) {
@@ -133,7 +134,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   cancelPendingLobby(cx)
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
-  const { voice, chat, st } = cx
+  const { st } = cx
   resetMediaAnnouncements()
   closeMediaRoom()
   stopMicTest(cx)
@@ -142,6 +143,18 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
 
   const gen = ++st.joinGeneration
   st.dtx = null
+  // Until the join is sent, a reconnect must not resume this call: the join
+  // that follows would be a second one (see socketGap.ts).
+  st.joinPendingGen = gen
+  try {
+    await runJoin(cx, channelId, gen, takeover)
+  } finally {
+    if (st.joinPendingGen === gen) st.joinPendingGen = null
+  }
+}
+
+async function runJoin(cx: Cx, channelId: string, gen: number, takeover: boolean) {
+  const { voice, chat, st } = cx
   voice.setChannel(channelId)
   startMediaCall(cx, channelId)
   voiceSession.track(channelId)
@@ -151,9 +164,20 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   const sendStream = await prepareAudioPipeline(cx, gen)
   if (sendStream === false) return
 
+  // A join sent before the realtime socket is up would be dropped and the call
+  // would wait for an answer forever (a Talk picked right after the page
+  // loaded): it waits for the socket instead.
+  if (!chat.isConnected) await socketUp(cx)
+  if (gen !== st.joinGeneration) {
+    // A capture that was not routed through the pipeline is stopped by nobody else.
+    stopStreams(sendStream)
+    return
+  }
+
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
+  st.joinPendingGen = null
   chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId() } : { channel_id: channelId, tab: tabId() })
   openMediaRoom()
   attachSubscriptions(cx)
@@ -180,6 +204,8 @@ const ROOM_STATE_GRACE_MS = 5000
 export function rejoinAfterReconnect(cx: Cx) {
   const { voice, chat } = cx
   const channelId = voice.currentChannelId
+  // A join that is not sent yet sends itself; a resume would be a second join.
+  if (cx.st.joinPendingGen === cx.st.joinGeneration) return
   if (!channelId) return
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.

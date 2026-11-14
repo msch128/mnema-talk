@@ -76,8 +76,11 @@ export const ROWS: readonly SentenceRow[] = [
   ['mail delivery failed', 'srvMailDeliveryFailed'],
   ['managed bot roles have no upload limit: bots upload under their own rules', 'srvManagedBotRolesHaveNo'],
   ['manifest_version must be %d', 'srvManifestVersionMustBe'],
+  ['max_active must be between 1 and 100', 'srvMaxActiveMustBeBetween'],
   ['max_age_seconds must be between %d and %d', 'srvMaxAgeSecondsMustBe'],
+  ['max_expires_in_hours must be between 1 and 8760', 'srvMaxExpiresInHoursMust'],
   ['max_mentions must be between 1 and %d', 'srvMaxMentionsMustBeBetween'],
+  ['max_per_hour must be between 1 and 100', 'srvMaxPerHourMustBe'],
   ['max_upload_mb must be between 1 and %d', 'srvMaxUploadMbMustBe'],
   ['max_uses must be at least the %d uses already consumed', 'srvMaxUsesMustBeAt'],
   ['max_uses must be between 1 and 1000', 'srvMaxUsesMustBeBetween'],
@@ -219,5 +222,13 @@ export const ROWS: readonly SentenceRow[] = [
   ['session not found', 'srvSessionNotFound'],
   ['session_inactivity_days must be between 1 and 365', 'srvSessionInactivityDaysMustBe'],
   ['sign-ups are paused for now: try again later', 'signupsPaused'],
-  ['since must be an RFC 3339 time', 'srvSinceMustBeAnRfc']
+  ['since must be an RFC 3339 time', 'srvSinceMustBeAnRfc'],
+  ['give hours, days or use_default', 'autoDeleteNoPeriod'],
+  ['hours must be 0 (off) to 8760', 'autoDeleteHoursRange'],
+  ['lifetime_seconds is longer than this community allows (%s s)', 'lifetimeTooLong', ['seconds']],
+  ['lifetime_seconds must be 60 to 2592000', 'lifetimeRange'],
+  ['message_lifetime_max_seconds must be 60 to 2592000', 'lifetimeMaxRange'],
+  ['messages with a lifetime are turned off in this community', 'lifetimesOff'],
+  ['scope must be all or attachments', 'autoDeleteScope'],
+  ['invalid lifetime_seconds', 'lifetimeInvalid']
 ]

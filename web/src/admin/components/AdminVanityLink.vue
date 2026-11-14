@@ -2,6 +2,7 @@
 // The vanity invite link (Owner and Administrators): one custom address for the whole community,
 // /join/<name>. When active, anyone with the link can sign up without an individual code.
 // When inactive, the link is closed and the name stays reserved.
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { ref, computed, onMounted, watch } from 'vue'
 import { Check, Copy } from '@lucide/vue'
 import { api } from '../../shared/lib/api'
@@ -27,7 +28,7 @@ const loaded = ref(false)
 const failed = ref(false)
 const copied = ref(false)
 
-const fullLink = computed(() => (stored.value.slug ? joinLink(window.location.origin, stored.value.slug) : ''))
+const fullLink = computed(() => (stored.value.slug ? joinLink(useServerFeaturesStore().shareOrigin, stored.value.slug) : ''))
 const nameOf = (slug: string) => normalise.text(slug).toLowerCase()
 // What is sent: an Administrator cannot keep an active link for another name, so a rename switches it off.
 const acceptsFor = (draft: { slug: string; accepts: boolean }) => draft.accepts && (isOwner.value || nameOf(draft.slug) === stored.value.slug)

@@ -31,6 +31,20 @@ describe('MarkdownContent interaction delegation', () => {
     expect(useChatStore().openUserProfile).not.toHaveBeenCalled()
   })
 
+  it('shows members by display name with the username on hover, and still opens the profile', async () => {
+    useChatStore().members = [
+      userFixture({ username: 'bot-fceaf0', display_name: 'Mnemo', id: fixtureId(30) }),
+      userFixture({ username: 'max', display_name: 'Max M.', id: fixtureId(31) })
+    ]
+    const w = mount(MarkdownContent, { props: { content: '@bot-fceaf0 hi @max and @deleted' } })
+    const pills = w.findAll('[data-mention]')
+    expect(pills.map(p => p.text())).toEqual(['@Mnemo', '@Max M.'])
+    expect(pills.map(p => p.attributes('title'))).toEqual(['@bot-fceaf0', '@max'])
+    expect(w.text()).toContain('@deleted')
+    await pills[0]!.trigger('click')
+    expect(useChatStore().openUserProfile).toHaveBeenCalledWith(expect.objectContaining({ username: 'bot-fceaf0' }))
+  })
+
   it('ignores missing and stale mention targets, including nested clicks', async () => {
     const w = mount(MarkdownContent)
     const body = w.find('.markdown-body')

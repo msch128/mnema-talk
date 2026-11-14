@@ -37,7 +37,7 @@ func TestCatalogIsConsistent(t *testing.T) {
 		"manage_reports": 1 << 21, "send_direct_messages": 1 << 22, "kick_members": 1 << 23,
 		"manage_stage":  1 << 24,
 		"manage_events": 1 << 25, "bypass_new_member_limits": 1 << 26,
-		"edit_wiki": 1 << 27, "manage_wiki": 1 << 28, "view_wiki": 1 << 29,
+		"edit_wiki": 1 << 27, "manage_wiki": 1 << 28, "view_wiki": 1 << 29, "create_member_invites": 1 << 30,
 	}
 	for _, i := range Catalog {
 		if want[i.Key] != i.Bit {
@@ -48,9 +48,10 @@ func TestCatalogIsConsistent(t *testing.T) {
 	if len(want) != 0 {
 		t.Fatalf("permissions removed: %v", want)
 	}
-	// Migration 0017 seeds @everyone with this number, migration 0050 adds Send direct messages, 0089 View wiki.
-	if DefaultEveryone != 990|SendDirectMessages|ViewWiki {
-		t.Fatalf("DefaultEveryone = %d, migrations 0017, 0050 and 0089 seed %d", DefaultEveryone, 990|SendDirectMessages|ViewWiki)
+	// Migration 0017 seeds @everyone with this number, migration 0050 adds Send direct messages, 0089 View wiki,
+	// and 0109 Create invites on a fresh install (an existing install keeps what it has).
+	if DefaultEveryone != 990|SendDirectMessages|ViewWiki|CreateMemberInvites {
+		t.Fatalf("DefaultEveryone = %d, migrations 0017, 0050, 0089 and 0109 seed %d", DefaultEveryone, 990|SendDirectMessages|ViewWiki|CreateMemberInvites)
 	}
 	if ChannelScoped.Has(ManageRoles) || !ChannelScoped.Has(ViewChannel|Connect) || ChannelScoped.Has(Administrator) {
 		t.Fatalf("ChannelScoped = %b", ChannelScoped)
@@ -78,7 +79,7 @@ func TestEveryoneDefaultsPreserveTodaysBehavior(t *testing.T) {
 	ch := f.Channel(uuid.Nil)
 	member := Subject{ID: uuid.New()}
 	got := f.Snapshot().Channel(member, ch)
-	want := ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | ViewWiki
+	want := ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | ViewWiki | CreateMemberInvites
 	if got != want {
 		t.Fatalf("a plain member holds %b, want %b", got, want)
 	}

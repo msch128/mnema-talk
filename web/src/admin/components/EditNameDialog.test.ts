@@ -197,9 +197,40 @@ describe('EditNameDialog editing', () => {
     await flushPromises()
     pendingConfirm.value?.resolve(true)
     await flushPromises()
-    expect(chat.setChannelAutoDelete).toHaveBeenCalledWith(channelFixture().id, 7)
+    expect(chat.setChannelAutoDelete).toHaveBeenCalledWith(channelFixture().id, { days: 7 })
     expect(chat.updateChannel).not.toHaveBeenCalled()
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('counts what a period would remove at once before it asks, and does not ask when nothing would go', async () => {
+    useServerFeaturesStore().list = ['channels.auto_delete', 'channels.auto_delete.v2']
+    let counts = { messages: 12, attachments: 3 }
+    const previews: unknown[] = []
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (_url, init) => {
+      previews.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify({ ...counts, next_run_at: '2026-11-13T10:10:00Z' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+    const chat = useChatStore()
+    chat.setChannelAutoDelete = vi.fn().mockResolvedValue(undefined)
+    wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ name: 'general', auto_delete_follows_default: true }) } })
+    await wrapper.get('[data-testid="auto-delete-mode"]').setValue('period')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(previews).toEqual([{ hours: 168, scope: 'all' }])
+    expect(pendingConfirm.value?.body).toContain('12')
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(chat.setChannelAutoDelete).toHaveBeenCalledWith(channelFixture().id, { hours: 168, scope: 'all' })
+
+    counts = { messages: 0, attachments: 0 }
+    wrapper.unmount()
+    wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ name: 'general', auto_delete_hours: 168, auto_delete_scope: 'all' }) } })
+    await wrapper.get('[data-testid="auto-delete-mode"]').setValue('off')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(chat.setChannelAutoDelete).toHaveBeenLastCalledWith(channelFixture().id, { hours: 0 })
+    vi.unstubAllGlobals()
   })
 
   it('asks before Cancel drops a typed category name, and not for an empty one', async () => {

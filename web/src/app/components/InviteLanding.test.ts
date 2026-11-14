@@ -5,6 +5,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import InviteLanding from './InviteLanding.vue'
 import { setLocale } from '../../i18n'
+import { inviteLandingRoute } from '../../shared/lib/inviteLanding'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../../shared/lib/api', async (importOriginal) => ({
@@ -49,6 +50,17 @@ describe('InviteLanding', () => {
     expect(w.find<HTMLInputElement>('#login-invite').element.value).toBe('abc234xyz789')
     expect(w.find('[data-testid="invite-expiry"]').exists()).toBe(true)
     expect(w.find('[data-testid="invite-invalid"]').exists()).toBe(false)
+  })
+
+  it('carries the channel of an invite from a channel’s menu into the sign-up', async () => {
+    apiMock.mockResolvedValue({ valid: true, community_name: 'Test Home', channel_id: 'chan-1' })
+    apiMock.mockImplementation(url => Promise.resolve(url === '/api/auth/register' ? { user: { id: 'u', username: 'max', display_name: 'Max', role: 'user' } } : { valid: true, community_name: 'Test Home', channel_id: 'chan-1' }))
+    const w = await landing('/invite/abc234xyz789')
+    await w.find<HTMLInputElement>('#login-username').setValue('max')
+    await w.find('#login-password').setValue('member-password-123')
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(inviteLandingRoute([{ id: 'chan-1', type: 'voice', slug: 'lounge' }])).toBe('/v/lounge')
   })
 
   it('keeps the product name when the community has none, and shows no expiry for a code that never expires', async () => {

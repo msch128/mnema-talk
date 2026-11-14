@@ -11,6 +11,7 @@ import { setLocale } from '../../i18n'
 import { useAuthStore } from '../../stores/auth'
 import { useChatStore } from '../../stores/chat'
 import { useVoiceStore } from '../../stores/voice'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { usePermissionsStore } from '../../stores/permissions'
 import { PERMISSION_BITS } from '../../shared/lib/permissions'
 import { pendingModeration } from '../../shared/lib/moderation'
@@ -84,6 +85,14 @@ describe('menu actions and state', () => {
     chat.markChannelRead = vi.fn(async () => true)
     await required(menuItem(buildChannelItems(textCh), 'mark-read').action)()
     expect(useToastStore().toasts.map(x => x.type)).toEqual(['error', 'success'])
+  })
+
+  it('puts Invite people into the channel menu for a member who may, and nowhere else', () => {
+    useServerFeaturesStore().list = ['invites.member']
+    expect(ids(buildChannelItems(textCh))).toContain('invite-people')
+    expect(ids(buildChannelItems(voiceCh))).toContain('invite-people')
+    useServerFeaturesStore().list = []
+    expect(ids(buildChannelItems(textCh))).not.toContain('invite-people')
   })
 
   it('marks read, copies each channel link and reports unavailable clipboard', async () => {

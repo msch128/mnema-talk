@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, trackPeerConnections } from './helpers'
+import { apiFetch, awaitApiBudget, responseString } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
@@ -35,8 +35,6 @@ async function signIn(page: Page, username: string, password: string) {
 test('login, chat and talk', async ({ browser }) => {
   const adminCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const userCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
-  await adminCtx.addInitScript(trackPeerConnections)
-  await userCtx.addInitScript(trackPeerConnections)
   const admin = await adminCtx.newPage()
   const user = await userCtx.newPage()
 

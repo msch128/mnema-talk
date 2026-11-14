@@ -123,7 +123,7 @@ func TestMailSettingsRoundTripWithSpecialCharacters(t *testing.T) {
 }
 
 func TestRenderComposeDropsTheBuildSection(t *testing.T) {
-	out, err := RenderCompose(repoTemplate(t), "ghcr.io/msch128/mnema-talk:1.4")
+	out, err := RenderCompose(repoTemplate(t), "ghcr.io/mnema-xyz/mnema-talk:1.4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestRenderComposeDropsTheBuildSection(t *testing.T) {
 			t.Errorf("generated compose still contains %q", bad)
 		}
 	}
-	if strings.Count(s, "${MNEMA_IMAGE:-ghcr.io/msch128/mnema-talk:1.4}") < 2 {
+	if strings.Count(s, "${MNEMA_IMAGE:-ghcr.io/mnema-xyz/mnema-talk:1.4}") < 2 {
 		t.Error("the app and updater services must default to the released image")
 	}
 	for _, keep := range []string{"  postgres:", "  seaweedfs:", "  coturn:", "  updater:", "  recreator:", "profiles:"} {

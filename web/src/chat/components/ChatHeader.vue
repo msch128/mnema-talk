@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { effectLine, effectOf, periodLabel } from '../../shared/lib/autoDelete'
 import type { Component } from 'vue'
 import type { ContextMenuItem } from '../../shared/components/menuTypes'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -22,6 +23,7 @@ import DmHeaderTitle from '../../dm/components/DmHeaderTitle.vue'
 import DmMuteButton from '../../dm/components/DmMuteButton.vue'
 import { useDmChat } from '../../dm/composables/useDmChat'
 import { openSearch } from '../lib/globalSearch'
+import { inviteMenuItems } from '../lib/channelInvite'
 import { quoteValue } from '../lib/searchQuery'
 import { memberListShown, toggleMemberList } from '../../shared/lib/sideColumns'
 
@@ -67,9 +69,9 @@ const richDm = computed(() => isDm.value && serverFeatures.dmV2 && !props.panel)
 const later = useLaterStore()
 onMounted(() => { void serverFeatures.load() })
 // Auto-delete is shown wherever it applies, so nobody posts in a channel unaware that it forgets.
-const autoDeleteDays = computed(() => {
-  const days = chatStore.activeChannel?.auto_delete_days ?? 0
-  return days > 0 && serverFeatures.channelAutoDelete && !isDm.value ? days : 0
+const autoDelete = computed(() => {
+  const e = effectOf(chatStore.activeChannel)
+  return e.hours > 0 && serverFeatures.channelAutoDelete && !isDm.value ? e : null
 })
 const channelIcon = computed<Component>(() => {
   if (props.panel) return Volume2
@@ -119,7 +121,8 @@ function openNotificationMenu(e: MouseEvent) {
   if (!channel) return
   if (!(e.currentTarget instanceof Element)) return
   const rect = e.currentTarget.getBoundingClientRect()
-  emit('menu', Math.max(8, rect.right - 200), rect.bottom + 4, notificationMenuItems(channel.id))
+  const invite = inviteMenuItems(channel.id)
+  emit('menu', Math.max(8, rect.right - 200), rect.bottom + 4, invite.length ? [...notificationMenuItems(channel.id), { type: 'separator' }, ...invite] : notificationMenuItems(channel.id))
 }
 </script>
 
@@ -160,13 +163,13 @@ function openNotificationMenu(e: MouseEvent) {
         class="shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
         v-tooltip="$t('moderation.slowModeHint')"
       >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
-      <!-- On a phone the chip is its icon only: the note under the header says it in full. -->
+      <!-- In a narrow header (a phone, or beside the member list) the chip is its icon only: the note under the header says it in full. -->
       <span
-        v-if="autoDeleteDays"
+        v-if="autoDelete"
         data-testid="auto-delete-chip"
-        class="inline-flex shrink-0 items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
-        v-tooltip="$t('autoDelete.tooltip', { period: $t(`autoDelete.periods.${autoDeleteDays}`) })"
-      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="max-md:sr-only">{{ $t(`autoDelete.periods.${autoDeleteDays}`) }}</span></span>
+        class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
+        v-tooltip="effectLine(autoDelete)"
+      ><Timer class="h-3 w-3" aria-hidden="true" /><span class="@max-[40rem]:sr-only">{{ periodLabel(autoDelete.hours) }}</span></span>
     </div>
 
     <!-- Right: Badges & member list toggle -->
@@ -211,6 +214,7 @@ function openNotificationMenu(e: MouseEvent) {
       </button>
       <button
         v-if="chatStore.activeChannel && !isDm"
+        data-testid="channel-menu-button"
         @click="openNotificationMenu"
         class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
         v-tooltip="$t('notifications.channelSettings')"

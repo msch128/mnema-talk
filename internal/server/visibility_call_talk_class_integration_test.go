@@ -70,10 +70,14 @@ func TestAReportOfACallChatIsFiledLikeOneOfTheConversation(t *testing.T) {
 // kept an auto-delete setting from before the admin routes refused it was swept
 // like a channel, and the run was audited (channel.auto_delete_run) with the
 // call's id and name, which the Owner reads. Like a conversation it is never
-// swept now.
+// swept now: the schema refuses a setting of its own (migration 0106) and the
+// community default passes it by.
 func TestTheAutoDeleteSweepLeavesACallTalkAlone(t *testing.T) {
 	w := newCallChatWorld(t)
-	if _, err := w.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_days = 1 WHERE id = $1`, w.call); err != nil {
+	if _, err := w.a.db.Exec(t.Context(), `UPDATE channels SET auto_delete_hours = 24 WHERE id = $1`, w.call); err == nil {
+		t.Fatal("the database accepted auto-delete on a call Talk")
+	}
+	if _, err := w.a.db.Exec(t.Context(), `UPDATE instance_settings SET auto_delete_default_hours = 24`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.a.db.Exec(t.Context(), `UPDATE messages SET created_at = now() - interval '3 days' WHERE id = $1`, w.message); err != nil {
