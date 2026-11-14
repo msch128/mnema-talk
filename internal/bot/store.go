@@ -174,10 +174,6 @@ func wrapCreate(err error) error {
 
 // createIn inserts the account, the bot and its Bot role in tx.
 func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creator uuid.UUID) (uuid.UUID, error) {
-	suffix := make([]byte, 6)
-	if _, err := rand.Read(suffix); err != nil {
-		return uuid.Nil, err
-	}
 	var n int
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM bots`).Scan(&n); err != nil {
 		return uuid.Nil, err
@@ -185,13 +181,17 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 	if n >= MaxBots {
 		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("at most %d bots are allowed", MaxBots))
 	}
+	username, err := newUsername(ctx, tx, name)
+	if err != nil {
+		return uuid.Nil, err
+	}
 	var user, id uuid.UUID
 	// "!" is no password hash: the account can never sign in (login,
 	// sessions and re-authentication skip bots).
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO users (username, display_name, password_hash, role, is_bot)
 		VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
-		"bot-"+hex.EncodeToString(suffix), name).Scan(&user); err != nil {
+		username, name).Scan(&user); err != nil {
 		return uuid.Nil, err
 	}
 	if err := tx.QueryRow(ctx, `
@@ -211,8 +211,75 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 		VALUES ($1, 0, 1, 0, FALSE, FALSE, TRUE, $2) RETURNING id`, roleName(name), user).Scan(&role); err != nil {
 		return uuid.Nil, err
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, user, role)
+	_, err = tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, user, role)
 	return id, err
+}
+
+// maxUsernameTries bounds the numbered names tried before a bot gets a random one.
+const maxUsernameTries = 50
+
+// usernameBase is the readable username a bot name stands for: lower case
+// letters and digits, with runs of anything else (spaces, "-", "_", ".",
+// letters outside a-z) as one "_", cut to leave room for a "_NN" suffix. It is
+// "" where nothing usable is left.
+func usernameBase(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case b.Len() > 0 && !strings.HasSuffix(b.String(), "_"):
+			b.WriteByte('_')
+		}
+	}
+	base := b.String()
+	if len(base) > 28 {
+		base = base[:28]
+	}
+	base = strings.Trim(base, "_")
+	if len(base) < 2 {
+		return ""
+	}
+	return base
+}
+
+// newUsername gives a new bot its @username: the one its name stands for
+// ("mnema bot" is mnema_bot), numbered on a collision (mnema_bot_2). Where the
+// name leaves nothing usable, or the policy for new names refuses it, the name
+// is "bot-" and 12 random hex digits. Bots that exist keep the name they have.
+func newUsername(ctx context.Context, tx pgx.Tx, name string) (string, error) {
+	if base := usernameBase(name); base != "" {
+		if u, err := freeUsername(ctx, tx, base); err != nil || u != "" {
+			return u, err
+		}
+	}
+	suffix := make([]byte, 6)
+	if _, err := rand.Read(suffix); err != nil {
+		return "", err
+	}
+	return "bot-" + hex.EncodeToString(suffix), nil
+}
+
+// freeUsername is base, or base numbered from 2, whichever no account holds
+// yet. It is "" when the policy refuses the name or every number is taken.
+func freeUsername(ctx context.Context, tx pgx.Tx, base string) (string, error) {
+	for i := 1; i <= maxUsernameTries; i++ {
+		candidate := base
+		if i > 1 {
+			candidate = fmt.Sprintf("%s_%d", base, i)
+		}
+		if auth.ValidateUsername(candidate) != nil {
+			return "", nil
+		}
+		var taken bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = $1)`, candidate).Scan(&taken); err != nil {
+			return "", err
+		}
+		if !taken {
+			return candidate, nil
+		}
+	}
+	return "", nil
 }
 
 // setProfile stores the description and homepage of a bot added from a
