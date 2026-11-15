@@ -64,6 +64,7 @@ export function draftSessionAlive(): boolean {
 function endSession() {
   ended = true
   unsaved = false
+  refused.value = false
   state.value = { uid: null, items: {} }
   endListeners.forEach(listener => listener())
 }
@@ -139,6 +140,8 @@ function read(uid: string): Items {
 // True while this tab holds drafts that storage does not: the last write failed
 // (storage full or restricted) although reads still work.
 let unsaved = false
+// The same, readable by a watcher (`draftsAtRisk`).
+const refused = shallowRef(false)
 
 function write(uid: string, items: Items) {
   try {
@@ -149,6 +152,20 @@ function write(uid: string, items: Items) {
     // Storage blocked or full: drafts then live only until the page closes.
     unsaved = true
   }
+  // Nothing is at risk once no draft is left, even when storage refused to forget the last one.
+  refused.value = unsaved && Object.keys(items).length > 0
+}
+
+// Composers with typed text that is not written yet (a save waits for a pause in typing).
+const pendingWrites = shallowRef<ReadonlySet<symbol>>(new Set())
+
+/** A composer has text waiting to be written (`true`), or has written it (`false`). */
+export function notePendingDraft(composer: symbol, pending: boolean) {
+  if (pendingWrites.value.has(composer) === pending) return
+  const next = new Set(pendingWrites.value)
+  if (pending) next.add(composer)
+  else next.delete(composer)
+  pendingWrites.value = next
 }
 
 function current(uid: string): Items {
@@ -190,6 +207,15 @@ export function getDraft(uid: string, key: string): Draft | null {
 export function hasDraft(uid: string | null | undefined, key: string): boolean {
   const snapshot = state.value
   return !!uid && snapshot.uid === uid && key in snapshot.items
+}
+
+/**
+ * Reactive: true while closing the page would lose a draft: text typed and
+ * not written yet, or a draft storage refused. A draft in storage is safe: it
+ * comes back after a reload.
+ */
+export function draftsAtRisk(): boolean {
+  return refused.value || pendingWrites.value.size > 0
 }
 
 /** Stores the draft, or forgets it when it holds no text and no reply. */
@@ -249,6 +275,7 @@ export function beginDraftSession(uid: string) {
 /** Sign-out and account deletion: every account's drafts leave this browser. */
 export function clearAllDrafts() {
   unsaved = false
+  refused.value = false
   state.value = { uid: null, items: {} }
   const hadSession = session !== null || !!storedSession()
   session = null
