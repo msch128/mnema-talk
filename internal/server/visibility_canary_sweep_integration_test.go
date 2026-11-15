@@ -62,18 +62,20 @@ func TestNoCanaryReachesAnObserverOutsideItsClass(t *testing.T) {
 		"outsider": w.outsider.get, "carol": w.carol.get, "mod": w.mod.get, "exstaff": w.exstaff.get,
 		"anon": w.a.anon().get, "insider": w.insider.get, "bot": w.bot.get, "admin": w.admin.get, "owner": w.owner.get,
 	}
-	names := slices.Sorted(func(yield func(string) bool) {
-		for k := range observers {
-			if !yield(k) {
-				return
-			}
-		}
-	})
-	for _, who := range names {
-		start := time.Now()
-		s.run(t, who, observers[who])
-		t.Logf("%s: swept in %v", who, time.Since(start).Round(time.Millisecond))
+	for who := range observers {
+		s.found[who], s.status[who] = map[string]bool{}, map[int]int{}
 	}
+	var wg sync.WaitGroup
+	for who, get := range observers {
+		wg.Add(1)
+		go func(who string, get func(string) response) {
+			defer wg.Done()
+			start := time.Now()
+			s.run(t, who, get)
+			t.Logf("%s: swept in %v", who, time.Since(start).Round(time.Millisecond))
+		}(who, get)
+	}
+	wg.Wait()
 	time.Sleep(300 * time.Millisecond)
 	for who, log := range frames {
 		s.frames(t, who, log)
@@ -85,6 +87,7 @@ func TestNoCanaryReachesAnObserverOutsideItsClass(t *testing.T) {
 type canaryRequest struct{ route, path string }
 
 type canarySweep struct {
+	mu       sync.Mutex
 	w        *canaryWorld
 	deep     bool
 	requests []canaryRequest
@@ -282,7 +285,6 @@ func openAPIQueries(t *testing.T) map[string][]string {
 // run sends every request as one observer and checks each answer.
 func (s *canarySweep) run(t *testing.T, who string, get func(string) response) {
 	t.Helper()
-	s.found[who], s.status[who] = map[string]bool{}, map[int]int{}
 	for _, r := range s.requests {
 		if strings.HasPrefix(r.route, "/api/bot/") != (who == "bot") {
 			continue
@@ -302,7 +304,9 @@ func (s *canarySweep) get(get func(string) response, r canaryRequest) response {
 		time.Sleep(time.Duration(retryAfter(res)) * time.Second)
 		res = get(r.path)
 	}
+	s.mu.Lock()
 	s.sent++
+	s.mu.Unlock()
 	return res
 }
 
@@ -335,7 +339,9 @@ func (s *canarySweep) existence(who string, r canaryRequest, hidden, missing res
 	if hidden.status == http.StatusTooManyRequests || missing.status == http.StatusTooManyRequests {
 		return // a rate limit answered, not the route: no comparison
 	}
+	s.mu.Lock()
 	s.twins++
+	s.mu.Unlock()
 	if hidden.status == missing.status && bytes.Equal(hidden.body, missing.body) {
 		return
 	}
@@ -418,6 +424,8 @@ var canaryKnownLeaks = map[string]string{}
 var canaryKnownDeepOnly = map[string]bool{}
 
 func (s *canarySweep) leak(who, route, what, msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if key := who + " " + route + " " + what; canaryKnownLeaks[key] != "" {
 		s.known[key] = true
 		return
