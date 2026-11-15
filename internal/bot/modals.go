@@ -86,7 +86,7 @@ func (c *Commands) deliverSubmit(w http.ResponseWriter, r *http.Request, snap *p
 	in := &interaction{kind: InteractionModalSubmit, botID: m.botID, botUser: m.botUser, botName: name,
 		avatar: avatar, channel: m.channel, invoker: user.ID, source: m.source}
 	data := map[string]any{"custom_id": m.form.CustomID, "components": rows}
-	return c.startInteraction(w, in, user, data, message)
+	return c.startInteraction(w, in, user, snap.Channel(user.Subject(), m.channel), data, message)
 }
 
 // modalAnswers checks the answers against the modal's inputs and returns

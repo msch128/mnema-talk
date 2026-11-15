@@ -151,6 +151,7 @@ type Hub struct {
 
 type graceLeave struct {
 	channelID uuid.UUID
+	tab       string
 	timer     *time.Timer
 }
 

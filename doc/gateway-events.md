@@ -174,8 +174,9 @@ intent. Without a live session the member's action fails with `409`.
 ([Interactions in detail](bots.md#interactions-in-detail)).
 
 Common fields: `id`, `token`, `type`, `channel_id`, `application_id` (the bot's
-`bot_id`), `data`, and `member.user` (the member who acted: `id`, `username`,
-`display_name`, `avatar_url`).
+`bot_id`), `data`, and `member` (`user`: `id`, `username`, `display_name`,
+`avatar_url`; `permissions`: effective channel permissions as a decimal string
+bitfield). Bits follow Mnema's permission catalogue ([Roles and permissions](roles-and-permissions.md) and [Bots](bots.md#command-permissions-default_member_permissions)), not Discord's (a ported bot must not reuse Discord's `PermissionFlagsBits`).
 
 ### A slash command (`type` 2)
 
@@ -188,7 +189,10 @@ Common fields: `id`, `token`, `type`, `channel_id`, `application_id` (the bot's
     "id": "<command id>", "name": "roll",
     "options": [{ "name": "sides", "type": 4, "value": 20 }]
   },
-  "member": { "user": { "id": "...", "username": "mara", "display_name": "Mara", "avatar_url": "/api/media/..." } }
+  "member": {
+    "user": { "id": "...", "username": "mara", "display_name": "Mara", "avatar_url": "/api/media/..." },
+    "permissions": "6"
+  }
 }
 ```
 

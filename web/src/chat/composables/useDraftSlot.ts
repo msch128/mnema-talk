@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { onBeforeUnmount, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
-import { getDraft, setDraft, type DraftReply } from '../lib/drafts'
+import { getDraft, notePendingDraft, setDraft, type DraftReply } from '../lib/drafts'
 
 const SAVE_DELAY_MS = 400
 
@@ -14,11 +14,14 @@ export function useDraftSlot(key: () => string | null, text: Ref<string>, reply:
   const auth = useAuthStore()
   let timer: ReturnType<typeof setTimeout> | undefined
   let pending: { uid: string; slot: string } | null = null
+  // This composer, for the count of text that is typed and not written yet.
+  const me = Symbol('composer')
 
   function flush() {
     clearTimeout(timer)
     const target = pending
     pending = null
+    notePendingDraft(me, false)
     // After sign-out nothing may be written back.
     if (!target || auth.user?.id !== target.uid) return
     const to = reply.value
@@ -40,6 +43,7 @@ export function useDraftSlot(key: () => string | null, text: Ref<string>, reply:
     const slot = key()
     if (!uid || !slot) return
     pending = { uid, slot }
+    notePendingDraft(me, true)
     clearTimeout(timer)
     timer = setTimeout(flush, SAVE_DELAY_MS)
   }, { flush: 'sync' })
