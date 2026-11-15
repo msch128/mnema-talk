@@ -258,8 +258,8 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   ([doc/upgrade.md](doc/upgrade.md#calls-and-the-security-floor)).
 - **Invite-only.** There is no public registration. Admins can change an
   invite's expiry and use limit later, or remove them. An optional vanity link
-  (`/join/your-community`) leads visitors to the sign-in page; only if the
-  Owner switches it on does it also create accounts
+  (`/join/your-community`) lets the Owner offer an open door: while active,
+  anyone with the link can sign up without an individual code
   ([doc/operations.md](doc/operations.md#vanity-invite-link)).
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
@@ -521,6 +521,10 @@ running a changed version as a network service: its users must be able to get
 the source (the legal dialog in the app links to it; point `SOURCE_URL` in
 `web/src/shared/lib/thirdParty.ts` at your own repository).
 
+**Go SDK:** the Go SDK under [`sdk/go`](sdk/go) is the exception. It is licensed
+under the [MIT License](sdk/go/LICENSE), so bots built with it can use any
+license.
+
 **Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
 obligations (for example in a closed-source product or service), get a
 separate commercial license from the copyright holder. Contact
@@ -528,3 +532,4 @@ separate commercial license from the copyright holder. Contact
 
 Contributions are accepted under the AGPL-3.0, and their authors agree that
 Marius Schröder may also distribute them under a commercial license.
+Contributions to `sdk/go` are accepted under the MIT License.
