@@ -334,31 +334,31 @@ Words that name something of the app (`admin`, `api`, `join`, `login`,
 test keeps the list in step with the routes of the web app and the files of the
 web build. There is one link per community.
 
-**Registration stays invite-only.** By default the link is only a friendly door:
-it opens the sign-in page under "You were invited to <community>", and creating
-an account still needs an invite code (individual, limited, revocable). The
-link grants nothing.
+**Open door while active.** The switch *Link active* turns the link into a
+permanent public invite: unlimited uses, no expiry. Anyone who knows the link
+can then register, so keep it active only when you want that (a poster, a profile
+bio). When switched off, the link is closed: `/join/<name>` shows a calm page
+telling visitors the link is not active, with a way to the normal sign-in at `/`,
+while keeping the name reserved.
 
-Only the Owner can turn on the switch *Let this link create accounts*
-(an Administrator gets 403, and renaming a link that takes sign-ups switches it
-off for them); an Administrator may set or clear the name and switch sign-ups
-off. The switch turns the link into a permanent public invite: unlimited uses,
-no expiry. Anyone who knows the link can then register,
-so enable it only when you want that (a poster, a profile bio). The sign-up goes
-through the same registration as every invite (username rules, password rules,
-rate limits, raid protection, the rules gate); its code is `~<name>`, which no
-real invite code can look like. Accounts made this way have no invite behind them,
-so banning one does not revoke an invite, and the audit log shows them as a
-plain `auth.register` (no invite is recorded). Switching it off or removing the
-link takes effect at once for every new sign-up; one that is already being
-processed may still complete.
+Only the Owner can turn on the switch *Link active* (an Administrator gets 403,
+and renaming an active link switches it off for them); an Administrator may set
+or clear the name and switch the link off. When no link exists yet and the Owner
+types a name, the switch starts on. The sign-up goes through the same
+registration as every invite (username rules, password rules, rate limits, raid
+protection, the rules gate); its code is `~<name>`, which no real invite code
+can look like. Accounts made this way have no invite behind them, so banning one
+does not revoke an invite, and the audit log shows them as a plain
+`auth.register` (no invite is recorded). Switching it off or removing the link
+takes effect at once for every new sign-up; one that is already being processed
+may still complete.
 
 `GET /api/join/<name>` (public, rate limited like the invite preview) tells the
-sign-in page whether the link exists and whether it takes sign-ups. Link
-previews of `/join/<name>` carry the community name and nothing else; an
-unknown name gets the generic page and is never written into it. The reverse
-proxy needs nothing extra: `/join/...` is an ordinary page of the app, forwarded
-like every other path ([reverse-proxy.md](reverse-proxy.md)).
+landing page whether the link exists and whether it is active. Link previews of
+`/join/<name>` carry the community name and nothing else; an unknown name gets
+the generic page and is never written into it. The reverse proxy needs nothing
+extra: `/join/...` is an ordinary page of the app, forwarded like every other
+path ([reverse-proxy.md](reverse-proxy.md)).
 
 ## Sessions and inactivity sign-out
 
