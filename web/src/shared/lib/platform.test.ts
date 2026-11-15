@@ -11,7 +11,7 @@ vi.mock('./desktopRuntime', () => ({ isWebDesktopSelector: () => host.selector }
 vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
 const notify = vi.hoisted(() => ({
   browser: { permission: vi.fn(() => 'default'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
-  host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn(), reportUnread: vi.fn() },
+  host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn(), reportUnread: vi.fn(), reportBusy: vi.fn() },
 }))
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted'; constructor(public path?: string) {} } }))
@@ -135,6 +135,26 @@ describe('notifications', () => {
       }
       expect(notify.host.reportUnread).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('busy report (multi-instance client)', () => {
+  const flags = { draft: true, upload: false, talk: true }
+
+  it('goes to the host only when its instance window announces busy', () => {
+    host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify', 'busy'] }
+    expect(platform.supportsBusyReport()).toBe(true)
+    platform.reportBusy(flags)
+    expect(notify.host.reportBusy).toHaveBeenCalledWith(flags)
+  })
+
+  it('is a no-op in a browser, in older clients and outside the instance window', () => {
+    for (const trusted of [null, { role: 'instance', version: '1.2.3', capabilities: ['notify', 'unread'] }, { role: 'selector', version: '1.2.3', capabilities: ['busy'] }, { role: 'surface', version: '1.2.3', capabilities: ['busy'] }]) {
+      host.trusted = trusted
+      expect(platform.supportsBusyReport()).toBe(false)
+      expect(() => platform.reportBusy(flags)).not.toThrow()
+    }
+    expect(notify.host.reportBusy).not.toHaveBeenCalled()
   })
 })
 
