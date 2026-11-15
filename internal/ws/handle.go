@@ -44,7 +44,11 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		// A leave is always honoured, but it spends from the same allowance
 		// as joins, so leave/join cycles stay bounded.
 		c.hub.voiceGate.take(c.User.ID, time.Now())
+		noSeat := c.currentVoice() == nil
 		c.hub.leaveCurrentVoice(c)
+		if noSeat && p.ChannelID != uuid.Nil && p.Tab != "" && len(p.Tab) <= 64 {
+			c.hub.leaveLostVoice(c.User.ID, p.ChannelID, p.Tab, c.logger())
+		}
 	case events.ClientTyping:
 		c.handleTyping(ctx, p.ChannelID)
 	case events.ClientVoiceSpeaking:

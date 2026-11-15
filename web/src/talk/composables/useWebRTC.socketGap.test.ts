@@ -57,13 +57,72 @@ describe('a reconnect during the microphone prompt', () => {
   })
 })
 
+describe('leaving while connected', () => {
+  it('sends voice_leave with channel_id and tab when join was sent', async () => {
+    const { rtc, sent } = await joined()
+    const before = sent.length
+    rtc.leaveVoiceChannel()
+    expect(sent.slice(before)).toEqual([{ type: 'voice_leave', payload: { channel_id: 'ch-1', tab: expect.any(String) } }])
+  })
+
+  it('sends empty voice_leave when no join was sent', async () => {
+    const { rtc, sent } = setup()
+    void rtc.joinVoiceChannel('ch-1')
+    await flushPromises()
+    const before = sent.length
+    rtc.leaveVoiceChannel()
+    expect(sent.slice(before)).toEqual([{ type: 'voice_leave', payload: {} }])
+  })
+})
+
 describe('leaving while the socket is down', () => {
-  it('sends no made-up join or leave after the reconnect', async () => {
+  it('sends one voice_leave with channel_id and tab after reconnect and no voice_join', async () => {
     const { rtc, chat, sent } = await joined()
     chat.isConnected = false
     rtc.leaveVoiceChannel()
     const before = sent.length
     chat.isConnected = true
+    rtc.rejoinAfterReconnect()
+    const after = sent.slice(before)
+    expect(after).toEqual([{ type: 'voice_leave', payload: { channel_id: 'ch-1', tab: expect.any(String) } }])
+    expect(after.some(e => e.type === 'voice_join')).toBe(false)
+  })
+
+  it('owes nothing when a join was never sent', async () => {
+    const { rtc, chat, sent } = setup()
+    chat.isConnected = false
+    void rtc.joinVoiceChannel('ch-1')
+    await flushPromises()
+    rtc.leaveVoiceChannel()
+    const before = sent.length
+    chat.isConnected = true
+    rtc.rejoinAfterReconnect()
+    expect(sent.slice(before)).toEqual([])
+  })
+
+  it('clears the owed leave when a later join occurs', async () => {
+    const { rtc, chat, sent } = await joined()
+    chat.isConnected = false
+    rtc.leaveVoiceChannel()
+    chat.isConnected = true
+    const join2 = rtc.joinVoiceChannel('ch-2')
+    await grantMic()
+    await join2
+    rtc.leaveVoiceChannel()
+    const before = sent.length
+    chat.isConnected = false
+    chat.isConnected = true
+    rtc.rejoinAfterReconnect()
+    expect(sent.slice(before)).toEqual([])
+  })
+
+  it('sends nothing more on a second reconnect', async () => {
+    const { rtc, chat, sent } = await joined()
+    chat.isConnected = false
+    rtc.leaveVoiceChannel()
+    chat.isConnected = true
+    rtc.rejoinAfterReconnect()
+    const before = sent.length
     rtc.rejoinAfterReconnect()
     expect(sent.slice(before)).toEqual([])
   })

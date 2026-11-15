@@ -68,7 +68,7 @@ func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	if !h.checkJoinPermission(c, ch.ID) {
 		return false
 	}
-	rejoin, done := h.leaveOtherRooms(c, ch.ID)
+	rejoin, tab, done := h.leaveOtherRooms(c, ch.ID)
 	if done {
 		return true
 	}
@@ -79,7 +79,7 @@ func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	seat, ok := h.takeSeat(c, ch)
 	if !ok {
 		if rejoin {
-			h.restoreGraceIfAbandoned(c, ch.ID)
+			h.restoreGraceIfAbandoned(c, ch.ID, tab)
 		}
 		return false
 	}
@@ -172,34 +172,35 @@ func (h *Hub) announceVoiceJoin(c *Client, chID uuid.UUID, seat voiceSeat) {
 // room; joining a different room ends the lingering presence first. rejoin
 // reports that c is already in chID; done that its media connection is live
 // too, so there is nothing to do.
-func (h *Hub) leaveOtherRooms(c *Client, chID uuid.UUID) (rejoin, done bool) {
+func (h *Hub) leaveOtherRooms(c *Client, chID uuid.UUID) (rejoin bool, tab string, done bool) {
 	for _, g := range h.takeUserGraces(c.User.ID) {
 		if g.channelID == chID {
 			rejoin = true
+			tab = g.tab
 		} else {
 			h.removePresenceUnlessPresent(c.User.ID, g.channelID, c)
 		}
 	}
 	cur := c.currentVoice()
 	if cur == nil {
-		return rejoin, false
+		return rejoin, tab, false
 	}
 	if *cur != chID {
 		h.leaveVoiceLocked(c, *cur)
-		return rejoin, false
+		return rejoin, tab, false
 	}
 	// Already in this room with a live media connection: nothing to
 	// renegotiate. (A client that wants a fresh connection leaves
 	// first, or reconnects its socket.)
-	return true, h.SFU != nil && c.peer().Healthy()
+	return true, tab, h.SFU != nil && c.peer().Healthy()
 }
 
 // restoreGraceIfAbandoned runs when a join that resumed a lingering presence
 // was refused after the grace timer was already cancelled: with no connection
 // in the room and no timer left, nothing would ever end that presence.
-func (h *Hub) restoreGraceIfAbandoned(c *Client, chID uuid.UUID) {
+func (h *Hub) restoreGraceIfAbandoned(c *Client, chID uuid.UUID, tab string) {
 	if h.inRoom(chID, c.User.ID) {
-		h.startGrace(voiceKey{c.User.ID, chID}, nil)
+		h.startGrace(voiceKey{c.User.ID, chID}, nil, tab)
 	}
 }
 

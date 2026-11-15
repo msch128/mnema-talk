@@ -48,6 +48,7 @@ audit.
 | [822](2026-11/822.md) | #822 | the lobby's join and a join during the microphone prompt could be dropped or doubled around a socket drop: both wait for the socket and a reconnect sends no resume beside a held join; two replay ideas (a leave, a stop) were rejected in review as ineffective or unsafe, and the lost leave stays a ledger follow-up |
 | [836](2026-11/836.md) | #836 | each lower screen layer encodes its own copy of the capture, as #824 did for the camera: the clones' lifecycle (sharing indicator), a quality change, reconnects, the frame encryption of their lines; two rounds: the required finding of the first (a stale hint after a quality change) was fixed in the same pull request and checked in the second |
 | [clip-sweep](2026-11/clip-sweep.md) | #820 | the full clipping sweep moves out of ci.yml into a nightly workflow that the release gate judges; the gate reads every run of the last 49 hours, so pull request runs cannot push the deciding night off a page; one round |
+| [850](2026-11/850.md) | #850 | a leave lost while the socket was down no longer leaves a ghost seat for the server's grace time: a seatless connection's `voice_leave` naming its Talk and tab ends the lost seat (same user, same tab only), including a stale connection the server has not noticed yet; the client sends it after the reconnect |
 
 ## 2026-11: defect hunt on 3.0.8
 
