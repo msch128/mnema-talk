@@ -47,6 +47,7 @@ audit.
 | [829](2026-11/829.md) | #829 | a bot can be given access to every channel in one step: the install and settings endpoints under the bot invariant, the snapshot rule that keeps private channels and categories hidden from such a bot, replace semantics when switching back; three rounds, the findings of the first two fixed in the same pull request |
 | [822](2026-11/822.md) | #822 | the lobby's join and a join during the microphone prompt could be dropped or doubled around a socket drop: both wait for the socket and a reconnect sends no resume beside a held join; two replay ideas (a leave, a stop) were rejected in review as ineffective or unsafe, and the lost leave stays a ledger follow-up |
 | [836](2026-11/836.md) | #836 | each lower screen layer encodes its own copy of the capture, as #824 did for the camera: the clones' lifecycle (sharing indicator), a quality change, reconnects, the frame encryption of their lines; two rounds: the required finding of the first (a stale hint after a quality change) was fixed in the same pull request and checked in the second |
+| [clip-sweep](2026-11/clip-sweep.md) | #820 | the full clipping sweep moves out of ci.yml into a nightly workflow that the release gate judges; the gate reads every run of the last 49 hours, so pull request runs cannot push the deciding night off a page; one round |
 
 ## 2026-11: defect hunt on 3.0.8
 
