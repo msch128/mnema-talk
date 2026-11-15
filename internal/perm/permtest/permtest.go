@@ -98,6 +98,17 @@ func (f *Fixture) ManagedRole(position int, p perm.Set) uuid.UUID {
 	return id
 }
 
+// BotOwnRole adds the managed own role of a bot, held by that bot, and
+// returns its ID.
+func (f *Fixture) BotOwnRole(position int, p perm.Set, bot uuid.UUID) uuid.UUID {
+	id := f.ManagedRole(position, p)
+	r := f.st.Roles[id]
+	r.BotUserID = &bot
+	f.st.Roles[id] = r
+	f.Assign(bot, id)
+	return id
+}
+
 // Assign gives a member a role.
 func (f *Fixture) Assign(user, role uuid.UUID) *Fixture {
 	f.st.UserRoles[user] = append(slices.Clip(f.st.UserRoles[user]), role)
@@ -116,9 +127,30 @@ func (f *Fixture) Unassign(user, role uuid.UUID) *Fixture {
 	return f.touch()
 }
 
+// BotWithName marks user as a bot account with a name.
+func (f *Fixture) BotWithName(user uuid.UUID, name string) *Fixture {
+	f.Bot(user)
+	if f.st.BotNames == nil {
+		f.st.BotNames = map[uuid.UUID]string{}
+	}
+	f.st.BotNames[user] = name
+	return f.touch()
+}
+
 // Bot marks user as a bot account (no @everyone).
 func (f *Fixture) Bot(user uuid.UUID) *Fixture {
 	f.st.Bots[user] = true
+	return f.touch()
+}
+
+// BotAllChannels marks the bot user as given access to every channel: it also
+// does not see what @everyone alone cannot see.
+func (f *Fixture) BotAllChannels(user uuid.UUID) *Fixture {
+	f.Bot(user)
+	if f.st.BotsAll == nil {
+		f.st.BotsAll = map[uuid.UUID]bool{}
+	}
+	f.st.BotsAll[user] = true
 	return f.touch()
 }
 
@@ -177,6 +209,16 @@ func (f *Fixture) Channel(category uuid.UUID) uuid.UUID {
 // ChannelWithID adds a channel under a chosen ID; category is uuid.Nil for none.
 func (f *Fixture) ChannelWithID(id, category uuid.UUID) {
 	f.st.ChannelCat[id] = category
+	f.touch()
+}
+
+// ChannelWithName adds a channel with a name under a chosen ID.
+func (f *Fixture) ChannelWithName(id, category uuid.UUID, name string) {
+	if f.st.ChannelNames == nil {
+		f.st.ChannelNames = map[uuid.UUID]string{}
+	}
+	f.st.ChannelCat[id] = category
+	f.st.ChannelNames[id] = name
 	f.touch()
 }
 
@@ -267,6 +309,7 @@ func (f *Fixture) Fork() *Fixture {
 	s := f.st
 	s.Roles, s.UserRoles, s.Owners, s.Bots = maps.Clone(s.Roles), maps.Clone(s.UserRoles), maps.Clone(s.Owners), maps.Clone(s.Bots)
 	s.ChannelCat, s.Categories = maps.Clone(s.ChannelCat), maps.Clone(s.Categories)
+	s.ChannelNames, s.BotNames = maps.Clone(s.ChannelNames), maps.Clone(s.BotNames)
 	s.DMs, s.Stages = maps.Clone(s.DMs), maps.Clone(s.Stages)
 	s.Timeouts, s.RulesAccepted = maps.Clone(s.Timeouts), maps.Clone(s.RulesAccepted)
 	s.ChannelOv, s.CategoryOv = cloneScopes(s.ChannelOv), cloneScopes(s.CategoryOv)

@@ -16,8 +16,8 @@ const VIEWER_B = `layers_b_${suffix}`
 const PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 
 // The shared "screen" is an animated 1280x720 canvas with moving detail, so
-// every layer has something to encode. The sharer's peer connections are
-// kept in window.__pcs to look at what it sends.
+// every layer has something to encode. Every context keeps its peer
+// connections in window.__pcs (fixtures.ts), to look at what is sent and received.
 const fakeScreen = () => {
   MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
@@ -35,21 +35,6 @@ const fakeScreen = () => {
       n++
     }, 33)
     return canvas.captureStream(30)
-  }
-  const Native = window.RTCPeerConnection
-  window.__pcs = []
-  window.RTCPeerConnection = class extends Native {
-    constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) { super(...args); window.__pcs.push(this) }
-  }
-}
-
-// The viewers keep their peer connections too, to say what the receiver did
-// when a picture never starts.
-const keepPeers = () => {
-  const Native = window.RTCPeerConnection
-  window.__pcs = []
-  window.RTCPeerConnection = class extends Native {
-    constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) { super(...args); window.__pcs.push(this) }
   }
 }
 
@@ -156,8 +141,6 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 700 }, deviceScaleFactor: 1 })
   cleanups.push(() => sharerCtx.close(), () => aCtx.close(), () => bCtx.close())
   await sharerCtx.addInitScript(fakeScreen)
-  await aCtx.addInitScript(keepPeers)
-  await bCtx.addInitScript(keepPeers)
   const sharer = await sharerCtx.newPage()
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // One wiki page: where it sits, who last changed it, its text, its subpages,
 // and what the member may do with it (edit, history, lock, move, delete).
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
 import { computed, ref, watch } from 'vue'
 import { Clock, History, Link2, Lock, LockOpen, Pencil, Trash2, Undo2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../../shared/lib/api'
@@ -55,7 +56,7 @@ async function remove() {
 }
 
 function copyLink() {
-  void copyToClipboard(`${window.location.origin}/wiki/${encodeURIComponent(props.page.slug)}`, t('wiki.linkCopied'))
+  void copyToClipboard(`${useServerFeaturesStore().shareOrigin}/wiki/${encodeURIComponent(props.page.slug)}`, t('wiki.linkCopied'))
 }
 </script>
 

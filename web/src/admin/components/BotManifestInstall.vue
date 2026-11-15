@@ -14,6 +14,7 @@ import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
 import { avatarFromManifest, initialPermissions, manifestTextFromParam, readManifest, type AvatarRead } from '../lib/manifest'
 import BotManifestConfirm from './BotManifestConfirm.vue'
+import type { AccessMode } from './BotAccessChoice.vue'
 
 const props = defineProps({
   /** The base64url manifest of an add link, checked at once. */
@@ -30,6 +31,7 @@ const avatarUrl = ref('')
 const intents = ref<string[]>([])
 const permissions = ref<string[]>([])
 const channels = ref<string[]>([])
+const access = ref<AccessMode>('channels')
 const busy = ref(false)
 const error = ref('')
 
@@ -86,6 +88,7 @@ async function check() {
     intents.value = result.intents.map(i => i.name)
     permissions.value = initialPermissions(result.permissions)
     channels.value = []
+    access.value = 'channels'
     avatar.value = avatarFromManifest(read.manifest, result.name)
   } catch (e) {
     error.value = caughtErrorMessage(e, t('admin.unknownError'))
@@ -119,7 +122,7 @@ async function install() {
   busy.value = true
   error.value = ''
   try {
-    const json = { manifest: manifest.value, permissions: permissions.value, intents: intents.value, channel_ids: channels.value }
+    const json = { manifest: manifest.value, permissions: permissions.value, intents: intents.value, channel_ids: channels.value, access: access.value }
     const result = await api('/api/admin/bots/install', { method: 'POST', json, decode: decodeBotInstallResponse })
     const bot = await uploadAvatar(result.bot)
     // Done: nothing is left to lose, so leaving no longer asks.
@@ -158,6 +161,7 @@ onMounted(() => {
       v-model:intents="intents"
       v-model:permissions="permissions"
       v-model:channels="channels"
+      v-model:access="access"
       :manifest="checked"
       :avatar-url="avatarUrl"
       :avatar-problem="'problem' in avatar ? avatar.problem : null"

@@ -132,7 +132,7 @@ func (d DirectMessage) forOthers() DirectMessage {
 // block_sql_test.go checks it still matches the shared rule.
 const DmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
-	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND NOT EXISTS (
+	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND (m.expires_at IS NULL OR m.expires_at > now()) AND NOT EXISTS (
 	           SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)),
 	       u.unread, u.mentions,
 	       cr.last_read_at, COALESCE(cr.notify_level, 'inherit'), cr.muted_until, NOW(),
@@ -148,7 +148,7 @@ const DmSelect = `
 	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll,
 	           CASE WHEN m.embeds->0->>'call' = 'missed' THEN 'missed' WHEN m.embeds->0->>'talk_id' IS NOT NULL THEN 'invite' END AS call_kind
 	    FROM messages m
-	    WHERE m.channel_id = c.id AND NOT EXISTS (
+	    WHERE m.channel_id = c.id AND (m.expires_at IS NULL OR m.expires_at > now()) AND NOT EXISTS (
 	        SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
 	    ORDER BY m.created_at DESC LIMIT 1) lm ON TRUE
 	CROSS JOIN LATERAL (

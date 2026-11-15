@@ -7,10 +7,10 @@ import type { Component } from 'vue'
 import type { AdminTab } from '../lib/adminNav'
 import { NAV_GROUPS } from '../lib/adminNav'
 import ReportsBadge from './ReportsBadge.vue'
-import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, KeyRound, Flag, ShieldCheck, Activity, Download, ChevronRight } from '@lucide/vue'
+import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, KeyRound, Flag, ShieldCheck, Activity, Download, ChevronRight, Timer } from '@lucide/vue'
 
 const ICONS: Record<AdminTab, Component> = {
-  users: Users, roles: Shield, channels: FolderTree, invites: Link, onboarding: Sparkles, access: KeyRound, emoji: Smile,
+  users: Users, roles: Shield, channels: FolderTree, invites: Link, onboarding: Sparkles, access: KeyRound, messages: Timer, emoji: Smile,
   reports: Flag, automod: ShieldCheck, bans: Gavel, audit: ScrollText, bots: Bot, import: Download,
   media: HardDrive, system: Server, status: Activity
 }

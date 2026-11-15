@@ -14,9 +14,10 @@ import (
 )
 
 // TestSDKContract runs the contract tests of the official bot SDKs
-// (sdk/typescript, sdk/go) against this server: a real router on a real
-// database, a bot with a token and a channel, and a signed-in member who runs
-// its commands and clicks its buttons. It needs Node 24 or newer and runs only
+// (sdk/typescript, a checkout of github.com/mnema-xyz/bot-sdk-js, and sdk/go)
+// against this server: a real router on a real database, a bot with a token
+// and a channel, and a signed-in member who runs its commands and clicks its
+// buttons. It needs Node 24 or newer and runs only
 // with SDK_CONTRACT=1 (CI's sdk job sets it), so the plain integration run
 // stays free of Node; with the variable set, a missing tool fails the test.
 func TestSDKContract(t *testing.T) {

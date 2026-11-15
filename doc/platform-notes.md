@@ -14,7 +14,7 @@ Container Manager on DSM 7.2 or later.
    <!-- test:setup-synology -->
    ```sh
    cd /volume1/docker/mnema-talk
-   sudo docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+   sudo docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
    ```
 
    `$(id -u)` is evaluated before `sudo`, so the files belong to you, not to
@@ -81,7 +81,7 @@ button and the admin update check do.
    <!-- test:setup-unraid -->
    ```sh
    mkdir -p /mnt/user/appdata/mnema-talk && cd /mnt/user/appdata/mnema-talk
-   docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+   docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
    ```
 2. **Start.** In that folder: `docker compose up -d --wait`. Recent Unraid
    releases include `docker compose`; otherwise install the *Docker Compose

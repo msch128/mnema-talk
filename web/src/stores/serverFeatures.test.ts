@@ -56,4 +56,12 @@ describe('server features', () => {
     await features.load()
     expect(features.has('saved')).toBe(true)
   })
+
+  it('shares links from the announced public address, not from the origin of the page', async () => {
+    apiMock.mockResolvedValue({ ...health(), public_url: 'https://chat.example.org' })
+    const features = useServerFeaturesStore()
+    expect(features.shareOrigin).toBe(window.location.origin)
+    await features.load()
+    expect(features.shareOrigin).toBe('https://chat.example.org')
+  })
 })

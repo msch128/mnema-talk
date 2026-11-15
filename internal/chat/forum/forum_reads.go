@@ -24,7 +24,7 @@ func UnreadPostsSQL() string {
 		CROSS JOIN LATERAL (
 		    SELECT MAX(x.created_at) AS at FROM (
 		        SELECT m.created_at, m.user_id
-		        UNION ALL SELECT c.created_at, c.user_id FROM messages c WHERE c.parent_id = m.id
+		        UNION ALL SELECT c.created_at, c.user_id FROM messages c WHERE c.parent_id = m.id AND ` + core.LiveSQL("c") + `
 		    ) x
 		    WHERE x.user_id <> $2
 		      AND ` + core.AuthorHiddenFrom("$2", "x.user_id") + `

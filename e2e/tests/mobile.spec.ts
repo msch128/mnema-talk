@@ -15,7 +15,9 @@ if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2
 const suffix = Date.now().toString(36)
 const TEXT_CHANNEL = `mobil-${suffix}`
 const VOICE_CHANNEL = `Mobil Talk ${suffix}`
-const MIN_TARGET = 44
+// 44 px touch targets. A box that starts at a fractional x (the drawer is 86vw
+// wide) reads up to a few millionths of a pixel short in WebKit: allow that, no more.
+const MIN_TARGET = 44 - 0.001
 
 // Sealed calls do not work on Playwright's Linux WebKit (CI); they pass on macOS
 // WebKit and on Chromium. Same limit as the CI WebKit job, which skips the call specs.

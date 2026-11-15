@@ -14,9 +14,9 @@ fails when a web dependency is missing from the in-app list.
 ## Web app (shipped to every browser)
 
 The experimental native desktop source checkpoint now lives in
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop).
 Its dependency inventory is
-[experimental/THIRD_PARTY_NOTICES.md](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/THIRD_PARTY_NOTICES.md).
+[experimental/THIRD_PARTY_NOTICES.md](https://github.com/mnema-xyz/talk-desktop/blob/main/experimental/THIRD_PARTY_NOTICES.md).
 Its locked Rust and UI graph includes the pinned OpenMLS and SFrame providers;
 the corresponding full license texts are preserved under
 `experimental/licenses/` in that repository. This source checkpoint is not a desktop
@@ -242,8 +242,8 @@ The Windows-first probe additionally uses Tauri 2.12.1, its JavaScript API
 2.12.1, reqwest 0.12.28, serde 1.0.229, serde_json 1.0.151, url 2.5.8 and
 windows-sys 0.61.2 (MIT OR Apache-2.0). It reuses Vue under the MIT license.
 The locked Rust inventory, including optional platform and build dependencies,
-is in [THIRD_PARTY_NOTICES.md](https://github.com/msch128/mnema-talk-desktop/blob/main/THIRD_PARTY_NOTICES.md)
-in [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); the
+is in [THIRD_PARTY_NOTICES.md](https://github.com/mnema-xyz/talk-desktop/blob/main/THIRD_PARTY_NOTICES.md)
+in [mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop); the
 frontend lockfile is `ui/package-lock.json` there. This prototype is not
 an official desktop release. Distribution must include the applicable license
 texts; inventory generation alone is not redistribution compliance.

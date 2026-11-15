@@ -22,7 +22,7 @@ func loadForumPostDetails(ctx context.Context, p db.Querier, msgs []core.Message
 func loadPostTitlesAndLocks(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT m.id, m.title, m.is_locked, m.is_resolved,
-		       (SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id) AS last_reply_at
+		       (SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id AND (r.expires_at IS NULL OR r.expires_at > now())) AS last_reply_at
 		FROM messages m
 		WHERE m.id = ANY($1) AND m.parent_id IS NULL AND (m.title IS NOT NULL OR m.is_locked OR m.is_resolved)`, ids)
 	if err != nil {
