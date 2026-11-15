@@ -1,0 +1,106 @@
+name: Clipping sweep
+
+# Nothing visually clipped: e2e/tests/clipping.spec.ts over the whole matrix
+# (every scene at seven window sizes, English and German, 125 % zoom), one
+# size and language per test, dealt out over four shards (--shard=i/4), each
+# on a stack of its own. The e2e jobs of ci.yml run its smoke subset on every
+# pull request. This deep sweep runs on pull requests that touch the web app
+# or the browser tests, and every night on main, where a red night blocks the
+# release (GATED in scripts/nightly-gate.py). It is not part of ci.yml, so a
+# finding blocks a release through the gate instead of failing main's CI run.
+# A finding's screenshots and clip-findings.json are in the e2e-clip-results
+# artifact.
+on:
+  schedule:
+    - cron: "11 4 * * *"
+  pull_request:
+    paths:
+      - "web/**"
+      - "e2e/**"
+      - ".github/workflows/clip-sweep.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clip-sweep-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  clip-sweep:
+    name: clip-sweep (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-e2e-${{ steps.go.outputs.go-version }}-
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(jq -r '.packages["node_modules/playwright-core"].version' e2e/package-lock.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Playwright system dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
+      # The sweep runs Chromium only, so only its system libraries.
+      - name: Install browser system dependencies
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh chromium
+
+      - name: Run the full clipping sweep
+        env:
+          E2E_INSTALL_BROWSER: "1"
+          E2E_BROWSERS: chromium
+          CLIP_SWEEP: full
+          E2E_ONLY: --project=chromium tests/clipping.spec.ts --shard=${{ matrix.shard }}/4
+        run: e2e/run.sh
+
+      - name: Upload the findings and their screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-clip-results-${{ matrix.shard }}
+          path: |
+            e2e/test-results/
+            e2e/server.log
+          if-no-files-found: ignore
+          retention-days: 7
