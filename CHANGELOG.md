@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.3.0](https://github.com/mnema-xyz/talk/compare/v3.2.1...v3.3.0) (2026-11-15)
+
+
+### Features
+
+* bots can download attachments of messages they can see ([#851](https://github.com/mnema-xyz/talk/issues/851)) ([b9ba67f](https://github.com/mnema-xyz/talk/commit/b9ba67f5513c9b023a62e6f1ca8f304305470184))
+* interactions carry the member's permissions and commands can restrict who runs them ([#842](https://github.com/mnema-xyz/talk/issues/842)) ([ca37151](https://github.com/mnema-xyz/talk/commit/ca37151c42dc1573c236175e61bb736784ce3de0))
+* members can create invites, and a channel's menu invites people into it ([#831](https://github.com/mnema-xyz/talk/issues/831)) ([521ca01](https://github.com/mnema-xyz/talk/commit/521ca01c0206314d257e9874da358d450d7fb30c))
+* the page tells the desktop host when it is busy (draft, upload, Talk) ([#804](https://github.com/mnema-xyz/talk/issues/804)) ([be6ad7b](https://github.com/mnema-xyz/talk/commit/be6ad7b0abd11ac427edb7b5a0fce44536301d8e))
+* the vanity link has one switch, Link active, and an inactive link says so ([#838](https://github.com/mnema-xyz/talk/issues/838)) ([668d969](https://github.com/mnema-xyz/talk/commit/668d969e1eff3b085b6b0e871fb22137a40d6392))
+
+
+### Bug Fixes
+
+* a voice_leave naming its Talk and tab ends a lost connection's lingering seat ([#850](https://github.com/mnema-xyz/talk/issues/850)) ([e1ccf7b](https://github.com/mnema-xyz/talk/commit/e1ccf7b9f543c99cba011110730b2e1147d332b0))
+* bot creation retries the next username when two bots race for the same name ([#841](https://github.com/mnema-xyz/talk/issues/841)) ([d2b22e5](https://github.com/mnema-xyz/talk/commit/d2b22e5d4ec7c2b6de08cf68ca1e1ff641063234))
+* channel creation and duplication run under the bot invariant, with clearer refusals and a private-reach warning ([#839](https://github.com/mnema-xyz/talk/issues/839)) ([c8d99d0](https://github.com/mnema-xyz/talk/commit/c8d99d0cf08a650adbe75641032050d81b25fd5f))
+* shared links use the server's public address, also in the desktop client ([#828](https://github.com/mnema-xyz/talk/issues/828)) ([b164f69](https://github.com/mnema-xyz/talk/commit/b164f6936d37621ef05773f4398e5b142964326f))
+* wrap an unbreakable forum post title inside its card ([#821](https://github.com/mnema-xyz/talk/issues/821)) ([edf814f](https://github.com/mnema-xyz/talk/commit/edf814f563882be35ac925e389a005199d2351b2))
+
+
+### Performance Improvements
+
+* **test:** run visibility sweep canary observers concurrently ([#852](https://github.com/mnema-xyz/talk/issues/852)) ([db084e1](https://github.com/mnema-xyz/talk/commit/db084e101fd06c48e66ec57d5f18aea113dc7afb))
+
+
+### Documentation
+
+* the gaps found installing on a plain VPS ([#827](https://github.com/mnema-xyz/talk/issues/827)) ([294ccc5](https://github.com/mnema-xyz/talk/commit/294ccc51f955378ac2898d19a64bd18117d853a9))
+* the Go SDK is relicensed under MIT ([#826](https://github.com/mnema-xyz/talk/issues/826)) ([7e98953](https://github.com/mnema-xyz/talk/commit/7e9895386ce12ef79d6240412124b08d646f79df))
+
 ## [3.2.1](https://github.com/msch128/mnema-talk/compare/v3.2.0...v3.2.1) (2026-11-14)
 
 
