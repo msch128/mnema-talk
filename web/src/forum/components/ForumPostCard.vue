@@ -55,7 +55,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
           <h3
             v-full-text
             :class="[
-              'line-clamp-2 min-w-0 flex-1 text-base text-mnema-text transition group-hover:text-mnema-accent',
+              'line-clamp-2 min-w-0 flex-1 wrap-break-word text-base text-mnema-text transition group-hover:text-mnema-accent',
               unread ? 'font-bold' : 'font-semibold'
             ]"
           >
