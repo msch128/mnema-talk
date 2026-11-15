@@ -14,7 +14,7 @@ Container Manager on DSM 7.2 or later.
    <!-- test:setup-synology -->
    ```sh
    cd /volume1/docker/mnema-talk
-   sudo docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+   sudo docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
    ```
 
    `$(id -u)` is evaluated before `sudo`, so the files belong to you, not to
@@ -81,7 +81,7 @@ button and the admin update check do.
    <!-- test:setup-unraid -->
    ```sh
    mkdir -p /mnt/user/appdata/mnema-talk && cd /mnt/user/appdata/mnema-talk
-   docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+   docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
    ```
 2. **Start.** In that folder: `docker compose up -d --wait`. Recent Unraid
    releases include `docker compose`; otherwise install the *Docker Compose
@@ -103,11 +103,18 @@ Debian or Ubuntu with Docker.
 
 1. Run the assistant and start the stack as in the quick start, then set up
    [Caddy](reverse-proxy.md#caddy-vps-or-linux-box).
-2. **Firewall on the machine:**
-   `sudo ufw allow 80,443/tcp && sudo ufw allow 50000:50050/udp && sudo ufw allow 3479`
-   (`3479` without a protocol opens UDP and TCP). Docker publishes ports around
-   `ufw`'s rules on some setups; if a port stays closed anyway, check
-   `sudo iptables -L DOCKER-USER`.
+2. **Firewall on the machine:** allow SSH first, then the Mnema Talk ports,
+   and only then switch `ufw` on, so you cannot lock yourself out:
+   `sudo ufw allow 22/tcp && sudo ufw allow 80,443/tcp && sudo ufw allow 50000:50050/udp && sudo ufw allow 3479 && sudo ufw default deny incoming && sudo ufw enable`
+   (`3479` without a protocol opens UDP and TCP). Docker publishes its ports
+   around `ufw`, so `ufw` does **not** restrict them: what keeps a service
+   private is that Compose binds the app port (8080, or your `PORT`) to
+   `127.0.0.1` by default (`PUBLISH_ADDR` in `.env`, which the assistant sets
+   to `0.0.0.0` only when you chose a plain `http://` address) and does not
+   publish PostgreSQL and SeaweedFS at all. Do not add `ports:` lines for
+   them. To check from outside, run `nc -vz <your IP> 8080` from another
+   machine: it must not connect; if it does, look at `PUBLISH_ADDR`. If a port that should be open stays closed,
+   check `sudo iptables -L DOCKER-USER`.
 3. **The provider's firewall** (security group) is a second, separate firewall
    with the same ports.
 4. On a VPS the public IP is on the machine itself, so voice needs no

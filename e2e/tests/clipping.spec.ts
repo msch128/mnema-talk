@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import type { Browser, BrowserContext, Page, TestInfo } from '@playwright/test'
 import { test, expect, showWelcomeFlow } from './fixtures'
-import { apiFetch, trackPeerConnections } from './helpers'
+import { apiFetch } from './helpers'
 import { auditClipping, type ClipFinding } from './clipping/auditor'
 import { EXCEPTIONS, isExcepted, unexplained } from './clipping/exceptions'
 import { translate } from './clipping/i18n'
@@ -19,8 +19,9 @@ import { fakeDisplayMedia, routeSocket } from './clipping/talk'
 // cases go on clipping/exceptions.ts with a reason.
 //
 // The app ships one theme (style.css @theme, color-scheme dark), so there is no
-// theme axis. CLIP_SWEEP=full runs the whole matrix (its own CI job, sharded
-// like the e2e jobs); without it the smoke subset runs with the other specs.
+// theme axis. CLIP_SWEEP=full runs the whole matrix (its own workflow,
+// clip-sweep.yml, sharded like the e2e jobs, nightly and on pull requests that
+// touch web/ or e2e/); without it the smoke subset runs with the other specs.
 
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
@@ -116,7 +117,8 @@ async function signedOutScenes(browser: Browser, combo: Combo, world: World, inf
   expect((await apiFetch(mp, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
   await mp.goto('/')
   const welcome = mp.getByRole('dialog')
-  if (await welcome.isVisible({ timeout: 10_000 }).catch(() => false)) await audit(mp, info, 'welcome flow', report)
+  // isVisible does not wait (its timeout is ignored): wait for the dialog itself.
+  if (await welcome.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)) await audit(mp, info, 'welcome flow', report)
   else report.push({ scene: 'welcome flow', findings: [], unreached: 'the welcome flow did not open' })
   await member.close()
 }
@@ -135,7 +137,6 @@ async function signedIn(browser: Browser, combo: Combo): Promise<{ ctx: BrowserC
     locale: combo.locale === 'en' ? 'en-US' : 'de-DE',
     permissions: ['microphone', 'camera'],
   })
-  await ctx.addInitScript(trackPeerConnections)
   await ctx.addInitScript(fakeDisplayMedia)
   const page = await ctx.newPage()
   await browserFont(page)

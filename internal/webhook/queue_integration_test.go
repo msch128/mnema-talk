@@ -687,3 +687,36 @@ func TestRunWorksTheQueueAndReloads(t *testing.T) {
 		t.Fatalf("dropped %d", full.dropped.Load())
 	}
 }
+
+// A message whose lifetime ended does not go out after its end: a row that
+// waited (a retry, a slow receiver) is dropped instead of delivered, an edit
+// of it too; a message with a lifetime still running is delivered.
+func TestAnEndedMessageIsNotDeliveredAfterItsEnd(t *testing.T) {
+	f := newFixture(t)
+	recv := newReceiver(t)
+	d := NewDispatcher(f.p, loopbackClient(), "test")
+	ctx := context.Background()
+	hook := f.outgoing(recv.URL)
+	ended := time.Now().Add(-time.Second).UTC().Format(time.RFC3339Nano)
+	running := time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)
+	for _, c := range []struct {
+		typ, data string
+		sent      bool
+	}{
+		{EventMessageCreate, `{"id":"a","content":"gone words","expires_at":"` + ended + `"}`, false},
+		{EventMessageUpdate, `{"id":"a","content":"gone words","expires_at":"` + ended + `"}`, false},
+		{EventMessageCreate, `{"id":"b","content":"still here","expires_at":"` + running + `"}`, true},
+		{EventMessageCreate, `{"id":"c","content":"no lifetime"}`, true},
+	} {
+		ev := sampleEvent()
+		ev.Type, ev.Data, ev.Channel = c.typ, []byte(c.data), f.ch
+		if err := storeEvents(ctx, f.p, []job{{webhook: hook.ID, event: ev, attempt: 1}}); err != nil {
+			t.Fatal(err)
+		}
+		before := recv.hits.Load()
+		d.process(ctx, f.claim())
+		if sent := recv.hits.Load() > before; sent != c.sent || f.pending(hook.ID) != 0 {
+			t.Errorf("%s %s: delivered %v, want %v (pending %d)", c.typ, c.data, sent, c.sent, f.pending(hook.ID))
+		}
+	}
+}

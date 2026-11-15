@@ -108,7 +108,7 @@ folder (on a Synology or Unraid NAS: [platform notes](platform-notes.md)):
 <!-- test:setup-vps -->
 ```sh
 mkdir mnema-talk && cd mnema-talk
-docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk setup
 ```
 
 `-it` lets it ask you questions; `--user` makes the files yours instead of
@@ -118,7 +118,10 @@ explanation and an example. It asks:
 - whether you only want to try it on this computer (then no domain, certificate
   or router is involved, see [below](#try-it-on-one-computer-first)),
 - the address members will open, e.g. `https://chat.example.com`,
-- the Owner's user name (the all-powerful first account, default `admin`),
+- the Owner's user name (the all-powerful first account, default `admin`).
+  **Choose it now: the Owner cannot be renamed later.** To change it after
+  the first start, the only way is a fresh start on an empty database, which
+  is fine on a new install and loses everything on a used one,
 - the language of the default channel names (`en` by default),
 - optionally this machine's address in your own network (such as
   `192.168.1.20`; see [NAT loopback](glossary.md#voice-and-network-terms)),
@@ -138,7 +141,7 @@ No terminal (scripts, NAS web UI)? Pass everything as flags and see
 
 <!-- test:setup-flags -->
 ```sh
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk \
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/mnema-xyz/mnema-talk \
   setup --non-interactive --public-url https://chat.example.com --admin-username admin --language en
 ```
 

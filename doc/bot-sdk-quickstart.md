@@ -3,7 +3,7 @@
 A complete bot in about forty lines, in TypeScript or in Go. Both programs do
 the same: answer `!ping` with a button, answer the button, and register and
 answer the slash command `/roll`. They are the same ones the SDK READMEs build
-on ([TypeScript](../sdk/typescript/README.md), [Go](../sdk/go/README.md)); what
+on ([TypeScript](https://github.com/mnema-xyz/bot-sdk-js#readme), [Go](../sdk/go/README.md)); what
 each call sends is in [bots](bots.md), what the gateway delivers in
 [gateway events](gateway-events.md), and more tasks are in the
 [recipes](bot-recipes.md).

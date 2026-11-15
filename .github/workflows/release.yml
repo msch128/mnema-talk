@@ -30,13 +30,13 @@ name: Release
 #    SBOM attestations attached to the image. The same image is then copied
 #    by digest to Docker Hub (job dockerhub-mirror) when it is configured.
 #    The desktop app (Windows, macOS Apple silicon, Linux) lives in
-#    msch128/mnema-talk-desktop.
+#    mnema-xyz/talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
 #
 # Before a release is cut or merged, the most recent completed scheduled run
 # on main of each deep nightly sweep (the list is GATED in
 # scripts/nightly-gate.py: sim-sweep, visibility-sweep, store-trace,
-# plain-sweep) must have succeeded within the last 48 hours, in its first
+# plain-sweep, clip-sweep) must have succeeded within the last 48 hours, in its first
 # attempt, with no run deleted after it. The one way past a red, re-run, stale
 # or missing night is a manual run of this workflow on main with
 # `nightly_override` set to the reason (an urgent security fix only,
@@ -161,9 +161,15 @@ jobs:
             exit 1
           fi
           work=$(mktemp -d)
+          # Every run of the last 49 hours, of every event, all pages: the
+          # deciding night is at most 48 hours old to pass, and the check for
+          # deleted runs needs every run number after it. One page would let
+          # pull request runs (clip-sweep.yml has them) push the night off it.
+          since=$(date -u -d '-49 hours' +%Y-%m-%dT%H:%M:%SZ)
           for wf in $(python3 scripts/nightly-gate.py --list); do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf" > "$work/$wf.workflow.json"
-            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100" > "$work/$wf.runs.json"
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100&created=>=$since" \
+              | jq '{workflow_runs: map(.workflow_runs[])}' > "$work/$wf.runs.json"
             reruns=$(jq -r '.workflow_runs[] | select(.event == "schedule" and .head_branch == "main" and .status == "completed" and .run_attempt > 1) | .id' "$work/$wf.runs.json")
             for id in $reruns; do
               # A first attempt that cannot be read is left out: the gate then blocks and says so.
@@ -306,12 +312,12 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: write
+      packages: read # the push uses GHCR_MNEMA_XYZ_TOKEN for now (see the login step)
       id-token: write # keyless cosign signature (Sigstore), this job only
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     env:
-      IMAGE: ghcr.io/msch128/mnema-talk
+      IMAGE: ghcr.io/mnema-xyz/mnema-talk
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -324,11 +330,17 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # TODO(org move): the package ghcr.io/mnema-xyz/mnema-talk does not yet
+      # grant this repository write access ("Manage Actions access" in the
+      # package settings, an owner click), so GITHUB_TOKEN is refused
+      # (write_package denied, probed after the transfer). Until then the push
+      # uses GHCR_MNEMA_XYZ_TOKEN, the owner's classic PAT with write:packages
+      # only. Afterwards: log in with GITHUB_TOKEN again and delete the secret.
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: msch128
+          password: ${{ secrets.GHCR_MNEMA_XYZ_TOKEN }}
 
       - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
@@ -396,26 +408,45 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Two Docker Hub copies: the original one (namespace from the variable
+    # DOCKERHUB_NAMESPACE, secrets DOCKERHUB_USERNAME/TOKEN) and the
+    # organization's account mnemaxyz (Docker Hub allows no hyphen; secrets
+    # DOCKERHUB_MNEMAXYZ_USERNAME/TOKEN). A leg without its secrets is skipped.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - namespace: ''
+            user_secret: DOCKERHUB_USERNAME
+            token_secret: DOCKERHUB_TOKEN
+          - namespace: mnemaxyz
+            user_secret: DOCKERHUB_MNEMAXYZ_USERNAME
+            token_secret: DOCKERHUB_MNEMAXYZ_TOKEN
     permissions:
-      contents: read # gh release view, dispatch only
+      contents: read # gh release view, dispatch only; the description source
       packages: read # pull from GHCR
       id-token: write # keyless cosign signature (Sigstore)
     env:
-      SOURCE: ghcr.io/msch128/mnema-talk
+      SOURCE: ghcr.io/mnema-xyz/mnema-talk
+      # Releases before 3.2.1 exist only at the old path (GHCR does not
+      # redirect); a backfill of one reads it from there.
+      LEGACY_SOURCE: ghcr.io/msch128/mnema-talk
       VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.mirror_version || needs.release-please.outputs.version }}
       IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
-      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+      NAMESPACE: ${{ matrix.namespace || vars.DOCKERHUB_NAMESPACE }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Is the Docker Hub mirror configured?
         id: cfg
         env:
-          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DH_USER: ${{ secrets[matrix.user_secret] }}
+          DH_TOKEN: ${{ secrets[matrix.token_secret] }}
+          USER_SECRET: ${{ matrix.user_secret }}
+          TOKEN_SECRET: ${{ matrix.token_secret }}
         run: |
           set -eu
           if [ -z "$NAMESPACE" ] || [ -z "$DH_USER" ] || [ -z "$DH_TOKEN" ]; then
-            echo "::notice::DOCKERHUB_NAMESPACE, DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is not set; the Docker Hub mirror is skipped."
+            echo "::notice::the namespace, $USER_SECRET or $TOKEN_SECRET is not set; this Docker Hub mirror is skipped."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -441,8 +472,8 @@ jobs:
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         if: steps.cfg.outputs.enabled == 'true'
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets[matrix.user_secret] }}
+          password: ${{ secrets[matrix.token_secret] }}
 
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
         if: steps.cfg.outputs.enabled == 'true'
@@ -456,6 +487,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if ! docker buildx imagetools inspect "$SOURCE:$VERSION" >/dev/null 2>&1; then
+              SOURCE=$LEGACY_SOURCE
+              echo "SOURCE=$SOURCE" >> "$GITHUB_ENV"
+            fi
             digest=$(docker buildx imagetools inspect "$SOURCE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
           else
             digest=$IMAGE_DIGEST
@@ -465,7 +500,7 @@ jobs:
           esac
           cosign verify "$SOURCE@$digest" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null
+            --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null
           echo "DIGEST=$digest" >> "$GITHUB_ENV"
 
       # A release gets all four tags. A backfill moves latest and the
@@ -518,13 +553,43 @@ jobs:
           for _ in 1 2 3 4 5 6; do
             if cosign verify "$ref" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null; then
+              --certificate-identity-regexp '^https://github\.com/mnema-xyz/talk/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null; then
               exit 0
             fi
             sleep 10
           done
           echo "::error::the Docker Hub signature could not be verified"
           exit 1
+
+      # The repository page of the organization's Docker Hub copy (mnemaxyz
+      # only; the msch128 copy keeps its page as it is): short and full description from
+      # deploy/dockerhub/ of this run's commit on main, so a backfill of an
+      # old version also gets the current text (the full one is a Docker Hub
+      # specific overview; the repository README is too long for it).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
+        with:
+          persist-credentials: false
+          sparse-checkout: deploy/dockerhub
+
+      - name: Read the short description
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
+        id: short
+        run: |
+          set -euo pipefail
+          text=$(tr -d '\n' < deploy/dockerhub/short-description.txt)
+          [ "${#text}" -le 100 ] || { echo "::error::the Docker Hub short description is longer than 100 characters"; exit 1; }
+          echo "text=$text" >> "$GITHUB_OUTPUT"
+
+      - uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
+        with:
+          username: ${{ secrets[matrix.user_secret] }}
+          password: ${{ secrets[matrix.token_secret] }}
+          repository: ${{ env.NAMESPACE }}/mnema-talk
+          short-description: ${{ steps.short.outputs.text }}
+          readme-filepath: deploy/dockerhub/README.md
+          enable-url-completion: true
 
   # The desktop client runs a signed bundle of the web app instead of the
   # server's JavaScript (doc/desktop-trusted-client.md). One job builds and
@@ -659,69 +724,6 @@ jobs:
           gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
             --repo "$GITHUB_REPOSITORY" --clobber
 
-  # The TypeScript bot SDK (sdk/typescript) as an npm tarball attached to the
-  # release, with its SHA-256 next to it: `npm install <asset URL>` (doc/bots.md,
-  # SDKs). Built from the tag in a sealed container like the web bundle (the
-  # install needs the registry, the build and pack run with the network
-  # disabled), with the release's version stamped in at pack time: the release
-  # commit itself only ever touches version.txt, CHANGELOG.md and the manifest.
-  sdk-package:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    env:
-      VERSION: ${{ needs.release-please.outputs.version }}
-      TAG: ${{ needs.release-please.outputs.tag_name }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ needs.release-please.outputs.tag_name }}
-
-      - name: Pack the SDK in a sealed container
-        run: |
-          set -euo pipefail
-          image=$(grep -E '^FROM .* AS web$' Dockerfile | tr ' ' '\n' | grep '^node:')
-          case "$image" in node:*@sha256:*) ;; *) echo "::error::cannot find the pinned node image in the Dockerfile"; exit 1 ;; esac
-          work="$RUNNER_TEMP/sdk-build"
-          mkdir -p "$work"
-          cp -a sdk/typescript "$work/sdk"
-          rm -rf "$work/sdk/dist" "$work/sdk/node_modules"
-          version_ts="$work/sdk/src/version.ts"
-          grep -qx "export const VERSION = '0.0.0-dev'" "$version_ts" || { echo "::error::sdk/typescript/src/version.ts does not hold the dev placeholder"; exit 1; }
-          sed -i "s/^export const VERSION = '0.0.0-dev'\$/export const VERSION = '$VERSION'/" "$version_ts"
-          grep -qx "export const VERSION = '$VERSION'" "$version_ts"
-          sandbox=(--rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges
-            --env HOME=/tmp --mount "type=bind,src=$work,dst=/work" --workdir /work/sdk)
-          docker run "${sandbox[@]}" "$image" npm ci --ignore-scripts --no-audit --no-fund
-          docker run "${sandbox[@]}" --network none "$image" npm version --no-git-tag-version --allow-same-version "$VERSION"
-          # A git install builds through `prepare`; the tarball ships dist/, so
-          # it carries no install script that npm would ask a consumer about.
-          docker run "${sandbox[@]}" --network none "$image" npm pkg delete scripts.prepare
-          docker run "${sandbox[@]}" --network none "$image" npm pack
-          tar -xzOf "$work/sdk/mnema-talk-sdk-$VERSION.tgz" package/package.json > "$RUNNER_TEMP/packed-package.json"
-          if grep -q '"prepare"' "$RUNNER_TEMP/packed-package.json"; then echo "::error::the packed SDK still has a prepare script"; exit 1; fi
-          file="mnema-talk-sdk-$VERSION.tgz"
-          test -s "$work/sdk/$file"
-          mkdir -p sdk-out
-          cp "$work/sdk/$file" sdk-out/
-          (cd sdk-out && sha256sum "$file" > "$file.sha256")
-          {
-            echo "### TypeScript SDK $VERSION"
-            echo
-            echo "sha256: \`$(cut -d' ' -f1 "sdk-out/$file.sha256")\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Attach the SDK to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "$TAG" "sdk-out/mnema-talk-sdk-$VERSION.tgz" "sdk-out/mnema-talk-sdk-$VERSION.tgz.sha256" \
-            --repo "$GITHUB_REPOSITORY" --clobber
-
   # The server releases carry the Docker image and the signed web bundle, not
   # desktop installers (those come from the desktop repository). Say so in the
   # release body, so nobody looks for a download that is not here. Idempotent:
@@ -746,13 +748,13 @@ jobs:
           case "$body" in *"$marker"*) echo "section already present"; exit 0 ;; esac
           # The releases page, not one tag: a tag URL freezes whatever was
           # current when this server release was published.
-          url="https://github.com/msch128/mnema-talk-desktop/releases"
+          url="https://github.com/mnema-xyz/talk-desktop/releases"
           {
             printf '%s\n\n' "$body"
             printf '%s\n' "$marker"
             printf '%s\n\n' "### Desktop app (Beta)"
             printf '%s\n' "The desktop app (Beta, unsigned) for Windows, macOS and Linux is published in its own repository: [latest desktop release]($url)."
-            printf '%s\n' "This server release carries the Docker image (\`ghcr.io/msch128/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
+            printf '%s\n' "This server release carries the Docker image (\`ghcr.io/mnema-xyz/mnema-talk:$VERSION\`) and the signed web bundle that the desktop app verifies, not desktop installers."
           } > notes.md
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
 

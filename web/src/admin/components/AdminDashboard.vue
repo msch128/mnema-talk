@@ -30,6 +30,7 @@ import AdminAuditTab from './AdminAuditTab.vue'
 import AdminBansTab from './AdminBansTab.vue'
 import AdminBotsTab from './AdminBotsTab.vue'
 import AdminOnboardingTab from './AdminOnboardingTab.vue'
+import AdminMessagesTab from './AdminMessagesTab.vue'
 import AdminAccessSettings from './AdminAccessSettings.vue'
 import AdminEmojiTab from './AdminEmojiTab.vue'
 import AdminReportsTab from './AdminReportsTab.vue'
@@ -59,6 +60,7 @@ const ALLOWED: Record<AdminTab, () => boolean> = {
   invites: () => permissions.can('create_invites'),
   onboarding: () => permissions.can('administrator'),
   access: () => permissions.can('administrator'),
+  messages: () => features.has('messages.lifetime') && permissions.can('administrator'),
   emoji: () => permissions.can('manage_emoji'),
   reports: () => features.reports && permissions.can('manage_reports'),
   automod: () => features.automod && permissions.can('administrator'),
@@ -79,6 +81,7 @@ const TAB_COMPONENTS = {
   invites: AdminInvitesTab,
   onboarding: AdminOnboardingTab,
   access: AdminAccessSettings,
+  messages: AdminMessagesTab,
   emoji: AdminEmojiTab,
   reports: AdminReportsTab,
   automod: AdminAutomodTab,

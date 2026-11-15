@@ -194,7 +194,7 @@ the server refuses flags on an edit. `AllowedMentions` works as on
 `CreateMessage`: without it an answer notifies the members it names, never
 `@all`, `@here` or a role. `i.User` is always set: the server sends the member
 with every interaction. `Ready.User.Handle` is the name members mention the
-bot by (`@bot-...`); `Ready.User.Username` is its display name.
+bot by (for example `@mnemo`); `Ready.User.Username` is its display name.
 
 ## Components and modals
 
@@ -287,3 +287,9 @@ The bot must be able to view and send in the channel and be allowed
 `GUILDS|GUILD_MESSAGES|GUILD_MESSAGE_REACTIONS`; the member must be able to view
 and send there. The server's integration suite runs them on every change
 (`TestSDKContract` in `internal/server`, with `SDK_CONTRACT=1`).
+
+## License
+
+The Go SDK is licensed under the [MIT License](LICENSE). The Mnema Talk server
+itself is AGPL-3.0-only; a bot that uses this SDK is a separate program and is
+not bound by it. Contributions to the SDK are accepted under the MIT License.

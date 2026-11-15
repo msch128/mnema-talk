@@ -71,9 +71,11 @@ func hookedPool(t *testing.T, source *db.Pool, hook *beforeStatement) *db.Pool {
 // still has a reply younger than the cutoff or a pinned one" (sweepBatch). The
 // pin goes through the route and is in flight when the sweep selects: it has
 // changed the reply and holds its row lock, but has not committed (its foreign
-// key check on pinned_by waits for the user row the test holds). It commits
-// after the sweep chose its rows and before it deletes them. The pinned reply
-// and its root must stay; an unrelated old message shows that the sweep ran.
+// key check on pinned_by waits for the user row the test holds). Since 0106
+// the sweep's batch share-locks the channel row before it selects, and the pin
+// holds that row: the user row is let go when the sweep reaches that lock, the
+// pin commits, and the batch then sees the pinned reply. The pinned reply and
+// its root must stay; an unrelated old message shows that the sweep ran.
 func TestAReplyPinnedDuringTheSweepIsNotDeletedWithItsRoot(t *testing.T) {
 	f := newAutoDeleteFixture(t)
 	wantStatus(t, "auto-delete", f.set(f.owner, f.channel, 7), http.StatusOK)
@@ -100,7 +102,7 @@ func TestAReplyPinnedDuringTheSweepIsNotDeletedWithItsRoot(t *testing.T) {
 	f.waitForThePinsUpdate(t)
 
 	status := 0
-	hook := &beforeStatement{match: "DELETE FROM messages WHERE id = ANY", fn: func() {
+	hook := &beforeStatement{match: "SELECT 1 FROM channels WHERE id = $1 FOR SHARE", fn: func() {
 		if err := hold.Commit(ctx); err != nil {
 			t.Error(err)
 		}

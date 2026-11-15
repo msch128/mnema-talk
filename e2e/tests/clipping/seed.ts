@@ -19,7 +19,7 @@ export interface World {
   chat: { id: string; slug: string; name: string }
   longName: { id: string; slug: string; name: string }
   talk: { id: string; slug: string; name: string }
-  forum: { id: string; slug: string }
+  forum: { id: string; slug: string; postId: string }
   wikiSlug: string
   eventId: string
   dmId: string
@@ -30,7 +30,7 @@ export interface World {
   lastMessageText: string
 }
 
-const LONG_WORD = 'Pneumonoultramicroscopicsilicovolcanoconiosis'.repeat(3)
+export const LONG_WORD = 'Pneumonoultramicroscopicsilicovolcanoconiosis'.repeat(3)
 const LONG_LINK = `https://docs.example.com/guides/${'very-long-path-segment-'.repeat(8)}end?query=${'value'.repeat(12)}`
 const CODE = [
   '```ts',
@@ -179,13 +179,15 @@ async function seedEmbed(admin: Page, channelId: string) {
   if (sent.status() !== 204) throw new Error(`webhook answered ${sent.status()}`)
 }
 
-async function seedElsewhere(admin: Page, member: Page, other: string, adminId: string, suffix: string) {
+async function seedElsewhere(admin: Page, member: Page, other: string, adminId: string, suffix: string, run: RunMembers) {
   const longName = await channel(admin, `a-channel-with-the-longest-name-the-server-allows-${suffix}`.slice(0, 64), 'text')
   // The auto-delete chip beside the longest name in the header.
   await ok(admin, 'PUT', `/api/admin/channels/${longName.id}/auto-delete`, { days: 90 })
   const talk = await channel(admin, `A Talk with a long name for the sweep ${suffix}`.slice(0, 64), 'voice')
   const forum = await channel(admin, `clip-forum-${suffix}`, 'forum')
   for (let i = 0; i < 3; i++) await ok(admin, 'POST', `/api/channels/${forum.id}/posts`, { title: `Forum post ${i} with a title long enough to need two lines ${'or more '.repeat(4)}`, content: `Body ${i}. ${LONG_WORD}` })
+  // The post the "forum post" scene opens by its address: an unbreakable title (at most 100 characters).
+  const longPost = await ok(admin, 'POST', `/api/channels/${forum.id}/posts`, { title: LONG_WORD.slice(0, 100), content: `A post with an unbreakable title. ${LONG_WORD}` })
   const wiki = await ok(admin, 'POST', '/api/wiki/pages', { title: `A wiki page with a long title for the sweep ${suffix}`, content: `# Heading\n\n${'Paragraph text. '.repeat(40)}\n\n${CODE}\n\n| Column one | Column two with a long header | Three |\n|---|---|---|\n| ${LONG_WORD} | b | c |\n\n${LONG_LINK}` })
   const start = new Date(Date.now() + 3 * 86_400_000).toISOString()
   const event = await ok(admin, 'POST', '/api/events', { title: `Community evening with a long title ${'and more words '.repeat(3)}`.slice(0, 100), description: `${'Description text. '.repeat(20)}${LONG_LINK}`, start_time: start, location: `A location with a long address, ${'street '.repeat(5)}` })
@@ -195,10 +197,16 @@ async function seedElsewhere(admin: Page, member: Page, other: string, adminId: 
   const dmId = responseString(dm, 'id')
   await post(member, dmId, `Hello in a direct message, ${'with a long line '.repeat(6)}`)
   await post(admin, dmId, LONG_WORD)
-  const group = await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] })
-  const groupDmId = responseString(group, 'id')
-  await post(member, groupDmId, 'Hello group')
-  return { longName, talk, forum: { id: forum.id, slug: forum.slug }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
+  // A pair has one conversation, but every POST makes a new group, and a
+  // member may start only ten a day: a reseed reuses this run's group.
+  // It keeps its first message: a member may not send more than two unanswered.
+  let groupDmId = run.groupDmId
+  if (groupDmId) await ok(admin, 'PUT', `/api/dms/${groupDmId}/hidden`, { hidden: false })
+  else {
+    groupDmId = responseString(await ok(member, 'POST', '/api/dms', { user_ids: [adminId, other] }), 'id')
+    await post(member, groupDmId, 'Hello group')
+  }
+  return { longName, talk, forum: { id: forum.id, slug: forum.slug, postId: responseString(longPost, 'id') }, wikiSlug: responseString(wiki, 'slug'), eventId, dmId, groupDmId }
 }
 
 /**
@@ -209,10 +217,16 @@ function runKey(baseURL: string, adminId: string): string {
   return `${baseURL.replace(/[^a-zA-Z0-9]+/g, '-')}-${adminId}`
 }
 
-/** The names and password of this run's two members, kept for the whole run so a reseed signs them in. */
-function runMembers(key: string, outputDir: string): { name: string; password: string } {
-  const path = join(outputDir, `clip-members-${key}.json`)
-  if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as { name: string; password: string }
+/** This run's two members and their group conversation, kept for the whole run so a reseed reuses them. */
+interface RunMembers { name: string; password: string; groupDmId?: string }
+
+function runMembersPath(key: string, outputDir: string): string {
+  return join(outputDir, `clip-members-${key}.json`)
+}
+
+function runMembers(key: string, outputDir: string): RunMembers {
+  const path = runMembersPath(key, outputDir)
+  if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf8')) as RunMembers
   const name = Date.now().toString(36)
   const members = { name, password: `pw-${name}-${randomBytes(8).toString('hex')}` }
   writeFileSync(path, JSON.stringify(members))
@@ -236,7 +250,8 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
     return JSON.parse(readFileSync(cache, 'utf8')) as World
   }
   const suffix = Date.now().toString(36)
-  const { name, password } = runMembers(key, outputDir)
+  const run = runMembers(key, outputDir)
+  const { name, password } = run
   const member = await registerMember(browser, admin, `clip_member_${name}`, password)
   const other = await registerMember(browser, admin, `clip_blocked_${name}`, password)
   const { chat, imageMessageText } = await seedChat(admin, member.page, `clip_member_${name}`, suffix)
@@ -250,7 +265,8 @@ export async function seedWorld(browser: Browser, baseURL: string, outputDir: st
   const last = await post(admin, chat.id, lastMessageText)
   await ok(admin, 'PUT', `/api/me/saved/${last}`)
   await ok(admin, 'POST', '/api/me/reminders', { message_id: last, remind_at: new Date(Date.now() + 86_400_000).toISOString() })
-  const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix)
+  const elsewhere = await seedElsewhere(admin, member.page, other.id, adminId, suffix, run)
+  writeFileSync(runMembersPath(key, outputDir), JSON.stringify({ ...run, groupDmId: elsewhere.groupDmId }))
   const world: World = { suffix, chat, ...elsewhere, member: { id: member.id, username: `clip_member_${name}`, password }, blockedId: other.id, imageMessageText, lastMessageText }
   for (const ctx of [member.ctx, other.ctx, admin.context()]) await ctx.close()
   writeFileSync(cache, JSON.stringify(world))

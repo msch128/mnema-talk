@@ -120,8 +120,8 @@ func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*core.C
 		err = tx.QueryRow(ctx, `
 			INSERT INTO channels (id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds, dm_id, is_temp, leader_id, slug)
 			VALUES ($1, NULL, $2, 'voice', '', 0, 0, 0, $3, TRUE, $4, $5)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, dm, creator, ch.Slug).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, `+core.AutoDeleteSQL("channels"), id, name, dm, creator, ch.Slug).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteHours, &ch.AutoDeleteScope, &ch.AutoDeleteFollowsDefault)
 		if err != nil {
 			return fmt.Errorf("open conversation Talk: %w", err)
 		}

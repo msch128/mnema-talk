@@ -59,11 +59,12 @@ once.
   *Every way a bot can gain permissions*), so an install link can never be
   a way to talk someone into handing out power.
 - **Where it may work** is the installer's choice, not the manifest's: the
-  confirm step lists the channels the installer can see, none ticked. The
-  requested permissions become allow overwrites of the bot's **own** managed
-  role in exactly the ticked channels; the bot gets no server-wide
-  permission. Because bots do not inherit `@everyone`, a server-wide grant
-  would reach private channels; a per-channel grant cannot.
+  confirm step lists the channels the installer can see, none ticked, and an
+  **Access** choice. With **Selected channels** (the default) the requested
+  permissions become allow overwrites of the bot's **own** managed role in
+  exactly the ticked channels; the bot gets no server-wide permission. With
+  **All channels** they are held server-wide by the own role (see "Give a bot
+  access to every channel" below).
 - **Who may grant what** does not change. The install runs in one
   transaction under the permission lock, through the bot invariant: nobody
   but the Owner can give a bot anything elevated, or anything the installer
@@ -86,6 +87,39 @@ once.
   the bot's, listed next to the built-in.
 - **The result** is an ordinary bot: everything can be changed in the Bots
   tab afterwards. The token is shown once, as with every token.
+
+### Give a bot access to every channel
+
+Admins asked for the simple choice other platforms have: a bot that sees and
+answers everywhere, without a detour through the role editor. The add dialog
+and the bot's settings have one **Access** choice, **Selected channels** or
+**All channels**.
+
+- **How it works.** *All channels* writes the kept permissions onto the bot's
+  own managed role as ordinary server-wide permissions, instead of one
+  overwrite per channel, so channels created later are covered too. Switching
+  back removes them and writes overwrites for the chosen channels.
+  `PUT /api/admin/bots/{id}/access` does the same for an existing bot;
+  `POST /api/admin/bots/install` takes `access` and stays compatible (absent
+  means `channels`).
+- **Private channels.** The decision: they stay private. Bots do not inherit
+  `@everyone`, so a plain server-wide grant would reach every private channel
+  (that is why the first version offered per-channel grants only). A bot given
+  access to all channels follows one more rule: where `@everyone` alone does
+  not leave *View channels* in place (on the channel, its category or
+  server-wide), the bot does not see the channel either, until the admin lists
+  it explicitly, which gives the bot's own role an allow overwrite there. The
+  marker is a column, `bots.access_all` (migration 0107), not something derived
+  from the role's bits, so no existing bot changes: a bot whose own role was
+  given server-wide permissions in the role editor keeps seeing private
+  channels. The rule only ever takes View away; no other part of `@everyone`
+  applies to bots, so such a bot may write in a read-only channel of
+  `@everyone`.
+- **Who may grant what.** Unchanged. Only the manifest's channel permissions
+  can be chosen, so the choice can never carry Administrator or an admin-area
+  bit, and the existing bot invariant decides the rest: a non-Owner cannot give
+  a bot a permission they lack in any channel it reaches, and cannot change a
+  bot that reaches a channel they cannot view.
 
 ### 2. Message components and modals
 
@@ -134,9 +168,11 @@ notes, and so their buttons, live for 15 minutes in memory only.
 
 ### 4. SDKs
 
-Two official SDKs live in this repository, versioned with the server:
+Two official SDKs:
 
-- **TypeScript**, `sdk/typescript` (package `mnema-talk-sdk`): Node 24+, ESM,
+- **TypeScript**, its own repository `github.com/mnema-xyz/bot-sdk-js` (npm
+  package `@mnema-xyz/bot-sdk`, until 3.1.1 `sdk/typescript` here as
+  `mnema-talk-sdk`): Node 24+, ESM,
   no runtime dependencies (Node's own `fetch` and `WebSocket`), typed events,
   a REST client with rate-limit handling, a gateway client with heartbeats,
   resume and backoff, command registration, interaction helpers (`reply`,
@@ -151,18 +187,16 @@ modal bot), a README and contract tests that run against a real server
 started by the repository's integration test helpers in CI, so an SDK
 cannot drift from the server.
 
-Installing: nothing is on npm or behind a module proxy tag yet.
+Installing:
 
-- The TypeScript SDK is attached to every release as a tarball with its
-  SHA-256 next to it
-  (`npm install https://github.com/msch128/mnema-talk/releases/download/vX.Y.Z/mnema-talk-sdk-X.Y.Z.tgz`).
-  The `sdk-package` job of `release.yml` builds it from the tagged commit in
-  a sealed container, like the web bundle, and stamps the release's version
-  into the package as it packs. The version is not kept in the repository's
-  `package.json` through release-please, because the release commit may
-  touch only `version.txt`, `CHANGELOG.md` and the manifest, and that guard
-  of the release stays as it is. npm cannot install a package from a
-  subdirectory of a git repository; pnpm and yarn can (see the SDK's README).
+- The TypeScript SDK is on npm: `npm install @mnema-xyz/bot-sdk`. Its
+  repository publishes each version from a `vX.Y.Z` tag with npm provenance
+  and has its own semver versions (3.1.1, the first, is the code of Mnema
+  Talk 3.1.1). Releases of Mnema Talk up to 3.1.1 carry the older tarball
+  `mnema-talk-sdk-X.Y.Z.tgz`; later ones do not. Its contract tests run in
+  both repositories: the SDK's CI against this server's `main`, and this CI
+  (`sdk` job) against a pinned commit of the SDK, checked out into
+  `sdk/typescript`, so a server change that breaks the SDK fails here.
 - The Go module is fetched from the repository at a commit or a branch
   (`go get github.com/msch128/mnema-talk/sdk/go@<commit>`, or `@main`, which
   resolves to a pseudo-version). Version tags of the form `sdk/go/vX.Y.Z`

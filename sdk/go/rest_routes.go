@@ -46,6 +46,11 @@ type MessageCreate struct {
 	MessageReference *MessageReference `json:"message_reference,omitempty"`
 	// ParentID makes the message a reply in the thread of that message.
 	ParentID string `json:"parent_id,omitempty"`
+	// LifetimeSeconds makes the server delete the message that long after it
+	// is stored, as for a member: 60 to 2592000 and at most the community's
+	// ceiling (doc/timed-messages.md). 0 sends none. Refused with 400 when
+	// lifetimes are off or out of bounds.
+	LifetimeSeconds int `json:"lifetime_seconds,omitempty"`
 }
 
 // MessageEdit changes a bot's own message. Nil fields stay as they are;
