@@ -64,7 +64,7 @@ jobs:
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/mnema-xyz/mnema-talk:${tag#v}" >> "$GITHUB_OUTPUT"
           echo "Checking release $tag" >> "$GITHUB_STEP_SUMMARY"
 
       # A -run pattern that matches nothing passes as "no tests to run", so the

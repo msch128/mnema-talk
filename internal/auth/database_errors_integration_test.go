@@ -26,7 +26,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
-		{"register locked invite lookup", "FROM invites WHERE code = $1 FOR UPDATE", func(p *db.Pool) error {
+		{"register locked invite lookup", "FOR UPDATE OF i", func(p *db.Pool) error {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")
 			return e
 		}},
@@ -47,7 +47,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 			return e
 		}},
 		{"password confirmation load", "SELECT password_hash FROM users", func(p *db.Pool) error { return CheckUserPassword(ctx, p, member.ID, testPassword) }},
-		{"list invitations", "FROM invites ORDER BY", func(p *db.Pool) error { _, e := ListInvites(ctx, p); return e }},
+		{"list invitations", "ORDER BY i.created_at", func(p *db.Pool) error { _, e := ListInvites(ctx, p); return e }},
 		{"create invitation", "INSERT INTO invites", func(p *db.Pool) error {
 			_, e := CreateInvite(ctx, p, admin.ID, "cancelled-invite-k7x2", nil, nil)
 			return e
@@ -80,7 +80,8 @@ func TestAuthListRejectsIncompatibleDatabaseColumnTypes(t *testing.T) {
 	_, err := p.Exec(ctx, `CREATE SCHEMA auth_scan_fixture;
 		CREATE VIEW auth_scan_fixture.invites AS SELECT
 		'invalid-uuid'::text AS id, 'testcode'::text AS code, NULL::int AS max_uses,
-		0::int AS uses_count, NULL::timestamptz AS expires_at, NOW() AS created_at;
+		0::int AS uses_count, NULL::timestamptz AS expires_at, NOW() AS created_at,
+		NULL::uuid AS channel_id, 'invalid-uuid'::text AS created_by;
 		CREATE VIEW auth_scan_fixture.users AS SELECT
 		'invalid-uuid'::text AS id, 'testuser'::text AS username, 'testuser'::text AS display_name,
 		''::text AS bio, 'user'::text AS role, NULL::text AS avatar_s3_key, ''::text AS status_text, NULL::timestamptz AS status_expires_at,

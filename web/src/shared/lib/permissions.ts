@@ -33,7 +33,8 @@ export const PERMISSION_BITS = {
   bypass_new_member_limits: 67108864,
   edit_wiki: 134217728,
   manage_wiki: 268435456,
-  view_wiki: 536870912
+  view_wiki: 536870912,
+  create_member_invites: 1073741824
 } as const
 
 export type PermissionKey = keyof typeof PERMISSION_BITS
@@ -50,7 +51,7 @@ export type PermissionGroupId = 'general' | 'text' | 'voice' | 'moderation' | 'a
  * stays in the table above because the server still knows it.
  */
 export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly PermissionKey[] }[] = [
-  { id: 'general', keys: ['view_channel', 'view_wiki'] },
+  { id: 'general', keys: ['view_channel', 'view_wiki', 'create_member_invites'] },
   { id: 'text', keys: ['send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'send_direct_messages'] },
   { id: 'voice', keys: ['connect', 'speak', 'video', 'manage_stage', 'disconnect_members'] },
   { id: 'moderation', keys: ['manage_messages', 'manage_members', 'timeout_members', 'ban_members', 'kick_members', 'bypass_new_member_limits'] },
@@ -61,7 +62,7 @@ export const PERMISSION_GROUPS: readonly { id: PermissionGroupId; keys: readonly
 /** Permissions a category or channel can allow or deny per role or member. */
 export const CHANNEL_PERMISSION_KEYS: readonly PermissionKey[] = [
   'view_channel', 'send_messages', 'attach_files', 'add_reactions', 'manage_messages',
-  'mention_everyone', 'connect', 'speak', 'video', 'manage_stage', 'disconnect_members'
+  'mention_everyone', 'connect', 'speak', 'video', 'manage_stage', 'disconnect_members', 'create_member_invites'
 ]
 
 /** Any of these opens a part of the admin area. */
@@ -71,7 +72,7 @@ export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
 
 /** A self-assignable role holds none of these: administration, the admin area and moderation (internal/perm SelfAssignBlocked). */
 export const SELF_ASSIGN_BLOCKED_KEYS: readonly PermissionKey[] = [
-  'administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members', 'manage_messages', 'manage_stage', 'manage_events', 'bypass_new_member_limits', 'edit_wiki', 'manage_wiki'
+  'administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members', 'manage_messages', 'manage_stage', 'manage_events', 'bypass_new_member_limits', 'edit_wiki', 'manage_wiki', 'create_member_invites'
 ]
 
 /** Whether a role with these permissions holds something members must not be able to choose for themselves. */
@@ -80,7 +81,7 @@ export function blockedForSelfAssign(set: number): boolean {
 }
 
 /** What @everyone holds on a fresh install (internal/perm DefaultEveryone). */
-export const DEFAULT_EVERYONE = 541066206
+export const DEFAULT_EVERYONE = 1614808030
 
 export function hasPermission(set: number, key: PermissionKey): boolean {
   const bit = PERMISSION_BITS[key]

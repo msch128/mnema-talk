@@ -287,3 +287,9 @@ The bot must be able to view and send in the channel and be allowed
 `GUILDS|GUILD_MESSAGES|GUILD_MESSAGE_REACTIONS`; the member must be able to view
 and send there. The server's integration suite runs them on every change
 (`TestSDKContract` in `internal/server`, with `SDK_CONTRACT=1`).
+
+## License
+
+The Go SDK is licensed under the [MIT License](LICENSE). The Mnema Talk server
+itself is AGPL-3.0-only; a bot that uses this SDK is a separate program and is
+not bound by it. Contributions to the SDK are accepted under the MIT License.
