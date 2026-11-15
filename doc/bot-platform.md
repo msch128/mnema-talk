@@ -212,6 +212,21 @@ and new WebSocket events (`interaction_modal`; `interaction_response` gains
 `id`, `interaction_id` and `components`). Error shapes, codes and rate limits
 stay Discord's. No breaking change (doc/api-stability.md).
 
+### 6. Command permissions and interaction member permissions
+
+Discord compatibility for command access control: commands accept
+`default_member_permissions` (a decimal string bitfield of required Mnema
+permission bits, `null` = everyone, `"0"` = admin-only), or an array of
+permission keys (e.g. `["ban_members"]`). The server filters
+the composer picker and enforces permissions at invocation time (refusing with
+`403` and the missing permission name). The interaction payload includes
+`member.permissions` with the invoking member's effective channel permissions at
+invocation time as a decimal string bitfield (Owner: all bits). Bits use
+Mnema's permission catalogue ([Roles and permissions](roles-and-permissions.md)),
+not Discord's.
+
+**Important:** Mnema's permission bit values are **not** Discord's bit values (e.g. `discord.js`'s `PermissionFlagsBits`). A ported bot must not reuse Discord's `PermissionFlagsBits`; compute values from Mnema's catalogue or pass an array of permission keys.
+
 ## What is not built, and why
 
 - **A public bot directory or a central application registry.** One

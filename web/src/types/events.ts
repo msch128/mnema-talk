@@ -162,7 +162,7 @@ export interface ClientEventPayloads {
   ping: { t: number }
   presence_idle: { idle: boolean }
   voice_join: { channel_id: string; takeover?: true; resume?: true; tab?: string }
-  voice_leave: Record<string, never>
+  voice_leave: { channel_id?: string; tab?: string }
   typing: { channel_id: string }
   voice_speaking: { active: boolean }
   voice_mute_state: { muted: boolean; deafened: boolean }

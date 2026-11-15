@@ -135,13 +135,16 @@ func TestRefusedResumeOfALingeringPresenceRestartsTheGrace(t *testing.T) {
 	c := testClient(h, auth.User{ID: uid})
 	defer h.unregister(c)
 
-	h.restoreGraceIfAbandoned(c, ch.ID)
+	h.restoreGraceIfAbandoned(c, ch.ID, "tab-R")
 
 	h.mu.RLock()
 	g := h.grace[voiceKey{uid, ch.ID}]
 	h.mu.RUnlock()
 	if g == nil {
 		t.Fatal("presence has no grace timer")
+	}
+	if g.tab != "tab-R" {
+		t.Fatalf("want tab-R, got %q", g.tab)
 	}
 	g.timer.Stop()
 }

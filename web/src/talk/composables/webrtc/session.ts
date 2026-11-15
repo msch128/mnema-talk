@@ -135,6 +135,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
   const { st } = cx
+  st.joinSent = false
   resetMediaAnnouncements()
   closeMediaRoom()
   stopMicTest(cx)
@@ -178,6 +179,8 @@ async function runJoin(cx: Cx, channelId: string, gen: number, takeover: boolean
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
   st.joinPendingGen = null
+  st.joinSent = true
+  st.leaveUnsent = null
   chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId() } : { channel_id: channelId, tab: tabId() })
   openMediaRoom()
   attachSubscriptions(cx)
@@ -202,11 +205,17 @@ const ROOM_STATE_GRACE_MS = 5000
 // peer; start a fresh connection and announce the join again. The server
 // treats it as a resume (no leave/join for the others) within its grace time.
 export function rejoinAfterReconnect(cx: Cx) {
-  const { voice, chat } = cx
+  const { voice, chat, st } = cx
   const channelId = voice.currentChannelId
   // A join that is not sent yet sends itself; a resume would be a second join.
-  if (cx.st.joinPendingGen === cx.st.joinGeneration) return
-  if (!channelId) return
+  if (st.joinPendingGen === st.joinGeneration) return
+  if (!channelId) {
+    if (st.leaveUnsent) {
+      chat.sendWSEvent('voice_leave', { channel_id: st.leaveUnsent, tab: tabId() })
+      st.leaveUnsent = null
+    }
+    return
+  }
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)
@@ -245,11 +254,20 @@ function endCall(cx: Cx, { notifyServer }: { notifyServer: boolean }) {
   stopScreenShare(cx)
   stopCamera(cx)
   if (notifyServer) {
-    chat.sendWSEvent('voice_leave', {})
+    if (chat.isConnected) {
+      if (st.joinSent && voice.currentChannelId) {
+        chat.sendWSEvent('voice_leave', { channel_id: voice.currentChannelId, tab: tabId() })
+      } else {
+        chat.sendWSEvent('voice_leave', {})
+      }
+    } else if (st.joinSent && voice.currentChannelId) {
+      st.leaveUnsent = voice.currentChannelId
+    }
     // Not when the server ended it (taken over): another device of mine is
     // still listed in that Talk.
     forgetOwnSeat(cx)
   }
+  st.joinSent = false
   voice.disconnect()
   voice.audioBlocked = false
 }
