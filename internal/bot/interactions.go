@@ -110,7 +110,8 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if err := perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ViewChannel); err != nil {
+	sub := auth.UserFrom(r.Context()).Subject()
+	if err := perm.CheckChannel(snap.Channel(sub, ch), perm.ViewChannel); err != nil {
 		return err
 	}
 	type found struct {
@@ -135,13 +136,17 @@ func (c *Commands) listForChannel(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return fmt.Errorf("list channel commands: %w", err)
 	}
-	out := c.builtinsFor(snap, auth.UserFrom(r.Context()).Subject(), ch)
+	out := c.builtinsFor(snap, sub, ch)
 	if out == nil {
 		out = []ChannelCommand{}
 	}
+	memberPerms := snap.Channel(sub, ch)
 	// The verdict depends on the bot's account only, so it is evaluated once per bot.
 	canSend := map[uuid.UUID]bool{}
 	for _, f := range list {
+		if !hasCommandPerm(snap, sub, memberPerms, f.Command.DefaultPerms()) {
+			continue
+		}
 		ok, seen := canSend[f.BotUser]
 		if !seen {
 			ok = snap.Channel(perm.Subject{ID: f.BotUser}, ch).Has(perm.ViewChannel | perm.SendMessages)
@@ -183,11 +188,11 @@ func (c *Commands) loadBotProfile(ctx context.Context, botID uuid.UUID) (string,
 	return name, avatar, err
 }
 
-func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) ([]byte, error) {
+func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User, perms perm.Set) ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
 		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
-		"member": memberPayload(user),
+		"member": memberPayload(user, perms),
 	})
 }
 
@@ -250,8 +255,8 @@ func (c *Commands) createInteraction(ctx context.Context, cmd *Command, botUser,
 	return c.registerInteraction(cmd, botUser, name, avatar, ch, invoker)
 }
 
-func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) error {
-	payload, err := buildInteractionPayload(id, token, ch, cmd, opts, user)
+func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User, perms perm.Set) error {
+	payload, err := buildInteractionPayload(id, token, ch, cmd, opts, user, perms)
 	if err != nil {
 		return err
 	}
@@ -273,7 +278,7 @@ func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID,
 // @Success 202 {object} Invoked "Delivered to the bot."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): unknown or ill-typed options."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission or the command's default_member_permissions in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such channel or command, or the command is not available here."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the bot is not connected."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -297,6 +302,10 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	memberPerms := snap.Channel(user.Subject(), ch)
+	if err := checkCommandPerm(snap, user.Subject(), memberPerms, cmd.DefaultPerms()); err != nil {
+		return err
+	}
 	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {
 		return err
 	}
@@ -308,7 +317,7 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := c.dispatchInteraction(id, token, ch, *cmd, opts, user); err != nil {
+	if err := c.dispatchInteraction(id, token, ch, *cmd, opts, user, memberPerms); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, Invoked{InteractionID: id})

@@ -629,6 +629,7 @@ of the pre-update backup (see "Rollback" above).
 | 0107 | `bots.access_all`: whether a bot was given access to every channel in one step (false for every existing bot, so nothing changes for them). Adds a column with a default only; an older release ignores it. |
 | 0108 | Member invites: `invites.channel_id` (an invite that lands the joiner in a channel; empty for every existing invite), the `member_invite_*` limits on `instance_settings` (7 days, 25 uses, 10 active, 10 per hour) (the per-hour limit counts the audit log). Adds columns with defaults only; an older release ignores them. |
 | 0109 | The permission *Create invites* (`1 << 30`, see [invites](invites.md)). **A fresh install** gives it to @everyone. **An existing install** does not: members cannot create invites after the upgrade, and only the roles that already hold *Manage invites* get it, so nothing changes for members until the Owner turns it on. |
+| 0110 | `bot_commands.default_member_permissions`: permission bits required to run a slash command by default (NULL for existing commands, so nothing changes for them). Adds a nullable column only; an older release ignores it. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

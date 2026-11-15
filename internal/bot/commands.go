@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 const (
@@ -51,9 +53,11 @@ type Option struct {
 // CommandInput is what a bot sends to register a command.
 type CommandInput struct {
 	// Name is lowercase letters, digits, '-' and '_' (1 to 32).
-	Name        string   `json:"name" minLength:"1" maxLength:"32"`
-	Description string   `json:"description" minLength:"1" maxLength:"100"`
-	Options     []Option `json:"options"`
+	Name                     string                   `json:"name" minLength:"1" maxLength:"32"`
+	Description              string                   `json:"description" minLength:"1" maxLength:"100"`
+	Options                  []Option                 `json:"options"`
+	DefaultMemberPermissions *CommandPermissionsInput `json:"default_member_permissions,omitempty" swaggertype:"string" binding:"optional"`
+	defaultPerms             *perm.Set
 }
 
 // Command is a registered command.
@@ -65,8 +69,26 @@ type Command struct {
 	Options     []Option  `json:"options"`
 	// Disabled commands are hidden from members and refuse invocations; only
 	// an admin can set it, a bot registering the command again keeps it.
-	Disabled  bool      `json:"disabled"`
-	CreatedAt time.Time `json:"created_at" format:"date-time"`
+	Disabled                 bool      `json:"disabled"`
+	CreatedAt                time.Time `json:"created_at" format:"date-time"`
+	DefaultMemberPermissions *string   `json:"default_member_permissions" binding:"optional" extensions:"x-nullable"`
+	defaultPerms             *perm.Set
+}
+
+// DefaultPerms returns the parsed permission bits required to run the command,
+// or nil if everyone may run it.
+func (c Command) DefaultPerms() *perm.Set {
+	if c.defaultPerms != nil {
+		return c.defaultPerms
+	}
+	if c.DefaultMemberPermissions != nil {
+		bits, err := strconv.ParseUint(*c.DefaultMemberPermissions, 10, 64)
+		if err == nil {
+			p := perm.Set(bits)
+			return &p
+		}
+	}
+	return nil
 }
 
 // Clean validates and normalizes a command definition.
@@ -88,76 +110,21 @@ func (in CommandInput) Clean() (CommandInput, error) {
 	if err := cleanOptions(in.Options); err != nil {
 		return in, err
 	}
+	canonical, perms, err := cleanDefaultMemberPermissions(in.DefaultMemberPermissions)
+	if err != nil {
+		return in, err
+	}
+	if canonical != nil {
+		in.DefaultMemberPermissions = PermissionsString(*canonical)
+		in.defaultPerms = perms
+	} else {
+		in.DefaultMemberPermissions = nil
+		in.defaultPerms = nil
+	}
 	return in, nil
 }
 
-func isValidOptionType(t int) bool {
-	switch t {
-	case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
-		return true
-	default:
-		return false
-	}
-}
-
-func cleanOptionEntry(o *Option, seen map[string]bool) error {
-	if !nameRE.MatchString(o.Name) || seen[o.Name] {
-		return httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
-	}
-	seen[o.Name] = true
-	d, err := httpx.CleanText("option description", o.Description, 100, true)
-	if err != nil {
-		return err
-	}
-	o.Description = d
-	if !isValidOptionType(o.Type) {
-		return httpx.ErrInvalidInput("unknown option type")
-	}
-	return cleanChoices(o)
-}
-
-// MaxChoices bounds the choices of one option.
-const MaxChoices = 25
-
-func cleanChoices(o *Option) error {
-	if len(o.Choices) == 0 {
-		o.Choices = nil
-		return nil
-	}
-	if o.Type != OptionString || len(o.Choices) > MaxChoices {
-		return httpx.ErrInvalidInput(fmt.Sprintf("only a text option has choices, at most %d", MaxChoices))
-	}
-	seen := map[string]bool{}
-	for i, ch := range o.Choices {
-		v, err := httpx.CleanText("choice", ch, 100, true)
-		if err != nil || seen[v] {
-			return httpx.ErrInvalidInput("choices are 1 to 100 characters and unique")
-		}
-		seen[v] = true
-		o.Choices[i] = v
-	}
-	return nil
-}
-
-// cleanOptions validates option names, descriptions, types and order, and
-// normalizes the descriptions in place.
-func cleanOptions(opts []Option) error {
-	seen := map[string]bool{}
-	optional := false
-	for i := range opts {
-		if err := cleanOptionEntry(&opts[i], seen); err != nil {
-			return err
-		}
-		// As in Discord, required options come first.
-		if opts[i].Required && optional {
-			return httpx.ErrInvalidInput("required options must come before optional ones")
-		}
-		optional = optional || !opts[i].Required
-	}
-	return nil
-}
-
-const commandColumns = `id, bot_id, name, description, options, disabled, created_at`
+const commandColumns = `id, bot_id, name, description, options, disabled, created_at, default_member_permissions`
 
 // commandColumnsAs is commandColumns with every column qualified by a table alias.
 func commandColumnsAs(alias string) string {
@@ -176,9 +143,16 @@ func scanCommand(row pgx.Row) (Command, error) {
 // query selects after them.
 func scanCommandWith(row pgx.Row, extra ...any) (Command, error) {
 	var c Command
+	var defaultBits *int64
 	// options is a JSON array (a check constraint), scanned straight into the slice.
-	dest := append([]any{&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt}, extra...)
+	dest := append([]any{&c.ID, &c.BotID, &c.Name, &c.Description, &c.Options, &c.Disabled, &c.CreatedAt, &defaultBits}, extra...)
 	err := row.Scan(dest...)
+	if err == nil && defaultBits != nil {
+		s := strconv.FormatUint(uint64(*defaultBits), 10)
+		c.DefaultMemberPermissions = &s
+		p := perm.Set(*defaultBits)
+		c.defaultPerms = &p
+	}
 	return c, err
 }
 
@@ -200,10 +174,21 @@ func upsert(ctx context.Context, q db.Querier, botID uuid.UUID, in CommandInput)
 	if err != nil {
 		return Command{}, fmt.Errorf("marshal options: %w", err)
 	}
+	var defaultPerms *int64
+	if in.defaultPerms != nil {
+		v := int64(*in.defaultPerms)
+		defaultPerms = &v
+	} else if in.DefaultMemberPermissions != nil {
+		_, p, err := cleanDefaultMemberPermissions(in.DefaultMemberPermissions)
+		if err == nil && p != nil {
+			v := int64(*p)
+			defaultPerms = &v
+		}
+	}
 	return scanCommand(q.QueryRow(ctx, `
-		INSERT INTO bot_commands (bot_id, name, description, options) VALUES ($1, $2, $3, $4)
-		ON CONFLICT (bot_id, name) DO UPDATE SET description = EXCLUDED.description, options = EXCLUDED.options, updated_at = NOW()
-		RETURNING `+commandColumns, botID, in.Name, in.Description, opts))
+		INSERT INTO bot_commands (bot_id, name, description, options, default_member_permissions) VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (bot_id, name) DO UPDATE SET description = EXCLUDED.description, options = EXCLUDED.options, default_member_permissions = EXCLUDED.default_member_permissions, updated_at = NOW()
+		RETURNING `+commandColumns, botID, in.Name, in.Description, opts, defaultPerms))
 }
 
 // UpsertCommand registers or updates a command by name, keeping an admin's
