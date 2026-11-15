@@ -5,6 +5,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -123,6 +124,12 @@ func TestBotDownloadAttachment_WithoutView(t *testing.T) {
 
 	dl := f.client.get(bot.BasePath + "/media/" + attID.String())
 	wantStatus(t, "download without view", dl, http.StatusNotFound)
+
+	// Range (206) and 304 probes on unauthorized media must stay 404
+	reval := f.client.req(http.MethodGet, bot.BasePath+"/media/"+attID.String(), nil, map[string]string{"If-None-Match": `"` + attID.String() + `"`})
+	wantStatus(t, "reval without view", reval, http.StatusNotFound)
+	rng := f.client.req(http.MethodGet, bot.BasePath+"/media/"+attID.String(), nil, map[string]string{"Range": "bytes=0-3"})
+	wantStatus(t, "range without view", rng, http.StatusNotFound)
 }
 
 func TestBotDownloadAttachment_AccessAllPrivateChannel(t *testing.T) {
@@ -380,6 +387,35 @@ func TestBotDownloadAttachment_MessageIDNil(t *testing.T) {
 	}
 	dlStaged := f.client.get(bot.BasePath + "/media/" + stagedID.String())
 	wantStatus(t, "staged upload (messageID==nil, staged==true)", dlStaged, http.StatusNotFound)
+
+	// 4. Staged row with message_id: must answer 404 because staged == true
+	validMsg := uploadFile(t, f, f.open, "valid.png", "image/png", pngBytes)
+	stagedWithMsgID := uuid.New()
+	if err := f.a.store.Upload(context.Background(), "staged/st2.png", bytes.NewReader(pngBytes), "image/png", int64(len(pngBytes))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.a.db.Exec(context.Background(), `
+		INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, staged)
+		VALUES ($1, $2, $3, $4, 'test', 'staged/st2.png', 'st2.png', 'image/png', $5, TRUE)`,
+		stagedWithMsgID, f.bot.UserID, f.open, validMsg.ID, len(pngBytes)); err != nil {
+		t.Fatal(err)
+	}
+	dlStagedWithMsg := f.client.get(bot.BasePath + "/media/" + stagedWithMsgID.String())
+	wantStatus(t, "staged upload with message_id (staged==true)", dlStagedWithMsg, http.StatusNotFound)
+
+	// 5. Media with message_id but nil channel_id: must answer 404
+	nilChanID := uuid.New()
+	if err := f.a.store.Upload(context.Background(), "covers/nc.png", bytes.NewReader(pngBytes), "image/png", int64(len(pngBytes))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.a.db.Exec(context.Background(), `
+		INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
+		VALUES ($1, $2, NULL, $3, 'test', 'covers/nc.png', 'nc.png', 'image/png', $4)`,
+		nilChanID, f.bot.UserID, validMsg.ID, len(pngBytes)); err != nil {
+		t.Fatal(err)
+	}
+	dlNilChan := f.client.get(bot.BasePath + "/media/" + nilChanID.String())
+	wantStatus(t, "media with message_id but nil channel_id", dlNilChan, http.StatusNotFound)
 }
 
 func TestBotDownloadAttachment_AdminDeleted(t *testing.T) {
@@ -437,4 +473,54 @@ func TestBotDownloadAttachment_BotPayloadURL(t *testing.T) {
 	if memAtt.URL != "/api/media/"+attID.String() {
 		t.Fatalf("member message URL = %q, want %q", memAtt.URL, "/api/media/"+attID.String())
 	}
+}
+
+func TestBotDownloadAttachment_GatewayPayloadURL(t *testing.T) {
+	f := gwFixture(t)
+	g := f.dialGW("Bot " + f.token.Secret)
+	g.identify("", bot.IntentGuildMessages)
+
+	res := f.owner.upload("/api/channels/"+f.open.String()+"/upload", "file", "gw.png", "image/png", pngBytes, nil)
+	wantStatus(t, "owner upload", res, http.StatusCreated)
+	var ownerMsg core.Message
+	res.decode(t, &ownerMsg)
+	attID := ownerMsg.Attachments[0].ID
+
+	_, d := g.expect("MESSAGE_CREATE")
+	var m core.Message
+	if err := json.Unmarshal(d, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.ID == ownerMsg.ID {
+		if len(m.Attachments) != 1 {
+			t.Fatalf("expected 1 attachment on gateway, got %d", len(m.Attachments))
+		}
+		wantURL := bot.BasePath + "/media/" + attID.String()
+		if m.Attachments[0].URL != wantURL {
+			t.Fatalf("gateway message URL = %q, want %q", m.Attachments[0].URL, wantURL)
+		}
+	}
+}
+
+func TestBotDownloadAttachment_MissingObject(t *testing.T) {
+	f := newBotFixture(t, false)
+	msg := uploadFile(t, f, f.open, "missing.png", "image/png", pngBytes)
+	attID := msg.Attachments[0].ID
+
+	// Delete backing object from storage
+	var s3Key string
+	if err := f.a.db.QueryRow(context.Background(), `SELECT s3_key FROM media WHERE id = $1`, attID).Scan(&s3Key); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.a.store.Delete(context.Background(), s3Key); err != nil {
+		t.Fatal(err)
+	}
+
+	// Bot endpoint returns 404 (never 410)
+	dl := f.client.get(bot.BasePath + "/media/" + attID.String())
+	wantStatus(t, "missing object answers 404 for bot", dl, http.StatusNotFound)
+
+	// Member route answers 410 (Gone)
+	memDl := f.owner.get("/api/media/" + attID.String())
+	wantStatus(t, "missing object answers 410 for member", memDl, http.StatusGone)
 }
