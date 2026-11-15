@@ -12,10 +12,11 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// MountBot registers the bot API's file upload (the bot authentication
-// middleware must already apply). send is the per-channel send limit.
+// MountBot registers the bot API's file upload and download routes (the bot
+// authentication middleware must already apply). send is the per-channel send limit.
 func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 	r.With(httpx.MaxBodyDiscord(h.UploadBodyLimit()), send).Post("/channels/{channelID}/upload", httpx.HandleDiscord(h.botUpload))
+	r.Get("/media/{id}", httpx.HandleDiscord(h.botDownload))
 }
 
 // botUpload handles POST /api/bot/v1/channels/{channelID}/upload.
@@ -76,4 +77,35 @@ func parseAllowedMentions(raw string) (*messages.AllowedMentions, error) {
 		return nil, httpx.ErrInvalidInput("allowed_mentions must be a JSON object")
 	}
 	return am, nil
+}
+
+// botDownload handles GET /api/bot/v1/media/{id}.
+//
+// @Summary Download an attachment
+// @Description Streams a message attachment to an authenticated bot. Needs View channels for a channel attachment (text or voice), or to be a participant of the direct message. Attachments of deleted or expired messages, and unfinished uploads answer 404.
+// @ID botDownloadAttachment
+// @Tags Bot API
+// @Produce octet-stream,json
+// @Security botAuth
+// @Param id path string true "Media ID." Format(uuid)
+// @Success 200 {string} string "File content; Content-Type is the stored MIME type."
+// @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
+// @Failure 404 {object} httpx.DiscordError "Media not found (10003)."
+// @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
+// @Failure 500 {object} httpx.DiscordError "Server failure."
+// @Failure 503 {object} httpx.DiscordError "File storage is not available."
+// @Router /api/bot/v1/media/{id} [get]
+func (h *Handler) botDownload(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	m, err := h.lookupBotServed(r, id)
+	if err != nil {
+		return err
+	}
+	return h.serveMedia(w, r, m, true)
 }

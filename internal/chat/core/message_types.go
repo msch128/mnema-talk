@@ -22,9 +22,12 @@ const (
 type MediaAttachment struct {
 	ID               uuid.UUID `json:"id" format:"uuid"`
 	OriginalFilename string    `json:"original_filename"`
+	Filename         string    `json:"filename,omitempty" binding:"optional"`
 	MimeType         string    `json:"mime_type"`
+	ContentType      string    `json:"content_type,omitempty" binding:"optional"`
 	SizeBytes        int64     `json:"size_bytes"`
-	// URL is /api/media/{id}.
+	Size             *int64    `json:"size,omitempty" binding:"optional"`
+	// URL is /api/media/{id} for members, /api/bot/v1/media/{id} for bots.
 	URL       string `json:"url"`
 	IsDeleted bool   `json:"is_deleted"`
 	// Width and Height are a picture's size, measured at upload and kept

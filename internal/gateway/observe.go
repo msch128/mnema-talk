@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -91,7 +92,7 @@ func (g *Gateway) Observe(channel uuid.UUID, ev events.Event) {
 
 // enqueueChannelEvent queues a channel's event for the bots that may view it.
 func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.UUID, name string, ev events.Event) {
-	data, err := json.Marshal(ev)
+	data, err := json.Marshal(botEventPayload(ev))
 	if err != nil {
 		return
 	}
@@ -100,6 +101,33 @@ func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.U
 			s.enqueue(name, data)
 		}
 	}
+}
+
+func botEventPayload(ev events.Event) events.Event {
+	switch m := ev.(type) {
+	case *core.MessageCreate:
+		if m != nil && len(m.Attachments) > 0 {
+			cp := *m
+			cp.Attachments = botAttachments(m.Attachments)
+			return (*core.MessageCreate)(&cp)
+		}
+	case *core.MessageUpdate:
+		if m != nil && len(m.Attachments) > 0 {
+			cp := *m
+			cp.Attachments = botAttachments(m.Attachments)
+			return (*core.MessageUpdate)(&cp)
+		}
+	}
+	return ev
+}
+
+func botAttachments(atts []core.MediaAttachment) []core.MediaAttachment {
+	out := make([]core.MediaAttachment, len(atts))
+	copy(out, atts)
+	for i := range out {
+		out[i].URL = "/api/bot/v1/media/" + out[i].ID.String()
+	}
+	return out
 }
 
 // enqueueMemberAdd queues a new member only for the bots that share a channel

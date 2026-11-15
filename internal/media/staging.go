@@ -85,7 +85,9 @@ func (h *Handler) stageAttachment(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusCreated, core.MediaAttachment{
-		ID: in.id, OriginalFilename: in.filename, MimeType: in.mime, SizeBytes: in.size, URL: "/api/media/" + in.id.String(),
+		ID: in.id, OriginalFilename: in.filename, Filename: in.filename,
+		MimeType: in.mime, ContentType: in.mime, SizeBytes: in.size, Size: &in.size,
+		URL: "/api/media/" + in.id.String(),
 	})
 	return nil
 }
