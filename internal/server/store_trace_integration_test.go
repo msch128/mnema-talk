@@ -391,12 +391,38 @@ func runStoreTrace(t *testing.T, seed, steps int) *storeTrace {
 		w.quiet(150 * time.Millisecond)
 		w.snapshot(t, op)
 	}
+	for _, kind := range []string{"post", "edit", "delete"} {
+		for try := 0; w.trace.Ops[kind] == 0; try++ {
+			if try == 5 {
+				t.Fatalf("seed %d: forced %s did not run", seed, kind)
+			}
+			if (kind == "edit" || kind == "delete") && len(w.live) == 0 {
+				w.stepKind(t, "post")
+			}
+			w.stepKind(t, kind)
+		}
+	}
 	w.quiet(500 * time.Millisecond)
-	w.snapshot(t, steps+1)
+	w.snapshot(t, w.op+1)
 	w.mu.Lock()
 	w.trace.Frames = append([]traceFrame(nil), w.frames...)
 	w.mu.Unlock()
 	return w.trace
+}
+
+func (w *traceWorld) stepKind(t *testing.T, kind string) {
+	t.Helper()
+	w.op++
+	switch kind {
+	case "post":
+		w.post(t)
+	case "edit":
+		w.edit(t)
+	case "delete":
+		w.remove(t)
+	}
+	w.quiet(150 * time.Millisecond)
+	w.snapshot(t, w.op)
 }
 
 func envInt(name string, fallback int) int {
