@@ -46,4 +46,16 @@ describe('LoginModal vanity sign-up', () => {
     const w = await signUp(new ApiError(400, 'INVALID_INPUT', t('errors.detail.invalidInvite')))
     expect(w.find('#login-invite').exists()).toBe(true)
   })
+
+  it('starts in register mode with an invited subtitle for an active vanity link', async () => {
+    apiMock.mockResolvedValue({ password_reset: false })
+    const w = mount(LoginModal, {
+      props: { invite: { code: '~friends', valid: true, communityName: 'Friends', expiresAt: '', vanity: true } },
+      global: { stubs: { LegalModal: true } }
+    })
+    await flushPromises()
+    expect(w.find('button[type="submit"]').text()).toBe('Register')
+    expect(w.text()).toContain('You’ve been invited to join')
+    expect(w.find('#login-invite').exists()).toBe(false)
+  })
 })

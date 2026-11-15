@@ -99,6 +99,10 @@ export interface RtcState {
   joinGeneration: number
   /** The join (by its generation) that has not been sent yet: it sends itself, so a reconnect must not resume beside it (see socketGap.ts). */
   joinPendingGen: number | null
+  /** Whether the voice_join frame of this call was sent over the socket. */
+  joinSent: boolean
+  /** A leave owed to the server after the user hung up while the socket was down. */
+  leaveUnsent: string | null
   /** Whether this call's microphone uses DTX: decided once, with the first offer, and kept (see callDtx). */
   dtx: boolean | null
   /** The join of a Create-a-Talk lobby that waits for its Talk (lobby.ts). */
@@ -183,7 +187,7 @@ export function createRtcState(): RtcState {
     audioSettingsBusy: 0,
     signalingChain: Promise.resolve(),
     pendingCandidates: [],
-    joinGeneration: 0, joinPendingGen: null, dtx: null,
+    joinGeneration: 0, joinPendingGen: null, joinSent: false, leaveUnsent: null, dtx: null,
     pendingLobby: null,
     screenAudioGuard: null,
     warnedScreenAudioTracks: new WeakSet(),

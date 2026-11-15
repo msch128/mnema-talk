@@ -1,13 +1,69 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, getDraft, hasDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
+import { beginDraftSession, channelDraftKey, clearAllDrafts, DRAFT_SESSION_KEY, DRAFT_KEY_PREFIX, draftsAtRisk, getDraft, hasDraft, notePendingDraft, MAX_DRAFT_TEXT, MAX_DRAFTS, setDraft, threadDraftKey } from './drafts'
 
 beforeEach(() => {
   localStorage.clear()
   clearAllDrafts()
 })
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+type StorageCall = 'getItem' | 'setItem' | 'removeItem' | 'key'
+
+/**
+ * Makes the named storage calls throw, as blocked or full storage does; the
+ * others reach the real storage. A stand-in for the global, not a spy on
+ * Storage.prototype: the test window's storage does not go through the
+ * prototype, so such a spy never throws.
+ */
+function failStorage(...calls: StorageCall[]) {
+  const real = window.localStorage
+  const fail = (call: StorageCall) => calls.includes(call)
+  const blocked = (): never => { throw new Error('blocked') }
+  vi.stubGlobal('localStorage', {
+    get length() { return real.length },
+    key: (i: number) => (fail('key') ? blocked() : real.key(i)),
+    getItem: (k: string) => (fail('getItem') ? blocked() : real.getItem(k)),
+    setItem: (k: string, v: string) => (fail('setItem') ? blocked() : real.setItem(k, v)),
+    removeItem: (k: string) => (fail('removeItem') ? blocked() : real.removeItem(k)),
+    clear: () => real.clear(),
+  })
+}
 
 describe('drafts', () => {
+  it('puts no draft at risk once it is stored: it comes back after a reload', () => {
+    expect(draftsAtRisk()).toBe(false)
+    setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })
+    expect(draftsAtRisk()).toBe(false)
+  })
+
+  it('puts a draft at risk while text is typed and not written yet', () => {
+    const composer = Symbol('composer')
+    notePendingDraft(composer, true)
+    expect(draftsAtRisk()).toBe(true)
+    notePendingDraft(composer, false)
+    expect(draftsAtRisk()).toBe(false)
+  })
+
+  it('puts a draft at risk when storage refused it, until a write succeeds', () => {
+    failStorage('setItem')
+    setDraft('u1', channelDraftKey('c1'), { text: 'nowhere to go', reply: null })
+    expect(draftsAtRisk()).toBe(true)
+    vi.unstubAllGlobals()
+    setDraft('u1', channelDraftKey('c1'), { text: 'stored now', reply: null })
+    expect(draftsAtRisk()).toBe(false)
+  })
+
+  it('puts nothing at risk once the last draft is gone, also when storage is fully blocked', () => {
+    failStorage('setItem', 'getItem', 'key', 'removeItem')
+    setDraft('u1', channelDraftKey('c1'), { text: 'only in memory', reply: null })
+    expect(draftsAtRisk()).toBe(true)
+    setDraft('u1', channelDraftKey('c1'), null)
+    expect(draftsAtRisk()).toBe(false)
+  })
+
   it('keeps text and reply target per channel and thread', () => {
     setDraft('u1', channelDraftKey('c1'), { text: 'hello', reply: { id: 'm1', display_name: 'Max' } })
     setDraft('u1', threadDraftKey('t1'), { text: 'in thread', reply: null })
@@ -72,7 +128,7 @@ describe('drafts', () => {
   })
 
   it('keeps earlier drafts in memory when storage reads work but writes fail', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    failStorage('setItem')
     setDraft('u1', 'c:one', { text: 'A', reply: null })
     setDraft('u1', 'c:two', { text: 'B', reply: null })
     expect(getDraft('u1', 'c:one')?.text).toBe('A')
@@ -80,9 +136,7 @@ describe('drafts', () => {
   })
 
   it('works in memory when storage is blocked', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
-    vi.spyOn(Storage.prototype, 'key').mockImplementation(() => { throw new Error('blocked') })
+    failStorage('setItem', 'getItem', 'key', 'removeItem')
     expect(() => setDraft('u1', 'c:c1', { text: 'x', reply: null })).not.toThrow()
     expect(hasDraft('u1', 'c:c1')).toBe(true)
     expect(() => clearAllDrafts()).not.toThrow()
@@ -153,8 +207,7 @@ describe('drafts', () => {
     })
 
     it('keeps working in memory when storage is blocked', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+      failStorage('getItem', 'setItem')
       beginDraftSession('u1')
       setDraft('u1', 'c:c1', { text: 'x', reply: null })
       expect(hasDraft('u1', 'c:c1')).toBe(true)
