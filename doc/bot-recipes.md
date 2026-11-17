@@ -12,7 +12,7 @@ The TypeScript snippets use these imports:
 import { RestError, TextInputStyle, actionRow, modal, stringSelect, textInput } from '@mnema-xyz/bot-sdk'
 ```
 
-The Go snippets use `mnema "github.com/msch128/mnema-talk/sdk/go"` and the
+The Go snippets use `mnema "github.com/mnema-xyz/bot-sdk-go"` and the
 standard packages they name. What the bot may do in a channel is decided by its
 roles ([permissions](bots.md#permissions-roles-and-overwrites)); a call it may not
 make fails with `403` and code `50013`, see [handle an error](#handle-an-error).

@@ -178,7 +178,7 @@ Two official SDKs:
   resume and backoff, command registration, interaction helpers (`reply`,
   `deferReply`, `editReply`, `update`, `showModal`, ...) and builders for
   components and modals.
-- **Go**, `sdk/go`, its own module `github.com/msch128/mnema-talk/sdk/go`,
+- **Go**, [`github.com/mnema-xyz/bot-sdk-go`](https://github.com/mnema-xyz/bot-sdk-go),
   with the same feature set; its one dependency is `github.com/gorilla/websocket`,
   which the server uses as well.
 
@@ -197,12 +197,11 @@ Installing:
   both repositories: the SDK's CI against this server's `main`, and this CI
   (`sdk` job) against a pinned commit of the SDK, checked out into
   `sdk/typescript`, so a server change that breaks the SDK fails here.
-- The Go module is fetched from the repository at a commit or a branch
-  (`go get github.com/msch128/mnema-talk/sdk/go@<commit>`, or `@main`, which
-  resolves to a pseudo-version). Version tags of the form `sdk/go/vX.Y.Z`
-  are left for later: pushing a second tag from the release workflow is a
-  new kind of write under the tag ruleset that cannot be rehearsed outside a
-  real release.
+- The Go module is fetched from its dedicated repository
+  [`github.com/mnema-xyz/bot-sdk-go`](https://github.com/mnema-xyz/bot-sdk-go)
+  (`go get github.com/mnema-xyz/bot-sdk-go@latest`). Its contract tests run in
+  both repositories: the SDK's CI against this server's `main`, and this CI
+  (`sdk` job) against a pinned commit of the SDK, checked out into `sdk/go`.
 
 ### 5. Compatibility
 

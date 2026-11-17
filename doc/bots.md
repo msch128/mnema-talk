@@ -998,8 +998,9 @@ There are two official SDKs, both tested against the server in CI on every
 change: [TypeScript](https://github.com/mnema-xyz/bot-sdk-js) (npm package
 [`@mnema-xyz/bot-sdk`](https://www.npmjs.com/package/@mnema-xyz/bot-sdk),
 `npm install @mnema-xyz/bot-sdk`; MIT licensed, Node 24 or newer, no runtime dependencies)
-and [Go](../sdk/go/README.md) (module `github.com/msch128/mnema-talk/sdk/go`,
-in this repository). Both cover the REST API with rate
+and [Go](https://github.com/mnema-xyz/bot-sdk-go) (module
+`github.com/mnema-xyz/bot-sdk-go`, `go get github.com/mnema-xyz/bot-sdk-go@latest`;
+MIT licensed, Go 1.26 or newer). Both cover the REST API with rate
 limits, the gateway with heartbeats, resume and reconnects, slash command
 registration, interactions (`reply`, `deferReply`, `editReply`, `followUp`,
 `update`, `deferUpdate`, `showModal`), components and modals, and the add

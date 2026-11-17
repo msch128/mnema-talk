@@ -459,6 +459,8 @@ jobs:
   # from the integration helpers and runs both suites against it). The
   # TypeScript SDK lives in github.com/mnema-xyz/bot-sdk-js: a pinned commit of it
   # is checked out into sdk/typescript (bump BOT_SDK_REF to take a newer one).
+  # The Go SDK lives in github.com/mnema-xyz/bot-sdk-go: a pinned commit of it
+  # is checked out into sdk/go (bump BOT_SDK_GO_REF to take a newer one).
   # Node 24 is the oldest the TypeScript SDK supports, 26 what the web build uses.
   sdk:
     name: sdk (node ${{ matrix.node }})
@@ -499,6 +501,15 @@ jobs:
           repository: mnema-xyz/bot-sdk-js
           ref: fcb7dda7b7d339148abf276c49bafb11a0309d88 # BOT_SDK_REF, v3.2.0
           path: sdk/typescript
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Check out the Go SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          repository: mnema-xyz/bot-sdk-go
+          ref: 7b32ed87aff0a1a755db4e7b122df44aba15c63a # BOT_SDK_GO_REF, v0.2.0
+          path: sdk/go
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -589,13 +600,7 @@ jobs:
         name: govulncheck
         run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
-      # The nested modules are not part of ./... above: the bot SDK ships to
-      # users, the load-test viewer runs on server hosts.
-      - if: ${{ needs.changes.outputs.code == 'true' }}
-        name: govulncheck (bot SDK)
-        working-directory: sdk/go
-        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
-
+      # The nested module loadtest/viewer runs on server hosts and is not part of ./... above.
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: govulncheck (load-test viewer)
         working-directory: loadtest/viewer

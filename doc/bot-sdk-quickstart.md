@@ -3,7 +3,7 @@
 A complete bot in about forty lines, in TypeScript or in Go. Both programs do
 the same: answer `!ping` with a button, answer the button, and register and
 answer the slash command `/roll`. They are the same ones the SDK READMEs build
-on ([TypeScript](https://github.com/mnema-xyz/bot-sdk-js#readme), [Go](../sdk/go/README.md)); what
+on ([TypeScript](https://github.com/mnema-xyz/bot-sdk-js#readme), [Go](https://github.com/mnema-xyz/bot-sdk-go#readme)); what
 each call sends is in [bots](bots.md), what the gateway delivers in
 [gateway events](gateway-events.md), and more tasks are in the
 [recipes](bot-recipes.md).
@@ -106,7 +106,7 @@ Go 1.26 or newer.
 ```sh
 mkdir my-bot && cd my-bot
 go mod init example.org/my-bot
-go get github.com/msch128/mnema-talk/sdk/go@main
+go get github.com/mnema-xyz/bot-sdk-go@latest
 ```
 
 Save this as `main.go`:
@@ -123,7 +123,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	mnema "github.com/msch128/mnema-talk/sdk/go"
+	mnema "github.com/mnema-xyz/bot-sdk-go"
 )
 
 func main() {
