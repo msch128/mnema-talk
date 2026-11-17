@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Runs staticcheck (default checks) over the Go modules (the main one with and
-# without the integration tag, the load-test viewer, the bot SDK with and
-# without its contract tag), and fails on every finding that is not listed in
-# scripts/staticcheck-allowlist.txt. The allowlist only shrinks: an entry that
-# no longer has a finding fails the check too, so it gets removed. A
-# //lint:ignore directive counts as a finding of its file, so it needs an entry
-# as well, and staticcheck.conf files fail the check: the allowlist is the only
-# place that excuses anything.
+# without the integration tag, and the load-test viewer), and fails on every
+# finding that is not listed in scripts/staticcheck-allowlist.txt. The allowlist
+# only shrinks: an entry that no longer has a finding fails the check too, so
+# it gets removed. A //lint:ignore directive counts as a finding of its file,
+# so it needs an entry as well, and staticcheck.conf files fail the check: the
+# allowlist is the only place that excuses anything.
 # Usage: scripts/staticcheck.sh <staticcheck-version>
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -29,8 +28,6 @@ raw="$(
 	run .
 	run . -tags=integration
 	run loadtest/viewer
-	run sdk/go
-	run sdk/go -tags=contract
 )"
 
 # A line that is neither a finding nor the indented detail of one is a failure

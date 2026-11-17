@@ -36,21 +36,9 @@ updates:
       loadtest-go-modules:
         patterns: ["*"]
 
-  # The Go bot SDK (its own module). The TypeScript SDK lives in
-  # github.com/mnema-xyz/bot-sdk-js, with its own Dependabot.
-  - package-ecosystem: gomod
-    directory: /sdk/go
-    schedule:
-      interval: weekly
-      day: monday
-    cooldown:
-      default-days: 5
-    open-pull-requests-limit: 2
-    commit-message:
-      prefix: "build(deps)"
-    groups:
-      sdk-go-modules:
-        patterns: ["*"]
+  # The bot SDKs do not need entries here: they live in their own repositories,
+  # github.com/mnema-xyz/bot-sdk-js and github.com/mnema-xyz/bot-sdk-go, each with
+  # its own Dependabot.
 
   - package-ecosystem: npm
     directory: /web

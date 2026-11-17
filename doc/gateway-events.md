@@ -8,7 +8,7 @@ The shapes come from the server's own types: the message is the one the REST API
 returns (`api/openapi.json`, tag *Bot API*), and the other payloads are the Go
 types in `internal/gateway`. They are named in
 [`src/types/gateway.ts` of the TypeScript SDK](https://github.com/mnema-xyz/bot-sdk-js/blob/main/src/types/gateway.ts),
-the Go SDK in [`sdk/go/types.go`](../sdk/go/types.go).
+and the Go SDK in [`types.go` of the Go SDK](https://github.com/mnema-xyz/bot-sdk-go/blob/main/types.go).
 
 | Event | Intent | Sent when |
 |---|---|---|
