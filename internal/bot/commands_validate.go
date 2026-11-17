@@ -252,7 +252,7 @@ func cleanDefaultMemberPermissions(in *CommandPermissionsInput) (*string, *perm.
 	var s string
 	if err := json.Unmarshal(in.raw, &s); err == nil {
 		bits, err := strconv.ParseUint(s, 10, 64)
-		if err != nil || !perm.Set(bits).Valid() {
+		if err != nil || bits > math.MaxInt64 || !perm.Set(bits).Valid() {
 			return nil, nil, httpx.ErrInvalidInput("unknown permission bits")
 		}
 		canonical := strconv.FormatUint(bits, 10)
