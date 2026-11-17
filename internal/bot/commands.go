@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -175,12 +176,12 @@ func upsert(ctx context.Context, q db.Querier, botID uuid.UUID, in CommandInput)
 		return Command{}, fmt.Errorf("marshal options: %w", err)
 	}
 	var defaultPerms *int64
-	if in.defaultPerms != nil {
+	if in.defaultPerms != nil && *in.defaultPerms <= math.MaxInt64 {
 		v := int64(*in.defaultPerms)
 		defaultPerms = &v
 	} else if in.DefaultMemberPermissions != nil {
 		_, p, err := cleanDefaultMemberPermissions(in.DefaultMemberPermissions)
-		if err == nil && p != nil {
+		if err == nil && p != nil && *p <= math.MaxInt64 {
 			v := int64(*p)
 			defaultPerms = &v
 		}
