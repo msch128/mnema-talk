@@ -118,6 +118,14 @@ describe('forum post addresses', () => {
     }
   })
 
+  it('does not query forum posts when the post is already the active thread', async () => {
+    const { ctx, chatStore } = makeCtx()
+    chatStore.activeThread = { id: POST, title: 'Neue Küche?' }
+    await applyRoute(ctx, parseRoute('/c/ideas/p/neue-kueche-0f3a9c1e'))
+    expect(fetchForumPosts).not.toHaveBeenCalled()
+    expect(chatStore.openThread).not.toHaveBeenCalled()
+  })
+
   it('takes a full id without asking the server which posts exist', async () => {
     const { ctx, chatStore } = makeCtx()
     await applyRoute(ctx, parseRoute(`/c/ideas/p/${POST}`))
