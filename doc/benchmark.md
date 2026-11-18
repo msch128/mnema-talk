@@ -1,6 +1,7 @@
 # Benchmark
 
-A capacity measurement of Mnema Talk 2.2.0 on a small home server. It answers
+A capacity measurement of Mnema Talk 2.2.0 on a small home server, repeated on
+3.3.0 (see [Repeat on 3.3.0](#repeat-on-330)). It answers
 one question: how much of a low-power machine do chat and voice use at a given
 number of members? It is a single run on a single host, so read the figures as
 orders of magnitude, not as a guarantee.
@@ -113,6 +114,54 @@ values afterwards, so there is no leak.
   about 1.6 cores through the relay.
 - A Talk in which 100 members watch ten cameras and a screen at the same time
   is beyond this machine, also with 2.4.0; see the [sizing guide](#sizing-guide).
+
+## Repeat on 3.3.0
+
+The six scenarios were run again on server 3.3.0 (the published container
+image, pinned by digest), with the same settings and the same host as above.
+This run used a **throwaway stack on the same machine**: its own application,
+PostgreSQL and SeaweedFS containers with fresh secrets and volumes, other
+ports, and no real members, no push, no update check and no other load from
+the instance. The production instance on the host was not involved. The load
+generator was built from the repository at the time of the run, so it is newer
+than the one used for 2.2.0. The announced address was the host's LAN address
+instead of loopback. It is one run, like the first; differences of a few
+percent are noise.
+
+CPU is the average over the hold phase, memory the peak resident set of the
+application process. Egress is what the server's media counters sent in the
+run (not recorded for 2.2.0 except for the relay).
+
+| Scenario | CPU 2.2.0 | CPU 3.3.0 | Memory 2.2.0 | Memory 3.3.0 | Egress 3.3.0 | Loss 2.2.0 | Loss 3.3.0 |
+|---|---:|---:|---:|---:|---:|---|---|
+| Chat, 100 sessions | 0.02 | 0.02 | 47 MB | 60 MB | n/a | 0 % | 0 % |
+| Chat, 300 sessions | 0.09 | 0.08 | 62 MB | 65 MB | n/a | 0 % | 0 % |
+| Chat, 1,000 sessions | 0.67 | 0.65 | 102 MB | 107 MB | n/a | 0 % | 0 % |
+| Voice, direct | 0.56 | 0.56 | 312 MB | 181 MB | 2.7 GB | 0.00 % | 0.00 % |
+| Voice, relay | 1.61 | 1.34 | 312 MB | 192 MB | 3.2 GB (3.3 GB through the relay) | 0.00 % | 0.00 % |
+| Voice, mixed | 1.87 | 1.37 | 1044 MB | 423 MB | 3.8 GB | screen 81.6 %, camera 33.5 % | screen 76.9 %, camera 12.9 % |
+
+- **Chat** is unchanged in CPU and a few MB larger. Delivery latency at 1,000
+  sessions is higher: messages p50 / p95 / p99 were 33 / 84 / 115 ms and are
+  now 38 / 126 / 328 ms (maximum 1.3 s). Nothing was lost or duplicated, and
+  the 100 and 300 session runs match the first run within 2 ms at p95.
+- **Voice, direct** costs the same CPU with 42 % less memory (heap 116 MB).
+  No loss, no freezes.
+- **Relay:** CPU is 17 % lower and memory 38 % lower. As in the first run one
+  member failed the scenario's thresholds: this time one member's signalling
+  failed, it connected without the relay and was frozen for 43 s (before: one
+  member, 12.6 s). The other 99 members saw no freeze. Both runs show one
+  flap in 100 members; we did not investigate the cause.
+- **Mixed** still does not hold on this host: the screen loses 77 % of its
+  packets and the cameras 13 %, with the generator at 1.17 cores. The loss is
+  again at the server's ingress (generator sent 90,143 packets, the server
+  counted 42,506), none after the server. CPU is 27 % lower and memory 59 %
+  lower than on 2.2.0 and the server stays far from its 1 GB limit (peak heap
+  320 MB). This matches the analysis in [Where the packet loss comes
+  from](#where-the-packet-loss-comes-from): the generator and the shared host
+  limit this shape, not the server.
+- No goroutine leak: goroutines returned to 40 to 48 after every scenario, and
+  the database fingerprint matched before and after.
 
 ## Sizing guide
 
