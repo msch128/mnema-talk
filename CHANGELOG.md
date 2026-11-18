@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/mnema-xyz/talk/compare/v3.3.0...v3.3.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **bot,ci:** bound permission integers and eliminate dynamic secret access ([#861](https://github.com/mnema-xyz/talk/issues/861)) ([c2d2da2](https://github.com/mnema-xyz/talk/commit/c2d2da2036bb877abbc4595a37be45ac2b6139ff))
+
 ## [3.3.0](https://github.com/mnema-xyz/talk/compare/v3.2.1...v3.3.0) (2026-11-15)
 
 
