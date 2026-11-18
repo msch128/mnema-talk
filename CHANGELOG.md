@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.2](https://github.com/mnema-xyz/talk/compare/v3.3.1...v3.3.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* avoid re-fetching forum post when already active ([#866](https://github.com/mnema-xyz/talk/issues/866)) ([aa81518](https://github.com/mnema-xyz/talk/commit/aa81518a3f0f8df7b49bac5ae21c0301e5c1a0a6))
+
 ## [3.3.1](https://github.com/mnema-xyz/talk/compare/v3.3.0...v3.3.1) (2026-11-18)
 
 
