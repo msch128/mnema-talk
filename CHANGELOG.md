@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3.2](https://github.com/mnema-xyz/talk/compare/v3.3.1...v3.3.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* avoid re-fetching forum post when already active ([#866](https://github.com/mnema-xyz/talk/issues/866)) ([aa81518](https://github.com/mnema-xyz/talk/commit/aa81518a3f0f8df7b49bac5ae21c0301e5c1a0a6))
+
+## [3.3.1](https://github.com/mnema-xyz/talk/compare/v3.3.0...v3.3.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **bot,ci:** bound permission integers and eliminate dynamic secret access ([#861](https://github.com/mnema-xyz/talk/issues/861)) ([c2d2da2](https://github.com/mnema-xyz/talk/commit/c2d2da2036bb877abbc4595a37be45ac2b6139ff))
+
 ## [3.3.0](https://github.com/mnema-xyz/talk/compare/v3.2.1...v3.3.0) (2026-11-15)
 
 

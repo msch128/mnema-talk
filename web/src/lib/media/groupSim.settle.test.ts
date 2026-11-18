@@ -57,6 +57,15 @@ describe.skipIf(!process.env.SIM_SETTLE)('the settle time, measured again', () =
 //   SIM_PRODUCTION=1 [SIM_PRODUCTION_SEEDS=150] npx vitest run src/lib/media/groupSim.settle.test.ts
 const PRODUCTION = { rotateMs: 1_200_000, rotateJitterMs: 120_000, absentMs: 800_000, heartbeatMs: 200_000, maintenanceMs: 20_000 }
 
+// The one seed of the measurement below that split the room, kept in every run (half a second).
+describe('with the lifetimes of production in their ratios, pinned', () => {
+  it('hostile relay, seed 149: the room agrees and stays agreed', async () => {
+    const result = await runSeed(149, { relay: 'hostile', timing: PRODUCTION, agreeWithinMs: 7_200_000 })
+    expect(result.violations).toEqual([])
+    expect(result.agreedAfterMs).not.toBeNull()
+  }, 60_000)
+})
+
 describe.skipIf(!process.env.SIM_PRODUCTION)('with the lifetimes of production in their ratios', () => {
   it.each(['honest', 'hostile'] as const)('%s relay: every seed settles', async (relay) => {
     const failed: number[] = []

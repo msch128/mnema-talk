@@ -104,8 +104,17 @@ async function findForumPost(channelId: string, ref: string): Promise<string | n
   return null
 }
 
+/** When the post is already active, its id is known without querying the forum. */
+function activePostIdFor(ctx: RoutingContext, channelId: string, ref: string): string | null {
+  const post = ctx.chatStore.activeThread
+  if (!post || (post.channel_id && post.channel_id !== channelId)) return null
+  if (isUuid(ref)) return post.id.toLowerCase() === ref.toLowerCase() ? post.id : null
+  const short = postShortId(ref)
+  return short && post.id.toLowerCase().startsWith(short) ? post.id : null
+}
+
 async function openRoutePost(ctx: RoutingContext, channel: ChannelLike, ref: string, superseded: Superseded) {
-  const id = await findForumPost(channel.id, ref).catch(() => null)
+  const id = activePostIdFor(ctx, channel.id, ref) ?? (await findForumPost(channel.id, ref).catch(() => null))
   if (superseded()) return
   if (!id) {
     ctx.toasts.error(t('chat.messageNotFound'))
