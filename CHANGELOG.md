@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.3](https://github.com/mnema-xyz/talk/compare/v3.3.2...v3.3.3) (2026-11-18)
+
+
+### Documentation
+
+* repeat the capacity benchmark on 3.3.0 and compare with 2.2.0 ([#870](https://github.com/mnema-xyz/talk/issues/870)) ([7a8218f](https://github.com/mnema-xyz/talk/commit/7a8218f7d2a023e49ffa334dd375aaafe732d8d0))
+
 ## [3.3.2](https://github.com/mnema-xyz/talk/compare/v3.3.1...v3.3.2) (2026-11-18)
 
 
