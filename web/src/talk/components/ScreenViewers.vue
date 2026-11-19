@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/auth'
 import { useDismissable } from '../../shared/composables/useDismissable'
 import { t } from '../../i18n'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 const props = defineProps({
   // The sharer: whose screen share this is.
@@ -101,26 +102,28 @@ onUnmounted(() => clearTimeout(hoverTimer))
       <span class="tabular-nums">{{ count }}</span>
     </button>
 
-    <div
-      v-if="open"
-      :id="popoverId"
-      data-testid="screen-viewers-list"
-      class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-xl bg-mnema-elevated p-1.5 text-left shadow-popover pop-in select-none"
-    >
-      <p class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
-        {{ count ? $t('talk.viewersTitle', { count }) : $t('talk.viewersNone') }}
-      </p>
-      <ul v-if="count" class="max-h-48 overflow-y-auto">
-        <li
-          v-for="u in viewers"
-          :key="u.id"
-          :data-viewer="u.id"
-          class="flex h-9 items-center gap-2 rounded-md px-2 text-sm text-mnema-text"
-        >
-          <UserAvatar :user="u" size="xs" />
-          <span class="truncate font-medium">{{ nameOf(u) }}</span>
-        </li>
-      </ul>
-    </div>
+    <PopTransition>
+      <div
+        v-if="open"
+        :id="popoverId"
+        data-testid="screen-viewers-list"
+        class="absolute left-0 top-full z-40 mt-1.5 w-56 max-w-[calc(100vw-16px)] rounded-xl bg-mnema-elevated p-1.5 text-left shadow-popover pop-in select-none"
+      >
+        <p class="px-2 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">
+          {{ count ? $t('talk.viewersTitle', { count }) : $t('talk.viewersNone') }}
+        </p>
+        <ul v-if="count" class="max-h-48 overflow-y-auto">
+          <li
+            v-for="u in viewers"
+            :key="u.id"
+            :data-viewer="u.id"
+            class="flex h-9 items-center gap-2 rounded-md px-2 text-sm text-mnema-text"
+          >
+            <UserAvatar :user="u" size="xs" />
+            <span class="truncate font-medium">{{ nameOf(u) }}</span>
+          </li>
+        </ul>
+      </div>
+    </PopTransition>
   </div>
 </template>

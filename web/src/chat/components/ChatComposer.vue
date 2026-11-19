@@ -33,6 +33,7 @@ import { useAttachmentTray } from '../composables/useAttachmentTray'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 // The message composer: text with @mention and slash-command suggestions,
 // attachments, emoji and the reply bar. Sending and uploading are the chat's.
@@ -139,22 +140,26 @@ function handleKeyDown(e: KeyboardEvent) {
         replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
-      <SlashSuggestions
-        v-if="slashOpen"
-        id="chat-slash"
-        :items="slash.suggestions.value"
-        :active="slash.active.value"
-        @pick="slash.pick"
-        @hover="slash.active.value = $event"
-      />
-      <MentionSuggestions
-        v-if="assist.open.value"
-        id="chat-mentions"
-        :items="assist.suggestions.value"
-        :active="assist.active.value"
-        @pick="assist.pick"
-        @hover="assist.active.value = $event"
-      />
+      <PopTransition>
+        <SlashSuggestions
+          v-if="slashOpen"
+          id="chat-slash"
+          :items="slash.suggestions.value"
+          :active="slash.active.value"
+          @pick="slash.pick"
+          @hover="slash.active.value = $event"
+        />
+      </PopTransition>
+      <PopTransition>
+        <MentionSuggestions
+          v-if="assist.open.value"
+          id="chat-mentions"
+          :items="assist.suggestions.value"
+          :active="assist.active.value"
+          @pick="assist.pick"
+          @hover="assist.active.value = $event"
+        />
+      </PopTransition>
 
       <!-- Hidden File Input -->
       <input

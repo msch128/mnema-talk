@@ -95,3 +95,22 @@ export function visibleArea(): { top: number; bottom: number; width: number } {
   const bottom = (vv ? vv.offsetTop + vv.height : window.innerHeight) - insetBottom
   return { top, bottom, width: vv?.width ?? window.innerWidth }
 }
+
+/**
+ * The point a panel grows out of and shrinks back to (its transform-origin,
+ * in px of the panel): where it meets its anchor. Below the anchor that is
+ * the panel's top edge, above it the bottom edge, across at the anchor's
+ * middle (a pointer's own position).
+ */
+export function growOrigin(anchor: AnchorBox, at: { x: number; y: number }, size: { width: number; height: number }): string {
+  const x = clamp((anchor.left + anchor.right) / 2 - at.x, 0, size.width)
+  const y = at.y >= anchor.bottom - 1 ? 0 : at.y + size.height <= anchor.top + 1 ? size.height : clamp(anchor.top - at.y, 0, size.height)
+  return `${Math.round(x)}px ${Math.round(y)}px`
+}
+
+/** Where a menu is attached: the given target, else the element in full screen (only it is drawn there), else the page. */
+export function menuHost(target?: string | HTMLElement): string | HTMLElement {
+  if (target) return target
+  const full = typeof document === 'undefined' ? null : document.fullscreenElement
+  return full instanceof HTMLElement && full !== document.documentElement ? full : 'body'
+}

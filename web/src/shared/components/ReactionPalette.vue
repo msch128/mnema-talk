@@ -23,7 +23,7 @@ const position = props.sheet
 <template>
   <EmojiPicker
     v-if="full"
-    :class="[position, align === 'left' ? 'left-0' : 'right-0']"
+    :class="[position, align === 'left' ? 'left-0 origin-bottom-left' : 'right-0 origin-bottom-right']"
     @pick="emit('pick', $event)"
     @close="emit('close')"
   />
@@ -32,9 +32,9 @@ const position = props.sheet
     data-testid="reaction-palette"
     :class="[
       position,
-      'flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-[\'\']',
+      'pop-in flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-[\'\']',
       props.sheet ? 'max-md:justify-center max-md:flex-wrap' : '',
-      align === 'left' ? 'left-0' : 'right-0'
+      align === 'left' ? 'left-0 origin-bottom-left' : 'right-0 origin-bottom-right'
     ]"
   >
     <button

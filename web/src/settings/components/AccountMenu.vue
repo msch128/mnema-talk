@@ -19,6 +19,7 @@ import { useWebRTC } from '../../talk/composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../../i18n'
 import { useCompactLayout } from '../../shared/composables/useCompactLayout'
 import UserAvatar from '../../shared/components/UserAvatar.vue'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
 const emit = defineEmits<{ close: []; 'open-legal': [] }>()
@@ -148,7 +149,7 @@ const shortWindowInPlace = '[@media(max-height:40rem)]:static [@media(max-height
     ref="root"
     role="menu"
     :aria-label="$t('account.menu')"
-    :class="['absolute bottom-full left-2 z-40 mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowSheet]"
+    :class="['absolute bottom-full left-2 z-40 origin-bottom-left mb-1 flex w-[260px] max-w-[calc(100vw-16px)] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowSheet]"
     @keydown="onKeydown"
   >
     <div class="flex items-center gap-2.5 px-2 pb-2.5 pt-1.5">
@@ -205,28 +206,30 @@ const shortWindowInPlace = '[@media(max-height:40rem)]:static [@media(max-height
           {{ currentLanguage }}<ChevronRight class="h-3.5 w-3.5" />
         </span>
       </button>
-      <div
-        v-if="langOpen"
-        data-submenu
-        role="menu"
-        :aria-label="$t('account.language')"
-        :class="['absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowInPlace]"
-      >
-        <button
-          v-for="l in SUPPORTED"
-          :key="l"
-          type="button"
-          role="menuitemradio"
-          tabindex="-1"
-          :lang="l"
-          :aria-checked="locale === l ? 'true' : 'false'"
-          :class="item"
-          @click="chooseLanguage(l)"
+      <PopTransition>
+        <div
+          v-if="langOpen"
+          data-submenu
+          role="menu"
+          :aria-label="$t('account.language')"
+          :class="['absolute left-full top-0 z-50 ml-1 flex w-[180px] flex-col rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in', shortWindowInPlace]"
         >
-          {{ $t(`language.${l}`) }}
-          <span :class="['ml-auto h-3.5 w-3.5 shrink-0 rounded-full', locale === l ? 'bg-mnema-accent shadow-[inset_0_0_0_1.5px_var(--color-mnema-accent),inset_0_0_0_4px_var(--color-mnema-elevated)]' : 'shadow-[inset_0_0_0_1.5px_var(--color-mnema-border-field)]']"></span>
-        </button>
-      </div>
+          <button
+            v-for="l in SUPPORTED"
+            :key="l"
+            type="button"
+            role="menuitemradio"
+            tabindex="-1"
+            :lang="l"
+            :aria-checked="locale === l ? 'true' : 'false'"
+            :class="item"
+            @click="chooseLanguage(l)"
+          >
+            {{ $t(`language.${l}`) }}
+            <span :class="['ml-auto h-3.5 w-3.5 shrink-0 rounded-full', locale === l ? 'bg-mnema-accent shadow-[inset_0_0_0_1.5px_var(--color-mnema-accent),inset_0_0_0_4px_var(--color-mnema-elevated)]' : 'shadow-[inset_0_0_0_1.5px_var(--color-mnema-border-field)]']"></span>
+          </button>
+        </div>
+      </PopTransition>
     </div>
 
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>

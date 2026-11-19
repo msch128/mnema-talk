@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { boxOf, needsSheet, placeNear, pointBox, submenuOffsets, visibleArea } from './floatingPosition'
+import { boxOf, growOrigin, menuHost, needsSheet, placeNear, pointBox, submenuOffsets, visibleArea } from './floatingPosition'
 
 const view = { width: 1000, height: 800 }
 const menu = { width: 200, height: 300 }
@@ -80,5 +80,34 @@ describe('visibleArea', () => {
     vi.unstubAllGlobals()
     app.remove()
     expect(visibleArea().top).toBe(0)
+  })
+})
+
+describe('growOrigin', () => {
+  it('grows a menu below a pointer from the pointer', () => {
+    const at = placeNear(pointBox(300, 200), menu, view, { gap: 0 })
+    expect(growOrigin(pointBox(300, 200), at, menu)).toBe('0px 0px')
+  })
+
+  it('grows a menu flipped above and left of a pointer from its bottom right corner', () => {
+    const at = placeNear(pointBox(990, 790), menu, view, { gap: 0 })
+    expect(growOrigin(pointBox(990, 790), at, menu)).toBe('200px 300px')
+  })
+
+  it('grows a menu below a button from the middle of the button', () => {
+    const anchor = { left: 100, top: 100, right: 140, bottom: 130 }
+    expect(growOrigin(anchor, placeNear(anchor, menu, view), menu)).toBe('20px 0px')
+  })
+
+  it('grows a menu above a button from its bottom edge', () => {
+    const anchor = { left: 100, top: 740, right: 140, bottom: 770 }
+    expect(growOrigin(anchor, placeNear(anchor, menu, view), menu)).toBe('20px 300px')
+  })
+})
+
+describe('menuHost', () => {
+  it('takes the given target, else the page', () => {
+    expect(menuHost('#here')).toBe('#here')
+    expect(menuHost()).toBe('body')
   })
 })

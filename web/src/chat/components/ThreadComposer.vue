@@ -19,6 +19,7 @@ import { useAttachmentTray } from '../composables/useAttachmentTray'
 import { useChatStore } from '../../stores/chat'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 // The reply box of a thread: text with @mention suggestions, attachments,
 // emoji and the reply bar. Sending and uploading are the thread's.
@@ -69,14 +70,16 @@ function handleKeyDown(e: KeyboardEvent) {
         replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
-      <MentionSuggestions
-        v-if="assist.open.value"
-        id="thread-mentions"
-        :items="assist.suggestions.value"
-        :active="assist.active.value"
-        @pick="assist.pick"
-        @hover="assist.active.value = $event"
-      />
+      <PopTransition>
+        <MentionSuggestions
+          v-if="assist.open.value"
+          id="thread-mentions"
+          :items="assist.suggestions.value"
+          :active="assist.active.value"
+          @pick="assist.pick"
+          @hover="assist.active.value = $event"
+        />
+      </PopTransition>
 
       <!-- Hidden file input for thread -->
       <input

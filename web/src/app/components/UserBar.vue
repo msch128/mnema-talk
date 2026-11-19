@@ -12,6 +12,7 @@ import VoiceStatusPanel from '../../talk/components/VoiceStatusPanel.vue'
 import AccountMenu from '../../settings/components/AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
 import { isTextCut } from '../../directives/fullText'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 const emit = defineEmits<{ 'open-legal': [] }>()
 
@@ -122,12 +123,16 @@ function ibTone(active: boolean) {
       </button>
     </div>
 
-    <PresenceMenu v-if="presenceOpen" :trigger="presenceButton" @close="presenceOpen = false" />
-    <AccountMenu
-      v-if="menuOpen"
-      :trigger="menuButton"
-      @close="menuOpen = false"
-      @open-legal="emit('open-legal')"
-    />
+    <PopTransition>
+      <PresenceMenu v-if="presenceOpen" :trigger="presenceButton" @close="presenceOpen = false" />
+    </PopTransition>
+    <PopTransition>
+      <AccountMenu
+        v-if="menuOpen"
+        :trigger="menuButton"
+        @close="menuOpen = false"
+        @open-legal="emit('open-legal')"
+      />
+    </PopTransition>
   </div>
 </template>

@@ -15,6 +15,7 @@ import UserAvatar from '../../shared/components/UserAvatar.vue'
 import HeaderPopover from '../../shared/components/HeaderPopover.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
 import BlockedFold from '../../shared/components/BlockedFold.vue'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 // The channel's pinned messages: a header button with a popover listing them,
 // newest pin first. A click jumps to the message; moderators can unpin here.
@@ -122,45 +123,47 @@ const when = (iso: string) => dateTime(iso, locale.value)
       <Pin class="h-5 w-5" />
     </button>
 
-    <HeaderPopover v-if="open" data-testid="pinned-panel" :title="$t('pins.title')">
-      <StatePanel v-if="loading" state="loading" />
-      <StatePanel v-else-if="failed" state="error" retryable @retry="load">{{ $t('pins.failed') }}</StatePanel>
-      <StatePanel v-else-if="!items.length" state="empty" :icon="Pin" data-testid="pinned-empty">
-        {{ $t(canUnpin ? 'pins.emptyModerator' : 'pins.empty') }}
-      </StatePanel>
-      <div v-for="msg in items" v-else :key="msg.id" class="group/row flex items-start gap-1 rounded-md transition hover:bg-mnema-hover">
-        <BlockedFold :msg="msg" class="flex-1 p-2.5">
-          <button
-            type="button"
-            data-testid="pinned-item"
-            class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-md p-2.5 text-left"
-            @click="pick(msg)"
-          >
-            <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
-            <span class="min-w-0 flex-1">
-              <span class="mb-0.5 flex items-center gap-2">
-                <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-                <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
-                <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" aria-hidden="true" />
+    <PopTransition>
+      <HeaderPopover v-if="open" data-testid="pinned-panel" :title="$t('pins.title')">
+        <StatePanel v-if="loading" state="loading" />
+        <StatePanel v-else-if="failed" state="error" retryable @retry="load">{{ $t('pins.failed') }}</StatePanel>
+        <StatePanel v-else-if="!items.length" state="empty" :icon="Pin" data-testid="pinned-empty">
+          {{ $t(canUnpin ? 'pins.emptyModerator' : 'pins.empty') }}
+        </StatePanel>
+        <div v-for="msg in items" v-else :key="msg.id" class="group/row flex items-start gap-1 rounded-md transition hover:bg-mnema-hover">
+          <BlockedFold :msg="msg" class="flex-1 p-2.5">
+            <button
+              type="button"
+              data-testid="pinned-item"
+              class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-md p-2.5 text-left"
+              @click="pick(msg)"
+            >
+              <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
+              <span class="min-w-0 flex-1">
+                <span class="mb-0.5 flex items-center gap-2">
+                  <span class="truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+                  <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+                  <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" aria-hidden="true" />
+                </span>
+                <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
+                <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
+                <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
               </span>
-              <span class="line-clamp-3 wrap-break-word text-sm text-mnema-muted">{{ excerpt(msg) }}</span>
-              <span v-if="pinnedLine(msg)" data-testid="pinned-by" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ pinnedLine(msg) }}</span>
-              <span v-if="markers(msg).length" data-testid="pinned-markers" class="mt-1 block truncate text-xs text-mnema-tertiary">{{ markers(msg).join(' · ') }}</span>
-            </span>
+            </button>
+          </BlockedFold>
+          <button
+            v-if="canUnpin"
+            type="button"
+            data-testid="pinned-unpin"
+            class="btn btn-icon mr-1.5 mt-2 h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
+            :aria-label="$t('moderation.unpinMessage')"
+            v-tooltip="$t('moderation.unpinMessage')"
+            @click="unpin(msg)"
+          >
+            <PinOff class="h-4 w-4" />
           </button>
-        </BlockedFold>
-        <button
-          v-if="canUnpin"
-          type="button"
-          data-testid="pinned-unpin"
-          class="btn btn-icon mr-1.5 mt-2 h-7 w-7 shrink-0 max-md:h-11 max-md:w-11"
-          :aria-label="$t('moderation.unpinMessage')"
-          v-tooltip="$t('moderation.unpinMessage')"
-          @click="unpin(msg)"
-        >
-          <PinOff class="h-4 w-4" />
-        </button>
-      </div>
-    </HeaderPopover>
+        </div>
+      </HeaderPopover>
+    </PopTransition>
   </div>
 </template>
