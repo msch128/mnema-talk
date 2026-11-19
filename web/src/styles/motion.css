@@ -1,0 +1,136 @@
+/* Motion tokens and the few motion patterns built on them. The easings
+   (--ease-out, --ease-in, --ease-in-out) live in style.css @theme.
+
+   Rules: menus and popovers take 150-250 ms and grow from scale 0.95 at their
+   trigger; whatever leaves takes about 20 % less time than it took to arrive;
+   pressed controls shrink to 0.97; list rows arrive 30 ms apart, only the
+   first eight; nothing bounces. With prefers-reduced-motion nothing moves:
+   entrances fade at most, presses and stretches stay still. */
+
+:root {
+  --motion-press: 90ms;
+  --motion-popover-in: 180ms;
+  --motion-popover-out: 140ms;
+  --motion-panel-in: 220ms;
+  --motion-panel-out: 170ms;
+  --motion-icon: 180ms;
+  --motion-row-in: 150ms;
+  --motion-stagger: 30ms;
+  --motion-pulse: 520ms;
+  --motion-popover-scale: 0.95;
+  --motion-press-scale: 0.97;
+}
+
+@keyframes mnema-pop-out { to { opacity: 0; transform: scale(var(--motion-popover-scale)); } }
+@keyframes mnema-fade-out { to { opacity: 0; } }
+@keyframes mnema-row-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes mnema-success-pulse {
+  from { box-shadow: 0 0 0 0 rgb(45 167 113 / 0.45); }
+  to { box-shadow: 0 0 0 6px rgb(45 167 113 / 0); }
+}
+@keyframes mnema-success-icon { from { opacity: 0; transform: scale(0.6); } }
+
+@layer components {
+  /* Menus, popovers and the emoji picker grow out of their trigger. The
+     origin defaults to the top left corner (a menu below and right of the
+     pointer); a popover that opens elsewhere names its corner with one of
+     Tailwind's origin-* utilities. */
+  .pop-in {
+    animation: var(--animate-pop-in);
+    transform-origin: top left;
+  }
+
+  /* Leaving (PopTransition, PanelTransition): shorter, accelerating away,
+     back towards the same origin; it no longer takes clicks. */
+  .pop-out {
+    animation: mnema-pop-out var(--motion-popover-out) var(--ease-in) both;
+    pointer-events: none;
+  }
+  .panel-in {
+    animation: mnema-fade-in var(--motion-panel-in) var(--ease-out) both;
+  }
+  .panel-out {
+    animation: mnema-fade-out var(--motion-panel-out) var(--ease-in) both;
+    pointer-events: none;
+  }
+}
+
+/* Press feedback for controls that are not a .btn (the voice bars, the Talk
+   controls): the same 0.97 as a button. Unlayered so a view's transition-colors
+   does not drop the transform from the transition. */
+.press {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+}
+.press:active:not(:disabled, [aria-disabled='true']) {
+  transform: scale(var(--motion-press-scale));
+  transition-duration: var(--motion-press);
+}
+
+/* A confirmation ("Saved", "Copied"): one soft ring that runs out, the tick
+   scales into place. Plays once when the element appears. */
+.success-pulse {
+  border-radius: 9999px;
+  animation: mnema-success-pulse var(--motion-pulse) var(--ease-out) both;
+}
+.success-pulse > svg,
+svg.success-pulse {
+  animation: mnema-success-icon var(--motion-icon) var(--ease-out) both;
+}
+
+/* A list that has just been opened (a channel switch, the member list): its
+   first eight rows arrive 30 ms apart. The view sets data-entering only while
+   it swaps content, so rows that arrive later do not animate. */
+[data-entering] > :nth-child(-n + 8) {
+  animation: mnema-row-in var(--motion-row-in) var(--ease-out) both;
+}
+[data-entering] > :nth-child(2) { animation-delay: calc(var(--motion-stagger) * 1); }
+[data-entering] > :nth-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
+[data-entering] > :nth-child(4) { animation-delay: calc(var(--motion-stagger) * 3); }
+[data-entering] > :nth-child(5) { animation-delay: calc(var(--motion-stagger) * 4); }
+[data-entering] > :nth-child(6) { animation-delay: calc(var(--motion-stagger) * 5); }
+[data-entering] > :nth-child(7) { animation-delay: calc(var(--motion-stagger) * 6); }
+[data-entering] > :nth-child(8) { animation-delay: calc(var(--motion-stagger) * 7); }
+
+/* Icon crossfade (IconSwap): the old icon blurs and shrinks away while the new
+   one sharpens into its place, in the same grid cell. */
+.icon-swap {
+  display: inline-grid;
+  place-items: center;
+}
+.icon-swap > * {
+  grid-area: 1 / 1;
+}
+.icon-swap-enter-active,
+.icon-swap-leave-active {
+  transition: opacity var(--motion-icon) var(--ease-out), transform var(--motion-icon) var(--ease-out), filter var(--motion-icon) var(--ease-out);
+}
+.icon-swap-leave-active {
+  transition-duration: calc(var(--motion-icon) * 0.8);
+  transition-timing-function: var(--ease-in);
+}
+.icon-swap-enter-from,
+.icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.6);
+  filter: blur(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-in,
+  .pop-out,
+  .panel-in,
+  .panel-out,
+  .success-pulse,
+  .success-pulse > svg,
+  svg.success-pulse,
+  [data-entering] > * {
+    animation: none !important;
+  }
+  .press:active:not(:disabled, [aria-disabled='true']) {
+    transform: none;
+  }
+  .icon-swap-enter-active,
+  .icon-swap-leave-active {
+    transition: none;
+  }
+}

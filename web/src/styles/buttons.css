@@ -40,10 +40,10 @@
     transition-property: background-color, border-color, color, box-shadow, transform, opacity;
   }
 
-  /* Pressed: a hair smaller, never a colour jump. */
+  /* Pressed: 0.97 of its size (motion.css), never a colour jump. */
   .btn:not(:disabled, [aria-disabled='true']):active {
-    transform: translateY(0.5px) scale(0.985);
-    transition-duration: 60ms;
+    transform: scale(var(--motion-press-scale));
+    transition-duration: var(--motion-press);
   }
 
   .btn:disabled,

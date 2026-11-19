@@ -3,7 +3,7 @@ export const focusRing = 'focus-visible:outline-hidden focus-visible:ring-2 focu
 
 export function headerButton(active: boolean) {
   return [
-    'relative w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md border transition-colors motion-reduce:transition-none',
+    'press relative w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-md border motion-reduce:transition-none',
     focusRing,
     active
       ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
@@ -11,11 +11,11 @@ export function headerButton(active: boolean) {
   ]
 }
 
-export const overlayButton = 'w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-lg text-white transition-colors motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80'
+export const overlayButton = 'press w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center rounded-lg text-white motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/80'
 
 // A control the member may not use here (an audience member's microphone on a
 // Stage): the quiet grey of "not available", never the red of "muted".
 export const blockedButton = 'bg-mnema-surface text-mnema-tertiary opacity-60 cursor-not-allowed'
 
 // Square icon button of the voice bars (user bar, call panel); 44px on phones.
-export const barIconButton = 'flex h-8 w-8 max-md:h-11 max-md:w-11 shrink-0 items-center justify-center rounded-md transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
+export const barIconButton = 'flex h-8 w-8 max-md:h-11 max-md:w-11 shrink-0 items-center justify-center rounded-md press focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent'
