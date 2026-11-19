@@ -22,6 +22,7 @@ import { useStage } from '../composables/useStage'
 import { blockedButton } from './talkButtons'
 import { waitSentence } from '../../shared/lib/newMember'
 import { t } from '../../i18n'
+import IconSwap from '../../shared/components/IconSwap.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: true },
@@ -176,8 +177,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       v-bind="menus.mic.on"
       @click="canSpeak && voiceStore.toggleMute()"
     >
-      <MicOff v-if="voiceStore.isMuted" class="w-5 h-5" aria-hidden="true" />
-      <Mic v-else class="w-5 h-5" aria-hidden="true" />
+      <IconSwap :on="voiceStore.isMuted" :on-icon="MicOff" :off-icon="Mic" />
     </button>
 
     <button
@@ -189,8 +189,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       v-bind="menus.output.on"
       @click="voiceStore.toggleDeafen"
     >
-      <HeadphoneOff v-if="voiceStore.isDeafened" class="w-5 h-5" aria-hidden="true" />
-      <Headphones v-else class="w-5 h-5" aria-hidden="true" />
+      <IconSwap :on="voiceStore.isDeafened" :on-icon="HeadphoneOff" :off-icon="Headphones" />
     </button>
 
     <div v-if="!compact" :class="sep" aria-hidden="true"></div>
@@ -204,8 +203,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       v-bind="menus.camera.on"
       @click="toggleCamera"
     >
-      <Video v-if="voiceStore.isCameraOn" class="w-5 h-5" aria-hidden="true" />
-      <VideoOff v-else class="w-5 h-5" aria-hidden="true" />
+      <IconSwap :on="voiceStore.isCameraOn" :on-icon="Video" :off-icon="VideoOff" />
     </button>
 
     <button
@@ -233,8 +231,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
         v-tooltip="voiceStore.allCamerasOff ? t('talk.allCamerasOn') : t('talk.allCamerasOff')"
         @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
       >
-        <EyeOff v-if="voiceStore.allCamerasOff" class="w-5 h-5" aria-hidden="true" />
-        <Eye v-else class="w-5 h-5" aria-hidden="true" />
+        <IconSwap :on="voiceStore.allCamerasOff" :on-icon="EyeOff" :off-icon="Eye" />
       </button>
 
       <button

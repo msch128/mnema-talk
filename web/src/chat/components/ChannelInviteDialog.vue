@@ -66,7 +66,7 @@ onMounted(() => { void state.start() })
             @focus="($event.target as HTMLInputElement).select()"
           />
           <button type="button" class="btn btn-primary shrink-0" :disabled="!link" data-testid="channel-invite-copy" @click="copy">
-            <Check v-if="copied" class="h-4 w-4" aria-hidden="true" />
+            <Check v-if="copied" class="success-pulse h-4 w-4" aria-hidden="true" />
             <Copy v-else class="h-4 w-4" aria-hidden="true" />
             <span>{{ copied ? $t('memberInvites.copied') : $t('memberInvites.copy') }}</span>
           </button>
