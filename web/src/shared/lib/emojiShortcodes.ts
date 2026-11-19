@@ -1,5 +1,5 @@
 // The standard emoji behind ":smile:" suggestions. The table is a generated
-// JSON file (scripts/genEmojiShortcodes.mjs), loaded on first use so it stays
+// JSON file (scripts/genEmojiShortcodes.ts), loaded on first use so it stays
 // out of the main bundle.
 import { shallowRef } from 'vue'
 

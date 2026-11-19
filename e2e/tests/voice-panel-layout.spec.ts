@@ -33,7 +33,7 @@ const TALK = `Long Talk name for the voice panel layout check ${suffix}`.padEnd(
 const STATUS = 'Back after the long weekend trip'
 
 // The desktop client opens at 1200x820 with a minimum of 640x480 and keeps 68px
-// for its server rail on the left (mnema-talk-desktop: web_shell/window.rs, RAIL_WIDTH).
+// for its server rail on the left (talk-desktop: web_shell/window.rs, RAIL_WIDTH).
 interface Size { name: string; width: number; height: number; sidebar?: 'Home' | 'End'; rootFont?: string }
 const SIZES: Size[] = [
   { name: 'phone', width: 390, height: 844 },
