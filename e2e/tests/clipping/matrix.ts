@@ -6,7 +6,7 @@ export type Locale = 'en' | 'de'
 export interface Combo { viewport: Viewport; locale: Locale; zoom: 1 | 1.25 }
 
 // The desktop client opens at 1200x820 with a minimum of 640x480 and keeps 68px
-// on the left for its server rail (mnema-talk-desktop: web_shell/window.rs, RAIL_WIDTH).
+// on the left for its server rail (talk-desktop: web_shell/window.rs, RAIL_WIDTH).
 export const VIEWPORTS: Viewport[] = [
   { name: 'full-hd', width: 1920, height: 1080 },
   { name: 'laptop', width: 1366, height: 768 },
