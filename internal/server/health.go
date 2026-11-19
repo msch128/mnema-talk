@@ -152,7 +152,7 @@ func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *health
 	ping := func(context.Context) error { return errors.New("no database") }
 	if p != nil {
 		ping = func(ctx context.Context) error {
-			return pingOrBusy(ctx, p.Ping, func() int64 { return p.Snapshot().AcquireCount })
+			return pingOrBusy(ctx, p.Ping, p.Snapshot)
 		}
 	}
 	return &healthCheck{ping: ping, storage: storage, ttl: ttl}
@@ -163,18 +163,25 @@ func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *health
 // not down. After a restart every client reads its state again within
 // seconds; a ping queued behind those requests must not tell all of them that
 // the server is down (the web client shows an outage notice for a 503 here).
-// acquired counts the connections the pool has handed out; the ping's own
-// one is allowed for.
-func pingOrBusy(ctx context.Context, ping func(context.Context) error, acquired func() int64) error {
-	before := acquired()
+// Progress is counted in connections given back (see returnedConns), and the
+// ping's own one is allowed for.
+func pingOrBusy(ctx context.Context, ping func(context.Context) error, stats func() db.PoolStats) error {
+	before := returnedConns(stats())
 	err := ping(ctx)
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
-	if acquired()-before > 1 {
+	if returnedConns(stats())-before > 1 {
 		return nil
 	}
 	return err
+}
+
+// returnedConns counts the connections the pool handed out that came back:
+// work that finished. Handing out alone proves nothing: a database that
+// hangs still takes the idle connections, and they never return.
+func returnedConns(s db.PoolStats) int64 {
+	return s.AcquireCount - int64(s.Acquired)
 }
 
 // check returns the dependencies that are down, none when healthy.

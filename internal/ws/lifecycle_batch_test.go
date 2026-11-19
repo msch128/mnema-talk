@@ -204,3 +204,61 @@ func theBatchConn(t *testing.T, h *Hub) *batchConn {
 	t.Fatal("no client")
 	return nil
 }
+
+// A close frame another goroutine writes while the write loop holds a batch
+// (evict's 4001, renewLostPeer's 4002) still reaches the client when the
+// connection is closed right after: otherwise it sees 1006 and reconnects.
+func TestBatchConnCloseSendsTheHeldBatch(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	got := make(chan []byte, 1)
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			got <- nil
+			return
+		}
+		defer c.Close()
+		var all bytes.Buffer
+		_, _ = all.ReadFrom(c)
+		got <- all.Bytes()
+	}()
+	raw, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := &batchConn{Conn: raw}
+	b.hold()
+	frame := websocket.FormatCloseMessage(closeReplaced, "too many connections")
+	_, _ = b.Write(frame)
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case data := <-got:
+		if !bytes.Equal(data, frame) {
+			t.Fatalf("client got %q, want the close frame %q", data, frame)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("nothing arrived")
+	}
+}
+
+// Close does not hang on a write that is stuck on the network.
+func TestBatchConnCloseCutsOffAStuckWrite(t *testing.T) {
+	server, client := net.Pipe() // nobody reads client: a write blocks
+	t.Cleanup(func() { _ = client.Close() })
+	b := &batchConn{Conn: server}
+	go func() { _, _ = b.Write([]byte("stuck")) }()
+	time.Sleep(20 * time.Millisecond)
+	done := make(chan struct{})
+	go func() { _ = b.Close(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Close waited on a stuck write")
+	}
+}

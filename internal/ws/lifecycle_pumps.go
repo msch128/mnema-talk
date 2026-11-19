@@ -216,6 +216,28 @@ func (b *batchConn) Write(p []byte) (int, error) {
 	return b.Conn.Write(p)
 }
 
+// closeFlushWait bounds how long Close waits to send a batch it finds: a
+// close frame another goroutine wrote into it (evict's 4001, renewLostPeer's
+// 4002, the echo of the peer's close) must reach the client, or it sees 1006
+// and reconnects at once.
+const closeFlushWait = 250 * time.Millisecond
+
+// Close sends what the batch gathered, then closes the connection. A write
+// that is stuck on the network gets closeFlushWait before it is cut off.
+func (b *batchConn) Close() error {
+	if !b.mu.TryLock() {
+		_ = b.Conn.SetWriteDeadline(time.Now().Add(closeFlushWait))
+		b.mu.Lock()
+	}
+	b.holding = false
+	if len(b.buf) > 0 {
+		_ = b.Conn.SetWriteDeadline(time.Now().Add(closeFlushWait))
+		_ = b.sendLocked()
+	}
+	b.mu.Unlock()
+	return b.Conn.Close()
+}
+
 // hold starts a batch.
 func (b *batchConn) hold() {
 	b.mu.Lock()

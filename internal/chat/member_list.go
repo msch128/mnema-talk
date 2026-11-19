@@ -11,8 +11,8 @@ import (
 	"github.com/mnema-xyz/talk/internal/safego"
 )
 
-// memberLoadTimeout bounds one shared read of the member list. It runs on
-// its own context: one caller that gives up must not fail the others.
+// memberLoadTimeout bounds one shared read of the member list. It is not
+// cancelled with a caller: one caller that gives up must not fail the others.
 const memberLoadTimeout = 10 * time.Second
 
 // memberLoads shares the read of the member list between requests that ask
@@ -54,7 +54,9 @@ func (l *memberLoads) get(ctx context.Context, p *db.Pool) ([]core.Member, error
 	l.busy = true
 	l.mu.Unlock()
 	if start {
-		safego.Go("member_list", safego.Abandon, l.run)
+		// The read outlives this caller (others share it) but keeps its values.
+		base := context.WithoutCancel(ctx)
+		safego.Go("member_list", safego.Abandon, func() { l.run(base) })
 	}
 	select {
 	case <-f.done:
@@ -66,7 +68,7 @@ func (l *memberLoads) get(ctx context.Context, p *db.Pool) ([]core.Member, error
 
 // run reads for the waiting flight, then for the one that gathered meanwhile,
 // until nobody waits.
-func (l *memberLoads) run() {
+func (l *memberLoads) run(base context.Context) {
 	for {
 		l.mu.Lock()
 		f := l.waiting
@@ -78,7 +80,7 @@ func (l *memberLoads) run() {
 		}
 		load := l.load
 		l.mu.Unlock()
-		l.read(f, load)
+		l.read(base, f, load)
 	}
 }
 
@@ -86,9 +88,9 @@ func (l *memberLoads) run() {
 // request reads again.
 var errMemberLoad = errors.New("member list read failed")
 
-func (l *memberLoads) read(f *memberFlight, load func(ctx context.Context) ([]core.Member, error)) {
+func (l *memberLoads) read(base context.Context, f *memberFlight, load func(ctx context.Context) ([]core.Member, error)) {
 	defer close(f.done)
-	ctx, cancel := context.WithTimeout(context.Background(), memberLoadTimeout)
+	ctx, cancel := context.WithTimeout(base, memberLoadTimeout)
 	defer cancel()
 	safego.Run("member_list_read", func() { f.members, f.err = nil, errMemberLoad }, func() {
 		f.members, f.err = load(ctx)
