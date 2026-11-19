@@ -1,0 +1,54 @@
+name: Release rerun
+
+# A release job that fails on a transient error of an external service (the
+# image push, the Sigstore signature, Docker Hub, the npm registry) is run once
+# more, so a release does not wait for somebody to press "Re-run failed jobs".
+#
+# What it never does:
+#   - it does not rerun when the release-please job failed: that job holds the
+#     gates (CI on main's tip, the nightly sweeps, the release PR), and a
+#     failed gate is a decision, not a glitch;
+#   - it reruns only the first attempt, so a real failure stops after one
+#     more try and the failed run stays visible.
+# The rerun uses the same inputs and the same gates as the first attempt.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: release-rerun-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1 &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write # re-run failed jobs of the Release workflow, nothing else
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - name: Rerun the failed jobs unless a gate failed
+        run: |
+          set -euo pipefail
+          failed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100" \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(",")')
+          if [ -z "$failed" ]; then
+            echo "::notice::no failed job in run $RUN_ID (cancelled or skipped); nothing to rerun."
+            exit 0
+          fi
+          case ",$failed," in
+            *,release-please,*)
+              echo "::notice::release-please failed ($failed): a gate, not a transient error; not rerun."
+              exit 0 ;;
+          esac
+          echo "Rerunning failed jobs of run $RUN_ID: $failed"
+          gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"
