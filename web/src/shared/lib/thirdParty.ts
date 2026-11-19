@@ -57,7 +57,7 @@ export const THIRD_PARTY = [
       { name: 'sigstore-go, go-containerregistry (update verification)', license: 'Apache-2.0', url: 'https://github.com/sigstore/sigstore-go' },
       { name: 'godotenv', license: 'MIT', url: 'https://github.com/joho/godotenv' },
       { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' },
-      { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in mnema-talk-desktop THIRD_PARTY_NOTICES.md', url: 'https://github.com/mnema-xyz/talk-desktop/blob/main/THIRD_PARTY_NOTICES.md' }
+      { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in talk-desktop THIRD_PARTY_NOTICES.md', url: 'https://github.com/mnema-xyz/talk-desktop/blob/main/THIRD_PARTY_NOTICES.md' }
     ]
   },
   {

@@ -1,7 +1,7 @@
 {
  "format": 1,
- "source": "Copy of test-vectors/host-errors.json in the desktop repository (msch128/mnema-talk-desktop). Edit it there first, then copy it here byte for byte.",
- "note": "Edited by hand. Every sentence (clients: which of the two can send it) the connect page can receive from the Rust host and the Linux client; the web app (mnema-talk web/src/lib/hostErrors.json) translates them by exact text. {version} and {count} are placeholders; withHint sentences are followed by one space and natHint; withDetail sentences may end in ' (detail)'.",
+ "source": "Copy of test-vectors/host-errors.json in the desktop repository (mnema-xyz/talk-desktop). Edit it there first, then copy it here byte for byte.",
+ "note": "Edited by hand. Every sentence (clients: which of the two can send it) the connect page can receive from the Rust host and the Linux client; the web app (talk web/src/lib/hostErrors.json) translates them by exact text. {version} and {count} are placeholders; withHint sentences are followed by one space and natHint; withDetail sentences may end in ' (detail)'.",
  "natHint": "If the server runs in your own network, your router may not support reaching it through its public address (NAT loopback/hairpin) — try the local address or another network.",
  "sentences": [
   {
