@@ -113,7 +113,9 @@ values afterwards, so there is no leak.
 - One screen share to about 100 members used about half a core directly and
   about 1.6 cores through the relay.
 - A Talk in which 100 members watch ten cameras and a screen at the same time
-  is beyond this machine, also with 2.4.0; see the [sizing guide](#sizing-guide).
+  was beyond this machine up to 3.3; since the SFU sends from all goroutines at
+  once it holds with no loss at about 1.9 cores
+  ([the socket's write lock](#the-mixed-talk-holds-the-sockets-write-lock)).
 
 ## Repeat on 3.3.0
 
@@ -202,6 +204,47 @@ each back to back on fresh stacks:
 
 p95 and p99 drop by about a third and come within 10 to 20 % of 2.2.0; the
 lock's ordering guarantee is kept.
+
+### The mixed Talk holds: the socket's write lock
+
+The loss of the mixed shape at the server's ingress had one cause: the
+server's own UDP socket. Every member's media leaves through the SFU's one
+shared port, and Go lets one write at a time go through a socket for the whole
+system call. On this host a send costs about 14 µs, so the socket carried at
+most about 45,000 packets a second; the forwarding goroutines of all tracks
+queued on its lock (all 14 of them, in every goroutine dump of the run), read
+their publishers more slowly than they sent, and the tracks' receive buffers
+overflowed. Those packets were dropped before the server counted them, which
+is why the loss showed at the ingress while a third of the CPU was idle and the
+kernel counted no drops. A counter for these drops was added in the same
+change: `mnema_sfu_ingress_dropped_total{reason="buffer"}` (35,265 in the run
+before the fix).
+
+Since the fix the SFU's port and the built-in relay's port send from all
+goroutines at once (Linux; see `internal/fastudp`). Same host, same throwaway
+stack and generator, server built from the same commit with and without the
+fix, one run each with a 120 s hold:
+
+| Shape (100 members) | Version | Screen loss | Camera loss | Egress in the window | Server CPU (hold) | Generator |
+|---|---|---:|---:|---:|---:|---:|
+| screen, 10 cameras at 300 kbit/s, 3 speakers | before | 76.5 % | 11.8 % | 4.35 M packets | 1.38 cores | 1.19 cores |
+| | after | 0.00 % | 0.00 % | 8.92 M packets | 1.91 cores | 1.42 cores |
+| screen, 4 cameras at 1 Mbit/s, 3 speakers | before | 64.4 % | 49.5 % | 4.48 M packets | 1.38 cores | 1.17 cores |
+| | after | 0.00 % | 0.00 % | 8.99 M packets | 1.91 cores | 1.40 cores |
+| screen and 3 speakers, all through the relay | before | 0.00 % | | 3.56 M packets | 1.31 cores | 0.80 cores |
+| | after | 0.00 % | | 3.55 M packets | 1.24 cores | 0.71 cores |
+
+The server now sends twice the packets for 40 % more CPU: about 24 µs per
+packet instead of 35. Audio lost nothing in any run. The relay shape was not
+limited by the lock and is unchanged within noise; its flap of the earlier runs
+did not occur in either run.
+
+The next limit is the CPU itself. With 120 members (screen, 10 cameras, 3
+speakers) the server used 2.23 cores, the generator 1.46 and the host was 88 %
+busy; the screen then lost 22 % of its packets, again in the tracks' receive
+buffers. About half of the server's CPU in these runs is the kernel's send path
+(the system call itself), the rest mostly Pion's per-packet interceptors;
+encryption is about 5 %.
 
 ## Sizing guide
 
@@ -457,7 +500,8 @@ server's ingress remains (77 % of the screen's packets), now with the server
 far from its limit and the generator on 1.15 cores. That points at the load
 generator and the shared host as the limit of these runs, not at the server,
 but we have not shown it: a run with the generator on a second machine is
-still missing.
+still missing. Later runs found the real cause, the server's socket: see
+[the socket's write lock](#the-mixed-talk-holds-the-sockets-write-lock).
 
 The 100-member shape of the first benchmark (screen, 10 cameras, 3 speakers)
 lost 81 % of the screen's packets on 2.4.0 and 77 % on 2.5.0.

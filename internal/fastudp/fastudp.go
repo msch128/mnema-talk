@@ -15,6 +15,10 @@
 // on the descriptor, without the lock, on Linux. A send the kernel cannot take
 // at once (a full send buffer) and every other platform or address family
 // goes through the wrapped conn as before. Reads are untouched.
+//
+// A writer that falls back on a full send buffer waits for the socket through
+// the runtime, while direct writers may take the room it frees first; such a
+// writer is delayed, never stuck, and a UDP send buffer is rarely full.
 package fastudp
 
 import (
@@ -109,5 +113,8 @@ func (c *Conn) send(b []byte, addr netip.AddrPort) (n int, done bool, err error)
 	if c.closed {
 		return 0, false, nil
 	}
-	return sendto4(c.fd, b, ip.As4(), addr.Port())
+	return sendto(c.fd, b, ip.As4(), addr.Port())
 }
+
+// sendto is the system call; tests replace it.
+var sendto = sendto4

@@ -2,7 +2,11 @@ package sfu
 
 import (
 	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,7 +23,8 @@ func TestMuxSocketSendsConcurrentlyOnLinux(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := n.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	// Pion's mux listens like this: network "udp", one interface address.
+	c, err := n.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,8 +45,15 @@ func TestFullTrackBufferCountsDrops(t *testing.T) {
 	buf := srtpBuffer(packetio.RTPBufferPacket, 1)
 	defer buf.Close()
 	pkt := make([]byte, 1200)
+	// srtp writes through WriteWithAttributes when the buffer has it.
+	aw, ok := buf.(interface {
+		WriteWithAttributes([]byte, packetio.Attributes) (int, error)
+	})
+	if !ok {
+		t.Fatal("the track buffer lost WriteWithAttributes")
+	}
 	for range rtpBufferBytes/len(pkt) + 10 {
-		_, _ = buf.Write(pkt)
+		_, _ = aw.WriteWithAttributes(pkt, nil)
 	}
 	if metrics.SFUIngressDropped.Sum(0, "buffer") == start {
 		t.Fatal("no drop counted for a full track buffer")
@@ -64,5 +76,27 @@ func TestMuxLoggerCountsEndpointDrops(t *testing.T) {
 	c.NewLogger("mux").Infof("something else")
 	if got := metrics.SFUIngressDropped.Sum(0, "mux") - before; got != 1 {
 		t.Fatalf("mux drops = %d, want 1", got)
+	}
+}
+
+// The counters match Pion's log lines word for word; a Pion that rewords one
+// would make its counter read zero for ever.
+func TestPionLogLinesStillMatch(t *testing.T) {
+	out, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/pion/webrtc/v4").Output()
+	dir := strings.TrimSpace(string(out))
+	if err != nil || dir == "" {
+		t.Skipf("Pion's source is not available: %v", err)
+	}
+	for file, line := range map[string]string{
+		"internal/mux/mux.go": `m.log.Infof("` + pionMuxFull + `")`,
+		"peerconnection.go":   `"` + pionUnhandledRTCP + `"`,
+	} {
+		src, err := os.ReadFile(filepath.Join(dir, file))
+		if err != nil {
+			t.Skipf("Pion's source is not available: %v", err)
+		}
+		if !strings.Contains(string(src), line) {
+			t.Errorf("%s no longer logs %s", file, line)
+		}
 	}
 }
