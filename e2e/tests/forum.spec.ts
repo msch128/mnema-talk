@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, awaitSettled, responseString } from './helpers'
 
 // The forum end to end: a moderator defines the tags and the rules, a post is
 // created with tags, its tags are edited afterwards, the list is filtered by
@@ -28,7 +28,7 @@ async function signIn(page: Page) {
 async function shot(page: Page, name: string) {
   if (!SHOTS) return
   await mkdir(SHOTS, { recursive: true })
-  await page.waitForTimeout(400) // let dialogs and fades settle
+  await awaitSettled(page) // let dialogs and fades settle
   await page.screenshot({ path: `${SHOTS}/${SHOT_PREFIX}${name}.png` })
 }
 

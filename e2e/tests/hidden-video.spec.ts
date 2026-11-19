@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember } from './helpers'
+import { apiFetch, responseString, suiteMember, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -57,7 +57,7 @@ const received = (page: Page) => page.evaluate(async () => {
 
 async function growth(page: Page, ms: number) {
   const before = await received(page)
-  await page.waitForTimeout(ms)
+  await observeFor(page, ms)
   const after = await received(page)
   return { video: after.video - before.video, audio: after.audio - before.audio }
 }
@@ -109,7 +109,7 @@ test('a hidden page gets no video from the server, keeps the audio and gets the 
 
     // Hidden: the video stops at the server. The voices do not.
     await setHidden(viewer, true)
-    await viewer.waitForTimeout(2000)
+    await expect.poll(async () => (await growth(viewer, 1000)).video, { timeout: 20_000, message: 'the video kept flowing to a hidden tab' }).toBeLessThan(1000)
     const hidden = await growth(viewer, 4000)
     expect(hidden.video).toBeLessThan(4000)
     expect(hidden.audio).toBeGreaterThan(1000)

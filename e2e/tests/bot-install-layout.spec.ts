@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, awaitScrollEnd, responseString } from './helpers'
 
 // The confirm screen of a bot's manifest at the widths members use: nothing may
 // run out of the admin pane (a long channel name, a long command name), the
@@ -49,7 +49,7 @@ for (const [width, height] of [[390, 844], [820, 1180], [1132, 820]] as const) {
     const confirm = page.getByTestId('manifest-confirm')
     await expect(confirm).toBeVisible()
     await expect(page.getByTestId('manifest-channels')).toContainText(name)
-    await page.waitForTimeout(600) // the smooth scroll has settled
+    await awaitScrollEnd(page) // the smooth scroll has settled
 
     expect(await overflowing(page)).toEqual([])
     const nameCut = await page.getByTestId('manifest-name').evaluate(el => el.scrollWidth > el.clientWidth + 1)

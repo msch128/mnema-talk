@@ -1,6 +1,6 @@
 import { decodeChatChannel } from '../../web/src/types/rest'
 import type { Page, BrowserContext, Locator, Request } from '@playwright/test'
-import { apiFetch, responseString, bounds } from './helpers'
+import { apiFetch, responseString, bounds, observeFor } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 import { isCancelledApiRequest } from './page-errors'
@@ -350,7 +350,7 @@ test('the empty tail of the list appends to the last group without opening it', 
   await dragTo(admin, row(admin, 'a2'), tail(admin), 0.5)
   await expect(header(admin, 'G')).toHaveClass(/ring-mnema-accent/)
   // (longer than the 600 ms peek delay; checking that nothing happens needs the wait)
-  await admin.waitForTimeout(1000)
+  await observeFor(admin, 1000)
   await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
   // ... while holding over its header does; Escape closes it again.
   await moveOnto(admin, header(admin, 'G'), 40, 0.6, 4)

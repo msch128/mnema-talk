@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
-import { apiFetch, expectTalkLive, leaveTalks } from './helpers'
+import { apiFetch, expectTalkLive, leaveTalks, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 import { installPerfProbe } from './perf-probe'
 import type { ProbeSnapshot } from './perf-probe'
@@ -87,7 +87,7 @@ test('an open app is idle when nobody uses it', async ({ browser }) => {
   async function measure(state: string) {
     const [s0, m0, r0] = [await snapshot(page), await metrics(), requests]
     const started = Date.now()
-    await page.waitForTimeout(WINDOW_S * 1000)
+    await observeFor(page, WINDOW_S * 1000)
     const [s1, m1, r1] = [await snapshot(page), await metrics(), requests]
     const minutes = (Date.now() - started) / 60_000
     const per = (n: number) => Math.round((n / minutes) * 10) / 10
@@ -125,26 +125,26 @@ test('an open app is idle when nobody uses it', async ({ browser }) => {
   await page.reload()
   await page.locator('[data-channel-type="text"]', { hasText: text }).click()
   await expect(page.getByRole('textbox').first()).toBeVisible()
-  await page.waitForTimeout(3000)
+  await observeFor(page, 3000)
 
   await measure('a. text channel, tab visible')
   await setHidden(page, true)
-  await page.waitForTimeout(1500)
+  await observeFor(page, 1500)
   const hidden = await measure('b. text channel, tab hidden')
   await setHidden(page, false)
 
   await page.locator('[data-channel-type="voice"]', { hasText: voice }).click()
   await expectTalkLive(page)
-  await page.waitForTimeout(3000)
+  await observeFor(page, 3000)
   await setHidden(page, true)
-  await page.waitForTimeout(1500)
+  await observeFor(page, 1500)
   const inCall = await measure('d. in a call, tab hidden')
   await setHidden(page, false)
   await leaveTalks([page])
   await page.locator('[data-channel-type="text"]', { hasText: text }).click()
-  await page.waitForTimeout(3000)
+  await observeFor(page, 3000)
   await setHidden(page, true)
-  await page.waitForTimeout(1500)
+  await observeFor(page, 1500)
   const left = await measure('c. after leaving the call, tab hidden')
 
   if (OUT) writeFileSync(OUT, JSON.stringify(rows, null, 2))

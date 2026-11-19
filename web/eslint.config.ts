@@ -133,7 +133,10 @@ export default tseslint.config(
   // The browser specs probe the policy with a plain string at a sink (csp.spec.ts).
   {
     files: ['**/e2e/**/*.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...desktopGlobalSyntax] }
+    rules: { 'no-restricted-syntax': ['error', ...desktopGlobalSyntax, {
+      selector: "CallExpression[callee.property.name='waitForTimeout']",
+      message: 'Wait for a condition with a web-first assertion, expect.poll, awaitSettled or awaitScrollEnd; observeFor (helpers.ts) is for a measurement over real time.'
+    }] }
   },
   // The desktop adapters name the window globals; the HTML rule still holds there.
   {

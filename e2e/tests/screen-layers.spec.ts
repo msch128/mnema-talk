@@ -222,7 +222,8 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   for (const [layer, size] of sizes) {
     await chooseLayer(a, layer)
     await expect.poll(async () => sameSize(await videoSize(a), size), { timeout: 30_000 }).toBe(true)
-    await a.waitForTimeout(1500)
+    const before = (await frames(a)).frames
+    await expect.poll(async () => (await frames(a)).frames - before, { timeout: 20_000, message: 'no frames after the layer switch' }).toBeGreaterThan(15)
     if (layer === 'auto') await expect(a.getByTestId('screen-layer-label')).toHaveText(AUTO_LABEL)
   }
   const seen = await frames(a)

@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, awaitSettled, responseString } from './helpers'
 
 // A forum post closes with the X button and with Escape, the address goes back
 // to the forum, and a reload does not open the post again.
@@ -29,7 +29,7 @@ async function expectClosedForum(page: Page) {
   await expect(page).not.toHaveURL(POST_PATH)
   await expect(page.getByTestId('forum-area')).toBeVisible()
   // Still closed a moment later: nothing re-opens it.
-  await page.waitForTimeout(500)
+  await awaitSettled(page)
   await expect(page.getByTestId('thread-close')).toBeHidden()
   await page.reload()
   await expect(page.getByTestId('forum-area')).toBeVisible()
