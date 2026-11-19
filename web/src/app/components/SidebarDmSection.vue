@@ -209,7 +209,7 @@ function onDragEnd() {
             :call="callOf(dm.id)"
             :class="[
               dragging === dm.id ? 'opacity-50' : '',
-              dropAt?.id === dm.id ? (dropAt.after ? 'shadow-[inset_0_-2px_0_0_#2DA771]' : 'shadow-[inset_0_2px_0_0_#2DA771]') : ''
+              dropAt?.id === dm.id ? (dropAt.after ? 'shadow-[inset_0_-2px_0_0_var(--color-mnema-accent)]' : 'shadow-[inset_0_2px_0_0_var(--color-mnema-accent)]') : ''
             ]"
             @open="open(dm.id)"
             @menu="openMenu(dm, $event)"

@@ -37,7 +37,7 @@ const { draft } = form
 
 <template>
   <section class="space-y-3" data-testid="forum-settings" @keydown="form.onKeydown">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.rulesTitle') }}</h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-mnema-muted">{{ $t('forum.rulesTitle') }}</h3>
     <SwitchRow
       v-model="draft.require_tag"
       data-testid="forum-require-tag"

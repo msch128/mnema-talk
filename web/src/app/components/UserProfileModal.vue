@@ -160,7 +160,7 @@ async function handleMention() {
     <template #default="{ titleId, close }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
-      <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
+      <div class="h-28 shrink-0 bg-linear-to-br from-mnema-band via-mnema-raised to-mnema-accent-subtle border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
         <!-- The member's banner, or the default pattern -->
         <!-- A banner that was deleted from storage falls back to the default pattern. -->
         <MediaImage
@@ -201,7 +201,7 @@ async function handleMention() {
                 <BotBadge v-if="isBot" />
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
-                  class="w-4 h-4 text-amber-400 inline-block drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
+                  class="w-4 h-4 text-mnema-away inline-block drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
                   v-tooltip.visual="$t('profile.adminHint')"
                   role="img"
                   :aria-label="$t('profile.adminHint')"
@@ -221,7 +221,7 @@ async function handleMention() {
               :class="[
                 'flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold',
                 profileUser.role === 'admin'
-                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 uppercase tracking-wider'
+                  ? 'border-mnema-away/30 bg-mnema-away/10 text-mnema-away uppercase tracking-wider'
                   : 'border-mnema-border bg-mnema-band text-mnema-muted'
               ]"
               data-testid="profile-role-badge"

@@ -69,7 +69,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('   ')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('Enter a title.')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Enter a title.')
     expect(wrapper.find('[role="alert"]').text()).toBe('Enter a title.')
     expect(create).not.toHaveBeenCalled()
   })
@@ -79,7 +79,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('Party')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('Choose a start time.')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Choose a start time.')
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -90,7 +90,7 @@ describe('EventEditDialog', () => {
     await setText('input[type="datetime-local"]', '2026-11-01T18:00', 0)
     await setText('input[type="datetime-local"]', '2026-11-01T17:00', 1)
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('The end must not be before the start.')
+    expect(wrapper.find('[role="alert"]').text()).toBe('The end must not be before the start.')
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -100,11 +100,11 @@ describe('EventEditDialog', () => {
     await titleInput()?.setValue('Party')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('Enter a location.')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Enter a location.')
 
     await wrapper.find('input[type="radio"][value="talk"]').setValue(true)
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('Select a Talk channel')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Select a Talk channel')
     expect(create).not.toHaveBeenCalled()
   })
 

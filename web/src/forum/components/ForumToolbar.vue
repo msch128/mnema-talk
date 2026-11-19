@@ -65,7 +65,7 @@ function pick(id: string) {
           'shrink-0 cursor-pointer rounded-md border px-2.5 py-0.5 text-xs font-medium transition',
           tagId === null
             ? 'border-mnema-accent bg-mnema-accent/15 text-mnema-text'
-            : 'border-mnema-hairline bg-mnema-surface text-mnema-secondary hover:border-mnema-border hover:text-mnema-text'
+            : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:border-mnema-border hover:text-mnema-text'
         ]"
         @click="tagId = null"
       >

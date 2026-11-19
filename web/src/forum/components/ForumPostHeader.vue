@@ -146,7 +146,7 @@ function jump() {
           :aria-label="$t('forum.titleLabel')"
           class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-base font-semibold text-mnema-text focus:outline-hidden focus:border-mnema-accent"
         />
-        <button type="submit" :disabled="!titleDraft.trim() || savingTitle" class="btn btn-icon h-8 w-8 text-emerald-400 max-md:h-10 max-md:w-10" :aria-label="$t('common.save')" data-testid="forum-title-save">
+        <button type="submit" :disabled="!titleDraft.trim() || savingTitle" class="btn btn-icon h-8 w-8 text-mnema-accent max-md:h-10 max-md:w-10" :aria-label="$t('common.save')" data-testid="forum-title-save">
           <Loader2 v-if="savingTitle" class="h-4 w-4 animate-spin" />
           <Check v-else class="h-4 w-4" />
         </button>
@@ -176,13 +176,13 @@ function jump() {
     </div>
 
     <div v-if="post.is_resolved || post.is_pinned || post.is_locked" class="flex flex-wrap items-center gap-1.5 text-xs">
-      <span v-if="post.is_resolved" data-testid="forum-post-solved" class="flex items-center gap-1 rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-300">
+      <span v-if="post.is_resolved" data-testid="forum-post-solved" class="flex items-center gap-1 rounded-md bg-mnema-accent/10 px-1.5 py-0.5 text-mnema-mint">
         <CircleCheck class="h-3.5 w-3.5" />{{ $t('forum.solvedBadge') }}
       </span>
       <span v-if="post.is_pinned" class="flex items-center gap-1 rounded-md bg-mnema-accent/10 px-1.5 py-0.5 text-mnema-accent">
         <Pin class="h-3.5 w-3.5" />{{ $t('forum.pinnedBadge') }}
       </span>
-      <span v-if="post.is_locked" class="flex items-center gap-1 rounded-md bg-amber-400/10 px-1.5 py-0.5 text-amber-400">
+      <span v-if="post.is_locked" class="flex items-center gap-1 rounded-md bg-mnema-away/10 px-1.5 py-0.5 text-mnema-away">
         <Lock class="h-3.5 w-3.5" />{{ $t('forum.lockedBadge') }}
       </span>
     </div>

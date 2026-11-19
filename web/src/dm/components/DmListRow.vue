@@ -86,7 +86,7 @@ function onKey(event: KeyboardEvent) {
     :class="[
       'group relative mb-px flex min-h-[46px] w-full min-w-0 items-center gap-1 rounded-md text-left transition-colors max-md:min-h-14 motion-reduce:transition-none',
       open
-        ? 'bg-mnema-hover text-mnema-text shadow-[inset_2px_0_0_0_#2DA771]'
+        ? 'bg-mnema-hover text-mnema-text shadow-[inset_2px_0_0_0_var(--color-mnema-accent)]'
         : unread > 0 && !muted
           ? 'text-mnema-text hover:bg-mnema-hover/70'
           : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text'

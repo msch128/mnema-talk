@@ -94,7 +94,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
         v-if="canManage && open"
         type="button"
         data-testid="event-roles-edit"
-        class="flex items-center gap-1.5 rounded-lg border border-mnema-border px-2.5 py-1 text-xs font-medium text-mnema-secondary transition-colors hover:bg-mnema-hover max-md:min-h-11"
+        class="flex items-center gap-1.5 rounded-lg border border-mnema-border px-2.5 py-1 text-xs font-medium text-mnema-muted transition-colors hover:bg-mnema-hover max-md:min-h-11"
         @click="emit('edit-roles')"
       >
         <Pencil class="h-3.5 w-3.5" />
@@ -111,16 +111,16 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
           <span class="shrink-0 text-xs tabular-nums text-mnema-tertiary" data-testid="event-role-fill">{{ fill(role) }}</span>
         </div>
         <div v-if="role.capacity" class="h-1 overflow-hidden rounded-full bg-mnema-hairline" aria-hidden="true">
-          <div :class="['h-full rounded-full', fillWidth(role), full(role) ? 'bg-amber-400' : 'bg-mnema-accent']"></div>
+          <div :class="['h-full rounded-full', fillWidth(role), full(role) ? 'bg-mnema-away' : 'bg-mnema-accent']"></div>
         </div>
 
         <ul v-if="members(role, 'confirmed').length" class="flex flex-col gap-1">
           <li v-for="item in members(role, 'confirmed')" :key="item.user.id" class="flex items-center justify-between gap-2 text-sm">
             <span class="flex min-w-0 items-center gap-2">
               <UserAvatar :user="eventAvatar(item.user)" size="sm" />
-              <span v-full-text class="truncate" :class="isMe(item) ? 'font-semibold text-mnema-text' : 'text-mnema-secondary'">{{ item.user.display_name || item.user.username }}</span>
+              <span v-full-text class="truncate" :class="isMe(item) ? 'font-semibold text-mnema-text' : 'text-mnema-muted'">{{ item.user.display_name || item.user.username }}</span>
             </span>
-            <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
+            <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-danger max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
               <X class="h-4 w-4" />
             </button>
           </li>
@@ -131,7 +131,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
           <ol class="flex flex-col gap-1">
             <li v-for="(item, i) in members(role, 'waitlist')" :key="item.user.id" class="flex items-center justify-between gap-2 text-sm text-mnema-tertiary">
               <span v-full-text class="truncate"><span class="mr-1.5 tabular-nums">{{ i + 1 }}.</span>{{ item.user.display_name || item.user.username }}</span>
-              <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
+              <button v-if="canManage && open && !isMe(item)" type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:text-mnema-danger max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.remove', { name: item.user.display_name || item.user.username })" @click="remove(item)">
                 <X class="h-4 w-4" />
               </button>
             </li>
@@ -139,7 +139,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
         </div>
         <p v-else-if="role.waitlist > 0" class="text-xs text-mnema-tertiary">{{ $t('events.roles.waitlistTitle', { count: role.waitlist }) }}</p>
 
-        <p v-if="mine?.role_id === role.id && mine.state === 'waitlist'" class="rounded-md bg-amber-400/10 px-2 py-1 text-xs text-amber-300" data-testid="event-my-waitlist">
+        <p v-if="mine?.role_id === role.id && mine.state === 'waitlist'" class="rounded-md bg-mnema-away/10 px-2 py-1 text-xs text-mnema-away" data-testid="event-my-waitlist">
           {{ $t('events.roles.myPlace', { place: mine.waitlist_position }) }}
         </p>
 
@@ -150,7 +150,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
           :disabled="busy"
           :class="[
             'mt-auto rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 max-md:min-h-11',
-            action(role) === 'leave' ? 'border-mnema-border text-mnema-secondary hover:bg-mnema-hover' : 'border-mnema-accent/40 text-mnema-accent hover:bg-mnema-accent/10'
+            action(role) === 'leave' ? 'border-mnema-border text-mnema-muted hover:bg-mnema-hover' : 'border-mnema-accent/40 text-mnema-accent hover:bg-mnema-accent/10'
           ]"
           @click="press(role)"
         >

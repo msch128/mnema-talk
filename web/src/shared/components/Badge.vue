@@ -11,7 +11,7 @@ defineProps({
 })
 
 const VARIANTS: Record<BadgeVariant, string> = {
-  mention: 'bg-mnema-danger text-white font-bold',
+  mention: 'bg-mnema-danger text-mnema-accent-ink font-bold',
   unread: 'bg-mnema-hover text-mnema-muted font-semibold',
   info: 'bg-mnema-accent text-mnema-accent-ink font-mono font-semibold'
 }

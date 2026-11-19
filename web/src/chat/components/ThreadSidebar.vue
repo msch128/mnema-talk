@@ -338,7 +338,7 @@ async function handleSendReply() {
       <PendingMessages v-if="chatStore.activeThread" :channel-id="threadChannel" :parent-id="chatStore.activeThread.id" compact />
     </div>
 
-    <div v-if="isLockedForMe" class="p-3 bg-amber-400/10 border-t border-mnema-hairline flex items-center gap-2 text-xs text-amber-400 shrink-0">
+    <div v-if="isLockedForMe" class="p-3 bg-mnema-away/10 border-t border-mnema-hairline flex items-center gap-2 text-xs text-mnema-away shrink-0">
       <Lock class="w-4 h-4 shrink-0" />
       <span>{{ $t('forum.lockedNotice') }}</span>
     </div>

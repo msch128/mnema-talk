@@ -95,7 +95,7 @@ const canSettings = computed(() => features.talksLobby && canConfigureTalk(props
         <span
           v-if="chatUnread"
           data-testid="voice-chat-unread"
-          class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-mnema-danger text-white text-[11px] font-bold leading-[18px] text-center tabular-nums ring-2 ring-mnema-canvas"
+          class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-mnema-danger text-mnema-accent-ink text-[11px] font-bold leading-[18px] text-center tabular-nums ring-2 ring-mnema-canvas"
           aria-hidden="true"
         >{{ chatUnread }}</span>
       </button>
