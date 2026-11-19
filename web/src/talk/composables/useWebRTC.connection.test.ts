@@ -44,3 +44,22 @@ describe('a media connection that never comes up', () => {
     expect(relayOffered()).toBe(false)
   })
 })
+
+describe('the voice panel knows when the media path is up', () => {
+  it('is connecting until ICE connects, again while it is lost, and not after leaving', async () => {
+    const { pc, voice } = await joined()
+    expect(voice.mediaLinked).toBe(false)
+    pc.iceConnectionState = 'checking'
+    present(pc.oniceconnectionstatechange)()
+    expect(voice.mediaLinked).toBe(false)
+    pc.iceConnectionState = 'connected'
+    present(pc.oniceconnectionstatechange)()
+    expect(voice.mediaLinked).toBe(true)
+    pc.iceConnectionState = 'disconnected'
+    present(pc.oniceconnectionstatechange)()
+    expect(voice.mediaLinked).toBe(false)
+    pc.iceConnectionState = 'completed'
+    present(pc.oniceconnectionstatechange)()
+    expect(voice.mediaLinked).toBe(true)
+  })
+})

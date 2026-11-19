@@ -23,6 +23,7 @@ export function cleanupPeerConnection(cx: Cx) {
     try { st.pc.close() } catch (err) { void err }
     st.pc = null
   }
+  voice.mediaLinked = false
   releaseRemoteAudio()
   st.audioSender = null
   st.screenSender = null
@@ -88,6 +89,7 @@ function wireIceDiagnostics(cx: Cx, conn: RTCPeerConnection) {
   conn.onicegatheringstatechange = () => reportDiag('gathering')
   conn.oniceconnectionstatechange = () => {
     const state = st.pc?.iceConnectionState
+    if (st.pc === conn) cx.voice.mediaLinked = state === 'connected' || state === 'completed'
     if (state && REPORTABLE_ICE_STATES.has(state)) reportDiag('ice')
     if (state === 'failed' && st.pc === conn) announceNoMediaConnection(relayOffered())
   }

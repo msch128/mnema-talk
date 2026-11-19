@@ -52,19 +52,21 @@ const tone = (active: boolean) => active
     :aria-label="$t('voice.panel.label')"
     class="vpanel-wrap flex flex-col gap-0.5 border-t border-mnema-hairline pb-2 pl-3 pr-2 pt-2.5"
   >
-    <!-- "Connected" always stays whole; a long Talk name truncates. -->
+    <!-- "Connected" always stays whole; a long Talk name truncates. Until the
+         media path is up it says "Connecting…" in a calm grey, its dot breathing. -->
     <button
       type="button"
       data-testid="voice-panel-open"
       v-tooltip.visual="openTip"
-      :aria-label="$t('voice.panel.connected', { channel: channelName })"
-      class="flex min-w-0 items-center gap-1 text-left text-sm font-semibold leading-5 text-mnema-accent hover:text-mnema-accent-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent"
+      :data-linked="voiceStore.mediaLinked ? 'true' : 'false'"
+      :aria-label="$t(voiceStore.mediaLinked ? 'voice.panel.connected' : 'voice.panel.connectingNamed', { channel: channelName })"
+      :class="['flex min-w-0 items-center gap-1 text-left text-sm font-semibold leading-5 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-mnema-accent', voiceStore.mediaLinked ? 'text-mnema-accent hover:text-mnema-accent-hover' : 'text-mnema-muted hover:text-mnema-text']"
       @pointerenter="measureName"
       @focus="measureName"
       @click="voiceStore.activeView = 'voice'"
     >
-      <span class="mr-1 h-2 w-2 shrink-0 rounded-full bg-mnema-accent"></span>
-      <span class="shrink-0">{{ $t('voice.panel.status') }}</span>
+      <span :class="['mr-1 h-2 w-2 shrink-0 rounded-full', voiceStore.mediaLinked ? 'bg-mnema-accent' : 'bg-mnema-muted animate-pulse motion-reduce:animate-none']"></span>
+      <span class="shrink-0">{{ voiceStore.mediaLinked ? $t('voice.panel.status') : $t('voice.panel.connecting') }}</span>
       <span class="vp-name shrink-0" aria-hidden="true">·</span>
       <span ref="nameEl" data-testid="voice-panel-channel" class="vp-name min-w-0 truncate">{{ channelName }}</span>
     </button>
