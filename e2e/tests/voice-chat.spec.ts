@@ -67,7 +67,7 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
     await expect(page).toHaveURL(new RegExp(`/v/${channelSlug}$`))
   }
 
-  // A opens it with the chat button in the Talk header: Discord's empty state.
+  // A opens it with the chat button in the Talk header: the empty state.
   await a.getByTestId('voice-chat-toggle').click()
   const aPanel = a.getByTestId('voice-chat-panel')
   await expect(aPanel).toBeVisible()

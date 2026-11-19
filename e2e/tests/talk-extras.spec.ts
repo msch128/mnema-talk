@@ -204,7 +204,7 @@ test('the grid fits the window and can hide participants without video', async (
   await expect.poll(width).toBe(big)
 
   // Only videos: B turns on the camera, A hides everyone without video
-  // (A itself too, like Discord).
+  // (A itself too).
   await b.getByRole('button', { name: 'Kamera einschalten' }).first().click()
   const bTile = tiles.filter({ hasText: bName })
   await expect(bTile.locator('video')).toBeVisible({ timeout: 20_000 })
@@ -349,7 +349,7 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
   await expect.poll(() => bVideo.evaluate(v => { if (!(v instanceof HTMLVideoElement)) throw new Error("Expected video"); return v.videoHeight }), { timeout: 20_000 }).toBeGreaterThan(0)
   await expect.poll(async () => (await sent())?.maxFramerate).toBe(30)
 
-  // The gear on A's own share: Discord's stream menu.
+  // The gear on A's own share: the stream menu.
   await aStage.getByTestId('stream-quality-button').click()
   const menu = a.getByRole('menu', { name: 'Qualität der Übertragung' })
   await expect(menu).toBeVisible()
