@@ -44,7 +44,7 @@ class ResolveVersions(unittest.TestCase):
     def test_default_matrix_is_the_supported_sources(self):
         r = self.resolve('')
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.split(), ['0.8.16', '0.9.0', '1.0.0', '1.1.0', '2.0.0', '2.9.12', '2.9.19'])
+        self.assertEqual(r.stdout.split(), ['0.8.16', '0.9.0', '1.0.0', '1.1.0', '2.0.0', '2.9.12', '2.9.19', '3.0.13', '3.2.1', '3.3.5'])
 
     def test_commas_spaces_prefix_and_duplicates(self):
         r = self.resolve('v0.9.0, 0.8.16 0.9.0')
@@ -119,6 +119,24 @@ class HealthFeatures(unittest.TestCase):
             with self.subTest(bad=bad):
                 r = run_shell(f'drill_health_features_ok \'{bad}\' dm')
                 self.assertNotEqual(r.returncode, 0)
+
+
+class ImageFor(unittest.TestCase):
+    def image(self, version, env=None):
+        r = run_shell(f'drill_image_for {version}', env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.strip()
+
+    def test_releases_before_the_move_come_from_the_legacy_path(self):
+        for v in ('0.8.16', '2.9.19', '3.0.13'):
+            self.assertEqual(self.image(v), 'ghcr.io/msch128/mnema-talk', v)
+
+    def test_releases_since_the_move_come_from_the_org_path(self):
+        for v in ('3.2.1', '3.3.5', '4.0.0'):
+            self.assertEqual(self.image(v), 'ghcr.io/mnema-xyz/mnema-talk', v)
+
+    def test_registry_override_wins(self):
+        self.assertEqual(self.image('3.3.5', {'REGISTRY_IMAGE': 'localhost:5000/talk'}), 'localhost:5000/talk')
 
 
 if __name__ == '__main__':

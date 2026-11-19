@@ -60,7 +60,7 @@ if [ -n "${PREVIOUS_IMAGE:-}" ]; then
 else
   FROM_VERSION="$(drill_resolve_versions "${FROM_VERSION:-}")" || exit 1
   case "$FROM_VERSION" in *$'\n'*) echo "a leg takes exactly one FROM_VERSION" >&2; exit 1 ;; esac
-  OLD_IMAGE="$REGISTRY_IMAGE:$FROM_VERSION"
+  OLD_IMAGE="$(drill_image_for "$FROM_VERSION"):$FROM_VERSION"
 fi
 drill_semver_ok "$FROM_VERSION" || { echo "cannot tell the version of $OLD_IMAGE; set FROM_VERSION" >&2; exit 1; }
 drill_pull_image "$OLD_IMAGE"

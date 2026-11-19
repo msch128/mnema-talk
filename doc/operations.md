@@ -1502,6 +1502,31 @@ receiver that speaks its webhook format (ntfy, Gotify, email); without one,
 [`scripts/health-check.sh`](../scripts/health-check.sh) from cron still covers
 "is it up" with Unraid or webhook notifications.
 
+### A probe from outside, with GitHub Actions only
+
+If you run a public server and keep your fork on GitHub, no extra service is
+needed to learn that it is down. [`prod-probe.yml`](../.github/workflows/prod-probe.yml)
+runs [`scripts/prod-probe.sh`](../scripts/prod-probe.sh) every 15 minutes from a
+GitHub-hosted runner, so it sees what a member outside your network sees:
+
+- `/api/health` answers `{"status":"ok"}` (three tries before it counts),
+- `/` serves the web client,
+- the TLS certificate is valid for at least 14 more days,
+- the running version is not more than 6 hours behind the newest release, which
+  catches a self-updater that is stuck on a failed signature check, a changed
+  `docker-compose.yml` or an unhealthy start.
+
+A failing probe opens one issue labelled `prod-down` (later failures comment on
+it) and the first passing probe closes it; GitHub's issue notification is the
+alert. Set the repository variable `PROD_PROBE_URL` to your address (default:
+the project's own instance) and change the `if: github.repository` line to your
+repository. It cannot see the backup status or anything behind the login, and
+not a server on a private network: use the Prometheus rules below for those.
+The scheduled [`release-drill.yml`](../.github/workflows/release-drill.yml)
+does the same for backups: weekly it backs up, wipes and restores the newest
+released image and upgrades older releases to it, and opens a `drill-failed`
+issue when that stops working.
+
 ### Example alert rules
 
 The rules are in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
