@@ -265,7 +265,7 @@ services:
   # 3. Object Storage: SeaweedFS (S3-compatible)
   # ==========================================================
   seaweedfs:
-    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    image: chrislusf/seaweedfs:4.54@sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15
     container_name: mnema-seaweedfs
     restart: unless-stopped
     environment:
@@ -342,7 +342,7 @@ services:
   # not use UDP, e.g. Opera with its VPN or WebRTC protection); 49152-49200 UDP
   # only for relaying to peers outside the LAN.
   coturn:
-    image: coturn/coturn:4.19.0-alpine@sha256:136cbd65085981300ce8dda9f917f377d84f4512497041aecd5d0a42ac5fd04e
+    image: coturn/coturn:4.19.1-alpine@sha256:4e3e84aea0ed53ff2cb059ff5c8f48725c03646a6eec5ff2771c3fc12c46c8f5
     container_name: mnema-coturn
     restart: unless-stopped
     profiles:
