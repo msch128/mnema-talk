@@ -106,7 +106,7 @@ async function save() {
       <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="skip">
         {{ $t('welcome.skip') }}
       </button>
-      <button type="submit" :disabled="saving" class="btn btn-primary" data-testid="welcome-profile-save">
+      <button type="submit" :disabled="saving" :aria-busy="saving ? 'true' : undefined" class="btn btn-primary" data-testid="welcome-profile-save">
         {{ $t('welcome.continue') }}
       </button>
     </div>

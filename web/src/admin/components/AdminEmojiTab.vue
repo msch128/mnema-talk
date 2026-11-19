@@ -152,6 +152,7 @@ onMounted(() => { void store.load() })
         type="submit"
         data-testid="emoji-upload"
         :disabled="!file || !nameOk || busy || full"
+        :aria-busy="busy ? 'true' : undefined"
         class="btn btn-primary"
       >
         {{ $t('emoji.admin.add') }}

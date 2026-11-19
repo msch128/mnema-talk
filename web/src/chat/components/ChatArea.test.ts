@@ -490,7 +490,10 @@ describe('ChatArea notification settings and presentation', () => {
     chat.messages = []
     chat.isLoadingWindow = true
     await nextTick()
-    expect(w.find('svg.animate-spin').exists()).toBe(true)
+    // A channel that is still loading shows the shape of messages, and says so.
+    const skeleton = w.find('[data-testid=row-skeleton]')
+    expect(skeleton.attributes('role')).toBe('status')
+    expect(skeleton.text()).toBe(t('common.loading'))
     chat.isLoadingWindow = false
     await nextTick()
     expect(w.text()).toContain(t('chat.emptyBody'))

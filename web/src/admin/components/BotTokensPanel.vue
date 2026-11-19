@@ -108,7 +108,7 @@ onMounted(load)
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.expiry') }}</span>
         <input v-model="expires" type="date" class="rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       </label>
-      <button type="submit" :disabled="busy" class="btn btn-primary">{{ $t('bots.tokens.issue') }}</button>
+      <button type="submit" :disabled="busy" :aria-busy="busy ? 'true' : undefined" class="btn btn-primary">{{ $t('bots.tokens.issue') }}</button>
     </form>
 
     <p v-if="loaded && !tokens.length" class="text-sm text-mnema-tertiary">{{ $t('bots.tokens.empty') }}</p>
