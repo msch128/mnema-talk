@@ -20,6 +20,7 @@ import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'
 import { fullText } from './directives/fullText'
+import { entering } from './directives/entering'
 
 // Before login the browser decides; the account's language takes over after login.
 setLocale(browserLocale())
@@ -38,6 +39,7 @@ createApp(root)
   .directive('tooltip', tooltip)
   .directive('fullText', fullText)
   .directive('maxChars', maxChars)
+  .directive('entering', entering)
   .mount('#app')
 
 installRangeFill()

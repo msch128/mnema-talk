@@ -308,7 +308,7 @@ onMounted(async () => {
       <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
-        :class="['relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.threadOver.value ? 'fixed! inset-y-0 right-0 z-30 bg-mnema-canvas' : '']"
+        :class="['panel-in relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.threadOver.value ? 'fixed! inset-y-0 right-0 z-30 bg-mnema-canvas' : '']"
         :style="isCompact ? undefined : side.threadOver.value ? { left: `${panels.left.width}px` } : { width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
@@ -318,7 +318,7 @@ onMounted(async () => {
       <!-- Right column: member list -->
       <div
         v-if="(side.membersColumn.value || side.membersOver.value) && !inConversation"
-        :class="['relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.membersOver.value ? 'fixed! inset-y-0 right-0 z-40 bg-mnema-canvas shadow-popover' : '']"
+        :class="['panel-in relative h-full shrink-0 max-md:safe-pad max-md:fixed max-md:inset-0 max-md:z-30 max-md:bg-mnema-canvas', side.membersOver.value ? 'fixed! inset-y-0 right-0 z-40 bg-mnema-canvas shadow-popover' : '']"
         :style="isCompact ? undefined : { width: `${side.membersOver.value ? panels.members.defaultWidth : panels.members.width}px` }"
       >
         <MemberList />

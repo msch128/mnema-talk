@@ -86,18 +86,28 @@ svg.success-pulse {
 }
 
 /* A list that has just been opened (a channel switch, the member list): its
-   first eight rows arrive 30 ms apart. The view sets data-entering only while
-   it swaps content, so rows that arrive later do not animate. */
-[data-entering] > :nth-child(-n + 8) {
+   rows arrive 30 ms apart, eight at most. The view sets data-entering
+   (directives/entering.ts) only while it swaps content, so rows that arrive
+   later do not animate. A timeline at the bottom (data-entering="end")
+   staggers from its newest row upwards. */
+[data-entering='start'] > :nth-child(-n + 8),
+[data-entering='end'] > :nth-last-child(-n + 8) {
   animation: mnema-row-in var(--motion-row-in) var(--ease-out) both;
 }
-[data-entering] > :nth-child(2) { animation-delay: calc(var(--motion-stagger) * 1); }
-[data-entering] > :nth-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
-[data-entering] > :nth-child(4) { animation-delay: calc(var(--motion-stagger) * 3); }
-[data-entering] > :nth-child(5) { animation-delay: calc(var(--motion-stagger) * 4); }
-[data-entering] > :nth-child(6) { animation-delay: calc(var(--motion-stagger) * 5); }
-[data-entering] > :nth-child(7) { animation-delay: calc(var(--motion-stagger) * 6); }
-[data-entering] > :nth-child(8) { animation-delay: calc(var(--motion-stagger) * 7); }
+[data-entering='start'] > :nth-child(2),
+[data-entering='end'] > :nth-last-child(2) { animation-delay: calc(var(--motion-stagger) * 1); }
+[data-entering='start'] > :nth-child(3),
+[data-entering='end'] > :nth-last-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
+[data-entering='start'] > :nth-child(4),
+[data-entering='end'] > :nth-last-child(4) { animation-delay: calc(var(--motion-stagger) * 3); }
+[data-entering='start'] > :nth-child(5),
+[data-entering='end'] > :nth-last-child(5) { animation-delay: calc(var(--motion-stagger) * 4); }
+[data-entering='start'] > :nth-child(6),
+[data-entering='end'] > :nth-last-child(6) { animation-delay: calc(var(--motion-stagger) * 5); }
+[data-entering='start'] > :nth-child(7),
+[data-entering='end'] > :nth-last-child(7) { animation-delay: calc(var(--motion-stagger) * 6); }
+[data-entering='start'] > :nth-child(8),
+[data-entering='end'] > :nth-last-child(8) { animation-delay: calc(var(--motion-stagger) * 7); }
 
 /* Icon crossfade (IconSwap): the old icon blurs and shrinks away while the new
    one sharpens into its place, in the same grid cell. */
