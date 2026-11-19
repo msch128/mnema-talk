@@ -135,7 +135,11 @@
   input[type='range']:disabled { opacity: 0.45; cursor: not-allowed; }
   input[type='range']:focus-visible { outline: none; }
 
-  /* Switch: a button with role="switch" and aria-checked; the thumb is ::before. */
+  /* Switch: a button with role="switch" and aria-checked; the thumb is ::before.
+     The thumb is placed by its two edges. They travel with the same in-out
+     curve, the trailing edge 7 ms later, so the thumb stretches by about 12 %
+     on the way and lands at its own width; pressed, it reaches 12 % towards
+     the other side. */
   .switch {
     position: relative;
     flex: none;
@@ -151,26 +155,33 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 16px;
+    right: calc(100% - 18px);
     height: 16px;
     border-radius: 9999px;
     background-color: var(--color-mnema-muted);
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-    transition: transform var(--default-transition-duration) var(--ease-mnema), background-color var(--default-transition-duration) var(--ease-mnema), width 120ms var(--ease-mnema);
+    transition-property: left, right, background-color;
+    transition-duration: var(--motion-popover-in), var(--motion-popover-in), var(--default-transition-duration);
+    transition-timing-function: var(--ease-in-out), var(--ease-in-out), var(--ease-out);
+    /* Moving left: the left edge leads. */
+    transition-delay: 0ms, 7ms, 0ms;
   }
   .switch:hover:not(:disabled, [aria-checked='true']) {
     border-color: var(--color-mnema-muted);
   }
-  .switch:active:not(:disabled)::before { width: 19px; }
+  .switch:active:not(:disabled)::before { right: calc(100% - 20px); }
   .switch[aria-checked='true'] {
     border-color: var(--color-mnema-accent);
     background-color: var(--color-mnema-accent);
   }
   .switch[aria-checked='true']::before {
-    transform: translateX(18px);
+    left: calc(100% - 18px);
+    right: 2px;
     background-color: #fff;
+    /* Moving right: the right edge leads. */
+    transition-delay: 7ms, 0ms, 0ms;
   }
-  .switch[aria-checked='true']:active:not(:disabled)::before { transform: translateX(15px); }
+  .switch[aria-checked='true']:active:not(:disabled)::before { left: calc(100% - 20px); }
   .switch[aria-checked='true']:hover:not(:disabled) { background-color: var(--color-mnema-accent-hover); }
   .switch:disabled { opacity: 0.45; cursor: not-allowed; }
 }

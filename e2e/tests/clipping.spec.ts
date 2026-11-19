@@ -64,6 +64,8 @@ async function attachShot(page: Page, info: TestInfo, name: string, clip?: { x: 
 async function audit(page: Page, info: TestInfo, scene: string, report: Report[]) {
   await page.mouse.move(1, 1)
   await page.waitForTimeout(350) // entry animations settle
+  // What still runs (a staggered list, a popover on its way out) is taken to its end; a spinner keeps turning. The audit measures the settled layout.
+  await page.evaluate(() => { for (const a of document.getAnimations()) if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish() })
   const found = (await page.evaluate(auditClipping, { tolerance: 1 })).filter(f => !isExcepted(scene, f))
   report.push({ scene, findings: found })
   if (found.length === 0) return
