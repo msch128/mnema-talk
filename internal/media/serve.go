@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 	"github.com/mnema-xyz/talk/internal/httpx"
 	"github.com/mnema-xyz/talk/internal/perm"
 )
@@ -48,8 +49,8 @@ func (h *Handler) queryMedia(ctx context.Context, id uuid.UUID) (*servedMedia, e
 			m.message_id
 		FROM media m
 		WHERE m.id = $1
-		  -- the file of a message whose lifetime ended is gone with it, before the sweep
-		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = m.message_id AND x.expires_at <= now())`, id).
+		  -- the file of a message whose lifetime (or thread) ended is gone with it, before the sweep
+		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = m.message_id AND NOT `+core.LiveSQL("x")+`)`, id).
 		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &m.deleted, &m.channelID, &m.staged, &m.uploaderID, &m.wiki,
 			&m.messageID)
 	if errors.Is(err, pgx.ErrNoRows) {

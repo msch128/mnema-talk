@@ -93,15 +93,15 @@ func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.U
 	if before != nil {
 		// An entry whose message's lifetime ended is gone, as in the list below.
 		if err := core.CursorExists(ctx, p, `SELECT 1 FROM saved_messages s WHERE s.user_id = $1 AND s.message_id = $2
-			AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = s.message_id AND x.expires_at <= now())`, user, *before); err != nil {
+			AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = s.message_id AND NOT `+core.LiveSQL("x")+`)`, user, *before); err != nil {
 			return SavedPage{}, err
 		}
 	}
 	rows, err := p.Query(ctx, `
 		SELECT s.message_id, s.note, s.created_at FROM saved_messages s
 		WHERE s.user_id = $1
-		  -- the entry of a message whose lifetime ended goes with it, before the sweep
-		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = s.message_id AND x.expires_at <= now())
+		  -- the entry of a message whose lifetime (or thread) ended goes with it, before the sweep
+		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.id = s.message_id AND NOT `+core.LiveSQL("x")+`)
 		  AND ($3::uuid IS NULL OR (s.created_at, s.message_id) <
 			(SELECT created_at, message_id FROM saved_messages WHERE user_id = $1 AND message_id = $3))
 		ORDER BY s.created_at DESC, s.message_id DESC LIMIT $2`, user, limit+1, before)
