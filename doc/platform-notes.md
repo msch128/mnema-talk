@@ -73,6 +73,40 @@ Container Manager's own image update view only tracks registries in its
 registry list, so it will not flag a new Mnema Talk image; the "Update now"
 button and the admin update check do.
 
+## Install on Unraid via Community Apps
+
+The Community Apps template installs the whole stack (Mnema Talk, PostgreSQL
+and the SeaweedFS media store) as one app. It needs **Unraid 8 or newer**; on
+Unraid 7 use the Compose Manager route below.
+
+1. **Install.** Open the *Apps* tab, search for *Mnema Talk* and click
+   *Install*.
+2. **Fill in five fields.** *Public URL* (the `https://` address people will
+   open), *Admin password*, and three secrets: *JWT secret*, *Database
+   password* and *Media storage secret*. Make each secret on the Unraid
+   terminal with `openssl rand -hex 32`. Keep them; the database password
+   cannot be changed afterwards by editing the field.
+3. **Apply.** Data lives under `/mnt/user/appdata/mnema-talk`. Point the
+   *Appdata path* at a cache-only path such as `/mnt/cache/appdata/mnema-talk`
+   if you have a cache pool: PostgreSQL is faster there.
+4. **Reverse proxy and router.** Same as steps 3 and 4 of the
+   [Unraid section](#unraid) below: a proxy container with HTTPS in front of the
+   web port, and the [three ports](quick-start.md#step-4-open-the-three-ports)
+   forwarded. Enter the proxy container's address as *Reverse proxy address*.
+
+**Without Unraid 8 (Compose Manager).** Install the *Compose Manager Plus*
+plugin from Community Apps, add a stack, and paste the
+[`compose.yaml`](https://github.com/mnema-xyz/unraid-templates/blob/main/mnema-talk/compose.yaml)
+and
+[`.env.example`](https://github.com/mnema-xyz/unraid-templates/blob/main/mnema-talk/.env.example)
+of the template repository (save the second as `.env` and fill in the same five
+values). Updates: pull the new image in the stack, or follow
+[updating.md](updating.md).
+
+The template installs a released image and has no "Update now" button. The
+app's admin page still tells you when a new release is out; update the app
+from Unraid (Docker tab or the stack's *Update*).
+
 ## Unraid
 
 1. **Files.** Open the Unraid terminal and run the assistant in an appdata
