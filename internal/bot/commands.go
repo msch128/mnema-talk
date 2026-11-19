@@ -170,21 +170,35 @@ func ListCommands(ctx context.Context, q db.Querier, botID uuid.UUID) ([]Command
 	return list, nil
 }
 
+// storedDefaultPerms is the default_member_permissions column of in: NULL
+// (everyone may run the command) only when in asks for no restriction. A
+// value that cannot be stored is refused, never turned into "everyone".
+func storedDefaultPerms(in CommandInput) (*int64, error) {
+	p := in.defaultPerms
+	if p == nil && in.DefaultMemberPermissions != nil {
+		var err error
+		if _, p, err = cleanDefaultMemberPermissions(in.DefaultMemberPermissions); err != nil {
+			return nil, err
+		}
+	}
+	if p == nil {
+		return nil, nil
+	}
+	if *p > math.MaxInt64 || !p.Valid() {
+		return nil, httpx.ErrInvalidInput("unknown permission bits")
+	}
+	v := int64(*p)
+	return &v, nil
+}
+
 func upsert(ctx context.Context, q db.Querier, botID uuid.UUID, in CommandInput) (Command, error) {
 	opts, err := json.Marshal(in.Options)
 	if err != nil {
 		return Command{}, fmt.Errorf("marshal options: %w", err)
 	}
-	var defaultPerms *int64
-	if in.defaultPerms != nil && *in.defaultPerms <= math.MaxInt64 {
-		v := int64(*in.defaultPerms)
-		defaultPerms = &v
-	} else if in.DefaultMemberPermissions != nil {
-		_, p, err := cleanDefaultMemberPermissions(in.DefaultMemberPermissions)
-		if err == nil && p != nil && *p <= math.MaxInt64 {
-			v := int64(*p)
-			defaultPerms = &v
-		}
+	defaultPerms, err := storedDefaultPerms(in)
+	if err != nil {
+		return Command{}, err
 	}
 	return scanCommand(q.QueryRow(ctx, `
 		INSERT INTO bot_commands (bot_id, name, description, options, default_member_permissions) VALUES ($1, $2, $3, $4, $5)
