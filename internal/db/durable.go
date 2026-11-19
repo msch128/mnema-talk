@@ -33,8 +33,11 @@ func AsyncCommit(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// durableTimeout bounds AwaitDurable.
-const durableTimeout = 10 * time.Second
+// durableTimeout bounds AwaitDurable; durableAttempts is how often it tries.
+const (
+	durableTimeout  = 10 * time.Second
+	durableAttempts = 3
+)
 
 // AwaitDurable returns once every transaction committed on this server before
 // the call is on disk (and on the synchronous standbys, if any). The WAL is
@@ -51,14 +54,27 @@ const durableTimeout = 10 * time.Second
 // It takes the pool, not a transaction: the statement must commit on its own.
 // The caller's cancellation does not cut it short (the transaction it waits
 // for is committed already; a client that went away must not turn that into
-// a failure); durableTimeout bounds it instead. When the administrator turned
+// a failure); durableTimeout bounds it instead. A failed attempt is tried
+// again on another statement: an error here answers a request whose change
+// is stored, so only a database that stays unreachable (as with a commit
+// whose answer is lost) may give one. When the administrator turned
 // synchronous_commit off for the whole server, it flushes nothing, like every
 // other commit there.
 func AwaitDurable(ctx context.Context, p *Pool) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), durableTimeout)
 	defer cancel()
-	if _, err := p.Exec(ctx, `SELECT pg_logical_emit_message(true, 'mnema-durable', '')`); err != nil {
-		return fmt.Errorf("wait for durable commit: %w", err)
+	var err error
+	for attempt := range durableAttempts {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("wait for durable commit: %w", err)
+			case <-time.After(time.Duration(attempt) * 50 * time.Millisecond):
+			}
+		}
+		if _, err = p.Exec(ctx, `SELECT pg_logical_emit_message(true, 'mnema-durable', '')`); err == nil {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("wait for durable commit: %w", err)
 }
