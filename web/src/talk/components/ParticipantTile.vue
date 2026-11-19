@@ -287,7 +287,7 @@ watch(() => props.stream, (stream) => {
       :class="[
         'absolute inset-0 z-40 rounded-[inherit] pointer-events-none transition-shadow duration-150',
         speaking
-          ? 'ring-2 ring-inset ring-mnema-accent shadow-[inset_0_0_14px_rgba(45,167,113,0.35)]'
+          ? 'ring-2 ring-inset ring-mnema-accent shadow-[inset_0_0_14px_color-mix(in_srgb,var(--color-mnema-accent)_35%,transparent)]'
           : cameraFocused
             ? 'ring-2 ring-inset ring-mnema-accent/70'
             : 'ring-1 ring-inset ring-white/6 group-hover:ring-white/12'

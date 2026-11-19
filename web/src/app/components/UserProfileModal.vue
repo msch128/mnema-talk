@@ -201,7 +201,7 @@ async function handleMention() {
                 <BotBadge v-if="isBot" />
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
-                  class="w-4 h-4 text-mnema-away inline-block drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
+                  class="w-4 h-4 text-mnema-away inline-block drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-mnema-away)_50%,transparent)]" 
                   v-tooltip.visual="$t('profile.adminHint')"
                   role="img"
                   :aria-label="$t('profile.adminHint')"

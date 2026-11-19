@@ -40,6 +40,10 @@
   --color-mnema-away: #E0A23A;
   --color-mnema-focus: #8E97F2;
   --color-mnema-amber: #FCE4A8;
+  --color-mnema-white: #FFFFFF;
+  --color-mnema-black: #000000;
+  /* The veil behind a dialog: darker than the canvas so the page recedes. */
+  --color-mnema-scrim: rgb(8 10 9 / 0.62);
 
   /* Discord-like readable type scale. Nothing in the UI goes below 12px (text-xs).
        text-xs  12px  meta: timestamps, category/section headers, badges
@@ -114,8 +118,8 @@
    applies it. A text field keeps a calm 1px --focus-within-border (accent, no
    glow) while it holds focus. Both hold 3:1 against the dark surfaces. */
 :root {
-  --focus-ring: inset 0 0 0 1.5px rgb(45 167 113 / 0.75);
-  --focus-ring-outset: 0 0 0 2px rgb(45 167 113 / 0.75);
+  --focus-ring: inset 0 0 0 1.5px color-mix(in srgb, var(--color-mnema-accent) 75%, transparent);
+  --focus-ring-outset: 0 0 0 2px color-mix(in srgb, var(--color-mnema-accent) 75%, transparent);
   --focus-within-border: color-mix(in srgb, var(--color-mnema-accent) 60%, var(--color-mnema-border-strong));
 }
 
@@ -202,8 +206,8 @@
   body {
     font-size: 1rem;
     line-height: 1.375;
-    background-color: #0F1110;
-    color: #E6EAE8;
+    background-color: var(--color-mnema-canvas);
+    color: var(--color-mnema-text);
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -227,11 +231,11 @@
    a thin bar and a barely tinted background; the amber chip on the @name itself
    carries the emphasis, so two such messages in a row stay calm. */
 .msg-mentions-me {
-  background-color: rgba(224, 162, 58, 0.035);
-  box-shadow: inset 2px 0 0 rgba(224, 162, 58, 0.6);
+  background-color: color-mix(in srgb, var(--color-mnema-away) 3.5%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-mnema-away) 60%, transparent);
 }
 .msg-mentions-me:hover {
-  background-color: rgba(224, 162, 58, 0.06);
+  background-color: color-mix(in srgb, var(--color-mnema-away) 6%, transparent);
 }
 
 /* The message list's column. Where a short window leaves it room for less than
