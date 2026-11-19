@@ -48,8 +48,10 @@ const (
 // The record is a transactional logical message, committed on its own. A
 // transaction id alone is not enough: PostgreSQL flushes at commit only when
 // the transaction wrote WAL before its commit record. The message writes such
-// WAL, needs no table and no special privilege, and is ignored unless a logical
-// replication slot asks for messages with this prefix.
+// WAL, needs no table, and is ignored unless a logical replication slot asks
+// for messages with this prefix. It needs EXECUTE on pg_logical_emit_message,
+// which PostgreSQL grants to PUBLIC; a setup that revoked it would refuse every
+// post, so CheckDurable tries it at startup.
 //
 // It takes the pool, not a transaction: the statement must commit on its own.
 // The caller's cancellation does not cut it short (the transaction it waits
@@ -77,4 +79,15 @@ func AwaitDurable(ctx context.Context, p *Pool) error {
 		}
 	}
 	return fmt.Errorf("wait for durable commit: %w", err)
+}
+
+// CheckDurable tries AwaitDurable once at startup, so a database role that may
+// not run it stops the server with a clear message instead of failing every
+// post.
+func CheckDurable(ctx context.Context, p *Pool) error {
+	if _, err := p.Exec(ctx, `SELECT pg_logical_emit_message(true, 'mnema-durable', '')`); err != nil {
+		return fmt.Errorf("the database role cannot confirm that a commit is on disk; "+
+			"grant it EXECUTE on the function pg_logical_emit_message (PostgreSQL grants it to PUBLIC by default): %w", err)
+	}
+	return nil
 }

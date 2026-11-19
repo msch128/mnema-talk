@@ -130,6 +130,9 @@ func runWithContext(ctx context.Context) error {
 	if err := pool.Migrate(ctx); err != nil {
 		return err
 	}
+	if err := db.CheckDurable(ctx, pool); err != nil {
+		return err
+	}
 	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword, cfg.IsProduction()); err != nil {
 		return err
 	}
