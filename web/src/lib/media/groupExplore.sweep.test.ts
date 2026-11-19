@@ -6,7 +6,7 @@ import { appendFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { describeSchedule, runSchedule, schedules, scripts } from './groupExplore.fixture'
-import { occurrences, report } from './groupSimRun.fixture'
+import { occurrences, report, type SimResult } from './groupSimRun.fixture'
 
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -41,6 +41,13 @@ describe('a room of 2, all 24 scripts, one deviation among the first 4 handshake
   }, 120_000)
 })
 
+/** A schedule that broke an invariant: a row of SIM_EXPLORE_OUT when set, else the end of its trace on the console. */
+function counterexample(script: string, schedule: string, asked: number, result: SimResult) {
+  const row = { script, schedule, asked, first: result.violations[0]?.slice(0, 300), tail: result.trace.slice(-25) }
+  if (process.env.SIM_EXPLORE_OUT) appendFileSync(process.env.SIM_EXPLORE_OUT, `${JSON.stringify(row)}\n`)
+  else console.log(`${row.script}: ${row.schedule}\n${report(result, 25)}`)
+}
+
 describe.skipIf(!process.env.SIM_EXPLORE)('every schedule of a small room up to the bound', () => {
   it(`${process.env.SIM_EXPLORE_MEMBERS ?? '2'} members`, async () => {
     const members = Number(process.env.SIM_EXPLORE_MEMBERS ?? 2)
@@ -57,9 +64,7 @@ describe.skipIf(!process.env.SIM_EXPLORE)('every schedule of a small room up to 
         runs++
         if (!result.violations.length) continue
         failed++
-        const row = { script: named.name, schedule: describeSchedule(schedule), asked, first: result.violations[0]?.slice(0, 300), tail: result.trace.slice(-25) }
-        if (process.env.SIM_EXPLORE_OUT) appendFileSync(process.env.SIM_EXPLORE_OUT, `${JSON.stringify(row)}\n`)
-        else console.log(`${row.script}: ${row.schedule}\n${report(result, 25)}`)
+        counterexample(named.name, describeSchedule(schedule), asked, result)
       }
     }
     if (process.env.SIM_EXPLORE_OUT) appendFileSync(process.env.SIM_EXPLORE_OUT, `${JSON.stringify({ summary: true, members, depth, horizon, shard: `${index}/${count}`, runs, failed })}\n`)
