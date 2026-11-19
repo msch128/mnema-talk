@@ -5,13 +5,13 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
 )
 
 type dmMember struct {

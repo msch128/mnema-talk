@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
 )
 
 // announceRemoved sends message_update for the message a removed file was

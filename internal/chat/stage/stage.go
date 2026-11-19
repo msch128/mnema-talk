@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // SetStage turns a permanent Talk into a Stage or back into a normal Talk

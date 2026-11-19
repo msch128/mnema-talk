@@ -12,9 +12,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/testutil/pgtest"
 )
 
 //go:embed migrations/0034_starter_roles.sql

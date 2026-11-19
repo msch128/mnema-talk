@@ -8,9 +8,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth/authn"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/auth/authn"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 const unlockUsage = "usage: mnema-talk unlock <username> | mnema-talk unlock --all"

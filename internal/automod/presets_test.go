@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil/presets"
+	"github.com/mnema-xyz/talk/internal/testutil/presets"
 )
 
 // Every choice of the rule editor is accepted when the rule is saved.

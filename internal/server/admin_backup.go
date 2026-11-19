@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/backupstatus"
+	"github.com/mnema-xyz/talk/internal/backupstatus"
 )
 
 // backupHint is the operations guide section on backups.

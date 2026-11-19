@@ -13,14 +13,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
-	"github.com/msch128/mnema-talk/internal/chat"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/slash"
+	"github.com/mnema-xyz/talk/internal/audit"
+	"github.com/mnema-xyz/talk/internal/auth/memberadmin"
+	"github.com/mnema-xyz/talk/internal/chat"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/slash"
 )
 
 // Services is what the commands run on.

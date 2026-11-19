@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/db"
 	"golang.org/x/text/unicode/norm"
 )
 

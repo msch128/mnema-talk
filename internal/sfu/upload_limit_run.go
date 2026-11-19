@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 func countUnmet() { metrics.SFUUploadUnmet.Inc() }

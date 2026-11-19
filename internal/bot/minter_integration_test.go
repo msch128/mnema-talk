@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // A token stops working once the person who issued it no longer holds Manage

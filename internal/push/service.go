@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/community"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/mention"
-	"github.com/msch128/mnema-talk/internal/metrics"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/community"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/mention"
+	"github.com/mnema-xyz/talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // Snapshots is the permission service as push needs it.

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // A new role lands just above the managed bottom block, but never at or above

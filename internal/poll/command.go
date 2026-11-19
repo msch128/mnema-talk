@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/slash"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/slash"
 )
 
 // answerSeparator splits the answers option of /poll.

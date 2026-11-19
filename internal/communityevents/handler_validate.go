@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/automod"
-	"github.com/msch128/mnema-talk/internal/chat/talks"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/audit"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/automod"
+	"github.com/mnema-xyz/talk/internal/chat/talks"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 func validateEventText(title, desc string) error {

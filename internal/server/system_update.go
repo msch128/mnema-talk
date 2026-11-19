@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/update"
 )
 
 // UpdateStatus is what the server knows about newer releases.

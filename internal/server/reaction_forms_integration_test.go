@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // One emoji with and without U+FE0F is one reaction (doc/bots.md and the

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 // statusSweepEvery is how often expired status lines are cleared.

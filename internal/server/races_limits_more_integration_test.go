@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/automod"
-	"github.com/msch128/mnema-talk/internal/chat/blocks"
-	"github.com/msch128/mnema-talk/internal/later"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/automod"
+	"github.com/mnema-xyz/talk/internal/chat/blocks"
+	"github.com/mnema-xyz/talk/internal/later"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // Lane 7 of the defect hunt, second batch: per-member and per-channel caps

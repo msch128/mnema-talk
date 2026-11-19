@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/metrics"
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 func TestTheSweepDropsDevicesWhoseSessionHasEnded(t *testing.T) {

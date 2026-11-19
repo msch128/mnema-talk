@@ -5,10 +5,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/metrics"
-	"github.com/msch128/mnema-talk/internal/sfu"
-	"github.com/msch128/mnema-talk/internal/ws"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/ws"
 )
 
 const (

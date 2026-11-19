@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/audit"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
 )
 
 // The message settings refuse what they cannot store, and change nothing when

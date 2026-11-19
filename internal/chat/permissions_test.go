@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // A handler built without a permission service must not come up: every way

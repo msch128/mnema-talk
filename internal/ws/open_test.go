@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 // openWorld is the permission state of the hub tests that are not about

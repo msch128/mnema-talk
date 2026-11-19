@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/portconflict"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/portconflict"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
 )
 
 // Ports the stack needs on the host, with the setting that moves each.

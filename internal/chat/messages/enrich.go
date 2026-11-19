@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/mentions"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // Enrich loads attachments, reactions, mentions, polls and components for msgs.

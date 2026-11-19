@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // H-L6-04 (guard; was a known failure). doc/talks.md, "Start a Talk from a

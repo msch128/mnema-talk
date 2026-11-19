@@ -15,8 +15,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/testutil/pgfault"
 )
 
 // Every database statement of the management API can fail; the answer is a

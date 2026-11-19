@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/auth/authn"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/auth/authn"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 const reset2faUsage = "usage: mnema-talk reset-2fa <username>"

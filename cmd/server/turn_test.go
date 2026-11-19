@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/opwarn"
-	"github.com/msch128/mnema-talk/internal/sfu"
-	"github.com/msch128/mnema-talk/internal/turnrelay"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/turnrelay"
 )
 
 func freeUDP(t *testing.T) uint16 {

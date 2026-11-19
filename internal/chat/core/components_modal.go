@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // ValidateModal checks a modal a bot opens (callback type 9) and returns it

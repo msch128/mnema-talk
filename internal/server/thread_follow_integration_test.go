@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 func (f *messageModerationFixture) reply(c *client, root uuid.UUID, content string) uuid.UUID {

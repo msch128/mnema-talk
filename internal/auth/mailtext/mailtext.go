@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/msch128/mnema-talk/internal/mailer"
+	"github.com/mnema-xyz/talk/internal/mailer"
 )
 
 // mailJSON holds the subject and body templates by language (see Locale).

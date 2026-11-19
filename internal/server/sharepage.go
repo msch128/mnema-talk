@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/community"
-	"github.com/msch128/mnema-talk/internal/onboarding"
-	"github.com/msch128/mnema-talk/web"
+	"github.com/mnema-xyz/talk/internal/community"
+	"github.com/mnema-xyz/talk/internal/onboarding"
+	"github.com/mnema-xyz/talk/web"
 )
 
 // Link previews of the instance root and of invite links. Messengers and

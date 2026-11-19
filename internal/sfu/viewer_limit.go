@@ -3,7 +3,7 @@ package sfu
 import (
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // uploadView is what the upload governor needs to know of one viewer on

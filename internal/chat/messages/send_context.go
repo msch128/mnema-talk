@@ -6,9 +6,9 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/chat/mentions"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // ServeSendContext checks need for the caller in ch and returns the request

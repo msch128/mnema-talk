@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // MaxBannerBytes is the size of an uploaded banner and of the stored result.

@@ -9,7 +9,7 @@ import (
 	"net/textproto"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/media"
 )
 
 func uploadForm() ([]byte, string) { return uploadFormWith(`{"content":"x"}`) }

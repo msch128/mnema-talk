@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/testutil"
-	"github.com/msch128/mnema-talk/internal/testutil/stmtcount"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil/stmtcount"
 )
 
 type layoutRow struct {

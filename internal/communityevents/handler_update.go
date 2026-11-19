@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // statusRequest checks the status of a PATCH. An event's status follows its

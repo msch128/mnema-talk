@@ -2,9 +2,9 @@ package search
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // API serves message search and the mentions inbox. The chat Handler builds it

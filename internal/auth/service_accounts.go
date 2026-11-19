@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/automod"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/raid"
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/automod"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/raid"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // Register creates a regular user, consuming one use of a valid invite code.

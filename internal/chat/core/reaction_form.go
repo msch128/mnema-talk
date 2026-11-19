@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 // One emoji can be written with or without the variation selector U+FE0F: the

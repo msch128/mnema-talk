@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/communityevents"
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 func newForumPost(t *testing.T, c *client, forum uuid.UUID, title string) uuid.UUID {

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+import "github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 
 // thresholds fail the run when exceeded; a zero limit that says "off" is
 // marked in the README.

@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 func TestUnlockCommandReportsUnreachableDatabase(t *testing.T) {

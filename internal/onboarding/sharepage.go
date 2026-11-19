@@ -8,8 +8,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/mdplain"
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/mdplain"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // maxShareDescription is the longest description a link preview of an invite

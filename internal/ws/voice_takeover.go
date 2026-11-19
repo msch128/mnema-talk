@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 // takeoverMarks remembers which pages' stays a takeover ended, so such a page,

@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
-	"github.com/msch128/mnema-talk/internal/chat/chattest"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/chat/search"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/chat/chattest"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/mentions"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/search"
 )
 
 func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {

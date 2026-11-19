@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // slowFlush is the test pool's database with every WAL flush held back by

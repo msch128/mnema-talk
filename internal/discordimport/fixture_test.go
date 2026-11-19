@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/ssrf"
 )
 
 // sampleTemplate mimics Discord's template document: numeric ids, permission

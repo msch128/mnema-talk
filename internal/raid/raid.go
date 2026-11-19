@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // Bounds of the settings.

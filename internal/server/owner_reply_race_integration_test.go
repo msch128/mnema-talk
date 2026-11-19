@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // Lane 7 of the defect hunt. "The Owner's words (the message or a reply of

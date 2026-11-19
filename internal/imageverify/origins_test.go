@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/imageverify"
 )
 
 // legacy is the provenance of a release built before the move to mnema-xyz.

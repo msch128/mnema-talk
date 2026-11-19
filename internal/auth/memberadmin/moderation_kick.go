@@ -3,14 +3,14 @@ package memberadmin
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/safego"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // kickDisconnectDelay is how long a kicked member's socket stays open, so the

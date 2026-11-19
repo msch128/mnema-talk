@@ -3,7 +3,7 @@ package bot
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // CommandPatch changes a command; only an admin can.

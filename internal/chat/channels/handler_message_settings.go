@@ -3,8 +3,8 @@ package channels
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // ServeLifetimeSettings handles GET /api/message-settings.

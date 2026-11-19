@@ -13,7 +13,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // What the fixture photo (internal/imgstrip/testdata) carries: the camera

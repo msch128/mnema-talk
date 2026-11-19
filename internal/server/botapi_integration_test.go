@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat/botapi"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/chat/botapi"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // botClient talks to the bot API like a script: a token in the Authorization

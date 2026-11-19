@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 // stopTimers ends the countdowns of a test's manager, so none fires into the

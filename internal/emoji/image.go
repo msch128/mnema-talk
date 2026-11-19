@@ -13,7 +13,7 @@ import (
 	"image/png"
 	"io"
 
-	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/imgproc"
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/webp"
 )

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/imgproc"
 )
 
 // WebP: a RIFF container ("RIFF", the length of what follows, "WEBP") of

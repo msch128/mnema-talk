@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/onboarding"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/onboarding"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 func previewOf(t *testing.T, a *app, code string) onboarding.InvitePreview {

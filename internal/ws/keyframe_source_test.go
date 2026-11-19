@@ -3,7 +3,7 @@ package ws
 import (
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 // A keyframe request names the sender's own source after it changed (a new

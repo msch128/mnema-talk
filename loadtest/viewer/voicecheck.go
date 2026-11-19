@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 // voiceThresholds are the limits EVALUATE=1 holds a run to.

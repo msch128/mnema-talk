@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
 )
 
 // deleteOrphanBotAccounts removes the webhook bot accounts that no longer have

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // Deep reports whether the deep sweep was asked for.

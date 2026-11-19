@@ -10,12 +10,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/events/eventstest"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/events/eventstest"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 func TestFrameLimiter(t *testing.T) {

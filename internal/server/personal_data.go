@@ -1,16 +1,16 @@
 package server
 
 import (
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat/account"
-	"github.com/msch128/mnema-talk/internal/communityevents/accountdata"
-	"github.com/msch128/mnema-talk/internal/discordimport"
-	"github.com/msch128/mnema-talk/internal/emoji"
-	"github.com/msch128/mnema-talk/internal/later"
-	"github.com/msch128/mnema-talk/internal/push"
-	"github.com/msch128/mnema-talk/internal/userdata"
-	"github.com/msch128/mnema-talk/internal/webhook"
-	"github.com/msch128/mnema-talk/internal/wiki"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/chat/account"
+	"github.com/mnema-xyz/talk/internal/communityevents/accountdata"
+	"github.com/mnema-xyz/talk/internal/discordimport"
+	"github.com/mnema-xyz/talk/internal/emoji"
+	"github.com/mnema-xyz/talk/internal/later"
+	"github.com/mnema-xyz/talk/internal/push"
+	"github.com/mnema-xyz/talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/webhook"
+	"github.com/mnema-xyz/talk/internal/wiki"
 )
 
 // wirePersonalData registers each domain's export files and erasure statements

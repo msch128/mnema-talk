@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // ownRoleOf returns the managed role of one bot from the role list.

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/safego"
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 // Scheduler runs periodic checks for event state transitions and reminders.

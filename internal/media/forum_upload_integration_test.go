@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/forum"
+	"github.com/mnema-xyz/talk/internal/chat/forum"
 )
 
 // A file uploaded with a title and tag ids starts a forum post, by the rules of

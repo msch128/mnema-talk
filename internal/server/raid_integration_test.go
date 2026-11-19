@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 type raidSettings struct {

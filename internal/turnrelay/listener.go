@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 // limitedListener bounds the TCP connections to the relay, in total and per

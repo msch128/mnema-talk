@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 func putInactivity(c *client, days any) response {

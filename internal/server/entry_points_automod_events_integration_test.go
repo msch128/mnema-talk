@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/communityevents"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // Automod screens the text of an event like a message (doc/moderation.md,

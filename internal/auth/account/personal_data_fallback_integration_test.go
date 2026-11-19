@@ -3,17 +3,17 @@
 package account_test
 
 import (
-	"github.com/msch128/mnema-talk/internal/auth/account"
-	"github.com/msch128/mnema-talk/internal/bot"
-	chataccount "github.com/msch128/mnema-talk/internal/chat/account"
-	"github.com/msch128/mnema-talk/internal/communityevents/accountdata"
-	"github.com/msch128/mnema-talk/internal/discordimport"
-	"github.com/msch128/mnema-talk/internal/emoji"
-	"github.com/msch128/mnema-talk/internal/later"
-	"github.com/msch128/mnema-talk/internal/push"
-	"github.com/msch128/mnema-talk/internal/userdata"
-	"github.com/msch128/mnema-talk/internal/webhook"
-	"github.com/msch128/mnema-talk/internal/wiki"
+	"github.com/mnema-xyz/talk/internal/auth/account"
+	"github.com/mnema-xyz/talk/internal/bot"
+	chataccount "github.com/mnema-xyz/talk/internal/chat/account"
+	"github.com/mnema-xyz/talk/internal/communityevents/accountdata"
+	"github.com/mnema-xyz/talk/internal/discordimport"
+	"github.com/mnema-xyz/talk/internal/emoji"
+	"github.com/mnema-xyz/talk/internal/later"
+	"github.com/mnema-xyz/talk/internal/push"
+	"github.com/mnema-xyz/talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/webhook"
+	"github.com/mnema-xyz/talk/internal/wiki"
 )
 
 // Integration tests in package auth build a Handler without the server, so

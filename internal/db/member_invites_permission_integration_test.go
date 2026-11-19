@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 //go:embed migrations/0109_member_invites_permission.sql

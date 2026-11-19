@@ -20,10 +20,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/textcut"
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 // Entry is one thing that happened.

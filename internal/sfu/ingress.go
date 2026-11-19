@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 	"github.com/pion/logging"
 	"github.com/pion/transport/v5/packetio"
 	"github.com/pion/webrtc/v4"

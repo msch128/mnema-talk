@@ -5,9 +5,9 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // LobbyOpener opens the temporary Talk a join of a Create-a-Talk lobby leads

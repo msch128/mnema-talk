@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 // kindResult is what became of one kind of event.

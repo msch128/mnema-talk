@@ -10,10 +10,10 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 // Every kind of emoji reacts in the chat of a Talk exactly as in a text

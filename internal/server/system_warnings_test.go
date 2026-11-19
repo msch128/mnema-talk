@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/opwarn"
 )
 
 func querySystemStatusWarnings(t *testing.T, h *systemHandler) SystemStatus {

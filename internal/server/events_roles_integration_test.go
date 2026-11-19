@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/communityevents"
 )
 
 // Roles and sign-ups through the real router: the waitlist moves up when the

@@ -17,7 +17,7 @@ import (
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // Keys is the server's VAPID key pair in base64url (unpadded). The private key

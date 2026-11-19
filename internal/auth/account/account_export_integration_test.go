@@ -14,14 +14,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/auth/authn"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth/authn"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
-	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/userdata"
 )
 
 // errStoreMissing is what memStore answers for an unknown key.

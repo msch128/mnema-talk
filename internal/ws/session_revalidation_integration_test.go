@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 // runWriter starts the client's writer with fast pacing and returns a channel

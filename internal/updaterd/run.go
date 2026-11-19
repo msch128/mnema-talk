@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // HTTPRecreator calls Watchtower's HTTP API. Watchtower runs with

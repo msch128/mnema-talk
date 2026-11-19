@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 // MessageDelete says a message is gone (message_delete); parent_id is the

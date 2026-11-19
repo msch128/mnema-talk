@@ -5,10 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 // Wrong recovery-shaped codes on the signed-in proofs count against the

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 type memberResult struct {

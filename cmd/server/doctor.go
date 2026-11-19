@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/opwarn"
-	"github.com/msch128/mnema-talk/internal/portconflict"
-	"github.com/msch128/mnema-talk/internal/s3"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
-	"github.com/msch128/mnema-talk/internal/stunprobe"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/portconflict"
+	"github.com/mnema-xyz/talk/internal/s3"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/stunprobe"
 )
 
 const doctorUsage = `usage: mnema-talk doctor

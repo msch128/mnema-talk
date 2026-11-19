@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 // Live reactions as the database has them: a custom emoji of the community

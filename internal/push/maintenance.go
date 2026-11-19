@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 // sweepMaintenance runs one periodic sweep: drop coalesced pushes and the

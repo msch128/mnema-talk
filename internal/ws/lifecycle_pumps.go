@@ -8,7 +8,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 func (c *Client) readPump() {

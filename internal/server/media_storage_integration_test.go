@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/media"
 )
 
 // A media row whose object is gone from storage answers 410 before any

@@ -3,7 +3,7 @@ package dm
 import (
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/mnema-xyz/talk/internal/chat/readstate"
 )
 
 func TestAnnouncedConversationCarriesNothingOfTheStartersSettings(t *testing.T) {

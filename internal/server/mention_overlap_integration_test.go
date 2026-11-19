@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // mutedMember registers a member and mutes the channel for them.

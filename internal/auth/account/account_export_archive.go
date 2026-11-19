@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/userdata"
 )
 
 // writeArchive collects the person's own data into a ZIP written to out.

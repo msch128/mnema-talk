@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
 )
 
 // startCommand is what starts the stack and waits until it is healthy.

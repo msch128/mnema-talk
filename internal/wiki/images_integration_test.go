@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/imgproc"
-	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/media"
 )
 
 // addPictures marks n new media rows as wiki pictures made at the given age;

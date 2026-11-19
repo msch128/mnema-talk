@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/auth/authn"
-	"github.com/msch128/mnema-talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth/authn"
+	"github.com/mnema-xyz/talk/internal/events/wire"
 
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // listUsers handles GET /api/admin/users.

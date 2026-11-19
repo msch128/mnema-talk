@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/mnema-xyz/talk/internal/audit"
 )
 
 func entriesOf(t *testing.T, f *messageModerationFixture, action string) []audit.Item {

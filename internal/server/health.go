@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/community"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/community"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // WebClientAPI is the contract number between a web app and this server. A

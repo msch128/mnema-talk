@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 func TestVanitySignupCodeNeedsAnEnabledLinkAndReportsStorageFailures(t *testing.T) {

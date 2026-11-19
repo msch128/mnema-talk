@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/mnema-xyz/talk/internal/chat/readstate"
 )
 
 // The unread design must not cost the server more as the community grows:

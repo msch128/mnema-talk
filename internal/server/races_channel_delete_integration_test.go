@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // Deleting a channel (the route, and the undo of a Discord import, through

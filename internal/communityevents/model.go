@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 const (

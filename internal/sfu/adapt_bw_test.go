@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 // feedBW gives the adapter one clean report a second for n seconds, each with
