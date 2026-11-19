@@ -92,7 +92,7 @@ General rules:
 
 | Variable | Default | Meaning and validation |
 |---|---|---|
-| `DATABASE_URL` | none (required) | PostgreSQL connection URL. Compose builds it from `POSTGRES_*` and the `postgres` service. In production a placeholder password in it is rejected. |
+| `DATABASE_URL` | none (required) | PostgreSQL connection URL. Compose builds it from `POSTGRES_*` and the `postgres` service. In production a placeholder password in it is rejected. Its role needs EXECUTE on `pg_logical_emit_message` (granted to PUBLIC by default); the server does not start without it. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `mnema` / none / `mnema_talk` | Compose only: initialise the `postgres` container and build `DATABASE_URL`. Changing them later does not change an existing database. |
 | `DB_MAX_CONNS` | `25` | Connections the server keeps to PostgreSQL at most, 1-1000. Keep it below the database's `max_connections` (100 in the bundled `postgres`), with room for `pg_dump` and `psql`. Raise it only when `mnema_db_acquires_waited_total` keeps growing under normal load. |
 | `DB_STATEMENT_TIMEOUT` | `15s` | Longest one database statement of a request may run, as a duration (`15s`, `2m`), 1s-1h; `0` = no limit. The database cancels a statement that runs longer and the request fails with an internal error, logged with `SQLSTATE 57014`; a message or forum search answers 429 instead (searches are limited to 5 s). See [Database limits](#database-limits). |

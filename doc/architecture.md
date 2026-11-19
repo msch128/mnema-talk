@@ -683,9 +683,16 @@ then the post waits for the WAL flush (`db.AwaitDurable`), which concurrent
 posts share. Nobody is told of a message (the answer, `message_create`,
 bots, push) before it is on disk; a webhook worker claims its event with a
 commit of its own, which flushes the WAL past the message first. Other
-sessions can read the message in the few milliseconds before the flush: should
-PostgreSQL itself crash then, it is gone after the restart (and its number may
-be drawn again), like any transaction committed asynchronously. The work under the lock is also
+sessions (message history, read-state counts) can read the message a few
+milliseconds before the flush: should PostgreSQL itself crash in that window,
+the message is gone after the restart (and its number may be drawn again),
+like any transaction committed asynchronously. Before 3.3.5 a post committed
+synchronously: a message was on disk before anyone could read it. Acknowledged
+messages are as durable as before; only that read-only glimpse is new. The
+wait is a transactional logical message (`pg_logical_emit_message`), which
+needs the database role to hold EXECUTE on that function; PostgreSQL grants it
+to PUBLIC, and the server refuses to start when it has been revoked
+(`db.CheckDurable`) rather than fail every post. The work under the lock is also
 kept to few round trips to the database (seven for a message with a mention:
 the lock with the channel's settings, the insert that notes its number, the
 mentioned names, the mentions, the stored message and its details, each of the

@@ -4,11 +4,13 @@ package db
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
 )
 
 // flushDelay is how long every WAL flush of slowFlushPool's one session takes.
@@ -109,5 +111,59 @@ func TestAwaitDurableNeedsNoPrivilege(t *testing.T) {
 	}
 	if err := AwaitDurable(ctx, p); err != nil {
 		t.Fatalf("AwaitDurable as a role without privileges: %v", err)
+	}
+}
+
+// A role that may not run the logical message stops the server at startup
+// (CheckDurable) with what to grant, instead of failing every post.
+func TestCheckDurableNamesTheMissingGrant(t *testing.T) {
+	dsn, err := pgtest.DSN()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	admin, err := Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(admin.Close)
+	const name = "durable_revoked"
+	_, _ = admin.Exec(ctx, `DROP DATABASE IF EXISTS `+name)
+	_, _ = admin.Exec(ctx, `DROP ROLE IF EXISTS `+name)
+	if _, err := admin.Exec(ctx, `CREATE DATABASE `+name); err != nil {
+		t.Skipf("cannot create a database here: %v", err)
+	}
+	if _, err := admin.Exec(ctx, `CREATE ROLE `+name+` LOGIN PASSWORD 'probe'`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(context.Background(), `DROP DATABASE IF EXISTS `+name+` WITH (FORCE)`)
+		_, _ = admin.Exec(context.Background(), `DROP ROLE IF EXISTS `+name)
+	})
+	u, err := url.Parse(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.Path = "/" + name
+	owner, err := Connect(ctx, u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.Close()
+	if err := CheckDurable(ctx, owner); err != nil {
+		t.Fatalf("with the default grant: %v", err)
+	}
+	if _, err := owner.Exec(ctx, `REVOKE EXECUTE ON FUNCTION pg_logical_emit_message(boolean, text, text, boolean) FROM PUBLIC`); err != nil {
+		t.Fatal(err)
+	}
+	u.User = url.UserPassword(name, "probe")
+	app, err := Connect(ctx, u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close()
+	err = CheckDurable(ctx, app)
+	if err == nil || !strings.Contains(err.Error(), "EXECUTE on the function pg_logical_emit_message") {
+		t.Fatalf("CheckDurable with the grant revoked = %v, want the grant named", err)
 	}
 }

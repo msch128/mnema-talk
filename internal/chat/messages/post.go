@@ -118,7 +118,7 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 	// Nobody hears of the message (the answer, message_create) before it is
 	// on disk. The follow-ups of a stored message run either way.
 	durable := db.AwaitDurable(ctx, p)
-	pending.Commit(ctx, id)
+	pending.Commit(context.WithoutCancel(ctx), id) // the message is stored: a client that went away keeps its flag
 	if nm.LifetimeSeconds > 0 {
 		wakeExpiry(p, time.Now().Add(time.Duration(nm.LifetimeSeconds)*time.Second))
 	}
