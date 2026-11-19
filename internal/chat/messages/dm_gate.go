@@ -33,7 +33,9 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) er
 	var kind string
 	var seconds int
 	var talkOf *uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds, dm_id FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds, &talkOf)
+	// The row stays locked until the commit: the post draws its number under
+	// it (insertMessageTx).
+	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds, dm_id FROM channels WHERE id = $1 FOR NO KEY UPDATE`, nm.ChannelID).Scan(&kind, &seconds, &talkOf)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return core.ErrChannelNotFound
 	}

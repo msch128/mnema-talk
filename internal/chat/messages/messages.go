@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -71,69 +70,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 	return msgs, rows.Err()
 }
 
-// Enrich loads attachments, reactions, mentions, polls and components for msgs.
-func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
-	if len(msgs) == 0 {
-		return nil
-	}
-	idx := make(map[uuid.UUID]int, len(msgs))
-	ids := make([]uuid.UUID, len(msgs))
-	for i, m := range msgs {
-		idx[m.ID] = i
-		ids[i] = m.ID
-	}
-	for _, load := range []func(context.Context, db.Querier, []core.Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails, core.LoadComponents,
-	} {
-		if err := load(ctx, p, msgs, idx, ids); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `
-		SELECT message_id, MIN(emoji), array_agg(user_id ORDER BY created_at)
-		FROM message_reactions WHERE message_id = ANY($1)
-		GROUP BY message_id, `+reactionKeySQL+` ORDER BY MIN(created_at)`, ids)
-	if err != nil {
-		return fmt.Errorf("load reactions: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var r core.ReactionSummary
-		var msgID uuid.UUID
-		if err := rows.Scan(&msgID, &r.Emoji, &r.Users); err != nil {
-			return err
-		}
-		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, oneReaction(r))
-	}
-	return rows.Err()
-}
-
-func loadMentions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `SELECT message_id, user_id, kind <> $2 FROM message_mentions WHERE message_id = ANY($1)`, ids, core.MentionKindGroup)
-	if err != nil {
-		return fmt.Errorf("load mentions: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var msgID, userID uuid.UUID
-		var direct bool
-		if err := rows.Scan(&msgID, &userID, &direct); err != nil {
-			return err
-		}
-		m := &msgs[idx[msgID]]
-		m.Mentions = append(m.Mentions, userID)
-		if direct {
-			m.DirectMentions = append(m.DirectMentions, userID)
-		}
-	}
-	return rows.Err()
-}
-
-func QueryMessages(ctx context.Context, p db.Querier, sql string, args ...any) ([]core.Message, error) {
+func QueryMessages(ctx context.Context, p db.Batcher, sql string, args ...any) ([]core.Message, error) {
 	rows, err := p.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
@@ -283,7 +220,7 @@ func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*core.Me
 }
 
 // GetMessage returns one fully populated message.
-func GetMessage(ctx context.Context, p db.Querier, messageID uuid.UUID) (*core.Message, error) {
+func GetMessage(ctx context.Context, p db.Batcher, messageID uuid.UUID) (*core.Message, error) {
 	msgs, err := QueryMessages(ctx, p, MessageSelect+` WHERE m.id = $1`, messageID)
 	if err != nil {
 		return nil, err
@@ -328,7 +265,9 @@ type NewMessage struct {
 	LifetimeSeconds int
 }
 
-// ServeCreateMessage inserts a message and returns its ID.
+// CreateMessage inserts a message, notes its number as the channel's
+// last_message_number and returns its ID. The caller holds the channel row
+// (insertMessageTx), so the numbers commit in order.
 func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID, error) {
 	var id uuid.UUID
 	embeds := []byte("[]")
@@ -350,12 +289,15 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
+		WITH m AS (
 		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, created_at, expires_at) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
 		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, t.at,
 		       CASE WHEN $12::int > 0 THEN t.at + make_interval(secs => $12::int) END
 		FROM channels c, (SELECT clock_timestamp() AS at) t WHERE c.id = $1
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked, nm.LifetimeSeconds).Scan(&id)
+		RETURNING id, number)
+		UPDATE channels SET last_message_number = m.number FROM m WHERE channels.id = $1
+		RETURNING m.id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked, nm.LifetimeSeconds).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrChannelNotFound
 	}

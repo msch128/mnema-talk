@@ -181,8 +181,27 @@ slow at p99 than 2.2.0, at the same CPU and about 10 % more memory; nothing is
 lost. All deliveries still arrive within 350 ms. The 2.2.0 figures with the
 newer generator (75 / 98 ms) are slightly better than those of the first run
 (84 / 115 ms), so part of the gap in the 3.3.0 table above comes from the
-generator and the shared host. We did not look for the cause of the remaining
-difference.
+generator and the shared host.
+
+The cause of the remaining difference was the channel's lock. Since 3.0.10
+(migration 0104) a post holds its channel's row from the number it draws to its
+commit, so that `GET /api/read-state` can say exactly which messages its counts
+include. Every post in the busy channel queued for it, and the lock was held
+for 18 round trips to the database and through the WAL flush (about 5 ms on
+this host's disk). Timing spans in the server on this host showed a median
+hold of 13 to 15 ms and a wait for the lock of up to 110 ms (p99); the fan-out
+itself took under 20 ms (p99). The fix commits the post asynchronously and
+waits for the flush afterwards, before anybody hears of the message (concurrent
+posts share it), and holds the lock for 7 round trips. The same run, two of
+each back to back on fresh stacks:
+
+| Version | Messages p50 / p95 / p99 / max | Server CPU (hold) | Memory (peak) | Loss |
+|---|---|---:|---:|---:|
+| 3.3.3 | 37 / 122 / 213 / 443 ms, 38 / 116 / 179 / 333 ms | 0.65 cores | 98 to 102 MB | 0 % |
+| with the fix | 33 / 79 / 113 / 186 ms, 32 / 83 / 117 / 201 ms | 0.63 to 0.64 cores | 100 to 101 MB | 0 % |
+
+p95 and p99 drop by about a third and come within 10 to 20 % of 2.2.0; the
+lock's ordering guarantee is kept.
 
 ## Sizing guide
 

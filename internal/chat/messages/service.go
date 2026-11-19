@@ -143,7 +143,9 @@ func (s *Service) Post(ctx context.Context, actor Actor, cmd PostCommand) (*Post
 		return nil, err
 	}
 	// The message is read in the insert's transaction: an error means that
-	// nothing was stored, never a stored message behind a failure.
+	// nothing was stored, never a stored message behind a failure (save one
+	// whose commit could not be confirmed on disk: it is not announced, and a
+	// retry with the nonce finds it).
 	_, msg, err := insertMessage(ctx, s.inserter(), nm, rules, s.inTx(ctx, actor, cmd))
 	if IsNonceConflict(err) {
 		// A concurrent send of the same nonce won the race.

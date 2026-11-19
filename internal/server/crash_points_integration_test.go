@@ -85,6 +85,18 @@ func (f *stepFault) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.Trac
 
 func (*stepFault) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A batch is one step: its statements go to the database in one round trip
+// and fail together.
+func (f *stepFault) TraceBatchStart(ctx context.Context, c *pgx.Conn, d pgx.TraceBatchStartData) context.Context {
+	if d.Batch == nil || len(d.Batch.QueuedQueries) == 0 {
+		return ctx
+	}
+	return f.TraceQueryStart(ctx, c, pgx.TraceQueryStartData{SQL: "batch: " + d.Batch.QueuedQueries[0].SQL})
+}
+
+func (*stepFault) TraceBatchQuery(context.Context, *pgx.Conn, pgx.TraceBatchQueryData) {}
+func (*stepFault) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData)     {}
+
 // newCrashApp is newApp whose router runs on a pool with the fault attached.
 // One pool with the fault attached serves every world of a sweep, so the
 // sweep does not open and close hundreds of connections.

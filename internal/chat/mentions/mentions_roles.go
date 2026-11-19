@@ -242,50 +242,47 @@ func shadowed(h roleHit, hits []roleHit) bool {
 }
 
 // SaveMentionSet replaces the stored mentions and role mentions of messageID.
-func SaveMentionSet(ctx context.Context, q db.Querier, messageID uuid.UUID, set MentionSet) error {
-	if _, err := q.Exec(ctx, `DELETE FROM message_mentions WHERE message_id = $1`, messageID); err != nil {
-		return fmt.Errorf("clear mentions: %w", err)
-	}
+func SaveMentionSet(ctx context.Context, q db.Batcher, messageID uuid.UUID, set MentionSet) error {
+	// One round trip: a new message stores its mentions while its channel's
+	// row is locked (messages.insertMessageTx).
+	b := &pgx.Batch{}
+	b.Queue(`DELETE FROM message_mentions WHERE message_id = $1`, messageID)
 	if len(set.Users) > 0 {
 		ids := make([]uuid.UUID, len(set.Users))
 		kinds := make([]int16, len(set.Users))
 		for i, u := range set.Users {
 			ids[i], kinds[i] = u.ID, u.Kind
 		}
-		_, err := q.Exec(ctx, `
+		b.Queue(`
 			INSERT INTO message_mentions (message_id, user_id, kind)
 			SELECT $1, u, k FROM unnest($2::uuid[], $3::smallint[]) AS t(u, k)
 			ON CONFLICT DO NOTHING`, messageID, ids, kinds)
-		if err != nil {
-			return fmt.Errorf("save mentions: %w", err)
-		}
 	}
-	return saveRoleMentions(ctx, q, messageID, set.Roles)
-}
-
-func saveRoleMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, roles []uuid.UUID) error {
-	if _, err := q.Exec(ctx, `DELETE FROM message_role_mentions WHERE message_id = $1`, messageID); err != nil {
-		return fmt.Errorf("clear role mentions: %w", err)
+	b.Queue(`DELETE FROM message_role_mentions WHERE message_id = $1`, messageID)
+	if len(set.Roles) > 0 {
+		b.Queue(`
+			INSERT INTO message_role_mentions (message_id, role_id)
+			SELECT $1, r FROM unnest($2::uuid[]) AS r ON CONFLICT DO NOTHING`, messageID, set.Roles)
 	}
-	if len(roles) == 0 {
-		return nil
-	}
-	_, err := q.Exec(ctx, `
-		INSERT INTO message_role_mentions (message_id, role_id)
-		SELECT $1, r FROM unnest($2::uuid[]) AS r ON CONFLICT DO NOTHING`, messageID, roles)
-	if err != nil {
-		return fmt.Errorf("save role mentions: %w", err)
+	if err := q.SendBatch(ctx, b).Close(); err != nil {
+		return fmt.Errorf("save mentions: %w", err)
 	}
 	return nil
 }
 
-// LoadMentionRoles fills msgs[].MentionRoles.
-func LoadMentionRoles(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `SELECT message_id, role_id FROM message_role_mentions WHERE message_id = ANY($1)`, ids)
-	if err != nil {
-		return fmt.Errorf("load role mentions: %w", err)
-	}
-	defer rows.Close()
+// QueueMentionRoles queues the query that fills msgs[].MentionRoles (one of
+// the loaders of messages.Enrich).
+func QueueMentionRoles(_ context.Context, b *pgx.Batch, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) {
+	b.Queue(`SELECT message_id, role_id FROM message_role_mentions WHERE message_id = ANY($1)`, ids).
+		Query(func(rows pgx.Rows) error {
+			if err := scanMentionRoles(rows, msgs, idx); err != nil {
+				return fmt.Errorf("load role mentions: %w", err)
+			}
+			return nil
+		})
+}
+
+func scanMentionRoles(rows pgx.Rows, msgs []core.Message, idx map[uuid.UUID]int) error {
 	for rows.Next() {
 		var msgID, roleID uuid.UUID
 		if err := rows.Scan(&msgID, &roleID); err != nil {

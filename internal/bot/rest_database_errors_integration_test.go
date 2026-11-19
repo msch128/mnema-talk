@@ -55,6 +55,17 @@ func (f *nthFault) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Tr
 
 func (*nthFault) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A batch is one statement here: its queries share one round trip.
+func (f *nthFault) TraceBatchStart(ctx context.Context, c *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
+	if data.Batch == nil || len(data.Batch.QueuedQueries) == 0 {
+		return ctx
+	}
+	return f.TraceQueryStart(ctx, c, pgx.TraceQueryStartData{SQL: "batch: " + data.Batch.QueuedQueries[0].SQL})
+}
+
+func (*nthFault) TraceBatchQuery(context.Context, *pgx.Conn, pgx.TraceBatchQueryData) {}
+func (*nthFault) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData)     {}
+
 func (f *nthFault) pool(e *env) *db.Pool {
 	cfg := e.p.Pool.Config()
 	cfg.MaxConns, cfg.MinConns, cfg.MinIdleConns = 1, 0, 0
@@ -250,7 +261,8 @@ func restRoutes() []restRoute {
 // failures that only lose a timestamp do not fail the request.
 func tolerated(sql string) bool {
 	// The author's read marker after a send is best effort: the message is already stored.
-	return strings.Contains(sql, "INSERT INTO channel_reads") ||
+	// The durability wait after a post's commit is tried again (db.AwaitDurable): one failure passes.
+	return strings.Contains(sql, "INSERT INTO channel_reads") || strings.Contains(sql, "pg_logical_emit_message") ||
 		strings.Contains(sql, "last_used_at = NOW()") || strings.Contains(sql, "last_active_at = NOW()")
 }
 
