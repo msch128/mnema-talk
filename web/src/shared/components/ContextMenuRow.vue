@@ -67,7 +67,7 @@ function role(item: ContextMenuItem) {
       class="relative h-2 overflow-hidden rounded-full bg-mnema-canvas border border-mnema-hairline"
     >
       <div
-        class="h-full rounded-full bg-mnema-accent transition-[width] duration-75 motion-reduce:transition-none"
+        class="h-full rounded-full bg-mnema-accent transition-[width] duration-(--motion-press) motion-reduce:transition-none"
         :style="{ width: `${Math.max(0, Math.min(100, item.value))}%` }"
       ></div>
       <div

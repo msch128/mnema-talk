@@ -67,7 +67,7 @@ const avatarUrl = computed(() => {
   <div class="relative inline-block shrink-0">
     <div 
       :class="[
-        'rounded-full flex items-center justify-center font-semibold overflow-hidden border transition-all select-none',
+        'rounded-full flex items-center justify-center font-semibold overflow-hidden border transition-[color,background-color,border-color,box-shadow] motion-reduce:transition-none select-none',
         sizeClasses,
         isSpeaking ? 'ring-2 ring-mnema-accent ring-offset-1 ring-offset-mnema-canvas' : '',
         avatarUrl ? 'border-mnema-border bg-mnema-surface' : 'bg-mnema-band border-mnema-mint/30 text-mnema-mint'

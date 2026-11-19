@@ -101,7 +101,7 @@ async function removeAvatar() {
         <!-- Hover overlay for own profile -->
         <div
           v-if="isSelf"
-          class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-150"
+          class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-(--motion-fade) motion-reduce:transition-none"
         >
           <Camera class="w-5 h-5 mb-0.5" />
           <span class="text-xs font-bold tracking-wider uppercase">{{ $t('profile.change') }}</span>

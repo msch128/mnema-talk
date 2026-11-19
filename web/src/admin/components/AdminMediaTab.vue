@@ -153,7 +153,7 @@ onMounted(refresh)
               v-if="!item.is_deleted && item.mime_type.startsWith('image/') && item.mime_type !== 'image/svg+xml'"
               :src="item.url"
               :alt="item.original_filename"
-              class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+              class="w-full h-full object-cover group-hover:scale-105 transition duration-(--motion-icon) motion-reduce:transition-none"
               loading="lazy"
             />
             <!-- Not a picture: an icon, since the caption below already names the file (a long name overlapped it). -->
