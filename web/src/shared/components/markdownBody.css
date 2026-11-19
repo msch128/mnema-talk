@@ -15,7 +15,7 @@
   border-radius: 0.25rem;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.875em;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--color-mnema-white) 6%, transparent);
 }
 
 /* Headings, subtext, lists: block elements consume the line break around them. */
@@ -29,10 +29,10 @@
 .markdown-body ul.md-list ul.md-list { list-style: circle; }
 .markdown-body ol.md-list { list-style: decimal; }
 .markdown-body .md-list li { padding-left: 0.125rem; white-space: pre-wrap; }
-.markdown-body .md-list li::marker { color: rgba(45, 167, 113, 0.8); }
+.markdown-body .md-list li::marker { color: color-mix(in srgb, var(--color-mnema-accent) 80%, transparent); }
 
 .markdown-body .md-quote {
-  border-left: 2px solid rgba(45, 167, 113, 0.6);
+  border-left: 2px solid color-mix(in srgb, var(--color-mnema-accent) 60%, transparent);
   padding-left: 0.625rem;
   margin: 0.125rem 0;
   opacity: 0.85;
@@ -49,7 +49,7 @@
   line-height: 1.25rem;
   overflow-x: auto;
   white-space: pre;
-  background: rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--color-mnema-black) 35%, transparent);
 }
 .markdown-body .md-code-tools {
   position: absolute;
@@ -74,12 +74,12 @@
 .markdown-body .md-copy {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-mnema-white) 8%, transparent);
   color: inherit;
   cursor: pointer;
 }
-.markdown-body .md-copy:hover { background: rgba(255, 255, 255, 0.16); }
-.markdown-body .md-copy:focus-visible { outline: 2px solid #2da771; outline-offset: 1px; }
+.markdown-body .md-copy:hover { background: color-mix(in srgb, var(--color-mnema-white) 16%, transparent); }
+.markdown-body .md-copy:focus-visible { outline: 2px solid var(--color-mnema-accent); outline-offset: 1px; }
 
 /* highlight.js tokens, in the Mnema palette. */
 .markdown-body .hljs { color: #d6dcd8; }
@@ -91,7 +91,7 @@
 .markdown-body .hljs-string,
 .markdown-body .hljs-regexp,
 .markdown-body .hljs-meta .hljs-string,
-.markdown-body .hljs-addition { color: #e0a23a; }
+.markdown-body .hljs-addition { color: var(--color-mnema-away); }
 .markdown-body .hljs-number,
 .markdown-body .hljs-literal,
 .markdown-body .hljs-symbol,
@@ -113,7 +113,7 @@
 .markdown-body .hljs-emphasis { font-style: italic; }
 .markdown-body .hljs-strong { font-weight: 600; }
 
-.markdown-body .md-link { color: #2da771; word-break: break-all; }
+.markdown-body .md-link { color: var(--color-mnema-accent); word-break: break-all; }
 .markdown-body .md-link:hover { text-decoration: underline; }
 /* A masked link shows where it really leads when hovered or focused. */
 .markdown-body .md-link-masked { word-break: normal; text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -127,30 +127,30 @@
   padding: 0 0.25rem;
   border-radius: 0.25rem;
   font-weight: 600;
-  color: #2da771;
-  background: rgba(45, 167, 113, 0.15);
+  color: var(--color-mnema-accent);
+  background: color-mix(in srgb, var(--color-mnema-accent) 15%, transparent);
 }
 .markdown-body .md-mention[data-mention] { cursor: pointer; }
-.markdown-body .md-mention[data-mention]:hover { background: rgba(45, 167, 113, 0.28); }
+.markdown-body .md-mention[data-mention]:hover { background: color-mix(in srgb, var(--color-mnema-accent) 28%, transparent); }
 .markdown-body .md-mention-group[data-mention] { cursor: default; }
 /* A role reads like a member mention with an outline; the reader's own roles turn amber via -me. */
-.markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px rgba(45, 167, 113, 0.45); }
+.markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mnema-accent) 45%, transparent); }
 /* --role-color is set through the CSSOM by v-role-colors (CSP: no style attribute strings). */
 .markdown-body .md-mention-role[data-role-color] {
-  color: var(--role-color, #2da771);
-  background: color-mix(in srgb, var(--role-color, #2da771) 18%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-color, #2da771) 55%, transparent);
+  color: var(--role-color, var(--color-mnema-accent));
+  background: color-mix(in srgb, var(--role-color, var(--color-mnema-accent)) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-color, var(--color-mnema-accent)) 55%, transparent);
 }
 .markdown-body .md-mention-me,
 .markdown-body .md-mention-group {
-  color: #fce4a8;
-  background: rgba(224, 162, 58, 0.18);
+  color: var(--color-mnema-amber);
+  background: color-mix(in srgb, var(--color-mnema-away) 18%, transparent);
 }
-.markdown-body .md-mention-me[data-mention]:hover { background: rgba(224, 162, 58, 0.3); }
+.markdown-body .md-mention-me[data-mention]:hover { background: color-mix(in srgb, var(--color-mnema-away) 30%, transparent); }
 
 /* Spoiler: blacked out until clicked */
 .md-spoiler {
-  background-color: #2b2d31;
+  background-color: var(--color-mnema-border);
   color: transparent !important;
   border-radius: 4px;
   padding: 1px 5px;
@@ -159,8 +159,8 @@
   transition: all 0.15s ease;
   display: inline-block;
 }
-.md-spoiler:hover { background-color: #35373c; }
-.md-spoiler:focus-visible { outline: 2px solid #2da771; outline-offset: 1px; }
+.md-spoiler:hover { background-color: var(--color-mnema-border-strong); }
+.md-spoiler:focus-visible { outline: 2px solid var(--color-mnema-accent); outline-offset: 1px; }
 /* Hidden content stays hidden and inert (links inside must not open, mentions must not click). */
 .md-spoiler:not(.revealed) * {
   color: transparent !important;
@@ -169,7 +169,7 @@
   pointer-events: none;
 }
 .md-spoiler.revealed {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: color-mix(in srgb, var(--color-mnema-white) 8%, transparent) !important;
   color: inherit !important;
   user-select: text !important;
   cursor: text;
@@ -181,5 +181,5 @@
 /* [[Page]] links of a wiki page: a link to a page, or the dotted name of one that does not exist. */
 .markdown-body .md-wikilink[data-wiki] { color: var(--color-mnema-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .markdown-body .md-wikilink[data-wiki]:hover { color: var(--color-mnema-accent-hover); }
-.markdown-body .md-wikilink[data-wiki]:focus-visible { outline: 2px solid #2da771; outline-offset: 1px; border-radius: 2px; }
+.markdown-body .md-wikilink[data-wiki]:focus-visible { outline: 2px solid var(--color-mnema-accent); outline-offset: 1px; border-radius: 2px; }
 .markdown-body .md-wikilink-missing { color: var(--color-mnema-muted); text-decoration: underline dotted; text-underline-offset: 2px; }

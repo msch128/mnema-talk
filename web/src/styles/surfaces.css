@@ -19,14 +19,14 @@
   }
 
   ::selection {
-    background-color: rgb(45 167 113 / 0.28);
+    background-color: color-mix(in srgb, var(--color-mnema-accent) 28%, transparent);
     color: var(--color-mnema-text);
   }
 }
 
 /* Dialog scrim and panel: a soft blur behind, the panel eases up into place. */
 .scrim {
-  background-color: rgb(8 10 9 / 0.62);
+  background-color: var(--color-mnema-scrim);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   animation: var(--animate-fade-in);
