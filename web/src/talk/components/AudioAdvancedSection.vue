@@ -58,7 +58,7 @@ function playPreviewSound(sound: SoundEvent = 'join') {
           <div class="settings-row-text">
             <div class="settings-row-title flex flex-wrap items-center gap-2">
               <span>{{ $t('audio.agc') }}</span>
-              <span class="rounded-sm bg-amber-500/15 px-1.5 py-0.5 font-mono text-xs font-medium text-amber-400">{{ $t('audio.agcBadge') }}</span>
+              <span class="rounded-sm bg-mnema-away/15 px-1.5 py-0.5 font-mono text-xs font-medium text-mnema-away">{{ $t('audio.agcBadge') }}</span>
             </div>
             <p class="settings-hint">{{ $t('audio.agcHint') }}</p>
           </div>

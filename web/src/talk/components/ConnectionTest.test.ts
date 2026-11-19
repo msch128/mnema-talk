@@ -90,7 +90,7 @@ describe('ConnectionTest', () => {
 
   it('shows each verdict with its own tone and icon, and the inconclusive one without a fix of its own cause', async () => {
     const cases: Array<[ConnectionReport, string, string]> = [
-      [{ ...base, direct: { outcome: 'ok' } }, 'direct', 'text-mnema-success'],
+      [{ ...base, direct: { outcome: 'ok' } }, 'direct', 'text-mnema-accent'],
       [{ ...base, relayTcp: { outcome: 'ok' } }, 'relay_only', 'text-mnema-warning'],
       [base, 'none', 'text-mnema-danger'],
       [{ ...base, limited: true }, 'inconclusive', 'text-mnema-muted']

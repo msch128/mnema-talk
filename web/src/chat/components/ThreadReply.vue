@@ -59,8 +59,8 @@ const { pickerId, editingId, editText } = props.actions
           :class="[
             'p-1 rounded-sm transition',
             pickerId === reply.id
-              ? 'bg-mnema-surface text-amber-400'
-              : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
+              ? 'bg-mnema-surface text-mnema-away'
+              : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-away'
           ]"
           v-tooltip="$t('chat.addReaction')"
         >
@@ -97,7 +97,7 @@ const { pickerId, editingId, editText } = props.actions
         v-if="actions.canDelete(reply)"
         type="button"
         @click.stop="actions.deleteMessage(reply)"
-        class="btn btn-icon btn-sm hover:text-red-400"
+        class="btn btn-icon btn-sm hover:text-mnema-danger"
         v-tooltip="$t('thread.delete')"
       >
         <Trash2 class="w-3.5 h-3.5" />

@@ -89,7 +89,7 @@ const trailingClass = computed(() => (hasActions.value ? 'md:group-hover/row:inv
 const rowClass = computed(() => [
   'relative w-full h-[34px] max-md:h-11 flex items-center justify-between gap-1.5 px-2 mb-px rounded-lg text-nav transition-colors motion-reduce:transition-none group cursor-pointer text-left min-w-0 focus:outline-hidden focus-ring',
   active.value
-    ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
+    ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_var(--color-mnema-accent)]'
     : unread.value > 0
       ? 'text-mnema-text font-semibold hover:bg-mnema-hover/70'
       : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text',
@@ -194,7 +194,7 @@ const rowClass = computed(() => [
       <div :class="['flex items-center gap-1 ml-auto shrink-0', trailingClass]">
         <span
           v-if="seats"
-          :class="['text-xs tabular-nums', seats.full ? 'text-amber-400' : 'text-mnema-tertiary']"
+          :class="['text-xs tabular-nums', seats.full ? 'text-mnema-away' : 'text-mnema-tertiary']"
           data-testid="sidebar-talk-seats"
           :data-full="seats.full ? 'true' : undefined"
           v-tooltip="seats.count > seats.limit ? $t('talk.seatsOver') : seats.full ? $t('talk.seatsFull') : $t('talk.seats')"
@@ -270,14 +270,14 @@ const rowClass = computed(() => [
           />
           <span
             v-if="voiceStore.mediaState[user.id]?.screen"
-            class="px-1.5 py-0.5 rounded-sm bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs shrink-0"
+            class="px-1.5 py-0.5 rounded-sm bg-mnema-danger text-mnema-accent-ink text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs shrink-0"
             data-testid="sidebar-live-badge"
             v-tooltip="$t('talk.liveTooltip')"
           >
             <Monitor class="w-3 h-3" />
             {{ $t('talk.live') }}
           </span>
-          <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded-sm bg-amber-500/10 text-amber-400 shrink-0">
+          <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded-sm bg-mnema-away/10 text-mnema-away shrink-0">
             {{ $t('role.admin') }}
           </span>
         </span>

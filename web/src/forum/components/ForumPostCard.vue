@@ -66,18 +66,18 @@ const created = computed(() => relative(props.post.created_at, locale.value))
           <span v-if="post.is_pinned" data-testid="forum-post-pinned" class="flex items-center text-mnema-accent" :title="$t('forum.pinnedBadge')">
             <Pin class="h-3.5 w-3.5" :aria-label="$t('forum.pinnedBadge')" />
           </span>
-          <span v-if="post.is_resolved" data-testid="forum-post-solved" class="flex items-center gap-1 rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-300">
+          <span v-if="post.is_resolved" data-testid="forum-post-solved" class="flex items-center gap-1 rounded-md bg-mnema-accent/10 px-1.5 py-0.5 text-mnema-mint">
             <CircleCheck class="h-3.5 w-3.5" />
             <span class="max-sm:sr-only">{{ $t('forum.solvedBadge') }}</span>
           </span>
-          <span v-if="post.is_locked" class="flex items-center gap-1 rounded-md bg-amber-400/10 px-1.5 py-0.5 text-amber-400" :title="$t('forum.lockedBadge')">
+          <span v-if="post.is_locked" class="flex items-center gap-1 rounded-md bg-mnema-away/10 px-1.5 py-0.5 text-mnema-away" :title="$t('forum.lockedBadge')">
             <Lock class="h-3.5 w-3.5" />
             <span class="max-sm:sr-only">{{ $t('forum.lockedBadge') }}</span>
           </span>
         </div>
       </div>
 
-      <p v-if="snippet" v-full-text class="line-clamp-2 break-words text-sm text-mnema-secondary">{{ snippet }}</p>
+      <p v-if="snippet" v-full-text class="line-clamp-2 break-words text-sm text-mnema-muted">{{ snippet }}</p>
 
       <div v-if="post.tags?.length" class="flex flex-wrap items-center gap-1.5">
         <ForumTagChip v-for="tag in post.tags" :key="tag.id" data-testid="forum-post-tag" :tag="tag" />
@@ -85,7 +85,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
 
       <div class="mt-auto flex min-w-0 items-center gap-2 text-xs text-mnema-tertiary">
         <UserAvatar :user="{ username: post.username, display_name: post.display_name, avatar_url: post.avatar_url }" size="sm" class="shrink-0" />
-        <span v-full-text class="truncate font-medium text-mnema-secondary">{{ authorName }}</span>
+        <span v-full-text class="truncate font-medium text-mnema-muted">{{ authorName }}</span>
         <span class="shrink-0">{{ created }}</span>
         <span class="ml-auto flex shrink-0 items-center gap-3">
           <span v-if="replyCount > 0 && active" class="hidden sm:inline">{{ $t('forum.lastActivity', { when: active }) }}</span>

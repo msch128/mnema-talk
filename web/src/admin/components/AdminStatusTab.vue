@@ -101,7 +101,7 @@ onMounted(async () => {
             <XCircle v-if="c.level === 'fail'" class="w-4 h-4 mt-0.5 text-mnema-danger shrink-0" aria-hidden="true" />
             <TriangleAlert v-else-if="c.level === 'warn'" class="w-4 h-4 mt-0.5 text-mnema-warning shrink-0" aria-hidden="true" />
             <CircleHelp v-else-if="c.level === 'info'" class="w-4 h-4 mt-0.5 text-mnema-tertiary shrink-0" aria-hidden="true" />
-            <CheckCircle2 v-else class="w-4 h-4 mt-0.5 text-mnema-success shrink-0" aria-hidden="true" />
+            <CheckCircle2 v-else class="w-4 h-4 mt-0.5 text-mnema-accent shrink-0" aria-hidden="true" />
             <div class="min-w-0 space-y-1">
               <p class="font-medium text-mnema-text">
                 {{ checkLabel(c.id) }}
@@ -212,7 +212,7 @@ onMounted(async () => {
         <div>
           <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.reachable') }}</dt>
           <dd class="flex items-center gap-1 font-medium mt-0.5" data-testid="db-reachable">
-            <CheckCircle2 v-if="db.reachable" class="w-4 h-4 text-mnema-success shrink-0" />
+            <CheckCircle2 v-if="db.reachable" class="w-4 h-4 text-mnema-accent shrink-0" />
             <XCircle v-else class="w-4 h-4 text-mnema-danger shrink-0" />
             <span :class="db.reachable ? 'text-mnema-text' : 'text-mnema-danger'">{{ db.reachable ? $t('admin.operatorStatus.reachable') : $t('admin.operatorStatus.unreachable') }}</span>
           </dd>
@@ -246,7 +246,7 @@ onMounted(async () => {
         <div>
           <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.reachable') }}</dt>
           <dd class="flex items-center gap-1 font-medium mt-0.5" data-testid="storage-reachable">
-            <CheckCircle2 v-if="storage.reachable" class="w-4 h-4 text-mnema-success shrink-0" />
+            <CheckCircle2 v-if="storage.reachable" class="w-4 h-4 text-mnema-accent shrink-0" />
             <XCircle v-else class="w-4 h-4 text-mnema-danger shrink-0" />
             <span :class="storage.reachable ? 'text-mnema-text' : 'text-mnema-danger'">{{ storage.reachable ? $t('admin.operatorStatus.reachable') : $t('admin.operatorStatus.unreachable') }}</span>
           </dd>

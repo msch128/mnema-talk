@@ -167,7 +167,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
 header button, .controls button {padding:8px;border-radius:7px;background:rgba(255,255,255,.08)}
 .controls button[aria-pressed="true"] {background:rgba(239,68,68,.25)}
 header button svg, .controls button svg {width:18px;height:18px}
-.speaker-dot {width:7px;height:7px;border-radius:50%;background:#71717a;flex-shrink:0}
-.speaker-dot.live {background:#5ee6a8;box-shadow:0 0 8px #5ee6a8}
-.speaking {background:rgba(94,230,168,.1)}
+.speaker-dot {width:7px;height:7px;border-radius:50%;background:var(--color-mnema-tertiary);flex-shrink:0}
+.speaker-dot.live {background:var(--color-mnema-accent-hover);box-shadow:0 0 8px var(--color-mnema-accent-hover)}
+.speaking {background:rgb(54 189 129 / 0.1)}
 </style>

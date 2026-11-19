@@ -90,10 +90,10 @@ function pickTemplate(e: Event) {
           <div class="flex items-center">
             <button type="button" class="btn btn-icon h-8 w-8 max-md:h-11 max-md:w-11" :disabled="i === 0" :aria-label="$t('events.roles.moveUp')" @click="move(i, -1)"><ArrowUp class="h-4 w-4" /></button>
             <button type="button" class="btn btn-icon h-8 w-8 max-md:h-11 max-md:w-11" :disabled="i === rows.length - 1" :aria-label="$t('events.roles.moveDown')" @click="move(i, 1)"><ArrowDown class="h-4 w-4" /></button>
-            <button type="button" class="btn btn-icon h-8 w-8 hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.removeRole', { name: row.name || '…' })" @click="remove(row)"><Trash2 class="h-4 w-4" /></button>
+            <button type="button" class="btn btn-icon h-8 w-8 hover:text-mnema-danger max-md:h-11 max-md:w-11" :aria-label="$t('events.roles.removeRole', { name: row.name || '…' })" @click="remove(row)"><Trash2 class="h-4 w-4" /></button>
           </div>
         </div>
-        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-mnema-secondary">
+        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-mnema-muted">
           <label class="flex items-center gap-2 max-md:min-h-11">
             <input type="checkbox" class="accent-mnema-accent" :checked="row.capacity === null" @change="setUnlimited(row, ($event.target as HTMLInputElement).checked)" />
             {{ $t('events.roles.unlimited') }}
@@ -105,7 +105,7 @@ function pickTemplate(e: Event) {
           <span v-if="row.members > 0" class="text-xs text-mnema-tertiary">{{ $t('events.roles.members', { count: row.members }) }}</span>
         </div>
 
-        <div v-if="asking === row.key" class="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-amber-400/10 p-2 text-sm text-amber-300" data-testid="event-role-move">
+        <div v-if="asking === row.key" class="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-mnema-away/10 p-2 text-sm text-mnema-away" data-testid="event-role-move">
           <span>{{ $t('events.roles.moveMembers', { count: row.members }) }}</span>
           <p v-if="targets.length === 0" class="basis-full text-xs" data-testid="event-role-move-none">{{ $t('events.roles.moveNoTarget') }}</p>
           <select v-else v-model="moveTo" :aria-label="$t('events.roles.moveTo')" class="h-9 rounded-lg border border-mnema-border bg-mnema-surface px-2 text-sm text-mnema-text max-md:h-11">

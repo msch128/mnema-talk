@@ -19,7 +19,7 @@ onMounted(() => {
   <div v-if="features.events" class="mb-1 shrink-0">
     <button
       type="button"
-      class="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-secondary hover:bg-mnema-hover hover:text-mnema-text transition-colors cursor-pointer"
+      class="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text transition-colors cursor-pointer"
       @click="openEvents()"
     >
       <div class="flex items-center gap-2 min-w-0">

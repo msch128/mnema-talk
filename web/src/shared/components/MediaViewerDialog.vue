@@ -125,7 +125,7 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
         <UserAvatar v-if="message" :user="{ display_name: message.senderName, avatar_url: message.senderAvatarUrl }" size="sm" />
         <div class="min-w-0">
           <p v-full-text class="truncate text-sm font-medium text-mnema-text" data-testid="viewer-name">{{ item.name }}</p>
-          <p v-full-text v-if="message" class="truncate text-xs text-mnema-secondary" data-testid="viewer-sender">
+          <p v-full-text v-if="message" class="truncate text-xs text-mnema-muted" data-testid="viewer-sender">
             <span class="text-mnema-text">{{ message.senderName }}</span>
             · {{ sentAt }}<template v-if="message.channelName"> · {{ $t('viewer.inChannel', { channel: message.channelName }) }}</template>
           </p>
@@ -199,10 +199,10 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
     </div>
 
     <footer class="flex items-center justify-center gap-3 px-4 py-3">
-      <span v-if="total > 1" class="font-mono text-sm text-mnema-secondary" data-testid="viewer-counter">{{ counter }}</span>
+      <span v-if="total > 1" class="font-mono text-sm text-mnema-muted" data-testid="viewer-counter">{{ counter }}</span>
       <div class="flex items-center gap-1" role="group" :aria-label="$t('viewer.zoomLevel', { percent: zoomPercent })">
         <button type="button" :class="btn" :aria-label="$t('viewer.zoomOut')" v-tooltip="$t('viewer.zoomOut')" data-testid="viewer-zoom-out" @click="zoom.zoomOut"><Minus class="h-4 w-4" /></button>
-        <button type="button" class="h-9 min-w-14 rounded-md px-2 font-mono text-xs text-mnema-secondary hover:bg-mnema-hover" :aria-label="$t('viewer.zoomReset')" data-testid="viewer-zoom-reset" @click="zoom.reset">{{ zoomPercent }}%</button>
+        <button type="button" class="h-9 min-w-14 rounded-md px-2 font-mono text-xs text-mnema-muted hover:bg-mnema-hover" :aria-label="$t('viewer.zoomReset')" data-testid="viewer-zoom-reset" @click="zoom.reset">{{ zoomPercent }}%</button>
         <button type="button" :class="btn" :aria-label="$t('viewer.zoomIn')" v-tooltip="$t('viewer.zoomIn')" data-testid="viewer-zoom-in" @click="zoom.zoomIn"><Plus class="h-4 w-4" /></button>
       </div>
     </footer>

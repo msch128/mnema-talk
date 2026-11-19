@@ -67,7 +67,7 @@ async function saveCurrent() {
           <p class="text-xs leading-relaxed text-mnema-tertiary">{{ tpl.roles.map(r => `${r.name}${r.capacity ? ' ' + r.capacity : ''}`).join(' · ') }}</p>
         </div>
         <button type="button" class="btn btn-secondary shrink-0 px-3 py-1.5 text-xs max-md:min-h-11" data-testid="event-template-toggle" :disabled="busy" :aria-label="$t(tpl.enabled ? 'events.roles.turnOffTemplate' : 'events.roles.turnOnTemplate', { name: tpl.name })" @click="toggle(tpl)">{{ tpl.enabled ? $t('events.roles.turnOff') : $t('events.roles.turnOn') }}</button>
-        <button v-if="!tpl.preset" type="button" class="btn btn-icon h-8 w-8 shrink-0 hover:text-red-400 max-md:h-11 max-md:w-11" :disabled="busy" :aria-label="$t('events.roles.deleteTemplate', { name: tpl.name })" @click="remove(tpl)"><Trash2 class="h-4 w-4" /></button>
+        <button v-if="!tpl.preset" type="button" class="btn btn-icon h-8 w-8 shrink-0 hover:text-mnema-danger max-md:h-11 max-md:w-11" :disabled="busy" :aria-label="$t('events.roles.deleteTemplate', { name: tpl.name })" @click="remove(tpl)"><Trash2 class="h-4 w-4" /></button>
       </li>
     </ul>
     <div class="mt-3 flex flex-wrap items-center gap-2">

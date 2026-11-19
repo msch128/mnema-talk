@@ -37,7 +37,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
         <ImageIcon class="w-4 h-4 text-mnema-tertiary" />
         <span>{{ preview ? $t('events.changeCover') : $t('events.uploadCover') }}</span>
       </button>
-      <button v-if="preview" type="button" class="text-sm text-red-400 hover:underline" @click="emit('remove')">
+      <button v-if="preview" type="button" class="text-sm text-mnema-danger hover:underline" @click="emit('remove')">
         {{ $t('events.removeCover') }}
       </button>
     </div>

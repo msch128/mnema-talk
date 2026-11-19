@@ -31,10 +31,10 @@ const emit = defineEmits<{ create: []; reset: [] }>()
     </div>
     <div class="space-y-1.5">
       <h2 class="text-sm font-semibold text-mnema-text">{{ $t('forum.emptyTitle') }}</h2>
-      <p class="text-sm text-mnema-secondary">{{ $t('forum.emptyExplain') }}</p>
+      <p class="text-sm text-mnema-muted">{{ $t('forum.emptyExplain') }}</p>
       <p class="text-xs text-mnema-tertiary">{{ canPost ? $t('forum.emptyStart') : $t('forum.emptyReadOnly') }}</p>
     </div>
-    <p v-if="guidelines" class="w-full whitespace-pre-line break-words rounded-lg border border-mnema-hairline bg-mnema-surface/60 p-3 text-left text-xs text-mnema-secondary">{{ guidelines }}</p>
+    <p v-if="guidelines" class="w-full whitespace-pre-line break-words rounded-lg border border-mnema-hairline bg-mnema-surface/60 p-3 text-left text-xs text-mnema-muted">{{ guidelines }}</p>
     <button v-if="canPost" type="button" data-testid="forum-empty-new" class="btn btn-primary mt-1 px-3.5 py-1.5 text-xs" @click="emit('create')">{{ $t('forum.newPost') }}</button>
   </div>
 </template>

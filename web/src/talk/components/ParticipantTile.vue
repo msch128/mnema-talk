@@ -240,7 +240,7 @@ watch(() => props.stream, (stream) => {
         v-if="isScreensharing"
         data-testid="tile-live-badge"
         :class="[
-          'flex items-center gap-1 rounded-sm bg-red-600 text-white font-bold uppercase tracking-wider leading-none shadow-md shadow-black/30 pointer-events-none',
+          'flex items-center gap-1 rounded-sm bg-mnema-danger text-mnema-accent-ink font-bold uppercase tracking-wider leading-none shadow-md shadow-black/30 pointer-events-none',
           compact ? 'h-4 px-1 text-[10px]' : 'h-5 px-1.5 text-[11px]'
         ]"
       >
@@ -267,7 +267,7 @@ watch(() => props.stream, (stream) => {
         <span :class="['truncate font-semibold', compact ? 'text-xs' : 'text-sm']">{{ name }}</span>
         <span
           v-if="user.role === 'admin'"
-          class="shrink-0 rounded-sm px-1 bg-amber-500/15 text-amber-400 font-mono text-xs leading-4"
+          class="shrink-0 rounded-sm px-1 bg-mnema-away/15 text-mnema-away font-mono text-xs leading-4"
         >{{ $t('role.admin') }}</span>
         <MicOff
           v-if="localMuted"
