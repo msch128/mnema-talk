@@ -12,6 +12,19 @@ export interface RoleMention {
 
 const text = (v: string): Inline[] => (v ? [{ t: 'text', v }] : [])
 
+// Direction and zero-width format characters (bidi embeddings, overrides and
+// isolates, the marks, ZWSP, ZWNJ/ZWJ are kept for scripts and emoji).
+const NAME_FORMAT = /[\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g
+
+/**
+ * A member's display name as it may stand inside someone else's text: the
+ * server drops these characters from new names; a name stored before that
+ * still may not turn the rest of the message around.
+ */
+export function mentionName(display: string): string {
+  return display.replace(NAME_FORMAT, '').trim()
+}
+
 /**
  * @name for a member (2 to 32 letters, digits, "_", "." or "-"). With `known`
  * only those members and @all/@here are highlighted, and they get the data
@@ -39,7 +52,7 @@ export function userMentionRule(known: ReadonlySet<string> | ReadonlyMap<string,
       let label = `@${name}`
       if (known) {
         Object.assign(attrs, { 'data-mention': lower, role: 'button', tabindex: '0' })
-        const display = known instanceof Map ? (known.get(lower) ?? '').trim() : ''
+        const display = known instanceof Map ? mentionName(known.get(lower) ?? '') : ''
         if (display && display.toLowerCase() !== lower) {
           label = `@${display}`
           attrs['title'] = `@${name}`

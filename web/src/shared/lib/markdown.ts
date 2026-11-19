@@ -11,7 +11,7 @@ import type { Block } from './markdown/types'
 import { parseBlocks } from './markdown/blocks'
 import { applyTextRulesToBlocks, registeredTextRules } from './markdown/rules'
 import type { TextRule } from './markdown/rules'
-import { roleMentionRule, userMentionRule } from './markdown/mentions'
+import { mentionName, roleMentionRule, userMentionRule } from './markdown/mentions'
 import type { RoleMention } from './markdown/mentions'
 import { renderBlocks } from './markdown/render'
 import { blocksPlain, linksIn } from './markdown/plain'
@@ -89,7 +89,7 @@ function labelMentions(text: string): string {
   if (!resolve) return text
   return text.replace(/(^|[\s(])@([A-Za-z0-9_.-]{2,32})/g, (all, pre: string, raw: string) => {
     const name = raw.replace(/[.-]+$/, '')
-    const label = name.length >= 2 ? resolve(name.toLowerCase()) : undefined
+    const label = name.length >= 2 ? mentionName(resolve(name.toLowerCase()) ?? '') : ''
     return label ? `${pre}@${label}${raw.slice(name.length)}` : all
   })
 }

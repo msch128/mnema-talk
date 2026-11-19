@@ -155,3 +155,20 @@ describe('previewText mentions', () => {
     expect(previewText('hi @bot-fceaf0')).toBe('hi @bot-fceaf0')
   })
 })
+
+describe('mention display names', () => {
+  afterEach(() => setMentionLabels(null))
+
+  it('drops direction and zero-width characters from a name inside the text', () => {
+    setMentionLabels(name => ({ mallory: '\u202Eevil\u200B' })[name])
+    expect(previewText('ask @mallory now')).toBe('ask @evil now')
+    const html = renderMarkdown('ask @mallory now', { known: new Map([['mallory', '\u202Eevil\u2066']]) })
+    expect(html).not.toMatch(/[\u202A-\u202E\u2066-\u2069\u200B]/)
+    expect(dom(html).querySelector('.md-mention')?.textContent).toBe('@evil')
+  })
+
+  it('falls back to the username when nothing visible is left of the name', () => {
+    setMentionLabels(name => ({ mallory: '\u202E' })[name])
+    expect(previewText('ask @mallory')).toBe('ask @mallory')
+  })
+})
