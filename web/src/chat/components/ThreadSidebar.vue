@@ -280,7 +280,7 @@ async function handleSendReply() {
     <ForumPostHeader v-if="chatStore.activeThread?.title" @jump="jumpToReply" />
 
     <!-- Scrollable Thread Content Area -->
-    <div ref="repliesContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
+    <div ref="repliesContainer" v-entering="chatStore.isThreadLoading ? '' : chatStore.activeThread?.id" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
       <!-- Root Message Card -->
       <BlockedMessageRow
         v-if="chatStore.activeThread && blocks.hides(chatStore.activeThread)"
