@@ -27,12 +27,12 @@ Contents:
 | Product | Mnema Talk, a self-hosted, invite-only chat and voice server for small communities |
 | Audit target | Release **1.2.0** (branch `release/1.2.0`; the tag is the reference once it exists) |
 | Previous releases | 1.1.0 (direct messages, blocks, reports, forwarding), 1.0.x (first stable line) |
-| Repository | <https://github.com/msch128/mnema-talk> (public, source available to the reviewers) |
+| Repository | <https://github.com/mnema-xyz/talk> (public, source available to the reviewers) |
 | Server | Go (module `go 1.27`), chi 5.5, pgx 5.11, Pion WebRTC 4.2, `golang.org/x/crypto`, `webpush-go` 1.4 |
 | Web app | Vue 3 single-page app (TypeScript), `ts-mls` 1.6.4 for MLS, Vite build, embedded in the server binary |
 | Data stores | PostgreSQL 18, S3-compatible object storage (SeaweedFS in the compose stack) |
 | Optional services | coturn (TURN), update sidecars (`updater`, `recreator`, off by default) |
-| Desktop client | Separate repository (<https://github.com/msch128/mnema-talk-desktop>, Tauri shell, **Beta**, installers unsigned at OS level) running a signed web bundle built from this repository |
+| Desktop client | Separate repository (<https://github.com/mnema-xyz/talk-desktop>, Tauri shell, **Beta**, installers unsigned at OS level) running a signed web bundle built from this repository |
 
 **In scope:** the server (`cmd/server`, `internal/`), the web app (`web/`),
 the signed web bundle format and its verification (`internal/webbundle`,
@@ -824,7 +824,7 @@ auto-delete; search SQL (all user input travels as parameters); and no new
 Use a throwaway machine. Please do not test against instances you do not run.
 
 ```sh
-git clone https://github.com/msch128/mnema-talk && cd mnema-talk
+git clone https://github.com/mnema-xyz/talk && cd talk
 git checkout release/1.2.0            # or the 1.2.0 tag once it exists
 cp .env.example .env
 # Set at least: PUBLIC_URL (for example http://127.0.0.1:8080), JWT_SECRET (32+ random bytes),
@@ -840,7 +840,7 @@ curl -s http://127.0.0.1:8080/api/health
 Sign in as the Owner (`admin` by default, password from
 `ADMIN_INITIAL_PASSWORD`), create invite codes and register more accounts to test
 roles and cross-account cases. A published image can be used instead of building
-(`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:<version>`); [deployment](../deployment.md#fresh-install)
+(`MNEMA_IMAGE=ghcr.io/mnema-xyz/mnema-talk:<version>`); [deployment](../deployment.md#fresh-install)
 lists the steps CI runs. For development without the image: `make dev` starts
 PostgreSQL and SeaweedFS in Docker and runs the server with `go run`; the web
 app builds with `make web` (or the Vite dev server in `web/`).

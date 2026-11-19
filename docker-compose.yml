@@ -131,7 +131,7 @@ services:
       # 0 = keep the earlier versions of edited messages (moderator edit history).
       - EDIT_HISTORY_RETENTION_DAYS=${EDIT_HISTORY_RETENTION_DAYS:-0}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      # Empty = the server default (de); `mnema-talk setup` writes the choice.
+      # Empty = the server default (en); `mnema-talk setup` writes the choice.
       - INITIAL_LANGUAGE=${INITIAL_LANGUAGE:-}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}

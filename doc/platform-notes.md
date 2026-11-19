@@ -47,8 +47,8 @@ reverse proxy, edit that line in `docker-compose.yml` to a literal such as
 new release.
 
 **Docker Hub instead of GHCR.** If your NAS reaches Docker Hub more easily
-than `ghcr.io`, set `MNEMA_IMAGE=msch128/mnema-talk:latest` (or a tag such as
-`msch128/mnema-talk:2.1`) in the `.env` and rebuild the project. "Update now"
+than `ghcr.io`, set `MNEMA_IMAGE=mnemaxyz/mnema-talk:latest` (or a tag such as
+`mnemaxyz/mnema-talk:2.1`) in the `.env` and rebuild the project. "Update now"
 works with it: the updater verifies the same signature and provenance and pulls
 from Docker Hub, not from GHCR (outbound `registry-1.docker.io` and
 `auth.docker.io`, see [ports](ports.md#outbound-connections)).

@@ -71,6 +71,6 @@ Run `make check` before you push: it is what CI runs.
 ## License
 
 Contributions are accepted under the AGPL-3.0, and their authors agree that
-Marius Schröder may also distribute them under a commercial license (see
+the Mnema project maintainers may also distribute them under a commercial license (see
 [README](README.md#license)). The official bot SDKs ([TypeScript](https://github.com/mnema-xyz/bot-sdk-js)
 and [Go](https://github.com/mnema-xyz/bot-sdk-go)) are separate repositories under the MIT License.
