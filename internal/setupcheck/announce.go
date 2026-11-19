@@ -7,8 +7,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/stunprobe"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/stunprobe"
 )
 
 // Detector finds the public IPv4 address (stunprobe.Detect in production).

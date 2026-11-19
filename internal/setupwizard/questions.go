@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
 )
 
 // Each question says in plain words what it is, why it matters and gives an

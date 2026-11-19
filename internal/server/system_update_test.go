@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/mnema-xyz/talk/internal/update"
 )
 
 // fakeClock is a settable time source for the update checker.

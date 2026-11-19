@@ -17,7 +17,7 @@ import (
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/ssrf"
 )
 
 // received is one request a fake push service saw.

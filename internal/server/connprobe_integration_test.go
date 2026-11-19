@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/setupcheck"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
 

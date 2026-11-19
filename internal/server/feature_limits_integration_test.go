@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/emoji"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/emoji"
 )
 
 // The 1.0 features each broadcast or decode on every call, so they have a budget of their own,

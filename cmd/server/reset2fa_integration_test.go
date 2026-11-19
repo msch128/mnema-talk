@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 func TestReset2faCommandTurnsTheSecondFactorOffAndIsAudited(t *testing.T) {

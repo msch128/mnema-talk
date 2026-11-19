@@ -24,8 +24,8 @@ class CoverageSummaryTests(unittest.TestCase):
 
     def test_rounded_hundred_still_rejects_an_uncovered_statement(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/example/main.go:1.1,2.1 2500 1",
-            "github.com/msch128/mnema-talk/internal/example/main.go:3.1,4.1 1 0",
+            "github.com/mnema-xyz/talk/internal/example/main.go:1.1,2.1 2500 1",
+            "github.com/mnema-xyz/talk/internal/example/main.go:3.1,4.1 1 0",
         ], 100)
         self.assertEqual(result.returncode, 1)
         self.assertIn("100.0 %", result.stdout)
@@ -34,32 +34,32 @@ class CoverageSummaryTests(unittest.TestCase):
 
     def test_rounding_does_not_lower_an_integer_threshold(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/example/main.go:1.1,2.1 1999 1",
-            "github.com/msch128/mnema-talk/internal/example/main.go:3.1,4.1 501 0",
+            "github.com/mnema-xyz/talk/internal/example/main.go:1.1,2.1 1999 1",
+            "github.com/mnema-xyz/talk/internal/example/main.go:3.1,4.1 501 0",
         ], 80)
         self.assertEqual(result.returncode, 1)
         self.assertIn("80.0 %", result.stdout)
 
     def test_exact_boundary_qualifies(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/example/main.go:1.1,2.1 2450 1",
-            "github.com/msch128/mnema-talk/internal/example/main.go:3.1,4.1 50 0",
+            "github.com/mnema-xyz/talk/internal/example/main.go:1.1,2.1 2450 1",
+            "github.com/mnema-xyz/talk/internal/example/main.go:3.1,4.1 50 0",
         ], 98)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_shared_blocks_are_deduplicated_across_test_binaries(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/example/main.go:1.1,2.1 2 0",
-            "github.com/msch128/mnema-talk/internal/example/main.go:1.1,2.1 2 1",
+            "github.com/mnema-xyz/talk/internal/example/main.go:1.1,2.1 2 0",
+            "github.com/mnema-xyz/talk/internal/example/main.go:1.1,2.1 2 1",
         ], 100)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("2 of 2", result.stdout)
 
     def test_one_poorly_covered_file_fails_despite_a_healthy_total(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/good/good.go:1.1,2.1 1000 1",
-            "github.com/msch128/mnema-talk/internal/weak/weak.go:1.1,2.1 10 1",
-            "github.com/msch128/mnema-talk/internal/weak/weak.go:3.1,4.1 10 0",
+            "github.com/mnema-xyz/talk/internal/good/good.go:1.1,2.1 1000 1",
+            "github.com/mnema-xyz/talk/internal/weak/weak.go:1.1,2.1 10 1",
+            "github.com/mnema-xyz/talk/internal/weak/weak.go:3.1,4.1 10 0",
         ], 90, 80)
         self.assertEqual(result.returncode, 1)
         self.assertIn("internal/weak/weak.go: 50.0 %", result.stderr)
@@ -74,8 +74,8 @@ class CoverageSummaryTests(unittest.TestCase):
 
     def test_files_at_the_floor_qualify(self):
         result = self.run_profile([
-            "github.com/msch128/mnema-talk/internal/edge/edge.go:1.1,2.1 80 1",
-            "github.com/msch128/mnema-talk/internal/edge/edge.go:3.1,4.1 20 0",
+            "github.com/mnema-xyz/talk/internal/edge/edge.go:1.1,2.1 80 1",
+            "github.com/mnema-xyz/talk/internal/edge/edge.go:3.1,4.1 20 0",
         ], 80, 80)
         self.assertEqual(result.returncode, 0, result.stderr)
 

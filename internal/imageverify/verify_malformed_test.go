@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/imageverify"
 )
 
 func TestVerifyRefusesBrokenProvenance(t *testing.T) {

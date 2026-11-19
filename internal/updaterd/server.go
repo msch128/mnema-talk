@@ -18,9 +18,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
-	"github.com/msch128/mnema-talk/internal/safego"
-	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/mnema-xyz/talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/update"
 )
 
 // ImageVerifier is what the updater needs from imageverify.

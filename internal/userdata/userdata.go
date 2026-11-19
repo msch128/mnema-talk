@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // Channels is the set of channels whose names an export may include.

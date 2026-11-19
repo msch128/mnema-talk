@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/mailer"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/mailer"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // recordingMail keeps every message it is asked to send and announces each on

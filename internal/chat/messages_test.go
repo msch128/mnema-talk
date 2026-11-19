@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
 )
 
 func TestIsSameThreadContext(t *testing.T) {

@@ -6,7 +6,7 @@ package main
 import (
 	"os"
 
-	"github.com/msch128/mnema-talk/internal/updaterd"
+	"github.com/mnema-xyz/talk/internal/updaterd"
 )
 
 func main() {

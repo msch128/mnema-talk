@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // image handles GET /api/emoji/{id}/image.

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 // One hostile address hammering a locked account must not use up what a

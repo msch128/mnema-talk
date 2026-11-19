@@ -4,15 +4,15 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
-	"github.com/msch128/mnema-talk/internal/chat/talks"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/chat/talks"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 // callFixture is a conversation between Alice and Bob in a fresh community (no

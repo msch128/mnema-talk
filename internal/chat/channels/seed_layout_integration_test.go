@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 // seedBaselineLayout recreates what migration 0001 seeds: the baseline-language names.

@@ -1,6 +1,6 @@
 package emoji
 
-import "github.com/msch128/mnema-talk/internal/userdata"
+import "github.com/mnema-xyz/talk/internal/userdata"
 
 // accountData is the custom emoji an account uploaded in an account erasure. It exports nothing: the
 // rows only name the account as their creator.

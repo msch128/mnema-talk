@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 type lockedBuffer struct {

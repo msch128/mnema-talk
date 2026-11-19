@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 func openCountOf(t *testing.T, w *wsConn) (int, bool) {

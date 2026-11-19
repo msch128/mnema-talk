@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/imageverify"
 )
 
 func TestTrustSources(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/ssrf"
-	"github.com/msch128/mnema-talk/internal/stunprobe"
+	"github.com/mnema-xyz/talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/stunprobe"
 )
 
 // FromEnv builds a Config from a lookup function, which keeps it testable.

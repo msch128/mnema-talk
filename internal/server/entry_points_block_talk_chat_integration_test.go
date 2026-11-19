@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/talks"
+	"github.com/mnema-xyz/talk/internal/chat/talks"
 )
 
 // The Talk of a conversation of two belongs to the conversation

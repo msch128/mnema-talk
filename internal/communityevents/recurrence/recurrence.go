@@ -5,7 +5,7 @@ package recurrence
 import (
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 const (

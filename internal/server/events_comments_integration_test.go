@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/communityevents"
 )
 
 // Comments through the real router: a member's comments go with their account.

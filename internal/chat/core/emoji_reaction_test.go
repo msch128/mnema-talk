@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 func TestValidateEmojiAcceptsRealEmojiSequences(t *testing.T) {

@@ -3,11 +3,11 @@ package memberadmin
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // MountAdmin registers invite and account management; each route checks its

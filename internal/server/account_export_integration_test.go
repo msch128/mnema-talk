@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth/account"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth/account"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 type exportStatus struct {

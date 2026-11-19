@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil/presets"
+	"github.com/mnema-xyz/talk/internal/testutil/presets"
 )
 
 // Every duration of the poll dialog is accepted by the poll validation, and

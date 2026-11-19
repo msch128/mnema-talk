@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	chatdm "github.com/msch128/mnema-talk/internal/chat/dm"
-	"github.com/msch128/mnema-talk/internal/events"
+	chatdm "github.com/mnema-xyz/talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 func TestAGroupTakesMembersUpToTenAndEveryoneLeavesIt(t *testing.T) {

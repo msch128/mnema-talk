@@ -2,7 +2,7 @@ package channels
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // Request and response bodies of the channel and category routes in handler_channels.go.

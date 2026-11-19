@@ -16,8 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
-	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
+	"github.com/mnema-xyz/talk/internal/testutil/pgfault"
+	"github.com/mnema-xyz/talk/internal/testutil/pgtest"
 )
 
 // TestMain removes the Postgres container pgtest may have started.

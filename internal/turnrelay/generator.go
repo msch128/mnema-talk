@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 	"github.com/pion/turn/v5"
 )
 

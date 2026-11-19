@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/opwarn"
-	"github.com/msch128/mnema-talk/internal/safego"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
-	"github.com/msch128/mnema-talk/internal/turnrelay"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/turnrelay"
 )
 
 // setupLogDelay is how long after the start the setup checks are logged:

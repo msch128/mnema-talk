@@ -1,6 +1,6 @@
 package auth
 
-import "github.com/msch128/mnema-talk/internal/events"
+import "github.com/mnema-xyz/talk/internal/events"
 
 // UserUpdate is the long form of user_update: a member's public profile after
 // a change of name, status or avatar. The short form, an account disabled or

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/opwarn"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
-	"github.com/msch128/mnema-talk/internal/sfu"
-	"github.com/msch128/mnema-talk/internal/turnrelay"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/turnrelay"
 )
 
 // captureLog routes the default logger into a buffer for the test and clears

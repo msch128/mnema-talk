@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
 )
 
 func TestFavouritesReportOnlyWhatChanged(t *testing.T) {

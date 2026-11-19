@@ -1,6 +1,6 @@
 package wire
 
-import "github.com/msch128/mnema-talk/internal/events"
+import "github.com/mnema-xyz/talk/internal/events"
 
 // Pong answers a client's ping with the number it sent (pong).
 type Pong struct {

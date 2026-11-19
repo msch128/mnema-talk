@@ -18,7 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // Rule kinds.

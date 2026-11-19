@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 var updaterToken = strings.Repeat("updater-", 5)

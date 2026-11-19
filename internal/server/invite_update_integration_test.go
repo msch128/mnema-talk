@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 func createInvite(t *testing.T, c *client, body map[string]any) auth.Invite {

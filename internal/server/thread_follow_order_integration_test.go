@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/bot"
 )
 
 // The follow tap holds a thread reply for its lookup. Taps run in the order

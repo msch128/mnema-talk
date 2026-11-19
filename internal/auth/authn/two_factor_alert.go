@@ -3,7 +3,7 @@ package authn
 import (
 	"context"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 // raiseAlert audits the failure streak and, when the account has a confirmed

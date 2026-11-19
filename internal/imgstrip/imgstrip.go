@@ -23,7 +23,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/imgproc"
 )
 
 const (

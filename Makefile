@@ -25,7 +25,7 @@ OPENAPI_FILE := api/openapi.json
 # match: the browser offers a reload when the server's version differs).
 VERSION  ?= $(shell cat version.txt 2>/dev/null || echo dev)
 REVISION ?= $(shell git rev-parse HEAD 2>/dev/null)
-VERSION_PKG := github.com/msch128/mnema-talk/internal/version
+VERSION_PKG := github.com/mnema-xyz/talk/internal/version
 LDFLAGS  := -w -s -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Revision=$(REVISION)
 
 # openapi_gen,<target file>: swag v2 writes an OpenAPI 3.1 document from the

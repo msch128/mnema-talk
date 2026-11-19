@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/events/wire"
 )
 
 func publicNames(t *testing.T, a *app) (health, options string) {

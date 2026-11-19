@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/imageverify"
 )
 
 const token = "0123456789abcdef0123456789abcdef-token"

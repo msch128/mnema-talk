@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // Lane 7 of the defect hunt: "there can be at most 50 role templates" under

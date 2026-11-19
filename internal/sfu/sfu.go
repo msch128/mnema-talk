@@ -5,7 +5,7 @@ package sfu
 
 import (
 	"context"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 	"log/slog"
 	"sync"
 	"sync/atomic"

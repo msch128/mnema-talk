@@ -19,7 +19,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/ory/dockertest/v4"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // These tests talk to a real S3-compatible server (SeaweedFS, as in the

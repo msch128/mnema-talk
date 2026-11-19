@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/mnema-xyz/talk/internal/chat/mentions"
 )
 
 // sendRules is what the author's permissions mean for one new message. The

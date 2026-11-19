@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 // TestPanicInAMailJobFreesItsSlot fires the panic the account_mail site

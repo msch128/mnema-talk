@@ -2,7 +2,7 @@ package messages
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // reactionKeySQL is core.ReactionKey in SQL: the stored emoji without U+FE0F.

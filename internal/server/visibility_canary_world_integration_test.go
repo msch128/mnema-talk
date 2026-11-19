@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/gateway"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/gateway"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // The canary world: every object carries a word of its own in every text

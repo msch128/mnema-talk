@@ -13,8 +13,8 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
 )
 
 const repoCompose = "../../docker-compose.yml"

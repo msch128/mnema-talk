@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // Subject is u for permission questions: the Owner is the account with the

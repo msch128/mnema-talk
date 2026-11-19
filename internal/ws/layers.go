@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 // announceScreenLayers tells the members of a voice room which layers a

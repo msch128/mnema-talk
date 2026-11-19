@@ -35,7 +35,7 @@ trap cleanup EXIT
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   (cd web && npm ci --no-audit --no-fund && npm run build)
   mkdir -p bin
-  CGO_ENABLED=0 go build -ldflags="-X github.com/msch128/mnema-talk/internal/version.Version=$(cat version.txt)" -o "$BIN" ./cmd/server
+  CGO_ENABLED=0 go build -ldflags="-X github.com/mnema-xyz/talk/internal/version.Version=$(cat version.txt)" -o "$BIN" ./cmd/server
 fi
 (cd e2e && npm ci --no-audit --no-fund)
 "${COMPOSE[@]}" up -d --wait postgres seaweedfs

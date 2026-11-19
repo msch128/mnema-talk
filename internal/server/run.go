@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/portconflict"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/portconflict"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // Run starts the HTTP server and blocks until ctx is cancelled, then shuts

@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // utf8Reader decodes body to UTF-8 using the charset of the Content-Type

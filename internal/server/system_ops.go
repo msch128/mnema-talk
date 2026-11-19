@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 // OpsStatus is the response of GET /api/admin/system/ops: the live operator
