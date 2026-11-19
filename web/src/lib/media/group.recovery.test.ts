@@ -6,6 +6,7 @@ import { fixtureId } from '../../test-fixtures.fixture'
 import { mediaGroupId, mediaUserId } from './bounds'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import { MediaGroup } from './group'
+import { deliver } from './groupDeliver.fixture'
 
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
@@ -21,33 +22,6 @@ async function opened(userId: string) {
   const group = await MediaGroup.open(userId, channelId)
   if (!group) throw new Error('expected a media group')
   return group
-}
-
-// With a roster, a receiver also syncs to it after each wire: the call does the
-// same, since the roster arrives before the handshake that depends on it.
-async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster?: string[], tally?: { wires: number }) {
-  const pending = wires.map(wire => ({ from, wire }))
-  if (roster) for (const [id, group] of groups) if (roster.includes(id)) group.hint(roster)
-  if (tally) tally.wires += wires.length
-  const seen = new Set<string>()
-  while (pending.length) {
-    const item = pending.shift()
-    if (!item) break
-    const mark = `${item.from}:${item.wire.byteLength}:${item.wire[0]}:${item.wire[item.wire.byteLength - 1]}`
-    if (seen.has(mark)) continue
-    seen.add(mark)
-    for (const [id, group] of groups) {
-      if (id === item.from) continue
-      const step = await group.receive(item.from, item.wire)
-      for (const wire of step.wires) pending.push({ from: id, wire })
-      if (tally) tally.wires += step.wires.length
-      if (roster?.includes(id)) {
-        const synced = await group.sync(roster)
-        for (const wire of synced.wires) pending.push({ from: id, wire })
-        if (tally) tally.wires += synced.wires.length
-      }
-    }
-  }
 }
 
 /** Seals as `sender` with its keys `left` and opens with `right`. */

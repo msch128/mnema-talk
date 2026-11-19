@@ -53,47 +53,85 @@ interface Script {
   bobUntil?: number
 }
 
-/** Alice commits a group with Bob; the script plays on. Returns the second of Alice's first removal and the members a heard joiner holds after it. */
-async function room(script: Script) {
-  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
+/** The room as it plays: Alice, Bob, the joiners that came in so far and the roster the server holds. */
+interface Played {
+  script: Script
+  alice: MediaGroup
+  bob: MediaGroup
+  joiners: Map<string, MediaGroup>
+  roster: string[]
+}
+
+/** Whether Bob still speaks at `second`. */
+function bobHears(script: Script, second: number): boolean {
+  return second <= (script.bobUntil ?? 0)
+}
+
+/** `id` opens (again) and Alice lets it in; Bob hears of it while he still speaks. */
+async function arrive(room: Played, id: string, second: number) {
+  const { alice, bob } = room
+  const joiner = await open(id)
+  if (!room.roster.includes(id)) room.roster = [...room.roster, id]
+  await alice.sync(room.roster)
+  const offer = only(await joiner.sync(room.roster), 'mls_key_package')
+  const hears = bobHears(room.script, second)
+  if (hears) {
+    await bob.sync(room.roster)
+    await bob.receive(id, offer)
+  }
+  const added = await alice.receive(id, offer)
+  await joiner.receive(aliceId, only(added, 'mls_welcome'))
+  if (hears) await bob.receive(aliceId, only(added, 'mls_public_message'))
+  room.joiners.set(id, joiner)
+}
+
+/** Everyone who speaks at `second` sends Alice its heartbeats; Alice's own step reaches every joiner. */
+async function beat(room: Played, second: number): Promise<MediaStep> {
+  const { alice, bob, joiners, script } = room
+  if (bobHears(script, second)) for (const wire of (await bob.maintain()).wires) await alice.receive(bobId, wire)
+  for (const [id, joiner] of joiners) {
+    if (script.quiet?.includes(id)) continue
+    for (const wire of (await joiner.maintain()).wires) await alice.receive(id, wire)
+  }
+  const step = await alice.maintain()
+  for (const joiner of joiners.values()) for (const wire of step.wires) await joiner.receive(aliceId, wire)
+  return step
+}
+
+/** The members the first joiner that is heard holds now. */
+async function heldByHeard(room: Played): Promise<string[] | undefined> {
+  const heard = [...room.joiners].find(([id]) => !room.script.quiet?.includes(id))
+  return (await heard?.[1].sync(room.roster))?.verification?.members
+}
+
+/** Alice and Bob in one group at the start. */
+async function pair(script: Script): Promise<Played> {
   const alice = await open(aliceId)
   const bob = await open(bobId)
   await alice.sync([aliceId])
-  let roster = [aliceId, bobId]
+  const roster = [aliceId, bobId]
   await alice.sync(roster)
   await bob.receive(aliceId, only(await alice.receive(bobId, only(await bob.sync(roster), 'mls_key_package')), 'mls_welcome'))
-  const joiners = new Map<string, MediaGroup>()
+  return { script, alice, bob, joiners: new Map(), roster }
+}
+
+/** Alice commits a group with Bob; the script plays on. Returns the second of Alice's first removal and the members a heard joiner holds after it. */
+async function room(script: Script) {
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: START })
+  const played = await pair(script)
   let first: number | null = null
   let held: string[] | undefined
   for (let second = 1; second <= 120; second++) {
     vi.setSystemTime(START + second * 1000)
     const arriving = [...script.joinAt, ...(script.reloadAt ?? [])].filter(([, at]) => at === second)
-    for (const [id] of arriving) {
-      const joiner = await open(id)
-      if (!roster.includes(id)) roster = [...roster, id]
-      await alice.sync(roster)
-      const offer = only(await joiner.sync(roster), 'mls_key_package')
-      const bobHears = second <= (script.bobUntil ?? 0)
-      if (bobHears) {
-        await bob.sync(roster)
-        await bob.receive(id, offer)
-      }
-      const added = await alice.receive(id, offer)
-      await joiner.receive(aliceId, only(added, 'mls_welcome'))
-      if (bobHears) await bob.receive(aliceId, only(added, 'mls_public_message'))
-      joiners.set(id, joiner)
-    }
-    if (second <= (script.bobUntil ?? 0)) for (const wire of (await bob.maintain()).wires) await alice.receive(bobId, wire)
-    for (const [id, joiner] of joiners) if (!script.quiet?.includes(id)) for (const wire of (await joiner.maintain()).wires) await alice.receive(id, wire)
-    const step = await alice.maintain()
-    for (const joiner of joiners.values()) for (const wire of step.wires) await joiner.receive(aliceId, wire)
+    for (const [id] of arriving) await arrive(played, id, second)
+    const step = await beat(played, second)
     if (commits(step).length && first === null) {
       first = second
-      const heard = [...joiners].find(([id]) => !script.quiet?.includes(id))
-      held = (await heard?.[1].sync(roster))?.verification?.members
+      held = await heldByHeard(played)
     }
   }
-  for (const group of [alice, bob, ...joiners.values()]) await group.close()
+  for (const group of [played.alice, played.bob, ...played.joiners.values()]) await group.close()
   return { first, held }
 }
 
