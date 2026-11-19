@@ -121,17 +121,12 @@ export function enqueue(cx: Cx, channelId: string, send: TextSend, behindOthers 
   return cs.outbox.value[cs.outbox.value.length - 1]!
 }
 
-/** The pending messages of a conversation (a thread's replies when parentId is given, else the channel's own). */
-export function pendingIn({ cs }: Cx, channelId: string, parentId: string | null): PendingMessage[] {
-  return cs.outbox.value.filter(p => p.channelId === channelId && p.parentId === parentId)
-}
-
 function change(cx: Cx, nonce: string, patch: Partial<PendingMessage>) {
   commit(cx, cx.cs.outbox.value.map(p => p.nonce === nonce ? { ...p, ...patch } : p))
 }
 
 /** Forgets a pending message: it was sent (the echo carries its nonce), or the member took it back. */
-export function settlePending(cx: Cx, nonce: string | undefined) {
+function settlePending(cx: Cx, nonce: string | undefined) {
   if (!nonce || !cx.cs.outbox.value.some(p => p.nonce === nonce)) return
   commit(cx, cx.cs.outbox.value.filter(p => p.nonce !== nonce))
 }
@@ -202,7 +197,7 @@ export function retryPending(cx: Cx, nonce: string) {
 }
 
 /** Sends what is waiting, each conversation in the order it was written. */
-export async function flushOutbox(cx: Cx) {
+async function flushOutbox(cx: Cx) {
   reclaimLapsed(cx)
   const channels = new Set(cx.cs.outbox.value.filter(p => p.status === 'waiting').map(p => p.channelId))
   await Promise.all([...channels].map(id => flushConversation(cx, id)))

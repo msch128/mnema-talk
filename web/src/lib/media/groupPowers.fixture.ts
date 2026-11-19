@@ -15,16 +15,16 @@ import type { GroupChecks } from './groupSimChecks.fixture'
 import { AGREE_WITHIN_MS, type SimPlan } from './groupSimRun.fixture'
 
 /** How many of the recorded handshakes the server plays again, and over how long. */
-export const REPLAY_MOST = 300
-export const REPLAY_SPREAD_MS = 20_000
+const REPLAY_MOST = 300
+const REPLAY_SPREAD_MS = 20_000
 /** How long the replay's window lasts after it began, in which the start-overs are counted. */
-export const REPLAY_WINDOW_MS = 50_000
+const REPLAY_WINDOW_MS = 50_000
 /**
  * The most a member may start over within the window when the replay may cost keys. The limits the code states:
  * a leaf swap per member 3 s, doubling (3, 6, 12, 24, 48: five in 50 s), a reset 10 s doubling (three); a
  * rejoin in between starts both waits over, so the count can reach the number of rejoins that fit the window.
  */
-export const START_OVER_LIMIT = 8
+const START_OVER_LIMIT = 8
 
 const keysLine = /(\S+) keys (none)?/
 
@@ -32,7 +32,7 @@ const keysLine = /(\S+) keys (none)?/
 export const HARMLESS = ['heartbeat', 'capability', 'welcome'] as const
 
 /** The start-overs per member in the trace from line `from` on: a member that held keys and reports none (twice in a row is once). */
-export function startOvers(trace: readonly string[], from: number): Map<string, number> {
+function startOvers(trace: readonly string[], from: number): Map<string, number> {
   const counts = new Map<string, number>()
   const holding = new Set<string>()
   for (const [number, line] of trace.entries()) {
@@ -49,7 +49,7 @@ export function startOvers(trace: readonly string[], from: number): Map<string, 
 }
 
 /** Runs once the room agreed and held it: the server plays old handshakes again, then stops. */
-export function replayThenStop(kinds: readonly string[] | undefined, harmless: boolean) {
+function replayThenStop(kinds: readonly string[] | undefined, harmless: boolean) {
   return async (sim: GroupSim, checks: GroupChecks): Promise<void> => {
     const held = sim.live().map(member => `${member.label}=${epochKey(member.current)}`).join(' ')
     const from = sim.trace.length

@@ -13,8 +13,8 @@ import { setGamingPttLease } from './voiceAudio'
 export interface LayerClone { source: MediaStreamTrack; clone: MediaStreamTrack }
 import type { PendingLobby } from './lobby'
 
-export type VoiceStore = ReturnType<typeof useVoiceStore>
-export type ChatStore = ReturnType<typeof useChatStore>
+type VoiceStore = ReturnType<typeof useVoiceStore>
+type ChatStore = ReturnType<typeof useChatStore>
 
 /** Everything one call keeps while it runs; the modules in this folder read and write it through Cx. */
 export interface RtcState {

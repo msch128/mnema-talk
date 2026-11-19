@@ -33,7 +33,7 @@ export interface OpenMessage {
   parent_id: string | null
 }
 
-export interface NotificationLike {
+interface NotificationLike {
   data?: unknown
   close(): void
 }

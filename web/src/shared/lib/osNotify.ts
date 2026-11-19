@@ -25,7 +25,7 @@ export interface OsNotification {
 }
 
 /** What a toast button can ask for besides opening the message. */
-export type NotifyAction = 'join'
+type NotifyAction = 'join'
 
 export interface NotifyAdapter {
   permission(): NotifyPermission

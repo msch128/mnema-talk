@@ -56,7 +56,7 @@ function splitText(text: string, rule: TextRule): Inline[] {
 }
 
 /** Applies the rules, in order, to the text nodes of the tree. */
-export function applyTextRules(nodes: Inline[], rules: readonly TextRule[], inLink = false): Inline[] {
+function applyTextRules(nodes: Inline[], rules: readonly TextRule[], inLink = false): Inline[] {
   const active = inLink ? rules.filter(r => r.inLinks) : rules
   if (active.length === 0) return nodes
   return nodes.flatMap((node): Inline[] => {

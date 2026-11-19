@@ -76,7 +76,7 @@ function link(node: Extract<Inline, { t: 'link' }>): string {
   return `<a href="${href}"${target} rel="noopener noreferrer nofollow" class="${cls}"${masked}${confirm}>${renderInline(node.c)}</a>`
 }
 
-export function renderInline(nodes: readonly Inline[]): string {
+function renderInline(nodes: readonly Inline[]): string {
   let out = ''
   for (const node of nodes) {
     switch (node.t) {

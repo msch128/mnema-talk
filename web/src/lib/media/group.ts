@@ -37,7 +37,7 @@ import {
   commitWinsConflict,
   vetProposals,
 } from './groupVet'
-export { frameVerifiers, onlyRenewsLeaf, keepsEveryLeaf } from './groupTree'
+export { frameVerifiers, onlyRenewsLeaf,  } from './groupTree'
 export type { MediaStep } from './groupParams'
 
 /**

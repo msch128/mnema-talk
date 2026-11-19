@@ -91,7 +91,7 @@ export function choiceLabel(command: Pick<BotChannelCommand, 'builtin' | 'name'>
 }
 
 /** Built-in commands that open their own form instead of the generic option bar. */
-export const COMMAND_FORMS: ReadonlySet<string> = new Set(['poll'])
+const COMMAND_FORMS: ReadonlySet<string> = new Set(['poll'])
 
 export function hasForm(command: Pick<BotChannelCommand, 'builtin' | 'name'>): boolean {
   return command.builtin === true && COMMAND_FORMS.has(command.name)

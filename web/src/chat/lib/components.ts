@@ -8,7 +8,7 @@ import { t } from '../../i18n'
 export type Component = ChatComponent
 export type ActionRow = ChatActionRow
 
-export const BUTTON = 2
+const BUTTON = 2
 export const STRING_SELECT = 3
 export const TEXT_INPUT = 4
 export const USER_SELECT = 5

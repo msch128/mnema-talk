@@ -14,7 +14,7 @@ import de from './de.json'
 import en from './en.json'
 
 export const SUPPORTED = ['de', 'en'] as const
-export const DEFAULT_LOCALE: Locale = 'de'
+const DEFAULT_LOCALE: Locale = 'de'
 
 const messages: Record<Locale, MessageTree> = { de, en }
 

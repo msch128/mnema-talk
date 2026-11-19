@@ -6,7 +6,7 @@ import type { FormatKind, Inline } from './types'
 import { needsConfirm, safeHref } from './link'
 
 /** Formatting nests at most this deep; deeper delimiters stay literal text. */
-export const MAX_INLINE_DEPTH = 6
+const MAX_INLINE_DEPTH = 6
 /** A link label is at most this long; a longer "[" stays text. */
 const MAX_LABEL = 500
 

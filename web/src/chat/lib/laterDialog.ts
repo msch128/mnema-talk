@@ -2,14 +2,14 @@
 // <LaterDialog> host in App.vue shows whatever is pending, like chat/lib/forwardDialog.
 import { shallowRef } from 'vue'
 
-export interface RemindRequest {
+interface RemindRequest {
   kind: 'remind'
   messageId: string
   /** A short plain-text excerpt shown in the dialog. */
   excerpt: string
 }
 
-export interface ScheduleRequest {
+interface ScheduleRequest {
   kind: 'schedule'
   channelId: string
   content: string

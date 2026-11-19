@@ -2,7 +2,7 @@
 // cache and how. Nothing from /api/ is ever cached (it carries personal data),
 // and only same-origin GET requests are touched at all.
 
-export const SHELL_PREFIX = 'mnema-shell-'
+const SHELL_PREFIX = 'mnema-shell-'
 /** Cache key of the app shell (index.html), whatever route asked for it. */
 export const SHELL_KEY = '/'
 

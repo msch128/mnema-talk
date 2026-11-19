@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import type { CompatBaseline, CompatOperation, CompatSchema } from '../src/compat/types.ts'
 
-export type { CompatBaseline, CompatOperation, CompatSchema }
+export type { CompatBaseline,  CompatSchema }
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 

@@ -23,7 +23,7 @@ export interface CrossRecord {
 const CANARY = /zq\d+k\d+q/g
 
 /** The canaries the renderer shows: its HTML with every spoiler span cut out. */
-export function shownCanaries(msg: string): Set<string> {
+function shownCanaries(msg: string): Set<string> {
   let html = renderMarkdown(msg)
   for (;;) {
     const start = html.indexOf('<span class="md-spoiler"')
@@ -42,7 +42,7 @@ export function shownCanaries(msg: string): Set<string> {
 }
 
 /** The canaries of msg the renderer hides. */
-export function hiddenCanaries(msg: string): string[] {
+function hiddenCanaries(msg: string): string[] {
   const shown = shownCanaries(msg)
   return [...new Set(msg.match(CANARY) ?? [])].filter(c => !shown.has(c))
 }

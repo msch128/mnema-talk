@@ -9,7 +9,7 @@ import { useAccountStore } from './stores/account'
 import { useBlocksStore } from './stores/blocks'
 import { useServerFeaturesStore } from './stores/serverFeatures'
 import { recoveryFromLocation } from './app/lib/recoveryLink'
-import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './shared/lib/router'
+import { currentRoute, navigate, consumePendingRoute, savePendingRoute } from './shared/lib/router'
 import { inviteLandingRoute } from './shared/lib/inviteLanding'
 import Sidebar from './app/components/Sidebar.vue'
 import UserBar from './app/components/UserBar.vue'
@@ -164,7 +164,7 @@ async function onAuthSuccess() {
   await initializeApp()
   if (!alive) return
   const landing = inviteLandingRoute(chatStore.allChannels)
-  const redirect = popRedirectRoute() ?? landing
+  const redirect = consumePendingRoute() ?? landing
   if (redirect) {
     routing.endFirstRoute()
     navigate(redirect, { replace: true })

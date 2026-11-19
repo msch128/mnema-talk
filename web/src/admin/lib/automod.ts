@@ -16,8 +16,8 @@ export const RAID_RESTRICTIONS = presets.automodRaidRestrictions
 export const RULE_TIMEOUTS = presets.automodRuleTimeouts
 
 export const MAX_RULE_NAME = 60
-export const MAX_WORDS = 200
-export const MAX_DOMAINS = 100
+const MAX_WORDS = 200
+const MAX_DOMAINS = 100
 
 /** The form of one rule: the lists are the text of a box, one entry per line. */
 export interface RuleForm {

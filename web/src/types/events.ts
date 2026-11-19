@@ -32,15 +32,15 @@ export interface SpeakingState { channel_id: string; user_id: string; active: bo
 export interface MuteState { channel_id: string; user_id: string; muted: boolean; deafened: boolean }
 export interface VoiceRooms { started: Record<string, string>; now: string }
 export type VoiceSnapshot = Record<string, Record<string, VoiceUser>>
-export type { ReadStateUpdate }
-export type { InteractionDeferred, InteractionModal, InteractionResponse }
+
+export type {  InteractionModal, InteractionResponse }
 export type VoiceStateUpdate =
   | { action: 'join'; channel_id: string; user: VoiceUser; started_at: string }
   | { action: 'leave'; channel_id: string; user_id: string }
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
 /** What a bot says it is doing: Discord's activity type (0 playing, 2 listening, 3 watching, 4 custom, 5 competing) and a short text. */
-export interface BotActivity {
+interface BotActivity {
   type: number
   name: string
 }
@@ -148,7 +148,7 @@ export interface ServerEventPayloads {
   community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 
-export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
+type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
 export type ServerEvent = EventUnion<ServerEventPayloads>
 export type ServerEventType = keyof ServerEventPayloads
 
@@ -180,8 +180,6 @@ export interface ClientEventPayloads {
   stage_talk_power: { user_id: string; granted: boolean }
   talk_reaction: { emoji: string }
 }
-export type ClientEvent = EventUnion<ClientEventPayloads>
-export type ClientEventType = keyof ClientEventPayloads
 
 export function isPresence(value: unknown): value is Presence {
   return value === 'online' || value === 'away' || value === 'dnd' || value === 'focus' || value === 'offline'

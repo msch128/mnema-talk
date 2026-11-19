@@ -3,7 +3,7 @@
 import type { CommunityeventsEventRole as EventRole, CommunityeventsRoleInput as RoleInput } from '../../types/rest'
 
 export const MAX_EVENT_ROLES = 12
-export const MAX_ROLE_NAME = 40
+const MAX_ROLE_NAME = 40
 export const MAX_ROLE_CAPACITY = 1000
 
 export interface RoleDraft {

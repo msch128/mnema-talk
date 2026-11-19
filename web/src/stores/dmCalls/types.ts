@@ -14,7 +14,7 @@ export interface IncomingCall extends CallInfo {
   silent: boolean
 }
 
-export type OutgoingPhase = 'calling' | 'nobody'
+type OutgoingPhase = 'calling' | 'nobody'
 
 /** The call I started: ringing for the others, or nobody joined in time. */
 export interface OutgoingCall extends CallInfo {

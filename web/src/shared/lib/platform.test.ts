@@ -16,7 +16,7 @@ const notify = vi.hoisted(() => ({
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted'; constructor(public path?: string) {} } }))
 import { isTrustedDesktop } from './native/trustedDesktop'
-import { browserPlatform, platform } from './platform'
+import { platform } from './platform'
 
 beforeEach(() => {
   host.selector = false
@@ -41,7 +41,7 @@ describe('browser platform', () => {
     const socket = vi.fn()
     vi.stubGlobal('WebSocket', socket)
     expect(isTrustedDesktop()).toBe(false)
-    expect(browserPlatform.openSocket('wss://example.invalid/api/ws')).not.toMatchObject({ kind: 'trusted' })
+    expect(platform.openSocket('wss://example.invalid/api/ws')).not.toMatchObject({ kind: 'trusted' })
     expect(socket).toHaveBeenCalledWith('wss://example.invalid/api/ws')
   })
 
@@ -82,7 +82,7 @@ describe('browser platform', () => {
 
   it('reads no window global without a window', () => {
     vi.stubGlobal('window', undefined)
-    expect(browserPlatform.gamingSurface()).toBeNull()
+    expect(platform.gamingSurface()).toBeNull()
   })
 })
 

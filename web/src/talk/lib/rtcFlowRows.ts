@@ -15,7 +15,7 @@ const LABEL: Record<FlowKey, string> = {
   videoIn: 'stats.flow.videoIn'
 }
 
-export function formatBytes(bytes: number): string {
+function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
   let value = bytes
   let unit = 0

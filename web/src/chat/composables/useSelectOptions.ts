@@ -11,7 +11,7 @@ import { CHANNEL_SELECT, ROLE_SELECT, STRING_SELECT, stringOptions, USER_SELECT,
 export interface SelectChoice { value: string; label: string; description?: string; emoji?: string; color?: string; prefix?: string }
 
 /** Choices shown at most at once; a search narrows the rest. */
-export const MAX_SHOWN = 50
+const MAX_SHOWN = 50
 
 export function useSelectOptions(component: () => Component) {
   const chat = useChatStore()

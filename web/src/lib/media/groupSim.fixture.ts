@@ -39,11 +39,11 @@ const STATS_MS = 1000
 const QUIET_DELAY_MS = 20
 const TIMER_ID_BASE = 2 ** 40
 /** Ids nobody is behind: one that sorts above every member and one below. */
-export const GHOST_HIGH = fixtureId(0xfffff)
-export const GHOST_LOW = '00000000-0000-4000-8000-000000000000'
+const GHOST_HIGH = fixtureId(0xfffff)
+const GHOST_LOW = '00000000-0000-4000-8000-000000000000'
 
 /** mulberry32: small, seedable, and good enough to pick delays and actions. */
-export function seededRandom(seed: number): () => number {
+function seededRandom(seed: number): () => number {
   let state = seed >>> 0
   return () => {
     state = (state + 0x6d2b79f5) >>> 0
@@ -140,7 +140,7 @@ function proposalKinds(proposals: readonly { proposalOrRefType: string, proposal
 }
 
 /** What a handshake wire is, for the trace. */
-export function describeWire(wire: Uint8Array): string {
+function describeWire(wire: Uint8Array): string {
   if (isHeartbeat(wire)) return 'heartbeat'
   if (isCapability(wire)) return 'capability'
   try {

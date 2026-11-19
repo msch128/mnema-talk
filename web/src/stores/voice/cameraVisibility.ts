@@ -45,7 +45,7 @@ function requests(ids: string[], on: boolean): SubscribeRequest[] {
 }
 
 /** Tells the server about the cameras that went off or came back since the last time; one event per 16 cameras. */
-export function flushCameraVisibility(cs: VoiceState) {
+function flushCameraVisibility(cs: VoiceState) {
   const want = offscreenNow(cs)
   const sent = cs.offscreenCameras.value
   const off = Object.keys(want).filter(id => !sent[id])
