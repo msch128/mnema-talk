@@ -138,7 +138,7 @@ function onClickCapture(e: MouseEvent) {
 
 // The bar wraps instead of running past a box narrower than itself (a shared
 // screen on a phone); its 28px radius is a pill on one row and a rounded card on two.
-const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
+const btn = 'inline-flex items-center justify-center gap-1.5 rounded-full shrink-0 transition press motion-reduce:transition-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-elevated'
 const icon = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'w-10 h-10 max-md:w-11 max-md:h-11'}`)
 const wide = computed(() => `${btn} ${props.compact ? 'w-9 h-9 max-md:w-11 max-md:h-11' : 'h-10 max-md:h-11 px-4 text-sm font-semibold'}`)
 const sep = 'w-px h-6 bg-mnema-border mx-0.5 shrink-0'

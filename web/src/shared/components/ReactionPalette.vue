@@ -41,7 +41,7 @@ const position = props.sheet
       v-for="emoji in QUICK_REACTIONS"
       :key="emoji"
       type="button"
-      class="hover:scale-125 transition p-1 text-base rounded-sm hover:bg-mnema-surface active:scale-95"
+      class="hover:scale-125 motion-reduce:hover:scale-100 press p-1 text-base rounded-sm hover:bg-mnema-surface"
       @click.stop="emit('pick', emoji)"
     >
       {{ emoji }}
