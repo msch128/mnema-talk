@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -28,6 +29,32 @@ const migrationLockID = 0x6d6e656d61 // "mnema"
 
 type Pool struct {
 	*pgxpool.Pool
+	// done counts the queries that finished without an error (see
+	// QueriesDone); nil for a pool not opened by ConnectWith.
+	done *atomic.Int64
+}
+
+// QueriesDone counts the queries this pool ran to completion without an
+// error: work the database finished, which handing out connections is not
+// (a hung database still takes the idle ones).
+func (p *Pool) QueriesDone() int64 {
+	if p == nil || p.done == nil {
+		return 0
+	}
+	return p.done.Load()
+}
+
+// doneTracer counts the queries that ended without an error.
+type doneTracer struct{ done *atomic.Int64 }
+
+func (doneTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
+	return ctx
+}
+
+func (t doneTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+	if data.Err == nil {
+		t.done.Add(1)
+	}
 }
 
 // Querier is satisfied by both *Pool and pgx.Tx, so data functions can run
@@ -67,6 +94,8 @@ func ConnectWith(ctx context.Context, databaseURL string, opts Options) (*Pool, 
 	config.ConnConfig.RuntimeParams["statement_timeout"] = milliseconds(opts.StatementTimeout)
 	config.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = milliseconds(idleInTransactionTimeout)
 	config.PrepareConn = statementLimit{base: opts.StatementTimeout}.prepare
+	done := new(atomic.Int64)
+	config.ConnConfig.Tracer = doneTracer{done: done}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
@@ -76,7 +105,7 @@ func ConnectWith(ctx context.Context, databaseURL string, opts Options) (*Pool, 
 		pool.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
-	return &Pool{pool}, nil
+	return &Pool{Pool: pool, done: done}, nil
 }
 
 // Migrate applies every embedded migration that has not run yet, in filename

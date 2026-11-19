@@ -194,6 +194,11 @@ type batchConn struct {
 	mu      sync.Mutex
 	holding bool
 	buf     []byte
+
+	// dmu guards the write deadline once Close has begun (closing, closeBy).
+	dmu     sync.Mutex
+	closing bool
+	closeBy time.Time
 }
 
 // batchBytes caps what one batch gathers before it is sent.
@@ -223,19 +228,45 @@ func (b *batchConn) Write(p []byte) (int, error) {
 const closeFlushWait = 250 * time.Millisecond
 
 // Close sends what the batch gathered, then closes the connection. A write
-// that is stuck on the network gets closeFlushWait before it is cut off.
+// that is stuck on the network gets closeFlushWait before it is cut off, and
+// no later deadline moves that (see SetWriteDeadline): the hub closes clients
+// one after another (shutdown, sign-out, kicks), so each must be quick.
 func (b *batchConn) Close() error {
-	if !b.mu.TryLock() {
-		_ = b.Conn.SetWriteDeadline(time.Now().Add(closeFlushWait))
-		b.mu.Lock()
-	}
+	b.dmu.Lock()
+	b.closing = true
+	b.closeBy = time.Now().Add(closeFlushWait)
+	_ = b.Conn.SetWriteDeadline(b.closeBy)
+	b.dmu.Unlock()
+	b.mu.Lock()
 	b.holding = false
-	if len(b.buf) > 0 {
-		_ = b.Conn.SetWriteDeadline(time.Now().Add(closeFlushWait))
-		_ = b.sendLocked()
-	}
+	_ = b.sendLocked()
 	b.mu.Unlock()
 	return b.Conn.Close()
+}
+
+// SetWriteDeadline passes t on, but once Close has begun never past its own
+// deadline: gorilla sets one of writeWait before every write.
+func (b *batchConn) SetWriteDeadline(t time.Time) error {
+	b.dmu.Lock()
+	defer b.dmu.Unlock()
+	return b.Conn.SetWriteDeadline(b.clampLocked(t))
+}
+
+// SetDeadline is SetWriteDeadline for both directions; reads are not clamped.
+func (b *batchConn) SetDeadline(t time.Time) error {
+	if err := b.Conn.SetReadDeadline(t); err != nil {
+		return err
+	}
+	return b.SetWriteDeadline(t)
+}
+
+// clampLocked is t, or the close deadline when Close has begun and t is
+// later (or none). Callers hold b.dmu.
+func (b *batchConn) clampLocked(t time.Time) time.Time {
+	if b.closing && (t.IsZero() || t.After(b.closeBy)) {
+		return b.closeBy
+	}
+	return t
 }
 
 // hold starts a batch.

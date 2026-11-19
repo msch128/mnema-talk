@@ -54,9 +54,9 @@ func (l *memberLoads) get(ctx context.Context, p *db.Pool) ([]core.Member, error
 	l.busy = true
 	l.mu.Unlock()
 	if start {
-		// The read outlives this caller (others share it) but keeps its values.
-		base := context.WithoutCancel(ctx)
-		safego.Go("member_list", safego.Abandon, func() { l.run(base) })
+		// The read is shared, so it carries nothing of the request that started
+		// it (user, request id, address): a background context with a timeout.
+		safego.Go("member_list", safego.Abandon, func() { l.run(context.Background()) })
 	}
 	select {
 	case <-f.done:

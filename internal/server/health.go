@@ -152,37 +152,34 @@ func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *health
 	ping := func(context.Context) error { return errors.New("no database") }
 	if p != nil {
 		ping = func(ctx context.Context) error {
-			return pingOrBusy(ctx, p.Ping, p.Snapshot)
+			return pingOrBusy(ctx, p.Ping, p.QueriesDone)
 		}
 	}
 	return &healthCheck{ping: ping, storage: storage, ttl: ttl}
 }
 
 // pingOrBusy pings the database, and does not count a ping that timed out
-// while other requests kept getting connections: the database is busy then,
-// not down. After a restart every client reads its state again within
-// seconds; a ping queued behind those requests must not tell all of them that
-// the server is down (the web client shows an outage notice for a 503 here).
-// Progress is counted in connections given back (see returnedConns), and the
-// ping's own one is allowed for.
-func pingOrBusy(ctx context.Context, ping func(context.Context) error, stats func() db.PoolStats) error {
-	before := returnedConns(stats())
+// while the database kept finishing other work: it is busy then, not down.
+// After a restart every client reads its state again within seconds; a ping
+// queued behind those requests must not tell all of them that the server is
+// down (the web client shows an outage notice for a 503 here). done counts
+// queries that completed without an error (db.Pool.QueriesDone): connections
+// handed out or destroyed prove nothing, a hung database causes both.
+func pingOrBusy(ctx context.Context, ping func(context.Context) error, done func() int64) error {
+	before := done()
 	err := ping(ctx)
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
-	if returnedConns(stats())-before > 1 {
+	if done()-before >= busyMinQueries {
 		return nil
 	}
 	return err
 }
 
-// returnedConns counts the connections the pool handed out that came back:
-// work that finished. Handing out alone proves nothing: a database that
-// hangs still takes the idle connections, and they never return.
-func returnedConns(s db.PoolStats) int64 {
-	return s.AcquireCount - int64(s.Acquired)
-}
+// busyMinQueries is how many queries must complete while the ping waits for
+// the database to count as busy rather than down.
+const busyMinQueries = 2
 
 // check returns the dependencies that are down, none when healthy.
 func (h *healthCheck) check(ctx context.Context) []string {

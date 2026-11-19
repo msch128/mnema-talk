@@ -262,3 +262,34 @@ func TestBatchConnCloseCutsOffAStuckWrite(t *testing.T) {
 		t.Fatal("Close waited on a stuck write")
 	}
 }
+
+// The hub closes clients one after another (shutdown, sign-out, kicks): a
+// writer that sets gorilla's writeWait deadline while Close runs must not
+// stretch Close's own short wait to ten seconds.
+func TestBatchConnCloseKeepsItsDeadlineAgainstALaterOne(t *testing.T) {
+	server, client := net.Pipe() // nobody reads client: a write blocks
+	t.Cleanup(func() { _ = client.Close() })
+	b := &batchConn{Conn: server}
+	go func() { _, _ = b.Write([]byte("stuck")) }()
+	stop := make(chan struct{})
+	t.Cleanup(func() { close(stop) })
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				_ = b.SetWriteDeadline(time.Now().Add(10 * time.Second))
+				time.Sleep(time.Millisecond)
+			}
+		}
+	}()
+	time.Sleep(20 * time.Millisecond)
+	closed := make(chan struct{})
+	go func() { _ = b.Close(); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(closeFlushWait + 250*time.Millisecond):
+		t.Fatalf("Close still waiting after %v with a concurrent 10 s deadline", closeFlushWait+250*time.Millisecond)
+	}
+}
