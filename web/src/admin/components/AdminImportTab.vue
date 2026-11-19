@@ -176,7 +176,7 @@ onMounted(() => { void loadHistory() })
           :placeholder="$t('discordImport.linkPlaceholder')"
           class="min-w-0 flex-1 basis-64 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden transition focus:border-mnema-accent"
         />
-        <button type="submit" class="btn btn-primary" :disabled="!link.trim() || busy" data-testid="import-preview-button">
+        <button type="submit" class="btn btn-primary" :disabled="!link.trim() || busy" :aria-busy="busy ? 'true' : undefined" data-testid="import-preview-button">
           {{ busy ? $t('discordImport.previewing') : $t('discordImport.preview') }}
         </button>
       </div>

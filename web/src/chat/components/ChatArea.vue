@@ -38,6 +38,7 @@ import { typingLine } from '../../shared/lib/chatLogic'
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
 import StatePanel from '../../shared/components/StatePanel.vue'
+import RowSkeleton from '../../shared/components/RowSkeleton.vue'
 import { useLoadRetry } from '../composables/useLoadRetry'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
@@ -235,9 +236,7 @@ const groupedIds = computed(() => {
     <div class="msg-column relative flex-1 min-h-0 flex flex-col overflow-clip">
     <div ref="messageContainer" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
-      <div v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex items-center justify-center text-mnema-tertiary">
-        <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
-      </div>
+      <RowSkeleton v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex flex-col justify-end overflow-hidden" />
 
       <!-- Empty Talk chat: the channel's beginning, at the bottom like in Discord -->
       <div

@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
         <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger">{{ error }}</div>
         <div class="flex justify-end gap-2 pt-1">
           <button type="button" class="btn btn-ghost" @click="asking = null">{{ $t('common.cancel') }}</button>
-          <button type="submit" :disabled="busy" class="btn btn-primary" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
+          <button type="submit" :disabled="busy" :aria-busy="busy ? 'true' : undefined" class="btn btn-primary" data-testid="export-submit">{{ $t('security.privacy.exportRequest') }}</button>
         </div>
       </form>
       <template v-else-if="status?.state !== 'pending' && status?.state !== 'ready'">
