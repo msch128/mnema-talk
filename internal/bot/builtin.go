@@ -44,7 +44,7 @@ func (c *Commands) runBuiltin(w http.ResponseWriter, r *http.Request, b slash.Bu
 	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {
 		return err
 	}
-	checked, err := c.checkOptions(r, snap, user, ch, builtinCommand(b), given)
+	checked, err := c.checkOptions(r, optionContext{snap: snap, user: user, channel: ch}, builtinCommand(b), given)
 	if err != nil {
 		return err
 	}

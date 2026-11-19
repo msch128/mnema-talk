@@ -14,14 +14,23 @@ import (
 	"github.com/mnema-xyz/talk/internal/perm"
 )
 
+// optionContext is who runs a command where, and the bot it goes to
+// (uuid.Nil for a built-in command, which no bot hears of).
+type optionContext struct {
+	snap    *perm.Snapshot
+	user    *auth.User
+	channel uuid.UUID
+	botUser uuid.UUID
+}
+
 // checkOptions validates the values against the command's options.
-func (c *Commands) checkOptions(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, cmd Command, given map[string]any) ([]map[string]any, error) {
+func (c *Commands) checkOptions(r *http.Request, oc optionContext, cmd Command, given map[string]any) ([]map[string]any, error) {
 	if err := validateKnownOptions(cmd, given); err != nil {
 		return nil, err
 	}
 	out := make([]map[string]any, 0, len(given))
 	for _, o := range cmd.Options {
-		entry, err := c.evaluateOption(r, snap, user, ch, o, given)
+		entry, err := c.evaluateOption(r, oc, o, given)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +54,7 @@ func validateKnownOptions(cmd Command, given map[string]any) error {
 	return nil
 }
 
-func (c *Commands) evaluateOption(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, o Option, given map[string]any) (map[string]any, error) {
+func (c *Commands) evaluateOption(r *http.Request, oc optionContext, o Option, given map[string]any) (map[string]any, error) {
 	v, present := given[o.Name]
 	if !present || v == nil {
 		if o.Required {
@@ -53,14 +62,14 @@ func (c *Commands) evaluateOption(r *http.Request, snap *perm.Snapshot, user *au
 		}
 		return nil, nil
 	}
-	val, err := c.checkValue(r, snap, user, ch, o, v)
+	val, err := c.checkValue(r, oc, o, v)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"name": o.Name, "type": o.Type, "value": val}, nil
 }
 
-func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, o Option, v any) (any, error) {
+func (c *Commands) checkValue(r *http.Request, oc optionContext, o Option, v any) (any, error) {
 	bad := func(what string) (any, error) {
 		return nil, httpx.ErrInvalidInput(fmt.Sprintf("option %s must be %s", o.Name, what))
 	}
@@ -84,7 +93,7 @@ func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.U
 		}
 		return b, nil
 	case OptionUser, OptionChannel:
-		return c.checkReference(r, snap, user, ch, o.Type, v, bad)
+		return c.checkReference(r, oc, o.Type, v, bad)
 	}
 	return bad("valid")
 }
@@ -104,26 +113,47 @@ func checkChoice(o Option, s string) (any, error) {
 	return nil, httpx.ErrInvalidInput(fmt.Sprintf("option %s must be one of its choices", o.Name))
 }
 
-// checkReference validates a user or channel option: an ID of a channel the
-// invoker can see, or of a member who can see the invocation channel.
-func (c *Commands) checkReference(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, typ int, v any, bad func(string) (any, error)) (any, error) {
+// checkReference validates a user or channel option: an ID of a member who
+// can see the invocation channel, or of a channel the invoker can see. A
+// bot's command takes only a channel the bot can see too, never a
+// conversation, as a channel select does (resolveChannels): the bot is not
+// told of a channel it cannot see.
+func (c *Commands) checkReference(r *http.Request, oc optionContext, typ int, v any, bad func(string) (any, error)) (any, error) {
 	s, ok := v.(string)
 	id, err := uuid.Parse(s)
 	if !ok || err != nil {
 		return bad("an ID")
 	}
 	if typ == OptionChannel {
-		if !snap.Channel(user.Subject(), id).Has(perm.ViewChannel) {
-			return bad("a channel you can see")
-		}
-		return id, nil
+		return c.checkChannelOption(r, oc, id, bad)
 	}
 	var exists bool
 	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND NOT is_bot AND `+auth.ActiveSQL("")+`)`, id).Scan(&exists); err != nil {
 		return nil, err
 	}
-	if !exists || !snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) {
+	if !exists || !oc.snap.Channel(perm.Subject{ID: id}, oc.channel).Has(perm.ViewChannel) {
 		return bad("a member of this channel")
+	}
+	return id, nil
+}
+
+func (c *Commands) checkChannelOption(r *http.Request, oc optionContext, id uuid.UUID, bad func(string) (any, error)) (any, error) {
+	if !oc.snap.Channel(oc.user.Subject(), id).Has(perm.ViewChannel) {
+		return bad("a channel you can see")
+	}
+	if oc.botUser == uuid.Nil {
+		return id, nil
+	}
+	if !oc.snap.Channel(perm.Subject{ID: oc.botUser}, id).Has(perm.ViewChannel) {
+		return bad("a channel the bot can see")
+	}
+	var community bool
+	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM channels
+		WHERE id = $1 AND type IN ('text', 'voice', 'forum') AND dm_id IS NULL)`, id).Scan(&community); err != nil {
+		return nil, err
+	}
+	if !community {
+		return bad("a channel the bot can see")
 	}
 	return id, nil
 }

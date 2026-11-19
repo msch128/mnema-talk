@@ -309,7 +309,7 @@ func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {
 		return err
 	}
-	opts, err := c.checkOptions(r, snap, user, ch, *cmd, req.Options)
+	opts, err := c.checkOptions(r, optionContext{snap: snap, user: user, channel: ch, botUser: botUser}, *cmd, req.Options)
 	if err != nil {
 		return err
 	}
