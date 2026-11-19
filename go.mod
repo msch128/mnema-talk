@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/joho/godotenv v1.5.1
-	github.com/moby/moby/api v1.56.1
+	github.com/moby/moby/api v1.57.0
 	github.com/ory/dockertest/v4 v4.0.1
 	github.com/pion/ice/v4 v4.4.9
 	github.com/pion/interceptor v0.1.51
