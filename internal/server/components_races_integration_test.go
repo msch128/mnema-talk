@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // The races of a click through the real routes. Whatever wins, the click is

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/search"
+	"github.com/mnema-xyz/talk/internal/chat/search"
 )
 
 // The channel in the path of an edit must be the message's channel, even for

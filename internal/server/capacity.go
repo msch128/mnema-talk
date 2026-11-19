@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/msch128/mnema-talk/internal/capacity"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/capacity"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // capacityWindow is how many chart samples (10 s each) the figures average

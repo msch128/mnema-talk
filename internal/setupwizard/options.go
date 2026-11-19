@@ -11,9 +11,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/version"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/version"
 )
 
 // DefaultAdminUsername is the Owner name the server seeds when none is set.

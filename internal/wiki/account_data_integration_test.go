@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/userdata"
 )
 
 // exportedRevisions builds wiki_revisions.json for alice under the given limits.

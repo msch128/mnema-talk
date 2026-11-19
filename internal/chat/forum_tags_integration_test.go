@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/forum"
+	"github.com/mnema-xyz/talk/internal/chat/forum"
 )
 
 func TestForumTagNameConflictIsReported(t *testing.T) {

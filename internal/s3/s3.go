@@ -15,9 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	s3svc "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 type Client struct {

@@ -7,7 +7,7 @@ import (
 	"net/netip"
 	"os"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // cgnatRange is the shared address space (RFC 6598) providers use for

@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/aws/smithy-go"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/media"
 )
 
 // fakeS3 is a minimal path-style S3 endpoint: buckets, objects, ranged GETs

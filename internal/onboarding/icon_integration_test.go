@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 // brokenStore fails every read, as storage does during an outage.

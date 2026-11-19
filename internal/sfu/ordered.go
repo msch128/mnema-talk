@@ -3,7 +3,7 @@ package sfu
 import (
 	"sync"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // newest delivers values to a callback in order, one at a time, on a goroutine

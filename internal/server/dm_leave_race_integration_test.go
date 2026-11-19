@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
 )
 
 // Lane 7 of the defect hunt. An add that waits for the lock of a member's

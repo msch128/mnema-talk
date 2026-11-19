@@ -1,6 +1,6 @@
 package account
 
-import "github.com/msch128/mnema-talk/internal/userdata"
+import "github.com/mnema-xyz/talk/internal/userdata"
 
 // authEraseSteps are the erasure statements that stay with the account:
 // profile exports, invites, sessions, password, two-factor, audit and the

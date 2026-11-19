@@ -30,7 +30,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/mnema-xyz/talk/internal/update"
 )
 
 // Defaults pin the identity of this repository's release workflow. They are

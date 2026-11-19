@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/mnema-xyz/talk/internal/update"
 )
 
 // fakeGitHub serves one release and counts requests.

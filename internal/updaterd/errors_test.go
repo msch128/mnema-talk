@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/imageverify"
 )
 
 // brokenDaemon answers every Engine API call with the given status.

@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     v="${VERSION:-$(cat version.txt)}" && \
     CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" GOARM="${TARGETVARIANT#v}" \
     go build -trimpath \
-      -ldflags="-w -s -X github.com/msch128/mnema-talk/internal/version.Version=${v} -X github.com/msch128/mnema-talk/internal/version.Revision=${REVISION}" \
+      -ldflags="-w -s -X github.com/mnema-xyz/talk/internal/version.Version=${v} -X github.com/mnema-xyz/talk/internal/version.Revision=${REVISION}" \
       -o /out/mnema-talk ./cmd/server && \
     CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" GOARM="${TARGETVARIANT#v}" \
     go build -trimpath -ldflags="-w -s" -o /out/mnema-updater ./cmd/updater

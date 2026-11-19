@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/channels"
-	"github.com/msch128/mnema-talk/internal/chat/readstate"
-	"github.com/msch128/mnema-talk/internal/testutil/presets"
+	"github.com/mnema-xyz/talk/internal/chat/channels"
+	"github.com/mnema-xyz/talk/internal/chat/readstate"
+	"github.com/mnema-xyz/talk/internal/testutil/presets"
 )
 
 // Every slow mode choice of the channel settings is accepted by the channel edit.

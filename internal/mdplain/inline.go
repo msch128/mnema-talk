@@ -3,7 +3,7 @@ package mdplain
 import (
 	"strconv"
 
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 // The inline scanner, line for line the web client's parseInline

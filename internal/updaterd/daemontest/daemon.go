@@ -17,7 +17,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // Daemon implements the part of the Engine API the updater calls.

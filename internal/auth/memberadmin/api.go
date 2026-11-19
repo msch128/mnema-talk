@@ -6,7 +6,7 @@
 // code that lets staff act on accounts.
 package memberadmin
 
-import "github.com/msch128/mnema-talk/internal/auth/authn"
+import "github.com/mnema-xyz/talk/internal/auth/authn"
 
 // API serves the member-admin routes. It embeds the auth Handler on purpose:
 // the server fills Handler.Live, Perms, Events and the other collaborators

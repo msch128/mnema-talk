@@ -15,13 +15,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/msch128/mnema-talk/internal/community"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
-	"github.com/msch128/mnema-talk/internal/webbundle"
-	"github.com/msch128/mnema-talk/internal/ws"
+	"github.com/mnema-xyz/talk/internal/community"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/webbundle"
+	"github.com/mnema-xyz/talk/internal/ws"
 )
 
 func TestHealthCachesThePing(t *testing.T) {

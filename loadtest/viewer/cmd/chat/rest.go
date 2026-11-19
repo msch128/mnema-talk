@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 // decorate adds the session's identity to a REST request: the cookie, and for

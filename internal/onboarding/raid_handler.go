@@ -3,8 +3,8 @@ package onboarding
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/raid"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/raid"
 )
 
 // getRaid handles GET /api/admin/raid.

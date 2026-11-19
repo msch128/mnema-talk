@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 // Lane 7 of the defect hunt: an edit and a delete of one message released

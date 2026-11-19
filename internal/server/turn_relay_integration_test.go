@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // A banned or disabled member loses the built-in relay at once, not when their

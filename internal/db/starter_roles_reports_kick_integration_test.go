@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 //go:embed migrations/0097_starter_roles_reports_kick.sql

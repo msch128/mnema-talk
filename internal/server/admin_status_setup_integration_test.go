@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
 )
 
 func setupCheckByID(t *testing.T, st OperatorStatus, id string) setupcheck.Check {

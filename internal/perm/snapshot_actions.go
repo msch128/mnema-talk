@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // TopPosition is the position of sub's highest role (0 without custom roles);

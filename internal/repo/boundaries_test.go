@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	modulePath = "github.com/msch128/mnema-talk/"
+	modulePath = "github.com/mnema-xyz/talk/"
 	chatRoot   = "internal/chat"
 	authRoot   = "internal/auth"
 )

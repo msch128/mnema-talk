@@ -1,8 +1,8 @@
 // Package version holds the build's release version and source revision.
 // Both are set at link time:
 //
-//	go build -ldflags "-X github.com/msch128/mnema-talk/internal/version.Version=1.2.3 \
-//	                   -X github.com/msch128/mnema-talk/internal/version.Revision=<git sha>"
+//	go build -ldflags "-X github.com/mnema-xyz/talk/internal/version.Version=1.2.3 \
+//	                   -X github.com/mnema-xyz/talk/internal/version.Revision=<git sha>"
 //
 // The Dockerfile, the Makefile and the release workflow pass them; a plain
 // `go build` / `go run` reports "dev". The web app embeds the same version

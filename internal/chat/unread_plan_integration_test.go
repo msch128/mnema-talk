@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
-	"github.com/msch128/mnema-talk/internal/chat/readstate"
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/dm"
+	"github.com/mnema-xyz/talk/internal/chat/readstate"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 // seedUnreadWorld fills 24 channels and 6 conversations with replies so the

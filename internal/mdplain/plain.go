@@ -18,7 +18,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/emojitext"
 )
 
 // maxMarkdownUnits mirrors MAX_MARKDOWN_CHARS: longer text is not parsed.

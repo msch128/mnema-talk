@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // ErrNotLoopback is returned for an address that would be reachable from the network.

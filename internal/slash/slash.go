@@ -17,8 +17,8 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // Option types, with the numbers bot commands use (Discord's).

@@ -5,7 +5,7 @@ package account
 import (
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/userdata"
 )
 
 // SetPersonalDataFallback installs the domain registry used by integration

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/debugsrv"
+	"github.com/mnema-xyz/talk/internal/debugsrv"
 )
 
 // maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.

@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/msch128/mnema-talk/internal/events/wire"
-	"github.com/msch128/mnema-talk/internal/safego"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/events/wire"
+	"github.com/mnema-xyz/talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 // kickClient takes c out of its voice room and tells it so. It reports

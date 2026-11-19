@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 // errNoInput is returned when a question gets no answer because the input

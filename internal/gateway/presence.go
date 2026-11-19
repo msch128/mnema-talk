@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // OpPresenceUpdate is Discord's PRESENCE_UPDATE opcode: the bot sets its own

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 func TestBannedErrorTellsWhyAndUntilWhen(t *testing.T) {

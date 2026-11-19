@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/setupcheck"
-	"github.com/msch128/mnema-talk/internal/stunprobe"
+	"github.com/mnema-xyz/talk/internal/setupcheck"
+	"github.com/mnema-xyz/talk/internal/stunprobe"
 )
 
 // LevelNote marks a finding that is a reminder, not a result.

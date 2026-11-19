@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/msch128/mnema-talk/internal/imgstrip"
+	"github.com/mnema-xyz/talk/internal/imgstrip"
 )
 
 // stripBufferBytes is the largest WebP rewritten in memory to remove its

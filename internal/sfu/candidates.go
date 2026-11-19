@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 )

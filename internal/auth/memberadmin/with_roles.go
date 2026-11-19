@@ -3,7 +3,7 @@ package memberadmin
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 // withRoles fills RoleIDs of the given users from the permission state.

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/expiry"
+	"github.com/mnema-xyz/talk/internal/chat/expiry"
 )
 
 // Every entry point that creates a message takes a lifetime or refuses it by

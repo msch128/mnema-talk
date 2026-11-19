@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // restart builds a second server on the same database, as after a restart of

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/imgproc"
 )
 
 func pngOf(t *testing.T, w, h int) []byte {

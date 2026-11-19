@@ -6,7 +6,7 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/mention"
+	"github.com/mnema-xyz/talk/internal/mention"
 	"golang.org/x/text/unicode/norm"
 )
 

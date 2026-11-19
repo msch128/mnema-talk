@@ -1,6 +1,6 @@
 package account
 
-import "github.com/msch128/mnema-talk/internal/userdata"
+import "github.com/mnema-xyz/talk/internal/userdata"
 
 // personalFallback is the registry integration tests install. Those tests
 // build a Handler without the server. Production leaves it nil.

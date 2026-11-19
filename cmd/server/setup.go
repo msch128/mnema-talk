@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/msch128/mnema-talk/internal/setupwizard"
+	"github.com/mnema-xyz/talk/internal/setupwizard"
 )
 
 // setupCommand is `mnema-talk setup`: it writes .env and docker-compose.yml

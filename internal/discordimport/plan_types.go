@@ -2,7 +2,7 @@ package discordimport
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // Plan is the exact list of what an import creates. It is computed from the

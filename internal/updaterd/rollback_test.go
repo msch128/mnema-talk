@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/imageverify"
-	"github.com/msch128/mnema-talk/internal/updaterd/daemontest"
+	"github.com/mnema-xyz/talk/internal/imageverify"
+	"github.com/mnema-xyz/talk/internal/updaterd/daemontest"
 )
 
 // versionVerifier reports a validly signed image of the given release.

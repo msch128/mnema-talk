@@ -1,4 +1,4 @@
-module github.com/msch128/mnema-talk
+module github.com/mnema-xyz/talk
 
 go 1.27.0
 

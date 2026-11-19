@@ -1,4 +1,4 @@
-module github.com/msch128/mnema-talk/loadtest/viewer
+module github.com/mnema-xyz/talk/loadtest/viewer
 
 go 1.27
 

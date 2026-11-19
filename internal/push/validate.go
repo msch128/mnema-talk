@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/ssrf"
 )
 
 // maxEndpointLen is the longest endpoint the database stores.

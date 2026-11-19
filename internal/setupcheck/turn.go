@@ -3,7 +3,7 @@ package setupcheck
 import (
 	"fmt"
 
-	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/opwarn"
 )
 
 func turnCheck(in Input, has map[string]bool) Check {

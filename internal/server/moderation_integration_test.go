@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/auth/memberadmin"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // moderationFixture is an Owner, a moderator who may time out and ban, and a

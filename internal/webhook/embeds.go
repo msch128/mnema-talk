@@ -1,8 +1,8 @@
 package webhook
 
 import (
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
 )
 
 // The embed rules live in package chat (the bot API shares them); these are

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/msch128/mnema-talk/internal/emojitext"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/emojitext"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // Limits of message components and modals (doc/bots.md, Message components

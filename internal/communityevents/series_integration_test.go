@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/communityevents/recurrence"
+	"github.com/mnema-xyz/talk/internal/communityevents/recurrence"
 )
 
 // occurrences lists the series' events by index: start, status, title.
