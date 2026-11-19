@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.4](https://github.com/mnema-xyz/talk/compare/v3.3.3...v3.3.4) (2026-11-19)
+
+
+### Documentation
+
+* chat benchmark with the same generator on 2.2.0 and 3.3.3 ([#882](https://github.com/mnema-xyz/talk/issues/882)) ([864ca87](https://github.com/mnema-xyz/talk/commit/864ca876db595aa089c583fbce7ebc2d03d5b2c1))
+
 ## [3.3.3](https://github.com/mnema-xyz/talk/compare/v3.3.2...v3.3.3) (2026-11-18)
 
 
