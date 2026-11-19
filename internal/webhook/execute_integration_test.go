@@ -249,3 +249,29 @@ func TestThreadLookupFailureIsNotAnUnknownChannel(t *testing.T) {
 	h := f.failing(failingRecords{failThread: true})
 	wantStatus(t, f.json(h, "POST", path+uuid.NewString(), `{"content":"x"}`), 500, "thread lookup failure")
 }
+
+// A file of a message that committed but whose durability wait failed stays:
+// the message and its media row are stored (db.ErrNotDurable).
+func TestAWebhookFileOfACommittedMessageStaysWhenTheWaitFails(t *testing.T) {
+	f := newFixture(t)
+	rec, token := f.newHook("hook")
+	path := "/webhooks/" + rec.ID.String() + "/" + token
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	_ = mw.WriteField("payload_json", `{"content":"kept"}`)
+	hd := textproto.MIMEHeader{}
+	hd.Set("Content-Disposition", `form-data; name="files[0]"; filename="a.png"`)
+	hd.Set("Content-Type", "image/png")
+	part, _ := mw.CreatePart(hd)
+	_, _ = part.Write(png)
+	_ = mw.Close()
+	h := f.faulty(&pgfault.Tracer{Query: "pg_logical_emit_message"})
+	wantStatus(t, f.serve(h, "POST", path, bytes.NewReader(buf.Bytes()), map[string]string{"Content-Type": mw.FormDataContentType()}), 500, "durability wait")
+	var stored int
+	if err := f.p.QueryRow(context.Background(), `SELECT COUNT(*) FROM media m JOIN messages x ON x.id = m.message_id WHERE x.content = 'kept'`).Scan(&stored); err != nil || stored != 1 {
+		t.Fatalf("stored files %d, %v", stored, err)
+	}
+	if f.store.Len() != 1 {
+		t.Fatalf("objects %d: the stored message's file was deleted", f.store.Len())
+	}
+}
