@@ -13,6 +13,7 @@ import HeaderPopover from '../../shared/components/HeaderPopover.vue'
 import StatePanel from '../../shared/components/StatePanel.vue'
 import { shownName } from '../../shared/lib/deletedUser'
 import { previewText } from '../lib/replies'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 // The mentions inbox in the channel header: a button with the number of
 // unread mentions and a popover listing them; a click jumps to the message.
@@ -61,47 +62,49 @@ const when = (iso: string) => dateTime(iso, locale.value)
       <Badge v-if="unread > 0" variant="info" data-testid="mentions-inbox-badge" class="absolute -right-1 -top-1 min-w-4 px-1 py-0 text-[10px] leading-4">{{ badge }}</Badge>
     </button>
 
-    <HeaderPopover v-if="open" data-testid="mentions-inbox" :title="$t('mentions.inbox')">
-      <StatePanel v-if="inbox.loading.value" state="loading" />
-      <StatePanel v-else-if="inbox.failed.value" state="error" retryable @retry="inbox.load()">{{ $t('mentions.failed') }}</StatePanel>
-      <StatePanel v-else-if="!inbox.items.value.length" state="empty" :icon="Inbox" data-testid="mentions-inbox-empty">{{ $t('mentions.empty') }}</StatePanel>
-      <button
-        v-for="msg in inbox.items.value"
-        v-else
-        :key="msg.id"
-        type="button"
-        data-testid="mentions-inbox-item"
-        class="focus-ring group/row flex w-full items-start gap-3 rounded-md p-2.5 text-left transition hover:bg-mnema-hover"
-        @click="pick(msg)"
-      >
-        <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
-        <span class="min-w-0 flex-1">
-          <span class="mb-0.5 flex items-center gap-2">
-            <span v-full-text class="min-w-[3em] truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
-            <span v-if="channelNames.get(msg.channel_id)" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
-              <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-              <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
-              <span v-full-text class="min-w-[3em] truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
+    <PopTransition>
+      <HeaderPopover v-if="open" data-testid="mentions-inbox" :title="$t('mentions.inbox')">
+        <StatePanel v-if="inbox.loading.value" state="loading" />
+        <StatePanel v-else-if="inbox.failed.value" state="error" retryable @retry="inbox.load()">{{ $t('mentions.failed') }}</StatePanel>
+        <StatePanel v-else-if="!inbox.items.value.length" state="empty" :icon="Inbox" data-testid="mentions-inbox-empty">{{ $t('mentions.empty') }}</StatePanel>
+        <button
+          v-for="msg in inbox.items.value"
+          v-else
+          :key="msg.id"
+          type="button"
+          data-testid="mentions-inbox-item"
+          class="focus-ring group/row flex w-full items-start gap-3 rounded-md p-2.5 text-left transition hover:bg-mnema-hover"
+          @click="pick(msg)"
+        >
+          <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
+          <span class="min-w-0 flex-1">
+            <span class="mb-0.5 flex items-center gap-2">
+              <span v-full-text class="min-w-[3em] truncate text-sm font-medium text-mnema-text">{{ shownName(msg) }}</span>
+              <span v-if="channelNames.get(msg.channel_id)" class="flex min-w-0 max-w-[45%] items-center gap-1 rounded-sm border border-mnema-border bg-mnema-surface px-1.5 py-0.5 text-xs text-mnema-muted">
+                <Volume2 v-if="channelNames.get(msg.channel_id)?.type === 'voice'" class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
+                <Hash v-else class="h-2.5 w-2.5 shrink-0 text-mnema-tertiary" />
+                <span v-full-text class="min-w-[3em] truncate">{{ channelNames.get(msg.channel_id)?.name }}</span>
+              </span>
+              <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
+              <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
+              <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-visible/row:opacity-100" aria-hidden="true" />
             </span>
-            <CornerDownRight v-if="msg.parent_id" class="h-3 w-3 text-mnema-tertiary" :aria-label="$t('chat.inThread')" />
-            <span class="ml-auto shrink-0 text-xs text-mnema-tertiary">{{ when(msg.created_at) }}</span>
-            <ArrowUpRight class="-ml-1 h-3.5 w-3.5 shrink-0 text-mnema-tertiary opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-visible/row:opacity-100" aria-hidden="true" />
+            <span v-full-text class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
           </span>
-          <span v-full-text class="line-clamp-2 wrap-break-word text-sm text-mnema-muted">{{ previewText(msg.content) }}</span>
-        </span>
-      </button>
-      <p v-if="inbox.loadMoreFailed.value" role="alert" data-testid="mentions-inbox-more-failed" class="px-3 py-2 text-sm text-mnema-muted">{{ $t('mentions.moreFailed') }}</p>
-      <button
-        v-if="inbox.hasMore.value && !inbox.loading.value"
-        type="button"
-        data-testid="mentions-inbox-more"
-        :disabled="inbox.loadingMore.value"
-        class="btn btn-ghost flex w-full items-center justify-center gap-2"
-        @click="inbox.loadMore()"
-      >
-        <Loader2 v-if="inbox.loadingMore.value" class="h-3.5 w-3.5 animate-spin" />
-        {{ $t('chat.searchMore') }}
-      </button>
-    </HeaderPopover>
+        </button>
+        <p v-if="inbox.loadMoreFailed.value" role="alert" data-testid="mentions-inbox-more-failed" class="px-3 py-2 text-sm text-mnema-muted">{{ $t('mentions.moreFailed') }}</p>
+        <button
+          v-if="inbox.hasMore.value && !inbox.loading.value"
+          type="button"
+          data-testid="mentions-inbox-more"
+          :disabled="inbox.loadingMore.value"
+          class="btn btn-ghost flex w-full items-center justify-center gap-2"
+          @click="inbox.loadMore()"
+        >
+          <Loader2 v-if="inbox.loadingMore.value" class="h-3.5 w-3.5 animate-spin" />
+          {{ $t('chat.searchMore') }}
+        </button>
+      </HeaderPopover>
+    </PopTransition>
   </div>
 </template>

@@ -4,6 +4,7 @@ import type { PropType } from 'vue'
 import { nextTick, ref } from 'vue'
 import { Smile } from '@lucide/vue'
 import EmojiPicker from './EmojiPicker.vue'
+import PopTransition from './PopTransition.vue'
 
 defineProps({
   // Which side of the button the picker aligns to.
@@ -47,13 +48,15 @@ function pick(emoji: string) {
     >
       <Smile class="h-5 w-5" />
     </button>
-    <EmojiPicker
-      v-if="open"
-      :trigger="button"
-      shortcode
-      :class="['absolute bottom-full mb-2', align === 'left' ? 'left-0' : 'right-0']"
-      @pick="pick"
-      @close="close"
-    />
+    <PopTransition>
+      <EmojiPicker
+        v-if="open"
+        :trigger="button"
+        shortcode
+        :class="['absolute bottom-full mb-2', align === 'left' ? 'left-0 origin-bottom-left' : 'right-0 origin-bottom-right']"
+        @pick="pick"
+        @close="close"
+      />
+    </PopTransition>
   </div>
 </template>

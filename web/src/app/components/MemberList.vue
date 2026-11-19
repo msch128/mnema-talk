@@ -42,7 +42,7 @@ function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
     </div>
 
     <!-- Scrollable Member Categories -->
-    <div class="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-4">
+    <div v-entering="chatStore.members.length > 0" class="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-4">
       <!-- 1. Administrators -->
       <section v-if="admins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-amber flex items-center gap-1.5 min-w-0">

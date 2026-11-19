@@ -7,6 +7,7 @@ import { Users } from '@lucide/vue'
 import { useChatStore } from '../../stores/chat'
 import TalkParticipantList from './TalkParticipantList.vue'
 import { useDismissable } from '../../shared/composables/useDismissable'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 defineProps({
   users: { type: Array as PropType<TalkParticipant[]>, required: true },
@@ -60,14 +61,16 @@ function openProfile(user: TalkParticipant) {
       <span class="hidden items-center gap-1 tabular-nums max-[420px]:inline-flex" aria-hidden="true"><Users class="h-3 w-3" />{{ users.length }}</span>
     </button>
 
-    <TalkParticipantList
-      v-if="open"
-      data-testid="talk-participants-list"
-      class="absolute left-0 top-full z-40 mt-2 w-[280px] max-md:fixed max-md:inset-x-2 max-md:top-14 max-md:mt-0 max-md:w-auto max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
-      :users="users"
-      :started-at="startedAt"
-      :leader-id="leaderId"
-      @select="openProfile"
-    />
+    <PopTransition>
+      <TalkParticipantList
+        v-if="open"
+        data-testid="talk-participants-list"
+        class="absolute left-0 top-full z-40 mt-2 w-[280px] max-md:fixed max-md:inset-x-2 max-md:top-14 max-md:mt-0 max-md:w-auto max-h-[min(420px,calc(100dvh-80px))] overflow-y-auto overscroll-contain rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+        :users="users"
+        :started-at="startedAt"
+        :leader-id="leaderId"
+        @select="openProfile"
+      />
+    </PopTransition>
   </div>
 </template>

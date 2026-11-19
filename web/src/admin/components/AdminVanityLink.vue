@@ -123,7 +123,7 @@ onMounted(load)
     <div v-if="loaded && fullLink" class="flex items-center gap-2" data-testid="vanity-full">
       <code class="min-w-0 flex-1 truncate rounded-md bg-mnema-canvas px-2 py-1.5 text-xs text-mnema-text" data-testid="vanity-url">{{ fullLink }}</code>
       <button type="button" class="btn btn-secondary" :aria-label="$t('admin.vanity.copy')" data-testid="vanity-copy" @click="copy">
-        <Check v-if="copied" class="h-4 w-4" aria-hidden="true" />
+        <Check v-if="copied" class="success-pulse h-4 w-4" aria-hidden="true" />
         <Copy v-else class="h-4 w-4" aria-hidden="true" />
         <span>{{ copied ? $t('admin.vanity.copied') : $t('admin.vanity.copy') }}</span>
       </button>

@@ -16,6 +16,7 @@ import TriggerMenu from '../../shared/components/TriggerMenu.vue'
 import { useVoiceMenus } from '../composables/useVoiceMenus'
 import { isTextCut } from '../../directives/fullText'
 import { t } from '../../i18n'
+import IconSwap from '../../shared/components/IconSwap.vue'
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
@@ -92,8 +93,7 @@ const tone = (active: boolean) => active
         v-bind="mic.on"
         @click="voiceStore.toggleMute"
       >
-        <MicOff v-if="voiceStore.isMuted" class="h-[18px] w-[18px]" />
-        <Mic v-else class="h-[18px] w-[18px]" />
+        <IconSwap :on="voiceStore.isMuted" :on-icon="MicOff" :off-icon="Mic" icon-class="h-[18px] w-[18px]" />
       </button>
       <button
         type="button"
@@ -104,8 +104,7 @@ const tone = (active: boolean) => active
         v-bind="output.on"
         @click="voiceStore.toggleDeafen"
       >
-        <HeadphoneOff v-if="voiceStore.isDeafened" class="h-[18px] w-[18px]" />
-        <Headphones v-else class="h-[18px] w-[18px]" />
+        <IconSwap :on="voiceStore.isDeafened" :on-icon="HeadphoneOff" :off-icon="Headphones" icon-class="h-[18px] w-[18px]" />
       </button>
       <button
         type="button"
@@ -116,8 +115,7 @@ const tone = (active: boolean) => active
         v-bind="share.on"
         @click="toggleScreenShare"
       >
-        <MonitorOff v-if="voiceStore.isScreenSharing" class="h-[18px] w-[18px]" />
-        <Monitor v-else class="h-[18px] w-[18px]" />
+        <IconSwap :on="voiceStore.isScreenSharing" :on-icon="MonitorOff" :off-icon="Monitor" icon-class="h-[18px] w-[18px]" />
       </button>
       <button
         v-if="voiceStore.isScreenSharing"

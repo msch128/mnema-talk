@@ -234,7 +234,7 @@ const groupedIds = computed(() => {
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="msg-column relative flex-1 min-h-0 flex flex-col overflow-clip">
-    <div ref="messageContainer" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
+    <div ref="messageContainer" v-entering.end="chatStore.messages?.length ? chatStore.activeChannel?.id : ''" class="msg-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
       <RowSkeleton v-if="!chatStore.messages?.length && chatStore.isLoadingWindow" class="h-full flex flex-col justify-end overflow-hidden" />
 

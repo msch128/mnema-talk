@@ -4,13 +4,13 @@ import type { ContextMenuItem, MenuAnchor, MenuItemId, MenuSubmenu } from './men
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
-import { needsSheet, placeNear, pointBox, submenuOffsets, visibleArea, type AnchorBox } from '../lib/floatingPosition'
+import PopTransition from './PopTransition.vue'
+import { growOrigin, menuHost, needsSheet, placeNear, pointBox, submenuOffsets, visibleArea, type AnchorBox } from '../lib/floatingPosition'
 import { menuOpener, rowTarget, typeAhead } from '../lib/menuKeys'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
 // { type: 'separator' }, { type: 'label', label }, { type: 'slider', ... },
-// { type: 'radio', label, subtitle, checked, action },
-// { type: 'checkbox', label, checked, action },
+// { type: 'radio', label, subtitle, checked, action }, { type: 'checkbox', label, checked, action },
 // { type: 'info', label, value } (a read-only line),
 // { type: 'submenu', id, label, icon, value, items, onOpen, onClose }: opens
 // a nested menu to the side (hover, click, ArrowRight; ArrowLeft or Escape
@@ -18,8 +18,7 @@ import { menuOpener, rowTarget, typeAhead } from '../lib/menuKeys'
 // disabledReason on a disabled item shows as its tooltip. keepOpen on an item leaves the menu open after choosing it.
 // Position either with x/y (viewport px) or with `anchor` (an element or a
 // { left, top, right, bottom } rect), which is what keyboard openers use.
-// A menu taller than the window opens as a sheet along the bottom edge that
-// scrolls, and its submenus open in place under their row.
+// A menu taller than the window opens as a scrolling sheet along the bottom edge; its submenus open in place under their row.
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   x: { type: Number, default: 0 },
@@ -38,6 +37,8 @@ const menuEl = ref<HTMLElement | null>(null)
 const posX = ref(props.x)
 const posY = ref(props.y)
 const sheet = ref(false)
+// Where the menu grows out of and shrinks back to: the point of its anchor.
+const origin = ref('')
 let opener: HTMLElement | null = null
 
 // The open submenu: its item id, its onClose, where it shows.
@@ -74,6 +75,16 @@ function adjustPosition() {
   posX.value = x
   // Below a notch or a scrolled-off visual viewport top.
   posY.value = area.top > 0 ? Math.max(y, area.top + 8) : y
+  origin.value = growOrigin(box, { x, y: posY.value }, size)
+}
+
+// Before it is measured: at the anchor, the full page, growing from its corner.
+function resetPosition() {
+  sheet.value = false
+  origin.value = ''
+  const box = baseBox()
+  posX.value = box.left
+  posY.value = box.bottom
 }
 
 // The menu level the focus is in: the root or an open submenu.
@@ -170,10 +181,7 @@ watch(() => props.modelValue, (open) => {
     settling = true
     requestAnimationFrame(() => requestAnimationFrame(() => { settling = false }))
     opener = menuOpener(props.anchor, props.x, props.y)
-    sheet.value = false
-    const box = baseBox()
-    posX.value = box.left
-    posY.value = box.bottom
+    resetPosition()
     nextTick(() => {
       adjustPosition()
       // The container holds focus until an arrow key moves into the items.
@@ -186,10 +194,7 @@ watch(() => props.modelValue, (open) => {
 
 watch([() => props.x, () => props.y, () => props.anchor], () => {
   if (props.modelValue) {
-    sheet.value = false
-    const box = baseBox()
-    posX.value = box.left
-    posY.value = box.bottom
+    resetPosition()
     nextTick(adjustPosition)
   }
 })
@@ -307,94 +312,89 @@ onUnmounted(() => {
   window.removeEventListener('blur', handleWindowBlur)
 })
 
-function host(): string | HTMLElement {
-  if (props.teleportTo) return props.teleportTo
-  // Only the full-screen element is drawn in full screen; a menu on the page behind it would not show.
-  const full = typeof document === 'undefined' ? null : document.fullscreenElement
-  return full instanceof HTMLElement && full !== document.documentElement ? full : 'body'
-}
-
-const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
+const panelClass = 'p-1.5 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
 </script>
 
 <template>
-  <Teleport :to="host()">
-    <div
-      v-if="modelValue"
-      ref="menuEl"
-      role="menu"
-      data-menu-panel
-      :aria-label="ariaLabel || undefined"
-      tabindex="-1"
-      :data-menu-sheet="sheet ? '' : undefined"
-      :style="sheet ? undefined : { left: `${posX}px`, top: `${posY}px`, minWidth: `${minWidth}px` }"
-      :class="['fixed z-50 focus:outline-hidden select-none pop-in', panelClass, sheet ? 'inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-b-none pb-[max(0.5rem,env(safe-area-inset-bottom))]' : '']"
-      @keydown="handleKeydown"
-    >
-      <slot name="header"></slot>
+  <Teleport :to="menuHost(teleportTo)">
+    <PopTransition>
+      <div
+        v-if="modelValue"
+        ref="menuEl"
+        role="menu"
+        data-menu-panel
+        :aria-label="ariaLabel || undefined"
+        tabindex="-1"
+        :data-menu-sheet="sheet ? '' : undefined"
+        :style="sheet ? undefined : { left: `${posX}px`, top: `${posY}px`, minWidth: `${minWidth}px`, transformOrigin: origin || undefined }"
+        :class="['fixed z-50 focus:outline-hidden select-none pop-in', panelClass, sheet ? 'origin-bottom inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-b-none pb-[max(0.5rem,env(safe-area-inset-bottom))]' : '']"
+        @keydown="handleKeydown"
+      >
+        <slot name="header"></slot>
 
-      <template v-for="(item, idx) in items" :key="item.id ?? idx">
-        <div
-          v-if="item.type === 'submenu'"
-          class="relative"
-          @mouseenter="openSubmenu(item)"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            aria-haspopup="menu"
-            :aria-expanded="openSub === item.id ? 'true' : 'false'"
-            :aria-disabled="item.disabled ? 'true' : undefined"
-            :data-submenu-trigger="item.id"
-            data-menu-nav
-            tabindex="-1"
-            :disabled="item.disabled"
-            :class="[
-              'w-full h-9 px-3 flex items-center justify-between gap-3 rounded-lg text-left transition-colors font-normal focus:outline-hidden',
-              item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-mnema-hover hover:text-mnema-text focus-visible:bg-mnema-hover focus-visible:text-mnema-text',
-              openSub === item.id ? 'bg-mnema-hover text-mnema-text' : ''
-            ]"
-            @click="onTriggerClick(item, $event)"
-          >
-            <div class="flex items-center gap-2 truncate">
-              <component :is="item.icon" v-if="item.icon" class="w-4 h-4 shrink-0 opacity-80" />
-              <span class="truncate">{{ item.label }}</span>
-            </div>
-            <span class="ml-auto flex items-center gap-1 text-xs text-mnema-tertiary shrink-0">
-              <span v-if="item.value">{{ item.value }}</span>
-              <ChevronRight class="w-3.5 h-3.5" aria-hidden="true" />
-            </span>
-          </button>
-
+        <template v-for="(item, idx) in items" :key="item.id ?? idx">
           <div
-            v-if="openSub === item.id"
-            role="menu"
-            data-menu-panel
-            data-submenu-panel
-            :data-submenu="item.id"
-            :aria-label="item.label"
-            :style="sheet ? undefined : { top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px`, transform: subShiftX ? `translateX(${subShiftX}px)` : undefined }"
-            :class="sheet ? 'ml-4 border-l border-mnema-border pl-2' : ['absolute z-50', subFlip ? 'right-full mr-1.5' : 'left-full ml-1.5', panelClass]"
-            @mouseenter="cancelHoverClose"
+            v-if="item.type === 'submenu'"
+            class="relative"
+            @mouseenter="openSubmenu(item)"
           >
-            <ContextMenuRow
-              v-for="(sub, sIdx) in (item.items || [])"
-              :key="sub.id ?? sIdx"
-              :item="sub"
-              @select="handleSelect"
-            />
+            <button
+              type="button"
+              role="menuitem"
+              aria-haspopup="menu"
+              :aria-expanded="openSub === item.id ? 'true' : 'false'"
+              :aria-disabled="item.disabled ? 'true' : undefined"
+              :data-submenu-trigger="item.id"
+              data-menu-nav
+              tabindex="-1"
+              :disabled="item.disabled"
+              :class="[
+                'w-full h-9 px-3 flex items-center justify-between gap-3 rounded-md text-left transition-colors font-normal focus:outline-hidden',
+                item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-mnema-hover hover:text-mnema-text focus-visible:bg-mnema-hover focus-visible:text-mnema-text',
+                openSub === item.id ? 'bg-mnema-hover text-mnema-text' : ''
+              ]"
+              @click="onTriggerClick(item, $event)"
+            >
+              <div class="flex items-center gap-2 truncate">
+                <component :is="item.icon" v-if="item.icon" class="w-4 h-4 shrink-0 opacity-80" />
+                <span class="truncate">{{ item.label }}</span>
+              </div>
+              <span class="ml-auto flex items-center gap-1 text-xs text-mnema-tertiary shrink-0">
+                <span v-if="item.value">{{ item.value }}</span>
+                <ChevronRight class="w-3.5 h-3.5" aria-hidden="true" />
+              </span>
+            </button>
+
+            <div
+              v-if="openSub === item.id"
+              role="menu"
+              data-menu-panel
+              data-submenu-panel
+              :data-submenu="item.id"
+              :aria-label="item.label"
+              :style="sheet ? undefined : { top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px`, transform: subShiftX ? `translateX(${subShiftX}px)` : undefined }"
+              :class="sheet ? 'ml-4 border-l border-mnema-border pl-2' : ['absolute z-50', subFlip ? 'right-full mr-1.5' : 'left-full ml-1.5', panelClass]"
+              @mouseenter="cancelHoverClose"
+            >
+              <ContextMenuRow
+                v-for="(sub, sIdx) in (item.items || [])"
+                :key="sub.id ?? sIdx"
+                :item="sub"
+                @select="handleSelect"
+              />
+            </div>
           </div>
-        </div>
 
-        <ContextMenuRow
-          v-else
-          :item="item"
-          @select="handleSelect"
-          @mouseenter="onRootRowHover"
-        />
-      </template>
+          <ContextMenuRow
+            v-else
+            :item="item"
+            @select="handleSelect"
+            @mouseenter="onRootRowHover"
+          />
+        </template>
 
-      <slot name="footer"></slot>
-    </div>
+        <slot name="footer"></slot>
+      </div>
+    </PopTransition>
   </Teleport>
 </template>
