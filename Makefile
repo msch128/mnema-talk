@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-loadtest load-test-host fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check staticcheck bench bench-baseline bench-allocs fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
+.PHONY: help dev web build run test test-loadtest load-test-host fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check staticcheck bench bench-baseline bench-allocs fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check notices
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -213,6 +213,9 @@ smoke: docker ## Start the built image with the production compose file and chec
 
 fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
 	scripts/fresh-install-check.sh mnema-talk:local
+
+notices: ## Rewrite THIRD_PARTY_NOTICES.md from the modules the binaries compile (run after a Go dependency change)
+	go run ./scripts/notices
 
 docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, the paths AGENTS.md names, no merge-conflict markers, stale versions, setup check codes and ports in the docs (no network)
 	node scripts/check-doc-links.mjs

@@ -5,7 +5,7 @@ package webbundle
 // vectors in its own repository (test-vectors/). This test reads the same
 // vectors and checks that this package, which signs what those clients
 // verify, accepts and refuses the same inputs. It runs where a checkout of
-// mnema-talk-desktop exists: MNEMA_DESKTOP_VECTORS=<checkout>/test-vectors.
+// talk-desktop exists: MNEMA_DESKTOP_VECTORS=<checkout>/test-vectors.
 
 import (
 	"crypto/ed25519"
@@ -69,7 +69,7 @@ func readVectors(t *testing.T, dir, name string, into any) {
 func vectorsDir(t *testing.T) string {
 	dir := os.Getenv("MNEMA_DESKTOP_VECTORS")
 	if dir == "" {
-		t.Skip("MNEMA_DESKTOP_VECTORS not set (a mnema-talk-desktop checkout's test-vectors directory)")
+		t.Skip("MNEMA_DESKTOP_VECTORS not set (a talk-desktop checkout's test-vectors directory)")
 	}
 	return dir
 }

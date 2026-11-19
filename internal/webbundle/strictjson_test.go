@@ -11,7 +11,7 @@ import (
 // TestVerifyReadsManifestJSONLikeTheDesktopClients: signed manifests that
 // differ only in JSON spelling. desktopOK is the clients' verdict for the
 // same spelling in their shared vectors (test-vectors/json.json and
-// bundle.json of mnema-talk-desktop: serde_json with deny_unknown_fields, and
+// bundle.json of talk-desktop: serde_json with deny_unknown_fields, and
 // the Linux client's port of it).
 func TestVerifyReadsManifestJSONLikeTheDesktopClients(t *testing.T) {
 	pub, priv := testKey(t)

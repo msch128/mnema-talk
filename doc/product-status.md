@@ -11,7 +11,7 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 3.0
+## Status at 3.3
 
 Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
@@ -23,12 +23,12 @@ changed no API. 3.0.0 is a major release and contains the changes listed in
 
 **Supported versions.** Security fixes go to the latest minor release and,
 once a newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). At 3.0.x that means 3.0.x
-and, for 90 days after 3.0.0, 2.9.x. CI upgrades from 0.8.16,
+([SECURITY.md](../SECURITY.md#supported-versions)). At 3.3.x that means 3.3.x
+and, for 90 days after 3.3.0 (released 2026-11-15), 3.2.x. CI upgrades from 0.8.16,
 0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12 and 2.9.19 to prove the upgrade path; that is a test, not a
 support promise. Per-version notes: [upgrade.md](upgrade.md).
 
-| Area | Category at 3.0 |
+| Area | Category at 3.3 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters v2, built-in slash commands, reading a Talk's chat without joining | Supported (surfaces introduced in 1.1) |
@@ -214,7 +214,7 @@ three clients.
 ### Windows
 
 The desktop app (this section covers its Windows build) lives in the separate
-[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository
+[talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository
 and is an unsigned Tauri DEV client, including the Gaming integration described
 in the [usage guide](desktop-app.md#windows-gaming-dev). Its local instance
 selector checks HTTPS (or a loopback address) and the server's `web_client_api`
@@ -244,7 +244,7 @@ Voice in the desktop client uses the instance's browser path, so microphone,
 camera and screen payloads are sealed in WebView2 by the same code as in a
 browser. This is not yet qualified on real Windows hardware.
 
-Desktop builds come from the mnema-talk-desktop repository (releases of this
+Desktop builds come from the talk-desktop repository (releases of this
 repository stopped attaching them after v0.7.3). WebView2 Runtime is required on
 Windows. Checksums identify package bytes; they are not publisher signatures. The
 desktop installer of a release updates itself with signature-verified, newer-only updates; no

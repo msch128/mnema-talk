@@ -2,7 +2,7 @@
 
 Status: implemented and shipped. The release tooling is in this repository and
 needs no server change. The hosts that verify and load the bundle are in
-[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop): a Tauri
+[talk-desktop](https://github.com/mnema-xyz/talk-desktop): a Tauri
 host for Windows and macOS and an Electron client for Linux.
 
 ## Why
@@ -690,7 +690,7 @@ an installer by hand after the first time.
 
 * **Feed and key.** On Windows the installer is a per-user NSIS package; macOS
   has a signed `.app.tar.gz` and Linux signed AppImages. All are built by the
-  [mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) release
+  [talk-desktop](https://github.com/mnema-xyz/talk-desktop) release
   workflow on a `vX.Y.Z` tag. Installed clients read
   `https://github.com/mnema-xyz/talk-desktop/releases/latest/download/latest.json`
   at every start and every six hours (the interval of the bundle check). The

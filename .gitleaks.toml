@@ -28,7 +28,7 @@ regexes = [
 ]
 
 # Only generic-api-key: exact public upstream known-answer vector fields.
-# The vectors moved to mnema-talk-desktop. These paths stay allowlisted only so
+# The vectors moved to talk-desktop. These paths stay allowlisted only so
 # `gitleaks git` can still read this repository's history; the files are gone
 # from the tree.
 [[rules]]
