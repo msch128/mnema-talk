@@ -4,6 +4,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,5 +90,24 @@ func TestAwaitDurableIsNotCutShortByTheCallersCancellation(t *testing.T) {
 	// The pool's one session still works.
 	if err := pgx.BeginFunc(context.Background(), p, func(pgx.Tx) error { return nil }); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// The application's role need not be a superuser: the logical message is
+// open to every role.
+func TestAwaitDurableNeedsNoPrivilege(t *testing.T) {
+	p := scratchPoolWith(t, Options{MaxConns: 1, StatementTimeout: 10 * time.Second})
+	ctx := context.Background()
+	role := "durable_probe_" + strings.ReplaceAll(t.Name(), "/", "_")
+	role = strings.ToLower(role)
+	if _, err := p.Exec(ctx, `CREATE ROLE `+role+` NOLOGIN`); err != nil {
+		t.Skipf("cannot create a role here: %v", err)
+	}
+	t.Cleanup(func() { _, _ = p.Exec(context.Background(), `RESET ROLE; DROP ROLE IF EXISTS `+role) })
+	if _, err := p.Exec(ctx, `SET ROLE `+role); err != nil {
+		t.Fatal(err)
+	}
+	if err := AwaitDurable(ctx, p); err != nil {
+		t.Fatalf("AwaitDurable as a role without privileges: %v", err)
 	}
 }

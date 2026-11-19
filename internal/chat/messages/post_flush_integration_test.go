@@ -154,9 +154,20 @@ func TestAPostHoldsItsChannelForFewRoundTrips(t *testing.T) {
 	}
 	t.Cleanup(pool.Close)
 	w.svc.DB = &db.Pool{Pool: pool}
-	if _, err := w.svc.Post(context.Background(), w.actor(t, "member"), PostCommand{ChannelID: w.ch, Content: "hello @other_member"}); err != nil {
-		t.Fatal(err)
+	post := func() {
+		t.Helper()
+		if _, err := w.svc.Post(context.Background(), w.actor(t, "member"), PostCommand{ChannelID: w.ch, Content: "hello @other_member"}); err != nil {
+			t.Fatal(err)
+		}
 	}
+	// The first post fills the statement cache (a statement new to a
+	// connection costs a round trip of its own to prepare); the second is
+	// what every later post costs.
+	post()
+	trips.mu.Lock()
+	clear(trips.sent)
+	trips.mu.Unlock()
+	post()
 	held := trips.underLock()
 	if len(held) == 0 {
 		t.Fatal("no locked section found")

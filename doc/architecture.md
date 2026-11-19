@@ -681,7 +681,11 @@ the disk: the post's transaction commits asynchronously (`db.AsyncCommit`), so
 the lock is released once the commit is in PostgreSQL's WAL buffers, and only
 then the post waits for the WAL flush (`db.AwaitDurable`), which concurrent
 posts share. Nobody is told of a message (the answer, `message_create`,
-webhooks, bots, push) before it is on disk. The work under the lock is also
+bots, push) before it is on disk; a webhook worker claims its event with a
+commit of its own, which flushes the WAL past the message first. Other
+sessions can read the message in the few milliseconds before the flush: should
+PostgreSQL itself crash then, it is gone after the restart (and its number may
+be drawn again), like any transaction committed asynchronously. The work under the lock is also
 kept to few round trips to the database (seven for a message with a mention:
 the lock with the channel's settings, the insert that notes its number, the
 mentioned names, the mentions, the stored message and its details, each of the
