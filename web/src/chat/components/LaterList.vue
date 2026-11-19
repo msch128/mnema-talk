@@ -77,13 +77,13 @@ async function snooze(entry: LaterReminder, preset: typeof SNOOZES[number]['pres
 
     <section v-if="hasReminders && later.reminders.length" :aria-label="$t('later.reminders')">
       <h3 class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('later.reminders') }}</h3>
-      <div v-for="entry in later.reminders" :key="entry.id" data-testid="reminder-item" class="rounded-lg p-1 transition hover:bg-mnema-hover">
+      <div v-for="entry in later.reminders" :key="entry.id" data-testid="reminder-item" class="rounded-md p-1 transition hover:bg-mnema-hover">
         <div class="flex items-start gap-1">
           <BlockedFold v-if="entry.available && entry.message" :msg="{ id: entry.message.id, user_id: entry.message.author_id }" class="flex-1 p-2">
             <button
               type="button"
               data-testid="reminder-open"
-              class="focus-ring min-w-0 flex-1 rounded-lg p-1.5 text-left"
+              class="focus-ring min-w-0 flex-1 rounded-sm p-1.5 text-left"
               @click="openMessage(entry)"
             >
               <span class="mb-0.5 flex items-center gap-1.5 text-xs text-mnema-tertiary">

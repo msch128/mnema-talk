@@ -32,7 +32,7 @@ function toggle() {
     <ChevronDown v-else class="w-4 h-4" aria-hidden="true" />
     <template v-if="collapsed">
       <Users class="w-3.5 h-3.5" aria-hidden="true" />
-      <span>{{ users.length }}</span>
+      <span class="tabular-nums">{{ users.length }}</span>
     </template>
   </button>
   <div

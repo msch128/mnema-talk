@@ -134,7 +134,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
-const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
+const item = 'flex min-h-9 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm text-mnema-body-ink transition-colors hover:bg-mnema-hover hover:text-mnema-text focus:outline-hidden focus-visible:bg-mnema-hover focus-visible:text-mnema-text'
 // On a window too short for the menu above the user bar (the desktop client's
 // minimum zoomed in), it opens as a sheet along the bottom edge that scrolls,
 // like the context menus, and the language list opens in place.

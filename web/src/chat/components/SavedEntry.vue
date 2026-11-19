@@ -68,14 +68,14 @@ const when = (iso: string) => dateTime(iso, locale.value)
   <div
     data-testid="saved-item"
     :data-message-id="entry.message_id"
-    :class="['group/row rounded-lg p-1 transition hover:bg-mnema-hover', flash ? 'msg-flash' : '']"
+    :class="['group/row rounded-md p-1 transition hover:bg-mnema-hover', flash ? 'msg-flash' : '']"
   >
     <div class="flex items-start gap-1">
       <BlockedFold v-if="entry.available && entry.message" :msg="{ id: entry.message_id, user_id: entry.message.user_id }" class="flex-1 p-2">
         <button
           type="button"
           data-testid="saved-open"
-          class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-lg p-1.5 text-left"
+          class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-sm p-1.5 text-left"
           :aria-label="$t('saved.openMessage')"
           @click="emit('open')"
         >

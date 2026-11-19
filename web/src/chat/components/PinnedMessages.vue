@@ -128,12 +128,12 @@ const when = (iso: string) => dateTime(iso, locale.value)
       <StatePanel v-else-if="!items.length" state="empty" :icon="Pin" data-testid="pinned-empty">
         {{ $t(canUnpin ? 'pins.emptyModerator' : 'pins.empty') }}
       </StatePanel>
-      <div v-for="msg in items" v-else :key="msg.id" class="group/row flex items-start gap-1 rounded-lg transition hover:bg-mnema-hover">
+      <div v-for="msg in items" v-else :key="msg.id" class="group/row flex items-start gap-1 rounded-md transition hover:bg-mnema-hover">
         <BlockedFold :msg="msg" class="flex-1 p-2.5">
           <button
             type="button"
             data-testid="pinned-item"
-            class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-lg p-2.5 text-left"
+            class="focus-ring flex min-w-0 flex-1 items-start gap-3 rounded-md p-2.5 text-left"
             @click="pick(msg)"
           >
             <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />

@@ -98,7 +98,7 @@ onMounted(refresh)
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 stack-1">
           <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.storage') }}</span>
-          <div class="text-xl font-bold text-mnema-text flex items-baseline gap-2">
+          <div class="text-xl font-bold tabular-nums text-mnema-text flex items-baseline gap-2">
             <span>{{ formatBytes(stats.total_size_bytes) }}</span>
             <span class="text-sm font-normal text-mnema-muted">({{ $t('admin.storageCounts', { files: stats.total_files, deleted: stats.deleted_files }) }})</span>
           </div>
