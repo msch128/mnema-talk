@@ -63,22 +63,25 @@ async function sweepClean(file: string, trace: StoreTrace, s: Sweep) {
   s.runs++
 }
 
+const planLabel = (plan: Plan) => plan.kind === 'drop' ? `drop${plan.answer ? '+' + plan.answer : ''}` : plan.kind
+
+/** One perturbation: every key that is wrong now but was right after the clean run is a break. */
+async function sweepPlan(file: string, trace: StoreTrace, plan: Plan, expected: { want: Awaited<ReturnType<typeof fresh>>; cleanWrong: Set<string> }, s: Sweep) {
+  const got = await replay(trace, plan)
+  s.runs++
+  s.perturbed++
+  for (const key of wrong(withoutDeletedThreads(got, trace), expected.want)) {
+    if (expected.cleanWrong.has(key)) continue
+    note(s, `${planLabel(plan)} ${classOf(key)}`, `${file} ${JSON.stringify(plan)}: ${difference(got, expected.want).join('; ')}`)
+  }
+}
+
 async function sweepTrace(file: string, trace: StoreTrace, step: number, s: Sweep) {
   await sweepClean(file, trace, s)
   const want = await fresh(trace)
-  const right = (c: Awaited<ReturnType<typeof fresh>>) => wrong(withoutDeletedThreads(c, trace), want)
-  const cleanWrong = right(await replay(trace, { kind: 'clean' }))
+  const cleanWrong = wrong(withoutDeletedThreads(await replay(trace, { kind: 'clean' }), trace), want)
   for (let at = 0; at < trace.frames.length; at += step) {
-    for (const plan of plansAt(trace, at)) {
-      const got = await replay(trace, plan)
-      s.runs++
-      s.perturbed++
-      for (const key of right(got)) {
-        if (cleanWrong.has(key)) continue
-        const label = plan.kind === 'drop' ? `drop${plan.answer ? '+' + plan.answer : ''}` : plan.kind
-        note(s, `${label} ${classOf(key)}`, `${file} ${JSON.stringify(plan)}: ${difference(got, want).join('; ')}`)
-      }
-    }
+    for (const plan of plansAt(trace, at)) await sweepPlan(file, trace, plan, { want, cleanWrong }, s)
   }
 }
 

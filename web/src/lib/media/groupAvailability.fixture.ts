@@ -31,57 +31,74 @@ export function share(part: number, whole: number): number {
   return whole > 0 ? part / whole : 0
 }
 
+/** A tab's epoch ends at `at`: what a key's life came to. */
+function endEpoch(total: Availability, tab: Tab, at: number) {
+  if (tab.epoch !== null) total.longestEpochMs = Math.max(total.longestEpochMs, at - tab.epochSince)
+}
+
+/** A tab without keys since `tab.down` holds keys again, or leaves, at `at`. */
+function endDown(total: Availability, tab: Tab, at: number) {
+  if (tab.down === null) return
+  const span = at - tab.down
+  total.noKeysMs += span
+  if (tab.everKeys) {
+    total.lostMs += span
+    total.longestLostMs = Math.max(total.longestLostMs, span)
+  } else total.longestJoinMs = Math.max(total.longestJoinMs, span)
+}
+
+function close(total: Availability, tab: Tab, at: number) {
+  total.memberMs += at - tab.since
+  endEpoch(total, tab, at)
+  endDown(total, tab, at)
+}
+
+/** A tab reports keys `epoch` ('none' or an epoch number) at `at`. */
+function keys(total: Availability, tab: Tab, epoch: string, at: number) {
+  if (epoch === 'none') {
+    endEpoch(total, tab, at)
+    tab.epoch = null
+    if (tab.down !== null) return
+    tab.down = at
+    total.startOvers++
+    return
+  }
+  endDown(total, tab, at)
+  tab.down = null
+  tab.everKeys = true
+  if (tab.epoch === epoch) return
+  endEpoch(total, tab, at)
+  tab.epoch = epoch
+  tab.epochSince = at
+}
+
+/** One trace line's text at `at`. */
+function read(total: Availability, tabs: Map<string, Tab>, text: string, at: number) {
+  const joined = /^join (\S+)$/.exec(text)
+  if (joined) {
+    tabs.set(joined[1] as string, { since: at, everKeys: false, down: at, epoch: null, epochSince: at })
+    return
+  }
+  const gone = /^(?:leave|reload) (\S+)/.exec(text)
+  if (gone) {
+    const tab = tabs.get(gone[1] as string)
+    if (tab) { close(total, tab, at); tabs.delete(gone[1] as string) }
+    return
+  }
+  const keyed = /^(\S+) keys (none|\d+)/.exec(text)
+  const tab = keyed ? tabs.get(keyed[1] as string) : undefined
+  if (keyed && tab) keys(total, tab, keyed[2] as string, at)
+}
+
 /** Reads `trace` (see GroupSim.note) for a run of `endMs` virtual milliseconds. */
 export function availability(trace: readonly string[], endMs: number): Availability {
   const tabs = new Map<string, Tab>()
   const total: Availability = { memberMs: 0, noKeysMs: 0, lostMs: 0, startOvers: 0, longestLostMs: 0, longestEpochMs: 0, longestJoinMs: 0 }
-  const close = (tab: Tab, at: number) => {
-    total.memberMs += at - tab.since
-    if (tab.epoch !== null) total.longestEpochMs = Math.max(total.longestEpochMs, at - tab.epochSince)
-    if (tab.down !== null) {
-      const span = at - tab.down
-      total.noKeysMs += span
-      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) } else total.longestJoinMs = Math.max(total.longestJoinMs, span)
-    }
-  }
   for (const line of trace) {
     const match = LINE.exec(line)
-    if (!match) continue
-    const at = Math.round(Number(match[1]) * 1000)
-    const text = match[2] as string
-    const joined = /^join (\S+)$/.exec(text)
-    if (joined) { tabs.set(joined[1] as string, { since: at, everKeys: false, down: at, epoch: null, epochSince: at }); continue }
-    const gone = /^(?:leave|reload) (\S+)/.exec(text)
-    if (gone) {
-      const tab = tabs.get(gone[1] as string)
-      if (tab) { close(tab, at); tabs.delete(gone[1] as string) }
-      continue
-    }
-    const keyed = /^(\S+) keys (none|\d+)/.exec(text)
-    const tab = keyed ? tabs.get(keyed[1] as string) : undefined
-    if (!keyed || !tab) continue
-    if (keyed[2] === 'none') {
-      if (tab.epoch !== null) total.longestEpochMs = Math.max(total.longestEpochMs, at - tab.epochSince)
-      tab.epoch = null
-      if (tab.down !== null) continue
-      tab.down = at
-      total.startOvers++
-      continue
-    }
-    if (tab.down !== null) {
-      const span = at - tab.down
-      total.noKeysMs += span
-      if (tab.everKeys) { total.lostMs += span; total.longestLostMs = Math.max(total.longestLostMs, span) } else total.longestJoinMs = Math.max(total.longestJoinMs, span)
-      tab.down = null
-    }
-    tab.everKeys = true
-    if (tab.epoch !== keyed[2]) {
-      if (tab.epoch !== null) total.longestEpochMs = Math.max(total.longestEpochMs, at - tab.epochSince)
-      tab.epoch = keyed[2] as string
-      tab.epochSince = at
-    }
+    if (match) read(total, tabs, match[2] as string, Math.round(Number(match[1]) * 1000))
   }
-  for (const tab of tabs.values()) close(tab, endMs)
+  for (const tab of tabs.values()) close(total, tab, endMs)
   return total
 }
 

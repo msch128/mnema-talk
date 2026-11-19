@@ -483,24 +483,20 @@ export class GroupSim {
     if (from.gone && this.dropWiresOfGone) return
     if (from.offlineUntil > this.now) return this.note(`lost ${from.label} ${kind} (socket down)`)
     if (this.record) this.log.push({ from: from.id, text })
-    for (const to of this.live()) {
-      if (to === from) continue
-      if (to.offlineUntil > this.now) {
-        this.note(`lost ${from.label}->${to.label} ${kind} (socket down)`)
-        continue
-      }
-      const fault = this.fault
-      if (fault && this.random() < fault.drop) {
-        this.note(`drop ${from.label}->${to.label} ${kind}`)
-        continue
-      }
-      const copies = fault && this.random() < fault.duplicate ? 2 : 1
-      for (let copy = 0; copy < copies; copy++) {
-        this.after(to, this.due(to, this.delay(from, to)), () => {
-          this.note(`deliver ${from.label}->${to.label} ${kind}${copy ? ' (copy)' : ''}`)
-          this.enter(to, () => to.call.receive(from.id, text))
-        }, true, { from: from.id, to: to.id, kind })
-      }
+    for (const to of this.live()) if (to !== from) this.relayTo(from, to, text, kind)
+  }
+
+  /** One copy of the relay's, for `to`: lost while its socket is down, else dropped, delivered or duplicated by the fault. */
+  private relayTo(from: SimMember, to: SimMember, text: string, kind: string) {
+    if (to.offlineUntil > this.now) return this.note(`lost ${from.label}->${to.label} ${kind} (socket down)`)
+    const fault = this.fault
+    if (fault && this.random() < fault.drop) return this.note(`drop ${from.label}->${to.label} ${kind}`)
+    const copies = fault && this.random() < fault.duplicate ? 2 : 1
+    for (let copy = 0; copy < copies; copy++) {
+      this.after(to, this.due(to, this.delay(from, to)), () => {
+        this.note(`deliver ${from.label}->${to.label} ${kind}${copy ? ' (copy)' : ''}`)
+        this.enter(to, () => to.call.receive(from.id, text))
+      }, true, { from: from.id, to: to.id, kind })
     }
   }
 

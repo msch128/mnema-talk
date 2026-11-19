@@ -20,11 +20,30 @@ function seeds(setting: string): number[] {
   return setting.split(',').map(Number)
 }
 
+/** The seeds of `setting` this shard runs: sharded by position in the list, so a list of named seeds splits evenly too. */
+function shardSeeds(setting: string): number[] {
+  const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
+  return seeds(setting).filter((_, position) => position % count === index)
+}
+
+/** Runs `seed`; a run that throws counts as one that broke an invariant. */
+async function runSafely(seed: number, plan: Parameters<typeof runSeed>[1]): Promise<SimResult> {
+  const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
+  return runSeed(seed, plan).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
+}
+
+/** The row of one seed, written to SIM_CLOCKS_OUT when set. */
+function record(variant: string, relay: string, result: SimResult, listed: readonly number[]) {
+  const a = availabilityOf(result)
+  const row = { variant, relay, seed: result.seed, failed: result.violations.length > 0, known: listed.includes(result.seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 200), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
+  if (process.env.SIM_CLOCKS_OUT) appendFileSync(process.env.SIM_CLOCKS_OUT, `${JSON.stringify(row)}\n`)
+  return row
+}
+
 const variants = Object.entries(CLOCK_VARIANTS).filter(([name]) => !process.env.SIM_CLOCKS_VARIANT || name === process.env.SIM_CLOCKS_VARIANT)
 
 describe.skipIf(!process.env.SIM_CLOCKS)('seeds with a clock per member', () => {
   it.each(variants.flatMap(([name, clocks]) => (['honest', 'hostile'] as const).map(relay => [name, relay, clocks] as const)))('%s, %s relay', async (name, relay, clocks) => {
-    const [index, count] = (process.env.SIM_SHARD ?? '0/1').split('/').map(Number) as [number, number]
     const listed = KNOWN_CLOCKS[`${name}/${relay}`] ?? []
     const failing: number[] = []
     const ran: number[] = []
@@ -32,17 +51,13 @@ describe.skipIf(!process.env.SIM_CLOCKS)('seeds with a clock per member', () => 
     let skewed = 0
     let stepped = 0
     let runs = 0
-    // Sharded by position in the list, so a list of named seeds splits evenly too.
-    for (const seed of seeds(process.env.SIM_CLOCKS_SEEDS ?? '1..400').filter((_, position) => position % count === index)) {
+    for (const seed of shardSeeds(process.env.SIM_CLOCKS_SEEDS ?? '1..400')) {
       ran.push(seed)
-      const threw: SimResult = { seed, members: 0, events: 0, endMs: 0, agreedAfterMs: null, violations: [], trace: [] }
-      const result = await runSeed(seed, { relay, clocks }).catch((err: unknown) => ({ ...threw, violations: [`threw: ${String(err)}`] }))
+      const result = await runSafely(seed, { relay, clocks })
       runs++
       skewed += occurrences(result, /^\s*[\d.]+ clock of m\d+: offset -?[1-9]\d* ms|drift -?[1-9]\d* ppm/) > 0 ? 1 : 0
       stepped += occurrences(result, STEP_MOVED) > 0 ? 1 : 0
-      const a = availabilityOf(result)
-      const row = { variant: name, relay, seed, failed: result.violations.length > 0, known: listed.includes(seed), agreedAfterMs: result.agreedAfterMs, first: result.violations[0]?.slice(0, 200), lost: a.memberMs ? a.lostMs / a.memberMs : 0 }
-      if (process.env.SIM_CLOCKS_OUT) appendFileSync(process.env.SIM_CLOCKS_OUT, `${JSON.stringify(row)}\n`)
+      const row = record(name, relay, result, listed)
       if (row.failed) failing.push(seed)
       if (!process.env.SIM_CLOCKS_OUT && row.failed && !row.known) failures.push(`${name} ${relay} seed ${seed}: ${report(result, 12)}`)
     }
