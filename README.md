@@ -10,7 +10,7 @@ and screen sharing up to 4K at 60 FPS, in one Go binary.**
 
 ![Mnema Talk: the #dev-log channel of a small game studio, with a code block, reactions, an @mention and a thread under a bug report](doc/images/chat.png)
 
-Mnema Talk is a self-hosted alternative to Discord for a group that wants its
+Mnema Talk is a self-hosted chat and voice server for a group that wants its
 own place: friends, a club, a guild or a small team. It has one community
 instead of many servers, private direct messages without a back door for moderators, no ringing and its own quiet, dark
 design. It keeps the parts that make a community server useful: roles, private
@@ -85,7 +85,7 @@ no accounts on someone else's platform.
 
 ### Chat
 
-- Discord-style Markdown (headings, lists, quotes, links, code blocks with syntax highlighting), replies that jump to the original (also thousands of messages
+- Markdown (headings, lists, quotes, links, code blocks with syntax highlighting), replies that jump to the original (also thousands of messages
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
@@ -274,14 +274,14 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   each be turned off; browsers use no third-party STUN unless configured; no
   automatic data deletion unless enabled (`MEDIA_RETENTION_DAYS=0`).
 - Release images are signed with cosign and ship provenance and an SBOM. They are
-  published on GHCR and mirrored on Docker Hub (`docker.io/msch128/mnema-talk`).
+  published on GHCR and mirrored on Docker Hub (`docker.io/mnemaxyz/mnema-talk`).
 
 ![Turning on two-factor sign-in: a QR code for the authenticator app, the manual key and a field for the first code](doc/images/two-factor.png)
 
 ### Administration
 
 - **An Owner and roles.** The Owner can do everything and cannot be restricted
-  by anyone. Below them, custom roles hold Discord-style permissions, and
+  by anyone. Below them, custom roles hold permissions, and
   categories and channels can allow or deny them per role or member, which
   makes **private channels and Talks**. Changes apply live, also in a call.
 - **Moderation.** Timeouts (a minute to four weeks, lifted automatically, enforced in REST, the hub and the SFU), bans with reason and duration, and kicking, all bound by the role hierarchy and written to the audit log.
@@ -388,7 +388,7 @@ Where to go next:
 | Install by hand instead of the assistant | [Fresh install](doc/deployment.md#fresh-install) |
 | Update or back up | [doc/updating.md](doc/updating.md) |
 
-The same image is also on Docker Hub as `docker.io/msch128/mnema-talk`; GHCR
+The same image is also on Docker Hub as `docker.io/mnemaxyz/mnema-talk` (the older `docker.io/msch128/mnema-talk` keeps working); GHCR
 stays the primary reference ([verify the signature](doc/operations.md#verifying-a-release-image)).
 Building from source is for development; see [Development](#development).
 
@@ -424,7 +424,7 @@ In a few honest sentences:
   attacks. Who speaks when, and who is in which Talk, stays visible to the
   server.
 - **Text messages and attachments** are readable by the server, as on
-  Discord. Nothing is recorded and nothing is deleted automatically unless you
+  any hosted chat service. Nothing is recorded and nothing is deleted automatically unless you
   turn retention on.
 - **The desktop client removes server-served JavaScript**: it runs a signed web
   bundle that it verifies itself, so the server supplies data, never code.
@@ -511,7 +511,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-Copyright (C) 2026 Marius Schröder ([msch128](https://github.com/msch128)).
+Copyright (C) 2026 the Mnema project.
 
 Mnema Talk is licensed under the
 [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may
@@ -526,8 +526,8 @@ the source (the legal dialog in the app links to it; point `SOURCE_URL` in
 **Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
 obligations (for example in a closed-source product or service), get a
 separate commercial license from the copyright holder. Contact
-[msch128 on GitHub](https://github.com/msch128).
+<contact@mnema.xyz>.
 
 Contributions are accepted under the AGPL-3.0, and their authors agree that
-Marius Schröder may also distribute them under a commercial license.
+the Mnema project maintainers may also distribute them under a commercial license.
 Contributions to the bot SDK repositories are accepted under the MIT License.

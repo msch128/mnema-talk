@@ -197,9 +197,9 @@ docker compose up -d       # add --profile turn / --profile autoupdate if you us
 ```
 
 (`sed -i` as written is for Linux; on macOS use `sed -i ''`.) The same image is
-also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and
+also published on Docker Hub as `docker.io/mnemaxyz/mnema-talk` (same digest and
 signature); GHCR stays the primary reference. With
-`MNEMA_IMAGE=msch128/mnema-talk:<tag>` "Update now" works too and pulls from
+`MNEMA_IMAGE=mnemaxyz/mnema-talk:<tag>` "Update now" works too and pulls from
 Docker Hub.
 
 ## 3. Read the notes

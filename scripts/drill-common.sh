@@ -12,6 +12,7 @@
 DRILL_DEFAULT_FROM_VERSIONS='0.8.16 0.9.0 1.0.0 1.1.0 2.0.0 2.9.12 2.9.19'
 # The seed uses the roles, webhook and bot APIs, which start with 0.8.
 DRILL_MIN_FROM_VERSION='0.8.0'
+# The pre-move path still holds every old release the drill upgrades from.
 REGISTRY_IMAGE="${REGISTRY_IMAGE:-ghcr.io/msch128/mnema-talk}"
 
 drill_fail() { echo "$*" >&2; return 1; }

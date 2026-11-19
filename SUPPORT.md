@@ -21,5 +21,5 @@ this is where to look, in order.
 
 Supported versions (which releases get fixes) are listed in
 [SECURITY.md](SECURITY.md#supported-versions). The desktop client lives in
-[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop); it is
+[talk-desktop](https://github.com/mnema-xyz/talk-desktop); it is
 Beta, so please report its problems there.

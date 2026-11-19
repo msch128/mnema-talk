@@ -16,7 +16,7 @@ separate acceptance work.
 The current client source is
 [experimental/app](https://github.com/mnema-xyz/talk-desktop/blob/main/experimental/README.md)
 in `web-client` mode, in the
-[mnema-talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository.
+[talk-desktop](https://github.com/mnema-xyz/talk-desktop) repository.
 It runs the shared Vue app from a signed bundle that the client verifies and
 reaches the selected instance through its own proxy; the instance supplies data,
 never executable code ([doc/desktop-trusted-client.md](desktop-trusted-client.md)).
