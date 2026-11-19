@@ -124,8 +124,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
               <span class="settings-row-title">{{ $t('gaming.opacity') }}</span>
               <output for="gaming-opacity" class="font-mono text-xs text-mnema-muted">{{ draft.sidepeek_opacity }}%</output>
             </label>
-            <input id="gaming-opacity" v-model.number="draft.sidepeek_opacity" type="range" min="0" max="100" step="5" aria-describedby="gaming-opacity-hint" class="block w-full" />
-            <p id="gaming-opacity-hint" class="settings-hint">{{ $t('gaming.opacityHint') }}</p>
+            <input id="gaming-opacity" v-model.number="draft.sidepeek_opacity" type="range" min="0" max="100" step="5" class="block w-full" />
           </div>
         </div>
       </section>
