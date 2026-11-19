@@ -71,7 +71,7 @@ const when = (iso: string) => dateTime(iso, locale.value)
         :key="msg.id"
         type="button"
         data-testid="mentions-inbox-item"
-        class="focus-ring group/row flex w-full items-start gap-3 rounded-lg p-2.5 text-left transition hover:bg-mnema-hover"
+        class="focus-ring group/row flex w-full items-start gap-3 rounded-md p-2.5 text-left transition hover:bg-mnema-hover"
         @click="pick(msg)"
       >
         <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />

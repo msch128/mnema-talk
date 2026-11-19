@@ -98,7 +98,7 @@ onUnmounted(() => clearTimeout(hoverTimer))
       @click="toggle"
     >
       <Eye class="w-3.5 h-3.5" aria-hidden="true" />
-      <span>{{ count }}</span>
+      <span class="tabular-nums">{{ count }}</span>
     </button>
 
     <div
