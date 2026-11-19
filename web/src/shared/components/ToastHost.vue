@@ -38,7 +38,7 @@ function runAction(toast: Toast, which: 'action' | 'secondary' = 'action') {
       @click="dismissPlain(toast)"
       class="pointer-events-auto grid grid-cols-[1rem_minmax(0,1fr)_1.75rem] items-start gap-x-2.5 gap-y-2 rounded-lg bg-mnema-elevated py-3 pl-3.5 pr-2 shadow-popover"
     >
-      <component :is="icons[toast.type] || Info" :class="['col-start-1 row-start-1 mt-0.5 h-4 w-4', tones[toast.type] || tones.info]" />
+      <component :is="icons[toast.type] || Info" :class="['col-start-1 row-start-1 mt-0.5 h-4 w-4', tones[toast.type] || tones.info, toast.type === 'success' ? 'success-pulse' : '']" />
       <div class="col-start-2 row-start-1 min-w-0 text-sm">
         <div class="wrap-break-word text-mnema-text">{{ toast.text }}</div>
         <div v-if="toast.detail" class="wrap-break-word text-[13px] text-mnema-tertiary">{{ toast.detail }}</div>

@@ -29,6 +29,12 @@
   to { box-shadow: 0 0 0 6px rgb(45 167 113 / 0); }
 }
 @keyframes mnema-success-icon { from { opacity: 0; transform: scale(0.6); } }
+/* An icon has no box to ring: it glows once instead, along its own stroke. */
+@keyframes mnema-success-glow {
+  from { filter: drop-shadow(0 0 0 rgb(45 167 113 / 0.9)); }
+  40% { filter: drop-shadow(0 0 4px rgb(45 167 113 / 0.7)); }
+  to { filter: drop-shadow(0 0 6px rgb(45 167 113 / 0)); }
+}
 
 @layer components {
   /* Menus, popovers and the emoji picker grow out of their trigger. The
@@ -72,9 +78,11 @@
   border-radius: 9999px;
   animation: mnema-success-pulse var(--motion-pulse) var(--ease-out) both;
 }
-.success-pulse > svg,
-svg.success-pulse {
+.success-pulse > svg {
   animation: mnema-success-icon var(--motion-icon) var(--ease-out) both;
+}
+svg.success-pulse {
+  animation: mnema-success-icon var(--motion-icon) var(--ease-out) both, mnema-success-glow var(--motion-pulse) var(--ease-out) both;
 }
 
 /* A list that has just been opened (a channel switch, the member list): its
