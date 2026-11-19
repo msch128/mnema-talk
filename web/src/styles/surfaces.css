@@ -35,11 +35,7 @@
   animation: var(--animate-dialog-in);
 }
 
-/* Menus, popovers and the emoji picker pop in from just above their anchor. */
-.pop-in {
-  animation: var(--animate-pop-in);
-  transform-origin: top left;
-}
+/* Menus and popovers: .pop-in and .pop-out live in motion.css. */
 
 /* Menu and list rows: keyboard focus is a frame, not only a tint, so it holds
    3:1 against the panel. */

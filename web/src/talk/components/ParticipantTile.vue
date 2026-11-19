@@ -178,7 +178,7 @@ watch(() => props.stream, (stream) => {
         type="button"
         data-testid="tile-watch-button"
         :class="[
-          'pointer-events-auto rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold flex items-center gap-1.5 shadow-lg transition active:scale-95 disabled:opacity-60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-text',
+          'pointer-events-auto rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold flex items-center gap-1.5 shadow-lg press disabled:opacity-60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-mnema-text',
           compact ? 'h-6 px-2 text-xs' : 'h-8 px-3 text-sm'
         ]"
         :disabled="isConnecting"

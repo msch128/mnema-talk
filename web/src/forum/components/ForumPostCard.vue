@@ -91,7 +91,7 @@ const created = computed(() => relative(props.post.created_at, locale.value))
           <span v-if="replyCount > 0 && active" class="hidden sm:inline">{{ $t('forum.lastActivity', { when: active }) }}</span>
           <span class="flex items-center gap-1" :title="$t('forum.replyCount', { count: replyCount })">
             <MessageSquare class="h-3.5 w-3.5" />
-            <span>{{ replyCount }}</span>
+            <span class="tabular-nums">{{ replyCount }}</span>
           </span>
         </span>
       </div>

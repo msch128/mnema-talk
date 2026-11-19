@@ -149,6 +149,8 @@ describe('AudioSettingsPanel mic test and extra settings', () => {
     // Volume slider is visible when sound effects enabled
     const slider = wrapper.find('input[aria-label="Lautstärke der Soundeffekte"]')
     expect(slider.exists()).toBe(true)
+    // Under the "Sound effects" switch the visible label does not repeat it.
+    expect(slider.element.parentElement?.querySelector('.settings-row-title')?.textContent).toBe('Lautstärke')
 
     await slider.setValue(50)
     expect(voice.soundEffectsVolume).toBe(50)

@@ -93,7 +93,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
   <section v-if="snapshot && (snapshot.active || settingsOnly)" class="gaming-surface" :class="{ interactive }" :style="{ '--sidepeek-opacity': snapshot.settings.sidepeek_opacity / 100 }" :aria-label="$t('gaming.title')">
     <header class="flex items-center justify-between gap-2 mb-3">
       <strong>{{ settingsOnly ? $t('gaming.settings') : $t('gaming.title') }}</strong>
-      <span v-if="!settingsOnly" class="text-xs text-mnema-muted">{{ snapshot.voice.members.length }}</span>
+      <span v-if="!settingsOnly" class="text-xs tabular-nums text-mnema-muted">{{ snapshot.voice.members.length }}</span>
       <template v-if="interactive">
         <button v-if="!settingsOnly" :aria-label="$t('gaming.settings')" :aria-expanded="editing" data-testid="gaming-settings-toggle" @click="settings"><Settings class="w-4 h-4" /></button>
         <button :aria-label="$t('common.close')" @click="closeWindow"><X class="w-4 h-4" /></button>
@@ -124,8 +124,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
               <span class="settings-row-title">{{ $t('gaming.opacity') }}</span>
               <output for="gaming-opacity" class="font-mono text-xs text-mnema-muted">{{ draft.sidepeek_opacity }}%</output>
             </label>
-            <input id="gaming-opacity" v-model.number="draft.sidepeek_opacity" type="range" min="0" max="100" step="5" aria-describedby="gaming-opacity-hint" class="block w-full" />
-            <p id="gaming-opacity-hint" class="settings-hint">{{ $t('gaming.opacityHint') }}</p>
+            <input id="gaming-opacity" v-model.number="draft.sidepeek_opacity" type="range" min="0" max="100" step="5" class="block w-full" />
           </div>
         </div>
       </section>

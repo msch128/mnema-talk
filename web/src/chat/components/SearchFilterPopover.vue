@@ -86,7 +86,7 @@ onMounted(() => nextTick(() => {
     data-search-popover
     :data-popover-kind="kind"
     role="group"
-    class="w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-mnema-border bg-mnema-raised p-2 shadow-lg"
+    class="w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-mnema-border bg-mnema-raised p-1.5 shadow-lg"
     @keydown="onKeydown"
   >
     <template v-if="searchable || kind === 'filename'">

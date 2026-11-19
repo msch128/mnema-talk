@@ -76,7 +76,7 @@ defineExpose({ focus: () => input.value?.focus() })
           :disabled="saving"
           :class="[
             compact ? 'px-2 py-0.5' : 'px-2.5 py-1',
-            'rounded-sm bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50'
+            'rounded-sm bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 press disabled:opacity-50'
           ]"
         >
           <Loader2 v-if="saving" class="w-3.5 h-3.5 animate-spin" />

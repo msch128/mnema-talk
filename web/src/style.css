@@ -6,6 +6,7 @@
 @import './styles/surfaces.css';
 @import './styles/settings.css';
 @import './styles/calls.css';
+@import './styles/motion.css';
 
 /* Dark is a class on an ancestor (the emoji picker element carries it), as in Tailwind 3. */
 @custom-variant dark (&:is(.dark *));
@@ -84,17 +85,23 @@
   --shadow-xl: 0 8px 16px rgb(0 0 0 / 0.22), 0 20px 44px rgb(0 0 0 / 0.34);
   --shadow-2xl: 0 12px 24px rgb(0 0 0 / 0.24), 0 28px 64px rgb(0 0 0 / 0.4);
 
-  /* Motion: 120-200 ms, one easing. Out-curve: quick start, soft landing. */
-  --ease-mnema: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Motion easings (durations and scales are in styles/motion.css). Things
+     that arrive ease out (quick start, soft landing), things that leave ease
+     in, things that move on screen ease in and out. No curve overshoots: no
+     spring bounce anywhere. These also drive Tailwind's ease-* utilities. */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.75, 0.3);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-mnema: var(--ease-out);
   --default-transition-duration: 150ms;
   --default-transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
 
-  --animate-fade-in: mnema-fade-in 160ms var(--ease-mnema) both;
-  --animate-pop-in: mnema-pop-in 140ms var(--ease-mnema) both;
-  --animate-dialog-in: mnema-dialog-in 200ms var(--ease-mnema) both;
-  --animate-toast-in: mnema-toast-in 200ms var(--ease-mnema) both;
+  --animate-fade-in: mnema-fade-in 160ms var(--ease-out) both;
+  --animate-pop-in: mnema-pop-in var(--motion-popover-in) var(--ease-out) both;
+  --animate-dialog-in: mnema-dialog-in 200ms var(--ease-out) both;
+  --animate-toast-in: mnema-toast-in 200ms var(--ease-out) both;
   @keyframes mnema-fade-in { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes mnema-pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+  @keyframes mnema-pop-in { from { opacity: 0; transform: scale(var(--motion-popover-scale)); } to { opacity: 1; transform: none; } }
   /* Dialogs only fade: their box is measured (and clicked) the moment they open, so it must not move. */
   @keyframes mnema-dialog-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mnema-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -180,6 +187,15 @@
   /* 16px root so rem-based Tailwind sizes stay predictable */
   html {
     font-size: 16px;
+  }
+
+  /* Times, timers, progress and live readouts keep their width while their
+     digits change: every figure is as wide as the next. */
+  time,
+  output,
+  [role='timer'],
+  [role='progressbar'] {
+    font-variant-numeric: tabular-nums;
   }
 
   body {

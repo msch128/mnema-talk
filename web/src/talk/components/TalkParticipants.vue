@@ -56,8 +56,8 @@ function openProfile(user: TalkParticipant) {
       @click="toggle"
     >
       <!-- Phones: just the count, so the Talk's name keeps the room. -->
-      <span class="max-[420px]:hidden">{{ $t('talk.participants', { count: users.length }) }}</span>
-      <span class="hidden items-center gap-1 max-[420px]:inline-flex" aria-hidden="true"><Users class="h-3 w-3" />{{ users.length }}</span>
+      <span class="tabular-nums max-[420px]:hidden">{{ $t('talk.participants', { count: users.length }) }}</span>
+      <span class="hidden items-center gap-1 tabular-nums max-[420px]:inline-flex" aria-hidden="true"><Users class="h-3 w-3" />{{ users.length }}</span>
     </button>
 
     <TalkParticipantList

@@ -51,7 +51,7 @@ watch(() => props.active, index => {
     data-testid="slash-suggestions"
     :aria-label="$t('slash.listLabel')"
     :data-more="more ? '' : undefined"
-    class="fade-bottom absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-[min(26rem,55vh)] overflow-y-auto rounded-xl bg-mnema-elevated p-2 shadow-popover pop-in"
+    class="fade-bottom absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-[min(26rem,55vh)] overflow-y-auto rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @scroll.passive="measure"
   >
     <template v-for="(item, i) in items" :key="item.id">
@@ -67,7 +67,7 @@ watch(() => props.active, index => {
         :aria-selected="i === active ? 'true' : 'false'"
         :data-slash-option="item.name"
         :class="[
-          'flex h-10 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm transition-colors',
+          'flex h-10 cursor-pointer items-center gap-3 rounded-md px-3 text-sm transition-colors',
           i === active ? 'bg-mnema-hover text-mnema-text ring-1 ring-inset ring-mnema-accent/25' : 'text-mnema-body-ink'
         ]"
         @mousedown.prevent="emit('pick', item)"

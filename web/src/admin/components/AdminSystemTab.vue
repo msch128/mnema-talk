@@ -363,7 +363,7 @@ onMounted(refresh)
         <div class="text-sm font-semibold text-mnema-text">{{ $t('admin.system.runtime') }}</div>
         <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <dt class="text-mnema-tertiary">{{ $t('admin.system.uptime') }}</dt>
-          <dd class="text-mnema-text" data-testid="system-uptime">{{ formatUptime(health.runtime.uptime_seconds) }}</dd>
+          <dd class="text-mnema-text tabular-nums" data-testid="system-uptime">{{ formatUptime(health.runtime.uptime_seconds) }}</dd>
           <dt class="text-mnema-tertiary">{{ $t('admin.system.memory') }}</dt>
           <dd class="text-mnema-text tabular-nums">{{ formatBytes(health.runtime.mem_alloc_bytes) }} / {{ formatBytes(health.runtime.mem_sys_bytes) }}</dd>
           <dt class="text-mnema-tertiary">{{ $t('admin.system.goroutines') }}</dt>
