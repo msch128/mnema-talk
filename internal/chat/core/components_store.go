@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -32,14 +33,20 @@ func SaveComponents(ctx context.Context, q db.Querier, messageID uuid.UUID, comp
 	return nil
 }
 
-// LoadComponents fills msgs[].Components; idx maps a message ID to its
-// position in msgs. It is one of the loaders of messages.Enrich.
-func LoadComponents(ctx context.Context, p db.Querier, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `SELECT message_id, components FROM message_components WHERE message_id = ANY($1)`, ids)
-	if err != nil {
-		return fmt.Errorf("load components: %w", err)
-	}
-	defer rows.Close()
+// QueueComponents queues the query that fills msgs[].Components; idx maps a
+// message ID to its position in msgs. It is one of the loaders of
+// messages.Enrich.
+func QueueComponents(_ context.Context, b *pgx.Batch, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) {
+	b.Queue(`SELECT message_id, components FROM message_components WHERE message_id = ANY($1)`, ids).
+		Query(func(rows pgx.Rows) error {
+			if err := scanComponents(rows, msgs, idx); err != nil {
+				return fmt.Errorf("load components: %w", err)
+			}
+			return nil
+		})
+}
+
+func scanComponents(rows pgx.Rows, msgs []Message, idx map[uuid.UUID]int) error {
 	for rows.Next() {
 		var msgID uuid.UUID
 		var raw []byte

@@ -38,6 +38,13 @@ type Querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
+// Batcher is a Querier that also sends several queries in one round trip
+// (pipelined); *Pool and pgx.Tx are both.
+type Batcher interface {
+	Querier
+	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
+}
+
 // Connect opens a pool with the default limits.
 func Connect(ctx context.Context, databaseURL string) (*Pool, error) {
 	return ConnectWith(ctx, databaseURL, DefaultOptions())

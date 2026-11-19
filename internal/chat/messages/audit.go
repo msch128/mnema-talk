@@ -39,7 +39,7 @@ type auditSnapshot struct {
 // message. Callers read it in the transaction of the change, so a failure
 // fails the change too: a change is never left without its entry. Only the
 // reply ids and edit versions are detail whose failure is tolerated.
-func (a *API) snapshotMessage(ctx context.Context, q db.Querier, id uuid.UUID, withReplies bool) (*auditSnapshot, error) {
+func (a *API) snapshotMessage(ctx context.Context, q db.Batcher, id uuid.UUID, withReplies bool) (*auditSnapshot, error) {
 	if a.Audit == nil {
 		return nil, nil
 	}

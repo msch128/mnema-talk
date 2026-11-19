@@ -6,10 +6,13 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -84,5 +87,82 @@ func TestPostsInOneChannelShareTheirWALFlush(t *testing.T) {
 	// own write would add a flush of its own to every post.)
 	if limit := 6 * delay; elapsed >= limit {
 		t.Fatalf("%d concurrent posts in one channel took %v (limit %v, one flush %v): they wait for each other's WAL flush", posts, elapsed, limit, delay)
+	}
+}
+
+// roundTrips records the statements and batches each connection of a pool
+// sends, one entry per round trip.
+type roundTrips struct {
+	mu   sync.Mutex
+	sent map[*pgx.Conn][]string
+}
+
+func (r *roundTrips) note(c *pgx.Conn, what string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.sent[c] = append(r.sent[c], what)
+}
+
+func (r *roundTrips) TraceQueryStart(ctx context.Context, c *pgx.Conn, d pgx.TraceQueryStartData) context.Context {
+	r.note(c, strings.Join(strings.Fields(d.SQL), " "))
+	return ctx
+}
+func (r *roundTrips) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (r *roundTrips) TraceBatchStart(ctx context.Context, c *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	r.note(c, "batch")
+	return ctx
+}
+func (r *roundTrips) TraceBatchQuery(context.Context, *pgx.Conn, pgx.TraceBatchQueryData) {}
+func (r *roundTrips) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData)     {}
+
+// underLock is what the connection that locked a channel sent from the lock
+// to the commit, both included.
+func (r *roundTrips) underLock() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, sent := range r.sent {
+		for i, s := range sent {
+			if strings.Contains(s, "FROM channels WHERE id = $1 FOR NO KEY UPDATE") {
+				for j := i; j < len(sent); j++ {
+					if sent[j] == "commit" {
+						return sent[i : j+1]
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Every round trip while a post holds its channel's row is a wait for the
+// next post in the channel (insertMessageTx). Under CPU load each costs a
+// scheduling delay on both sides, so they are kept few: the lock with the
+// channel's settings, the insert with its number noted, the mentioned names,
+// the mentions in one batch, the stored message (the row, its details in one
+// batch), the commit. (3.3.3 held it for 18.)
+func TestAPostHoldsItsChannelForFewRoundTrips(t *testing.T) {
+	w := newPostWorld(t)
+	cfg, err := pgxpool.ParseConfig(w.p.Config().ConnString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	trips := &roundTrips{sent: map[*pgx.Conn][]string{}}
+	cfg.ConnConfig.Tracer = trips
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	w.svc.DB = &db.Pool{Pool: pool}
+	if _, err := w.svc.Post(context.Background(), w.actor(t, "member"), PostCommand{ChannelID: w.ch, Content: "hello @other_member"}); err != nil {
+		t.Fatal(err)
+	}
+	held := trips.underLock()
+	if len(held) == 0 {
+		t.Fatal("no locked section found")
+	}
+	const most = 7
+	if len(held) > most {
+		t.Fatalf("the channel row is held for %d round trips, want at most %d:\n%s", len(held), most, strings.Join(held, "\n"))
 	}
 }

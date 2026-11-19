@@ -681,9 +681,15 @@ the disk: the post's transaction commits asynchronously (`db.AsyncCommit`), so
 the lock is released once the commit is in PostgreSQL's WAL buffers, and only
 then the post waits for the WAL flush (`db.AwaitDurable`), which concurrent
 posts share. Nobody is told of a message (the answer, `message_create`,
-webhooks, bots, push) before it is on disk. Held through the flush, every post
-waited for one flush per post ahead of it: on a host whose disk takes about
-5 ms per flush, that doubled the p99 delivery time of a busy channel. `GET /api/threads/following` is ordered
+webhooks, bots, push) before it is on disk. The work under the lock is also
+kept to few round trips to the database (seven for a message with a mention:
+the lock with the channel's settings, the insert that notes its number, the
+mentioned names, the mentions, the stored message and its details, each of the
+last three in one round trip, and the commit), since under CPU load every
+round trip waits for the scheduler on both sides. On a 4-core Intel N100 host
+with a disk that takes about 5 ms per flush, 3.3.3 held the lock for 18
+round trips and through the flush: a median of 13 ms, and the posts of a busy
+channel waited up to 110 ms (p99) for it. `GET /api/threads/following` is ordered
 the same way without a mark: `thread_follow_updated` carries the whole state
 of a thread, so the changes that arrived while the list was on its way are
 applied to it again.

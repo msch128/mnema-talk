@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -70,15 +69,15 @@ func claimAttachments(ctx context.Context, tx pgx.Tx, messageID, userID, channel
 
 // loadAttachments fills msgs[].Attachments; idx maps a message ID to its
 // position in msgs.
-func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
-	rows, err := p.Query(ctx, `
-		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted, width, height
-		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
-	if err != nil {
-		return fmt.Errorf("load attachments: %w", err)
-	}
-	defer rows.Close()
+func queueAttachments(ctx context.Context, b *pgx.Batch, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) {
 	isBot := auth.BotFrom(ctx) != nil
+	b.Queue(`
+		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted, width, height
+		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids).
+		Query(labeled("load attachments", func(rows pgx.Rows) error { return scanAttachments(rows, isBot, msgs, idx) }))
+}
+
+func scanAttachments(rows pgx.Rows, isBot bool, msgs []core.Message, idx map[uuid.UUID]int) error {
 	for rows.Next() {
 		var a core.MediaAttachment
 		var msgID uuid.UUID

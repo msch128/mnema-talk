@@ -185,13 +185,13 @@ func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online 
 
 // RecordMentions resolves and stores the mentions of a new or edited message
 // under the mention policy of ctx.
-func RecordMentions(ctx context.Context, q db.Querier, src OnlineSource, messageID, authorID uuid.UUID, content string) error {
+func RecordMentions(ctx context.Context, q db.Batcher, src OnlineSource, messageID, authorID uuid.UUID, content string) error {
 	return RecordMentionsUnder(ctx, q, src, PolicyFrom(ctx), messageID, authorID, content)
 }
 
 // RecordMentionsUnder is RecordMentions with the policy given by the caller
 // instead of read from ctx.
-func RecordMentionsUnder(ctx context.Context, q db.Querier, src OnlineSource, policy MentionPolicy, messageID, authorID uuid.UUID, content string) error {
+func RecordMentionsUnder(ctx context.Context, q db.Batcher, src OnlineSource, policy MentionPolicy, messageID, authorID uuid.UUID, content string) error {
 	var online []uuid.UUID
 	if src != nil {
 		online = src.OnlineUserIDs()

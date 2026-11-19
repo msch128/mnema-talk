@@ -64,10 +64,12 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		// is_deleted stays: the message query reads it for the reply preview,
 		// so the attachment loader is what meets the missing columns.
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id,is_deleted FROM public.media`})
+		// The loaders' queries go out as one batch, which the database
+		// refuses as a whole before any of them runs.
 		msgs := []core.Message{{ID: f.m}}
-		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
+		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), `load message details: error preprocessing batch (prepare): ERROR: column "original_filename" does not exist`)
 		_, _, err := search.Search(ctx, p, search.SearchQuery{Text: "hello", Limit: 10})
-		chattest.RequireError(t, err, "load attachments")
+		chattest.RequireError(t, err, `load message details: error preprocessing batch (prepare): ERROR: column "original_filename" does not exist`)
 	})
 	t.Run("attachment decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position,NULL::int width,NULL::int height FROM public.messages`})
@@ -75,11 +77,11 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("attachment stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position,NULL::int width,NULL::int height FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load attachments: ERROR: division by zero")
 	})
 	t.Run("reaction query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load reactions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), `load message details: error preprocessing batch (prepare): ERROR: column "message_id" does not exist`)
 	})
 	t.Run("reaction decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,NULL::text emoji,created_at FROM public.messages`})
@@ -89,11 +91,11 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("reaction stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,(1/(number-number))::text emoji,created_at FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load reactions: ERROR: division by zero")
 	})
 	t.Run("mention query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load mentions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), `load message details: error preprocessing batch (prepare): ERROR: column "message_id" does not exist`)
 	})
 	t.Run("mention decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id message_id,'invalid-uuid'::text user_id FROM public.messages`})

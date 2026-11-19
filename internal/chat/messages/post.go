@@ -182,20 +182,12 @@ func ScreenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uu
 // key). One of the two is aborted and fails once; it needs the Talk's leader
 // to erase their account while being mentioned in it.
 func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage, rules sendRules) (uuid.UUID, error) {
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR NO KEY UPDATE`, nm.ChannelID); err != nil {
-		return uuid.Nil, fmt.Errorf("lock channel: %w", err)
-	}
-	if err := gatePost(ctx, tx, nm, rules); err != nil {
+	if err := gatePost(ctx, tx, nm, rules); err != nil { // locks the channel row
 		return uuid.Nil, err
 	}
-	id, err := CreateMessage(ctx, tx, nm)
+	id, err := CreateMessage(ctx, tx, nm) // and notes its number on the row
 	if err != nil {
 		return uuid.Nil, err
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE channels SET last_message_number = m.number FROM messages m
-		WHERE channels.id = $1 AND m.id = $2`, nm.ChannelID, id); err != nil {
-		return uuid.Nil, fmt.Errorf("note newest message: %w", err)
 	}
 	if err := recordNonce(ctx, tx, nm, id); err != nil {
 		return uuid.Nil, err
