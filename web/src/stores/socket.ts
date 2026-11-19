@@ -120,12 +120,26 @@ async function attemptReconnect(s: SocketState) {
   // false: the session is gone; the login screen takes over.
 }
 
+const RECONNECT_MAX_MS = 30000
+
+/**
+ * How long to wait before the retry whose backoff window is `window`: a random
+ * point in its second half. A restarting server drops every socket at once;
+ * without the spread all its clients would come back in the same instant, each
+ * with its burst of requests (stores/chat/socket.ts resyncState). The wait is
+ * never longer than the window, so nobody comes back later than before.
+ */
+export function reconnectWait(window: number, random: () => number = Math.random): number {
+  return Math.round(window / 2 + random() * (window / 2))
+}
+
 function scheduleReconnect(s: SocketState) {
   clearTimeout(s.reconnectTimer)
   s.reconnectAttempt.value++
-  s.nextRetryAt.value = Date.now() + s.reconnectDelay
-  s.reconnectTimer = setTimeout(() => attemptReconnect(s), s.reconnectDelay)
-  s.reconnectDelay = Math.min(s.reconnectDelay * 2, 30000)
+  const wait = reconnectWait(s.reconnectDelay)
+  s.nextRetryAt.value = Date.now() + wait
+  s.reconnectTimer = setTimeout(() => attemptReconnect(s), wait)
+  s.reconnectDelay = Math.min(s.reconnectDelay * 2, RECONNECT_MAX_MS)
 }
 
 /** The member asked for it: skip the wait and reconnect immediately. */
