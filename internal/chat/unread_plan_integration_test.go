@@ -70,6 +70,8 @@ type planNode struct {
 	NodeType string     `json:"Node Type"`
 	Relation string     `json:"Relation Name"`
 	Alias    string     `json:"Alias"`
+	Index    string     `json:"Index Name"`
+	Cond     string     `json:"Index Cond"`
 	Plans    []planNode `json:"Plans"`
 }
 

@@ -130,7 +130,9 @@ func (d DirectMessage) forOthers() DirectMessage {
 
 // DmSelect repeats authorHiddenFrom three times (last activity, last message,
 // unread). The clauses are wrapped differently, so the text stays here;
-// block_sql_test.go checks it still matches the shared rule.
+// block_sql_test.go checks it still matches the shared rule. has_media and
+// has_poll are scalar subqueries, lookups by message id, as in
+// messages.MessageSelect: as EXISTS the planner may hash the whole table.
 const DmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
 	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND ` + core.LiveM + ` AND NOT EXISTS (
@@ -145,8 +147,8 @@ const DmSelect = `
 	LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
 	LEFT JOIN LATERAL (
 	    SELECT m.user_id, m.content AS text,
-	           EXISTS (SELECT 1 FROM media md WHERE md.message_id = m.id) AS has_media,
-	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll,
+	           COALESCE((SELECT TRUE FROM media md WHERE md.message_id = m.id LIMIT 1), FALSE) AS has_media,
+	           COALESCE((SELECT TRUE FROM polls pl WHERE pl.message_id = m.id LIMIT 1), FALSE) AS has_poll,
 	           CASE WHEN m.embeds->0->>'call' = 'missed' THEN 'missed' WHEN m.embeds->0->>'talk_id' IS NOT NULL THEN 'invite' END AS call_kind
 	    FROM messages m
 	    WHERE m.channel_id = c.id AND ` + core.LiveM + ` AND NOT EXISTS (

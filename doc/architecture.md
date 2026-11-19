@@ -909,6 +909,30 @@ volume is the count in `GET /api/read-state`, linear in the unread messages of
 a member who has been away for a long time (about 30 to 45 ms for 50,000);
 it is paid once per page load or reconnect, not per message.
 
+### Hot queries on a million messages
+
+A throwaway PostgreSQL 18 container (4 CPUs, 1 GB, `shared_buffers` 128 MB as
+in `docker-compose.yml`) was filled with 1,026,000 messages in 334 channels
+(one with 309,000), 10,000 members, 410,000 reactions, 296,000 read markers,
+51,000 mentions, 57,000 saved items, 20,000 forum posts with 80,000 replies,
+31,000 attachments and 300,000 audit entries. Each hot path ran through its Go
+function against it; the times are the median of five calls on an Apple
+laptop, warm cache:
+
+| Path | Before | After | What changed |
+| --- | --- | --- | --- |
+| `GET /api/read-state`, member away from most channels | 780 ms | 109 ms | one index-only pass per channel (migration 0112), no JIT |
+| Read state recount of the largest channel for 500 members online | 1,600 to 2,000 ms | 920 ms | same query |
+| History page (50 messages) | 5.6 to 6.4 ms in the database | 0.3 to 0.4 ms | attachments of quoted messages looked up by id, not hashed |
+| Forum post search | 345 ms | 6 ms | no JIT |
+| Forum post list by activity | 66 to 83 ms | 8 ms | no JIT |
+| Member list totals without two hidden channels | 43 to 68 ms | 31 ms | counted from the index alone |
+
+The unread summary stays linear in the unread messages of a member (about
+470,000 in the case above); a message that quotes another one costs one
+primary key lookup. Startup on that database takes about 40 ms from the first
+log line to listening; migration 0112 adds about 0.45 s once.
+
 ### The permission snapshot with 10,000 members
 
 Permission questions are answered from one in-memory snapshot

@@ -20,6 +20,11 @@ import (
 // (core.LiveMessages), even before the sweeper removed an ended one. rm/ru are the replied-to message and its author;
 // the quoted snippet sent with every reply is mdplain.Snippet of the whole
 // replied-to message (at most core.MaxMessageLen characters are read).
+// Whether the replied-to message has attachments is a scalar subquery, looked
+// up by idx_media_message for each quoted message: as EXISTS the planner
+// hashed the whole media table once per page (it plans for every message of
+// the channel, not the page's 50), so a history page took 5.6 ms instead of
+// 0.4 ms with 31,000 attachments, growing with every upload.
 const MessageSelect = `
 	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
@@ -27,8 +32,8 @@ const MessageSelect = `
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
 	       rm.content,
-	       CASE WHEN rm.id IS NULL THEN FALSE ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
-	       CASE WHEN rm.id IS NULL THEN FALSE ELSE NOT EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id AND NOT md.is_deleted) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE COALESCE((SELECT TRUE FROM media md WHERE md.message_id = rm.id LIMIT 1), FALSE) END,
+	       CASE WHEN rm.id IS NULL THEN FALSE ELSE NOT COALESCE((SELECT TRUE FROM media md WHERE md.message_id = rm.id AND NOT md.is_deleted LIMIT 1), FALSE) END,
 	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%'),
 	       m.pinned_at, pu.id, pu.username, pu.display_name, pu.avatar_s3_key,
 	       m.forwarded, m.expires_at
