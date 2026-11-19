@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, awaitSettled, responseString } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -15,7 +15,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 // within narrows the check to one dialog: what lies under two scrims (a dialog over the
 // admin console over the chat) is not meant to be read, and its dimmed colours are not the app's.
 async function expectNoViolations(page: Page, where: string, within?: string) {
-  await page.waitForTimeout(400) // entry animations finished: axe reads the settled colours
+  await awaitSettled(page) // entry animations finished: axe reads the settled colours
   const builder = new AxeBuilder({ page }).withTags(TAGS)
   const result = await (within ? builder.include(within) : builder).analyze()
   // The failure summary says what axe measured (for contrast: both colours and the ratio).

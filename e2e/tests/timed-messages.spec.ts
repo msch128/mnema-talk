@@ -1,7 +1,7 @@
 import { deflateSync } from 'node:zlib'
 import type { Browser, Locator, Page } from '@playwright/test'
 import { test, expect } from './fixtures'
-import { apiFetch, bounds, responseString } from './helpers'
+import { apiFetch, bounds, responseString, awaitSettled } from './helpers'
 
 // Timed messages on every screen (doc/timed-messages.md): with a lifetime
 // chosen, the fields of the channel and of the thread stay wide enough to
@@ -115,7 +115,7 @@ async function settledWidth(target: Locator): Promise<number> {
     const width = (await bounds(target)).width
     if (Math.abs(width - last) < 0.5) return width
     last = width
-    await target.page().waitForTimeout(100)
+    await awaitSettled(target.page())
   }
   return last
 }

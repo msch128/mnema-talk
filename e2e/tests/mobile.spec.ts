@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { Cookie, Page } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
-import { apiFetch, bounds, responseString, responseUserId } from './helpers'
+import { apiFetch, bounds, responseString, responseUserId, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 // The phone layout (below 768px): the channel list is a drawer, the thread and
@@ -223,7 +223,7 @@ test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, b
   await expectTouchSize(page, 'Verlassen')
   await expectNoSidewaysScroll(page)
   // Alone in the call the controls stay: nothing else on the screen could bring them back.
-  await page.waitForTimeout(4_000)
+  await observeFor(page, 4_000)
   await expect(page.getByTestId('talk-controls').last()).toHaveAttribute('data-visible', 'true')
   await leave.tap()
   await expect(page.getByRole('button', { name: 'Verlassen' })).toHaveCount(0)

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, responseString, suiteMember, leaveTalks, expectTalkLive, leaveAndClose, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -112,7 +112,7 @@ test('a member whose audio engine never starts is told and is still heard', asyn
     // The tone must arrive as transport: Opus frames of a tone are several times the size of frames of silence, in every engine.
     await expect.poll(async () => {
       const before = { out: await outboundBytes(stalled), inn: await inboundBytes(other) }
-      await stalled.waitForTimeout(3000)
+      await observeFor(stalled, 3000)
       const delta = { out: (await outboundBytes(stalled)) - before.out, inn: (await inboundBytes(other)) - before.inn }
       return Math.min(delta.out, delta.inn)
     }, { timeout: 30_000, intervals: [500], message: 'the stalled member\'s microphone did not reach the other member as tone-sized audio (see the audio-diagnostics attachment)' }).toBeGreaterThan(6000)

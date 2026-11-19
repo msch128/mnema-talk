@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, leaveTalks, audioDecodedIn, leaveAndClose } from './helpers'
+import { apiFetch, responseString, responseUserId, suiteMember, leaveTalks, audioDecodedIn, leaveAndClose, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -131,7 +131,7 @@ test('a member that showed no sign of life is rekeyed out and is let back in whe
   const back = await sameCode(pages, before)
   await hearEachOther(pages)
   // It now beats, so it stays: the code holds well past the absence limit.
-  await committer.waitForTimeout(9000)
+  await observeFor(committer, 9000)
   expect(await sameCode(pages)).toBe(back)
   await hearEachOther(pages)
   await leaveTalks(pages)

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember } from './helpers'
+import { apiFetch, responseString, suiteMember, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -27,7 +27,7 @@ const videoBytes = (page: Page) => page.evaluate(async () => {
 
 async function growth(page: Page, ms: number) {
   const before = await videoBytes(page)
-  await page.waitForTimeout(ms)
+  await observeFor(page, ms)
   return (await videoBytes(page)) - before
 }
 
@@ -77,7 +77,7 @@ test('a camera whose tile is not on screen is not sent, and comes back with the 
     // Looking at a text channel during the call: the camera tile is gone from the screen, so is the camera.
     await viewer.locator('[data-channel-type="text"]', { hasText: TEXT_CHANNEL }).click()
     await expect(viewer.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
-    await viewer.waitForTimeout(3000)
+    await expect.poll(() => growth(viewer, 1000), { timeout: 20_000, message: 'the camera kept flowing to a hidden tile' }).toBeLessThan(1000)
     expect(await growth(viewer, 4000)).toBeLessThan(4000)
 
     // Back in the Talk: the tile is on screen again and the picture returns by itself.
