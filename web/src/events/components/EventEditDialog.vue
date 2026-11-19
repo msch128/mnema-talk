@@ -168,7 +168,7 @@ const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type ==
     <template #default="{ close }">
     <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submit" @keydown="form.onKeydown">
       <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
-      <div v-if="createError || (!isEdit && form.error.value)" role="alert" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
+      <div v-if="createError || (!isEdit && form.error.value)" role="alert" class="rounded-lg bg-mnema-danger/10 p-3 text-sm text-mnema-danger">
         {{ createError || form.error.value }}
       </div>
 
@@ -304,7 +304,7 @@ const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type ==
         <button type="button" class="rounded-lg border border-mnema-border px-4 py-2 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors" data-testid="event-cancel" @click="close">
           {{ $t('common.cancel') }}
         </button>
-        <button type="submit" :disabled="form.saving.value" class="rounded-lg bg-mnema-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity">
+        <button type="submit" :disabled="form.saving.value" class="btn btn-primary" :aria-busy="form.saving.value ? 'true' : undefined">
           {{ $t('events.create') }}
         </button>
       </div>

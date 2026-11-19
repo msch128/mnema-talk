@@ -125,7 +125,7 @@ function roles() {
       <span
         v-if="user.role === 'admin'"
         data-testid="user-role"
-        class="px-2 py-0.5 rounded-sm text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        class="px-2 py-0.5 rounded-sm text-xs font-semibold bg-mnema-away/10 text-mnema-away border border-mnema-away/20"
       >
         {{ $t('role.admin') }}
       </span>

@@ -131,14 +131,14 @@ async function move(index: number, by: -1 | 1) {
   <BaseDialog :title="$t('forum.manageTagsTitle')" panel-class="max-w-lg" sheet :guard="guard" @close="onDialogClose">
     <template #default="{ close }">
     <div class="space-y-6 overflow-y-auto p-6">
-      <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+      <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-mnema-danger/20 bg-mnema-danger/10 p-3 text-sm text-mnema-danger">
         <AlertCircle class="h-4 w-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
       <section class="space-y-3">
         <div class="flex items-center justify-between">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.tagsTitle') }}</h3>
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-mnema-muted">{{ $t('forum.tagsTitle') }}</h3>
           <span class="text-xs tabular-nums text-mnema-tertiary">{{ tags.length }}/{{ MAX_FORUM_TAGS }}</span>
         </div>
         <p class="text-xs leading-relaxed text-mnema-tertiary">{{ $t('forum.tagsIntro') }}</p>
@@ -163,7 +163,7 @@ async function move(index: number, by: -1 | 1) {
                 <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :aria-label="$t('forum.edit')" v-tooltip="$t('forum.edit')" @click="startEditing(tag.id)">
                   <Pencil class="h-3.5 w-3.5" />
                 </button>
-                <button type="button" class="btn btn-icon h-8 w-8 hover:text-red-400 max-md:h-10 max-md:w-10" :disabled="busyId === tag.id" :aria-label="$t('common.delete')" v-tooltip="$t('common.delete')" @click="removeTag(tag)">
+                <button type="button" class="btn btn-icon h-8 w-8 hover:text-mnema-danger max-md:h-10 max-md:w-10" :disabled="busyId === tag.id" :aria-label="$t('common.delete')" v-tooltip="$t('common.delete')" @click="removeTag(tag)">
                   <Loader2 v-if="busyId === tag.id" class="h-3.5 w-3.5 animate-spin" />
                   <Trash2 v-else class="h-3.5 w-3.5" />
                 </button>

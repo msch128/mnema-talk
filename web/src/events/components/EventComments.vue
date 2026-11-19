@@ -92,7 +92,7 @@ async function removeComment(c: EventComment) {
     </div>
 
     <p v-if="list.loading.value" class="py-3 text-center text-sm text-mnema-tertiary">{{ $t('common.loading') }}</p>
-    <p v-else-if="list.failed.value" role="alert" class="text-sm text-red-400">{{ $t('events.commentsLoadFailed') }}</p>
+    <p v-else-if="list.failed.value" role="alert" class="text-sm text-mnema-danger">{{ $t('events.commentsLoadFailed') }}</p>
     <template v-else>
       <button
         v-if="list.hasMore.value"
@@ -117,7 +117,7 @@ async function removeComment(c: EventComment) {
                 <button v-if="isOwn(c) && editingId !== c.id" type="button" data-testid="comment-edit" class="btn btn-icon h-7 w-7 max-md:h-11 max-md:w-11" :aria-label="$t('events.commentEdit')" @click="startEdit(c)">
                   <Pencil class="h-3.5 w-3.5" />
                 </button>
-                <button v-if="canDelete(c)" type="button" data-testid="comment-delete" class="btn btn-icon h-7 w-7 hover:text-red-400 max-md:h-11 max-md:w-11" :aria-label="$t('common.delete')" @click="removeComment(c)">
+                <button v-if="canDelete(c)" type="button" data-testid="comment-delete" class="btn btn-icon h-7 w-7 hover:text-mnema-danger max-md:h-11 max-md:w-11" :aria-label="$t('common.delete')" @click="removeComment(c)">
                   <Trash2 class="h-3.5 w-3.5" />
                 </button>
               </span>

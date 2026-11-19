@@ -33,7 +33,7 @@ function toggle(tag: ForumTag) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-1.5">
-      <span :id="labelId" class="text-xs font-semibold text-mnema-secondary uppercase tracking-wider">
+      <span :id="labelId" class="text-xs font-semibold text-mnema-muted uppercase tracking-wider">
         {{ required ? $t('forum.tagsLabelRequired') : $t('forum.tagsLabel') }}
       </span>
       <span class="text-xs text-mnema-tertiary tabular-nums">{{ selected.length }}/{{ MAX_POST_TAGS }}</span>

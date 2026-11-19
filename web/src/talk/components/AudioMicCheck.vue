@@ -72,7 +72,7 @@ async function handleDeviceChange() {
             <span>{{ $t('audio.micTest') }}</span>
             <span
               v-if="voiceStore.isMicTesting"
-              class="animate-pulse rounded-sm bg-amber-500/15 px-2 py-0.5 font-mono text-xs font-medium text-amber-400"
+              class="animate-pulse rounded-sm bg-mnema-away/15 px-2 py-0.5 font-mono text-xs font-medium text-mnema-away"
             >
               {{ $t('audio.micTestActiveBadge') }}
             </span>

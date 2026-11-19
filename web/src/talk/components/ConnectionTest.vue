@@ -24,7 +24,7 @@ const verdict = computed(() => (report.value ? verdictOf(report.value) : null))
 const paths = computed(() => (report.value
   ? ([['direct', report.value.direct], ['relayUdp', report.value.relayUdp], ['relayTcp', report.value.relayTcp]] as const)
   : []))
-const verdictTone = computed(() => ({ direct: 'text-mnema-success', relay_only: 'text-mnema-warning', none: 'text-mnema-danger', inconclusive: 'text-mnema-muted' }[verdict.value?.kind ?? 'inconclusive']))
+const verdictTone = computed(() => ({ direct: 'text-mnema-accent', relay_only: 'text-mnema-warning', none: 'text-mnema-danger', inconclusive: 'text-mnema-muted' }[verdict.value?.kind ?? 'inconclusive']))
 // t() answers with the key itself when a cause has no fix text.
 const fixText = computed(() => {
   const key = `connectionTest.cause.${verdict.value?.cause}.fix`

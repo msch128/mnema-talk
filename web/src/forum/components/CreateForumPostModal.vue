@@ -116,7 +116,7 @@ async function handleSubmit() {
   <BaseDialog :title="$t('forum.newPostTitle')" panel-class="max-w-xl" sheet :guard="guard" @close="emit('close')">
     <template #default="{ close }">
     <form class="space-y-4 overflow-y-auto p-6 max-md:p-4" @submit.prevent="handleSubmit">
-      <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+      <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-mnema-danger/20 bg-mnema-danger/10 p-3 text-sm text-mnema-danger">
         <AlertCircle class="h-4 w-4 shrink-0" />
         <span>{{ error }}</span>
       </div>
@@ -124,14 +124,14 @@ async function handleSubmit() {
       <div v-if="settings.guidelines" data-testid="forum-guidelines" class="flex gap-2.5 rounded-lg border border-mnema-hairline bg-mnema-surface/60 p-3">
         <Info class="mt-0.5 h-4 w-4 shrink-0 text-mnema-accent" />
         <div class="min-w-0">
-          <p class="mb-0.5 text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.guidelinesTitle') }}</p>
-          <p class="whitespace-pre-line break-words text-sm text-mnema-secondary">{{ settings.guidelines }}</p>
+          <p class="mb-0.5 text-xs font-semibold uppercase tracking-wider text-mnema-muted">{{ $t('forum.guidelinesTitle') }}</p>
+          <p class="whitespace-pre-line break-words text-sm text-mnema-muted">{{ settings.guidelines }}</p>
         </div>
       </div>
 
       <div>
         <div class="mb-1.5 flex items-center justify-between">
-          <label for="post-title" class="text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.titleLabel') }}</label>
+          <label for="post-title" class="text-xs font-semibold uppercase tracking-wider text-mnema-muted">{{ $t('forum.titleLabel') }}</label>
           <span class="text-xs tabular-nums text-mnema-tertiary">{{ charCount(title) }}/{{ TITLE_MAX }}</span>
         </div>
         <input
@@ -156,7 +156,7 @@ async function handleSubmit() {
 
       <div>
         <div class="mb-1.5 flex items-center justify-between">
-          <label for="post-content" class="text-xs font-semibold uppercase tracking-wider text-mnema-secondary">{{ $t('forum.contentLabel') }}</label>
+          <label for="post-content" class="text-xs font-semibold uppercase tracking-wider text-mnema-muted">{{ $t('forum.contentLabel') }}</label>
           <span class="text-xs tabular-nums text-mnema-tertiary">{{ charCount(content) }}/{{ CONTENT_MAX }}</span>
         </div>
         <div class="relative rounded-lg border border-mnema-border bg-mnema-surface focus-within:border-mnema-accent">
@@ -201,7 +201,7 @@ async function handleSubmit() {
         </div>
         <input ref="fileInput" type="file" class="hidden" multiple accept="image/*,video/*" @change="addFiles(($event.target as HTMLInputElement).files)" />
         <ul v-if="files.length" class="mt-2 flex flex-wrap gap-1.5" data-testid="post-files">
-          <li v-for="(file, i) in files" :key="`${file.name}-${i}`" class="flex max-w-full items-center gap-1 rounded-md border border-mnema-hairline bg-mnema-raised py-0.5 pl-2 pr-0.5 text-xs text-mnema-secondary">
+          <li v-for="(file, i) in files" :key="`${file.name}-${i}`" class="flex max-w-full items-center gap-1 rounded-md border border-mnema-hairline bg-mnema-raised py-0.5 pl-2 pr-0.5 text-xs text-mnema-muted">
             <span class="truncate">{{ file.name }}</span>
             <button type="button" class="flex h-6 w-6 items-center justify-center rounded-sm hover:text-mnema-text" :aria-label="$t('forum.removeFile')" @click="removeFile(i)">
               <X class="h-3.5 w-3.5" />

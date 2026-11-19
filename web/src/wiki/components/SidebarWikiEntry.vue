@@ -16,7 +16,7 @@ const shown = computed(() => features.wiki && permissions.can('view_wiki'))
   <div v-if="shown" class="mb-1 shrink-0">
     <button
       type="button"
-      class="group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-secondary transition-colors hover:bg-mnema-hover hover:text-mnema-text"
+      class="group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-muted transition-colors hover:bg-mnema-hover hover:text-mnema-text"
       data-testid="sidebar-wiki"
       :aria-label="$t('wiki.title')"
       @click="openWiki()"

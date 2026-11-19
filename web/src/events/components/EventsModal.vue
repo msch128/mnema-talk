@@ -231,7 +231,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                     {{ event.title }}
                   </button>
                 </h3>
-                <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-mnema-secondary">
+                <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-mnema-muted">
                   <div class="flex items-center gap-1">
                     <Calendar class="w-3.5 h-3.5 text-mnema-tertiary" />
                     <span>{{ startText(event.start_time) }}</span>
@@ -252,14 +252,14 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
               <!-- Status Badge -->
               <span
                 v-if="event.status === 'active'"
-                class="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400"
+                class="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-mnema-accent/10 px-2.5 py-0.5 text-xs font-semibold text-mnema-accent"
               >
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
                 {{ $t('events.active') }}
               </span>
               <span
                 v-else-if="event.status === 'cancelled'"
-                class="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-400"
+                class="shrink-0 rounded-full bg-mnema-danger/10 px-2 py-0.5 text-xs font-semibold text-mnema-danger"
               >
                 {{ $t('events.cancelled') }}
               </span>
@@ -275,7 +275,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
             <p
               v-if="event.description"
               v-full-text
-              class="line-clamp-2 wrap-anywhere text-xs text-mnema-secondary cursor-pointer"
+              class="line-clamp-2 wrap-anywhere text-xs text-mnema-muted cursor-pointer"
               @click="selectedEvent = event"
             >
               {{ event.description }}
@@ -304,8 +304,8 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                   :class="[
                     'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                     event.my_rsvp === 'going'
-                      ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                      : 'bg-mnema-raised text-mnema-secondary hover:bg-mnema-hover'
+                      ? 'bg-mnema-accent/20 text-mnema-accent font-semibold'
+                      : 'bg-mnema-raised text-mnema-muted hover:bg-mnema-hover'
                   ]"
                   :aria-pressed="event.my_rsvp === 'going' ? 'true' : 'false'"
                   @click="quickRSVP(event, 'going')"
@@ -318,8 +318,8 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                   :class="[
                     'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                     event.my_rsvp === 'interested'
-                      ? 'bg-amber-500/20 text-amber-400 font-semibold'
-                      : 'bg-mnema-raised text-mnema-secondary hover:bg-mnema-hover'
+                      ? 'bg-mnema-away/20 text-mnema-away font-semibold'
+                      : 'bg-mnema-raised text-mnema-muted hover:bg-mnema-hover'
                   ]"
                   :aria-pressed="event.my_rsvp === 'interested' ? 'true' : 'false'"
                   @click="quickRSVP(event, 'interested')"
@@ -334,7 +334,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                 <button
                   v-if="event.channel_id && event.status === 'active'"
                   type="button"
-                  class="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+                  class="btn btn-primary btn-sm"
                   @click="handleJoin(event.channel_id!)"
                 >
                   <Volume2 class="w-3.5 h-3.5" />

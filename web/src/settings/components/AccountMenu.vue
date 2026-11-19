@@ -224,7 +224,7 @@ const shortWindowInPlace = '[@media(max-height:40rem)]:static [@media(max-height
           @click="chooseLanguage(l)"
         >
           {{ $t(`language.${l}`) }}
-          <span :class="['ml-auto h-3.5 w-3.5 shrink-0 rounded-full', locale === l ? 'bg-mnema-accent shadow-[inset_0_0_0_1.5px_#2DA771,inset_0_0_0_4px_#1C1E1D]' : 'shadow-[inset_0_0_0_1.5px_#6E7672]']"></span>
+          <span :class="['ml-auto h-3.5 w-3.5 shrink-0 rounded-full', locale === l ? 'bg-mnema-accent shadow-[inset_0_0_0_1.5px_var(--color-mnema-accent),inset_0_0_0_4px_var(--color-mnema-elevated)]' : 'shadow-[inset_0_0_0_1.5px_var(--color-mnema-border-field)]']"></span>
         </button>
       </div>
     </div>

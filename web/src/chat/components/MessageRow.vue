@@ -94,8 +94,8 @@ defineExpose({ el: row })
           :class="[
             'p-1.5 rounded-sm transition max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center',
             pickerId === msg.id
-              ? 'bg-mnema-surface text-amber-400'
-              : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
+              ? 'bg-mnema-surface text-mnema-away'
+              : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-away'
           ]"
           v-tooltip="$t('chat.addReaction')"
         >

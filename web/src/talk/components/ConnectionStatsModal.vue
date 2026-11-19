@@ -133,7 +133,7 @@ const rows = computed<[string, string | number, string?][]>(() => {
           <svg v-if="sparklinePoints" viewBox="0 0 280 50" preserveAspectRatio="none" class="w-full h-12 overflow-visible" role="img" :aria-label="$t('stats.signalHistory')">
             <polyline
               fill="none"
-              stroke="#2DA771"
+              class="stroke-mnema-accent"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"

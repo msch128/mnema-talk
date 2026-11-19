@@ -107,9 +107,9 @@ const whenHint = computed(() => {
 
 // The RSVP buttons are the member's own answer; the counts sit in a line of their own.
 const rsvpChoices = computed(() => [
-  { id: 'going' as const, label: t('events.rsvpGoing'), icon: Check, on: 'border-emerald-500 bg-emerald-500/10 text-emerald-400' },
-  { id: 'interested' as const, label: t('events.rsvpInterested'), icon: HelpCircle, on: 'border-amber-500 bg-amber-500/10 text-amber-400' },
-  { id: 'not_going' as const, label: t('events.rsvpNotGoing'), icon: X, on: 'border-red-500 bg-red-500/10 text-red-400' }
+  { id: 'going' as const, label: t('events.rsvpGoing'), icon: Check, on: 'border-mnema-accent bg-mnema-accent/10 text-mnema-accent' },
+  { id: 'interested' as const, label: t('events.rsvpInterested'), icon: HelpCircle, on: 'border-mnema-away bg-mnema-away/10 text-mnema-away' },
+  { id: 'not_going' as const, label: t('events.rsvpNotGoing'), icon: X, on: 'border-mnema-danger bg-mnema-danger/10 text-mnema-danger' }
 ])
 const counts = computed(() => currentEvent.value.rsvp_counts)
 
@@ -179,9 +179,9 @@ async function confirmCancel(scope: Scope) {
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <span
           v-if="currentEvent.status === 'active'"
-          class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400"
+          class="inline-flex items-center gap-1.5 rounded-full bg-mnema-accent/10 px-2.5 py-0.5 text-xs font-semibold text-mnema-accent"
         >
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="h-1.5 w-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
           {{ $t('events.active') }}
         </span>
         <span
@@ -192,7 +192,7 @@ async function confirmCancel(scope: Scope) {
         </span>
         <span
           v-else-if="currentEvent.status === 'cancelled'"
-          class="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-400"
+          class="inline-flex items-center rounded-full bg-mnema-danger/10 px-2.5 py-0.5 text-xs font-semibold text-mnema-danger"
         >
           {{ $t('events.cancelled') }}
         </span>
@@ -204,7 +204,7 @@ async function confirmCancel(scope: Scope) {
         </span>
 
         <!-- Time -->
-        <div class="flex items-center gap-1.5 text-sm text-mnema-secondary">
+        <div class="flex items-center gap-1.5 text-sm text-mnema-muted">
           <Calendar class="w-4 h-4 text-mnema-tertiary" />
           <span>{{ formatDateTime(currentEvent.start_time) }}</span>
           <span v-if="whenHint" class="text-mnema-tertiary">· {{ whenHint }}</span>
@@ -218,7 +218,7 @@ async function confirmCancel(scope: Scope) {
           <Volume2 class="w-4 h-4" />
           <span>{{ talkChannel.name }}</span>
         </div>
-        <div v-else-if="currentEvent.location" class="flex items-center gap-1.5 text-sm text-mnema-secondary">
+        <div v-else-if="currentEvent.location" class="flex items-center gap-1.5 text-sm text-mnema-muted">
           <MapPin class="w-4 h-4 text-mnema-tertiary" />
           <span>{{ currentEvent.location }}</span>
         </div>
@@ -228,7 +228,7 @@ async function confirmCancel(scope: Scope) {
       <div v-if="currentEvent.channel_id && currentEvent.status === 'active'" class="mb-6">
         <button
           type="button"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 hover:bg-emerald-500 transition-colors"
+          class="btn btn-primary btn-lg w-full"
           @click="emit('join', currentEvent.channel_id!); emit('close')"
         >
           <Volume2 class="w-5 h-5" />
@@ -263,7 +263,7 @@ async function confirmCancel(scope: Scope) {
             :aria-pressed="currentEvent.my_rsvp === c.id ? 'true' : 'false'"
             :class="[
               'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-center text-xs font-medium leading-tight transition-colors sm:flex-row sm:gap-1.5 sm:text-sm',
-              currentEvent.my_rsvp === c.id ? `${c.on} font-semibold` : 'border-mnema-border hover:bg-mnema-hover text-mnema-secondary'
+              currentEvent.my_rsvp === c.id ? `${c.on} font-semibold` : 'border-mnema-border hover:bg-mnema-hover text-mnema-muted'
             ]"
             @click="setRSVP(c.id)"
           >
@@ -284,7 +284,7 @@ async function confirmCancel(scope: Scope) {
         <div v-if="loadingRsvps" class="py-4 text-center text-sm text-mnema-tertiary">
           {{ $t('common.loading') }}
         </div>
-        <div v-else-if="rsvpsFailed" role="alert" class="text-sm text-red-400">
+        <div v-else-if="rsvpsFailed" role="alert" class="text-sm text-mnema-danger">
           {{ $t('events.participantsFailed') }}
         </div>
         <div v-else-if="rsvps.length === 0" class="text-sm text-mnema-tertiary italic">
@@ -305,8 +305,8 @@ async function confirmCancel(scope: Scope) {
             <span
               :class="[
                 'text-xs font-medium px-2 py-0.5 rounded-full',
-                item.response === 'going' ? 'bg-emerald-500/10 text-emerald-400' :
-                item.response === 'interested' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'
+                item.response === 'going' ? 'bg-mnema-accent/10 text-mnema-accent' :
+                item.response === 'interested' ? 'bg-mnema-away/10 text-mnema-away' : 'bg-mnema-danger/10 text-mnema-danger'
               ]"
             >
               {{ $t(`events.${item.response === 'not_going' ? 'notGoing' : item.response}`) }}
@@ -322,7 +322,7 @@ async function confirmCancel(scope: Scope) {
         <button
           v-if="currentEvent.status !== 'cancelled' && currentEvent.status !== 'completed'"
           type="button"
-          class="rounded-lg border border-red-500/30 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+          class="rounded-lg border border-mnema-danger/30 px-3 py-1.5 text-sm font-medium text-mnema-danger hover:bg-mnema-danger/10 transition-colors"
           @click="cancelEvent"
         >
           {{ $t('events.cancel') }}

@@ -180,7 +180,7 @@ function onOverlayPointer(e: PointerEvent, on: boolean) {
       <div :class="['absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-20 pointer-events-none', fade]">
         <div class="min-w-0 overflow-hidden pointer-events-auto bg-black/80 border border-white/10 h-8 px-2.5 rounded-lg flex items-center gap-2 text-sm text-white">
           <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80 shrink-0" />
-          <span v-else class="px-1.5 py-0.5 rounded-sm bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
+          <span v-else class="px-1.5 py-0.5 rounded-sm bg-mnema-danger text-mnema-accent-ink text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
             <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
             {{ $t('talk.live') }}
           </span>
