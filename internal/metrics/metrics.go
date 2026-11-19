@@ -194,12 +194,14 @@ var (
 	// pair is RTP written to subscribers (one packet counts once per viewer).
 	SFUIngressBytes, SFUIngressPackets Counter
 	// SFUIngressDropped counts publisher packets dropped over the per-track
-	// rate limit (reason "rate") and publishers closed for sustained
-	// abuse (reason "closed"); "rtcp_ssrcs" counts media connections closed
+	// rate limit (reason "rate"), publishers closed for sustained abuse
+	// (reason "closed") and packets Pion dropped because a track's or a
+	// connection's receive buffer was full ("buffer", "mux": the SFU read
+	// slower than the publisher sent); "rtcp_ssrcs" counts media connections closed
 	// for naming too many SSRCs in RTCP that nothing reads, "senders" media
 	// connections renewed after the SFU made too many senders on them
 	// (internal/sfu).
-	SFUIngressDropped                = newVec("mnema_sfu_ingress_dropped_total", "Publisher packets dropped over the ingress limit, by reason", "reason")
+	SFUIngressDropped                = newVec("mnema_sfu_ingress_dropped_total", "Publisher packets dropped on the way in, by reason", "reason")
 	SFUEgressBytes, SFUEgressPackets Counter
 	// SFUNackRequests counts NACK feedback messages received from
 	// subscribers, SFUNackPackets the packets they asked to resend.

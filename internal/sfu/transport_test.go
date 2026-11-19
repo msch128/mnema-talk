@@ -266,8 +266,12 @@ func TestOnlyLoopbackAnnouncements(t *testing.T) {
 
 func TestUDPMuxAsksForLargeSocketBuffers(t *testing.T) {
 	for _, announce := range [][]string{nil, {"203.0.113.7"}} {
-		if got := len(buildUDPMuxOptions(announce)); got < 2 {
-			t.Fatalf("announce %v: %d options, want the read and write buffer sizes among them", announce, got)
+		options, err := buildUDPMuxOptions(announce)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(options); got < 3 {
+			t.Fatalf("announce %v: %d options, want the read and write buffer sizes and the network among them", announce, got)
 		}
 	}
 }

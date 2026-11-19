@@ -291,10 +291,27 @@ func (c *rtcpStreamCap) closed(ssrc uint32) {
 // NewLogger counts on the connection's own logger only.
 func (c *rtcpStreamCap) NewLogger(scope string) logging.LeveledLogger {
 	l := c.logs.NewLogger(scope)
-	if scope != "pc" {
-		return l
+	switch scope {
+	case "pc":
+		return rtcpCountingLogger{LeveledLogger: l, limit: c}
+	case "mux":
+		return muxCountingLogger{l}
 	}
-	return rtcpCountingLogger{LeveledLogger: l, limit: c}
+	return l
+}
+
+// pionMuxFull is the line Pion's mux logs for a packet it drops because the
+// DTLS or SRTP endpoint's buffer is full (webrtc v4 internal/mux).
+const pionMuxFull = "mux: endpoint buffer is full, dropping packet"
+
+// muxCountingLogger counts the packets Pion's mux drops, as reason "mux".
+type muxCountingLogger struct{ logging.LeveledLogger }
+
+func (l muxCountingLogger) Infof(format string, args ...any) {
+	if format == pionMuxFull {
+		metrics.SFUIngressDropped.With("mux").Inc()
+	}
+	l.LeveledLogger.Infof(format, args...)
 }
 
 type rtcpCountingLogger struct {
