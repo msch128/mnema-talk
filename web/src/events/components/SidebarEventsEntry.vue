@@ -28,7 +28,7 @@ onMounted(() => {
       </div>
       <span
         v-if="eventsStore.upcomingCount > 0"
-        class="ml-2 inline-flex items-center justify-center rounded-full bg-mnema-accent/20 px-1.5 py-0.5 text-xs font-semibold text-mnema-accent"
+        class="ml-2 inline-flex items-center justify-center rounded-full bg-mnema-accent/20 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-mnema-accent"
       >
         {{ eventsStore.upcomingCount }}
       </span>

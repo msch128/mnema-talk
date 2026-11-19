@@ -77,7 +77,7 @@ async function send() {
       <div class="space-y-1">
         <label for="report-note" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.note') }}</label>
         <textarea id="report-note" v-model="note" rows="3" v-max-chars="REPORT_NOTE_MAX" :placeholder="$t('reports.notePlaceholder')" data-testid="report-note" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
-        <p class="text-right text-xs text-mnema-tertiary">{{ charCount(note) }} / {{ REPORT_NOTE_MAX }}</p>
+        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(note) }} / {{ REPORT_NOTE_MAX }}</p>
       </div>
 
       <p class="text-xs text-mnema-tertiary">{{ $t('reports.privacy') }}</p>

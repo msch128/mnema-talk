@@ -189,6 +189,15 @@
     font-size: 16px;
   }
 
+  /* Times, timers, progress and live readouts keep their width while their
+     digits change: every figure is as wide as the next. */
+  time,
+  output,
+  [role='timer'],
+  [role='progressbar'] {
+    font-variant-numeric: tabular-nums;
+  }
+
   body {
     font-size: 1rem;
     line-height: 1.375;

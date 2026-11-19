@@ -136,7 +136,7 @@ onMounted(async () => {
           <Users class="w-4 h-4 text-mnema-accent" />
           <span>{{ $t('admin.users') }}</span>
         </h3>
-        <span class="text-xs text-mnema-tertiary">({{ users.length }})</span>
+        <span class="text-xs tabular-nums text-mnema-tertiary">({{ users.length }})</span>
       </div>
 
       <div class="flex items-center gap-2 flex-1 min-w-48 max-w-sm ml-auto">
