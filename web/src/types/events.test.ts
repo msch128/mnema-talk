@@ -152,6 +152,19 @@ const examples: Record<ServerEventType, unknown[]> = {
   reports_open: [{ open: 0 }, { open: 12 }],
 }
 
+/** Each field of a valid payload, replaced one at a time by a wrong value, must make the event invalid. */
+function expectCorruptedFieldsRejected(type: string, valid: unknown) {
+  if (valid === null || typeof valid !== 'object' || Array.isArray(valid)) return
+  for (const key of Object.keys(valid)) {
+    for (const corrupt of [undefined, { malformed: true }, false]) {
+      if (typeof Reflect.get(valid, key) === 'boolean' && corrupt === false) continue
+      if (type === 'webrtc_candidate' && key !== 'candidate' && corrupt === undefined) continue
+      const payload = { ...valid, [key]: corrupt }
+      expect(isServerEvent({ type, payload }), `${type}.${key}`).toBe(false)
+    }
+  }
+}
+
 describe('WebSocket runtime event contracts', () => {
   it('preserves capacity rejection reasons while rejecting malformed or future reason values', () => {
     const event = decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id, reason: 'room_full' } })
@@ -178,17 +191,7 @@ describe('WebSocket runtime event contracts', () => {
         expect(isServerEvent({ type, payload })).toBe(false)
         expect(() => decodeServerEvent({ type, payload })).toThrow(ContractError)
       }
-      for (const valid of variants) {
-        if (valid === null || typeof valid !== 'object' || Array.isArray(valid)) continue
-        for (const key of Object.keys(valid)) {
-          for (const corrupt of [undefined, { malformed: true }, false]) {
-            if (typeof Reflect.get(valid, key) === 'boolean' && corrupt === false) continue
-            if (type === 'webrtc_candidate' && key !== 'candidate' && corrupt === undefined) continue
-            const payload = { ...valid, [key]: corrupt }
-            expect(isServerEvent({ type, payload }), `${type}.${key}`).toBe(false)
-          }
-        }
-      }
+      for (const valid of variants) expectCorruptedFieldsRejected(type, valid)
     })
   }
 
