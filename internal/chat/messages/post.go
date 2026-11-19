@@ -64,7 +64,9 @@ func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource
 
 // InsertStoredMessage is InsertMessage for a caller that answers with the
 // message: it is read in the same transaction, so an error means that
-// nothing was stored (PublishStored sends it).
+// nothing was stored (PublishStored sends it), or, as with a commit whose
+// answer is lost, that the commit could not be confirmed on disk; nothing
+// may be announced then.
 func InsertStoredMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (*core.Message, error) {
 	_, msg, err := insertMessage(ctx, inserter{db: p, online: online, automod: automod.Of(p), load: true}, nm, rulesFrom(ctx), also)
 	return msg, err
@@ -93,6 +95,11 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 	var id uuid.UUID
 	var stored *core.Message
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// The channel row is locked until the commit (insertMessageTx): the
+		// next post must not wait for this one's WAL flush too (AwaitDurable).
+		if err := db.AsyncCommit(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		if id, err = insertMessageTx(ctx, tx, in.online, nm, rules); err != nil {
 			return err
@@ -108,9 +115,15 @@ func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRu
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
+	// Nobody hears of the message (the answer, message_create) before it is
+	// on disk. The follow-ups of a stored message run either way.
+	durable := db.AwaitDurable(ctx, p)
 	pending.Commit(ctx, id)
 	if nm.LifetimeSeconds > 0 {
 		wakeExpiry(p, time.Now().Add(time.Duration(nm.LifetimeSeconds)*time.Second))
+	}
+	if durable != nil {
+		return uuid.Nil, nil, durable
 	}
 	return id, stored, nil
 }

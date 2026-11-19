@@ -676,7 +676,14 @@ run with the erased-person guard of migration 0103 in place, on a quieter
 machine, gave about 740 to 760 posts a second instead of about 870 and a
 median of about 10.5 ms instead of 6.5 ms. Writers spread over channels show
 no difference. A channel still takes several hundred posts a second, far more
-than the per-member send limit lets members produce. `GET /api/threads/following` is ordered
+than the per-member send limit lets members produce. The wait does not include
+the disk: the post's transaction commits asynchronously (`db.AsyncCommit`), so
+the lock is released once the commit is in PostgreSQL's WAL buffers, and only
+then the post waits for the WAL flush (`db.AwaitDurable`), which concurrent
+posts share. Nobody is told of a message (the answer, `message_create`,
+webhooks, bots, push) before it is on disk. Held through the flush, every post
+waited for one flush per post ahead of it: on a host whose disk takes about
+5 ms per flush, that doubled the p99 delivery time of a busy channel. `GET /api/threads/following` is ordered
 the same way without a mark: `thread_follow_updated` carries the whole state
 of a thread, so the changes that arrived while the list was on its way are
 applied to it again.

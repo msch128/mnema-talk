@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -154,6 +155,11 @@ func (s *Service) replay(ctx context.Context, author uuid.UUID, cmd PostCommand)
 	}
 	msg, err := GetMessage(ctx, s.DB, *id)
 	if err != nil {
+		return nil, err
+	}
+	// The first send may still be waiting for its flush (insertMessage):
+	// the retry does not answer with a message that is not on disk yet.
+	if err := db.AwaitDurable(ctx, s.DB); err != nil {
 		return nil, err
 	}
 	msg.Nonce = cmd.Nonce
