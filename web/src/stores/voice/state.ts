@@ -84,6 +84,9 @@ export function createVoiceState() {
     showScreenShareModal: ref(false),
     isCameraOn: ref(false),
     isConnected: ref(false),
+    // The media path of the Talk is up (ICE connected); until then, and while it
+    // is lost, the voice panel says "Connecting…".
+    mediaLinked: ref(false),
     activeView: ref<'chat' | 'voice'>('chat'),
     showStatsModal: ref(false),
     // The safety code of the call's current media keys (null without keys).

@@ -84,6 +84,8 @@ async function joinTalk(page: Page, takeoverLabel: string) {
   await takeover.or(page.getByTestId('voice-panel-leave')).first().waitFor()
   if (await takeover.isVisible()) await takeover.click()
   await expectTalkLive(page)
+  // "Connecting…" turns into "Connected" once the media path is up.
+  await expect(page.getByTestId('voice-panel-open')).toHaveAttribute('data-linked', 'true')
 }
 
 /** Shown texts in the panel and the user bar that are cut keep at least 2.5em: a sliver of a letter is not a name. */
