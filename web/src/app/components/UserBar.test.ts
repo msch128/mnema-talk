@@ -52,7 +52,13 @@ describe('UserBar voice status panel', () => {
     voice.setChannel("00000000-0000-4000-8000-0000000003f3")
     voice.recordPing(4)
     await nextTick()
+    // Until the media path is up the panel says so.
+    expect(w.find('[data-testid="voice-panel-open"]')!.attributes('aria-label')).toBe('Verbinde · Lounge')
+    expect(w.find('[data-testid="voice-panel-open"]')!.text()).toContain('Verbinde …')
+    voice.mediaLinked = true
+    await nextTick()
     expect(w.find('[data-testid="voice-panel-open"]')!.attributes('aria-label')).toBe('Verbunden · Lounge')
+    expect(w.find('[data-testid="voice-panel-open"]')!.text()).toContain('Verbunden')
     expect(w.find('[data-testid="voice-panel-channel"]')!.text()).toBe('Lounge')
     const ping = w.find('[data-testid="voice-panel-ping"]')!
     expect(ping.text()).toMatch(/^4 ms/)
@@ -103,6 +109,9 @@ describe('UserBar voice status panel', () => {
     const { w, voice } = setup()
     setLocale('en')
     voice.setChannel("00000000-0000-4000-8000-0000000003f3")
+    await nextTick()
+    expect(w.find('[data-testid="voice-panel-open"]')!.text()).toMatch(/^Connecting…/)
+    voice.mediaLinked = true
     await nextTick()
     expect(w.find('[data-testid="voice-panel-open"]')!.attributes('aria-label')).toBe('Connected · Lounge')
     expect(w.find('[data-testid="voice-panel-open"]')!.text()).toMatch(/^Connected/)

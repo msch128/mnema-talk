@@ -53,6 +53,7 @@ function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
     cameraSizes: cs.cameraSizes,
     userVideoStreams: cs.userVideoStreams,
     isConnected: cs.isConnected,
+    mediaLinked: cs.mediaLinked,
     ping: cs.ping,
     pingHistory: cs.pingHistory,
     minPing: cs.minPing,
