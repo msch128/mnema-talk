@@ -135,7 +135,7 @@ onMounted(load)
         :placeholder="$t('webhooks.namePlaceholder')"
         :aria-label="$t('common.name')"
       />
-      <button type="submit" :disabled="busy || !newName.trim()" class="btn btn-primary">{{ $t('webhooks.create') }}</button>
+      <button type="submit" :disabled="busy || !newName.trim()" :aria-busy="busy ? 'true' : undefined" class="btn btn-primary">{{ $t('webhooks.create') }}</button>
     </form>
 
     <div v-if="revealed" class="rounded-lg border border-mnema-accent/40 bg-mnema-accent-subtle p-3" role="status" data-testid="revealed-url">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { MessagesSquare, Plus, Tags, Loader2, Search } from '@lucide/vue'
+import { MessagesSquare, Plus, Tags, Search } from '@lucide/vue'
 import type { ForumTag, Message } from '../../types/domain'
 import { useChatStore } from '../../stores/chat'
 import { usePermissionsStore } from '../../stores/permissions'
@@ -10,6 +10,7 @@ import { useForumPosts } from '../composables/useForumPosts'
 import { openSearch } from '../../chat/lib/globalSearch'
 import { quoteValue } from '../../chat/lib/searchQuery'
 import StatePanel from '../../shared/components/StatePanel.vue'
+import RowSkeleton from '../../shared/components/RowSkeleton.vue'
 import NavDrawerButton from '../../shared/components/NavDrawerButton.vue'
 import ForumPostCard from './ForumPostCard.vue'
 import ForumToolbar from './ForumToolbar.vue'
@@ -149,10 +150,7 @@ const filtered = computed(() => !!tagId.value || !!search.value.trim())
     <ForumToolbar v-model:search="search" v-model:sort="sort" v-model:tag-id="tagId" :tags="tags" />
 
     <div class="flex-1 overflow-y-auto p-4 max-sm:p-3 min-h-0">
-      <div v-if="isLoading" class="h-64 flex flex-col items-center justify-center text-mnema-tertiary gap-2">
-        <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
-        <span class="text-xs">{{ $t('forum.loadingPosts') }}</span>
-      </div>
+      <RowSkeleton v-if="isLoading" shape="card" :rows="4" :label="$t('forum.loadingPosts')" />
 
       <StatePanel v-else-if="error" state="error" retryable data-testid="forum-error" @retry="list.load">
         {{ error }}

@@ -80,6 +80,7 @@ async function submit() {
           type="submit"
           data-testid="self-update-confirm"
           :disabled="!password || busy"
+          :aria-busy="busy ? 'true' : undefined"
           class="btn btn-primary"
         >
           {{ busy ? $t('admin.system.selfUpdateStarting') : $t('admin.system.selfUpdateButton') }}

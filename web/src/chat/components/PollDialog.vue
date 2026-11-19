@@ -161,6 +161,7 @@ async function submit() {
         <button
           type="submit"
           :disabled="!!problem || busy"
+          :aria-busy="busy ? 'true' : undefined"
           data-testid="poll-post"
           class="btn btn-primary whitespace-nowrap"
         >{{ $t('poll.post') }}</button>

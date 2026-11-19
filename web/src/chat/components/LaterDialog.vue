@@ -133,7 +133,7 @@ async function confirm() {
         <p v-if="error" role="alert" data-testid="later-error" class="rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">{{ error }}</p>
         <div class="flex justify-end gap-2 border-t border-mnema-hairline pt-3">
           <button type="button" class="btn btn-secondary h-8" @click="closeLater">{{ $t('common.cancel') }}</button>
-          <button type="submit" data-testid="later-confirm" :disabled="!valid || busy" class="btn btn-primary h-8">
+          <button type="submit" data-testid="later-confirm" :disabled="!valid || busy" :aria-busy="busy ? 'true' : undefined" class="btn btn-primary h-8">
             {{ request.kind === 'remind' ? $t('later.remindConfirm') : $t('later.scheduleConfirm') }}
           </button>
         </div>

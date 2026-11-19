@@ -98,7 +98,7 @@ function previewMessageSound() {
 
         <div v-if="voiceStore.soundEffectsEnabled" class="stack-2">
           <div class="flex items-center justify-between gap-3">
-            <span class="settings-row-title">{{ $t('audio.soundsVolume') }}</span>
+            <span class="settings-row-title">{{ $t('audio.soundsVolumeShort') }}</span>
             <span class="font-mono text-xs font-semibold tabular-nums text-mnema-text">{{ voiceStore.soundEffectsVolume }} %</span>
           </div>
           <input

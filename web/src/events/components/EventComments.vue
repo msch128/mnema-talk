@@ -126,7 +126,7 @@ async function removeComment(c: EventComment) {
               <textarea v-model="editText" v-max-chars="MAX" rows="2" data-testid="comment-edit-input" :aria-label="$t('events.commentEdit')" class="w-full resize-y rounded-lg border border-mnema-border bg-mnema-canvas p-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"></textarea>
               <div class="flex justify-end gap-2">
                 <button type="button" class="btn btn-secondary px-3 py-1.5 text-xs max-md:min-h-11" @click="editingId = null">{{ $t('common.cancel') }}</button>
-                <button type="submit" data-testid="comment-edit-save" class="btn btn-primary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="list.busy.value || !editText.trim()">{{ $t('common.save') }}</button>
+                <button type="submit" data-testid="comment-edit-save" class="btn btn-primary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="list.busy.value || !editText.trim()" :aria-busy="list.busy.value ? 'true' : undefined">{{ $t('common.save') }}</button>
               </div>
             </form>
             <BlockedFold v-else :msg="{ id: c.id, user_id: c.user.id }">

@@ -53,7 +53,7 @@ async function submit() {
       <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger" data-testid="owner-confirm-error">{{ error }}</div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="btn btn-secondary" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy" class="btn btn-danger-solid" data-testid="reset-two-factor-submit">{{ $t('admin.resetTwoFactorConfirm') }}</button>
+        <button type="submit" :disabled="busy" :aria-busy="busy ? 'true' : undefined" class="btn btn-danger-solid" data-testid="reset-two-factor-submit">{{ $t('admin.resetTwoFactorConfirm') }}</button>
       </div>
     </form>
   </BaseDialog>

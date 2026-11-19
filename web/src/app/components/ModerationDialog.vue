@@ -170,6 +170,7 @@ const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field roun
             type="submit"
             data-testid="moderation-submit"
             :disabled="!valid || saving"
+            :aria-busy="saving ? 'true' : undefined"
             class="btn btn-danger-solid"
           >{{ isBan ? $t('moderation.banConfirm') : $t('moderation.timeoutConfirm') }}</button>
         </div>

@@ -150,7 +150,7 @@ onMounted(load)
             <label class="flex items-center gap-2 text-sm text-mnema-text">
               <input v-model="draftStrike" type="checkbox" data-testid="mod-note-strike" /><span>{{ $t('modHistory.asStrike') }}</span>
             </label>
-            <button type="submit" :disabled="busy || !draft.trim()" class="btn btn-primary btn-sm" data-testid="mod-note-add">{{ $t('modHistory.add') }}</button>
+            <button type="submit" :disabled="busy || !draft.trim()" :aria-busy="busy ? 'true' : undefined" class="btn btn-primary btn-sm" data-testid="mod-note-add">{{ $t('modHistory.add') }}</button>
           </div>
         </form>
         <p v-if="!history.notes.length" class="text-sm text-mnema-tertiary" data-testid="mod-notes-empty">{{ $t('modHistory.noNotes') }}</p>
