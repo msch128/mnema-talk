@@ -81,7 +81,9 @@ func ApplyBotAccess(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 // clearBotOverwrites takes the bot permissions out of the allow side of
 // the own role's overwrites in every channel (the listed ones get them again
 // with the new set), and removes the
-// overwrites that end up empty. Denies stay: they are the admin's.
+// overwrites that end up empty. Denies stay here; a channel listed in the
+// new set gets its permissions through AllowBotRoleInChannel, which lifts a
+// deny of the same permissions there (the access change is the newer word).
 func clearBotOverwrites(ctx context.Context, tx pgx.Tx, a BotAccess) error {
 	role := a.Role
 	rows, err := tx.Query(ctx, `
