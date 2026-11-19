@@ -47,7 +47,8 @@ function move(index: number, by: -1 | 1) {
 }
 
 function setUnlimited(row: RoleDraft, unlimited: boolean) {
-  row.capacity = unlimited ? null : Math.max(row.members, 1)
+  const capacity = unlimited ? null : Math.max(row.members, 1)
+  rows.value = rows.value.map(r => r.key === row.key ? { ...r, capacity } : r)
 }
 
 function remove(row: RoleDraft) {
