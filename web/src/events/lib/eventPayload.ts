@@ -19,7 +19,7 @@ export interface EventFields {
 /** The fields that make up the event itself (the cover and the roles are stored by their own calls). */
 export const EVENT_FIELD_KEYS: (keyof EventFields)[] = ['title', 'description', 'startTime', 'endTime', 'locationType', 'channelId', 'locationText', 'repeat', 'repeatUntil']
 
-export function toLocalIso(dateStr?: string | null): string {
+function toLocalIso(dateStr?: string | null): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return ''

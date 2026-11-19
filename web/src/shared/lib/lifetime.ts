@@ -3,7 +3,7 @@
 // schedule that hides a message on this client's clock at its end.
 import { t } from '../../i18n'
 
-export const MIN_LIFETIME_SECONDS = 60
+const MIN_LIFETIME_SECONDS = 60
 export const MAX_LIFETIME_SECONDS = 30 * 24 * 3600
 
 /** The composer's presets, in seconds: 1 minute, 5 minutes, 1 hour, 8 hours, 1 day, 1 week. */

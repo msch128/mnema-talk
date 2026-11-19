@@ -55,17 +55,24 @@ function validVariants(input: Schema): unknown[] {
   return variants
 }
 
+// Arrays and objects are rejected by shape alone: no per-field boundary values apply.
+function shapeOnlyInvalid(schema: Schema): unknown[] | null {
+  if (schema.type === 'array') return [undefined, null, {}, [null], [1.5]]
+  // An object whose fields are all optional (automod's per-kind settings) accepts any record.
+  if (schema.type === 'object') return schema.properties ? [undefined, null, [], ...(schema.required?.length ? [{ malformed: true }] : [])] : [undefined, null, [], 'text']
+  return null
+}
+
 function invalidVariants(input: Schema): unknown[] {
   const schema = resolve(input)
+  const shaped = shapeOnlyInvalid(schema)
+  if (shaped) return shaped
   const variants: unknown[] = [undefined, {}, []]
   if (schema.type !== 'number') variants.push(1.5)
   if (!(Array.isArray(schema.type) && schema.type.includes('null'))) variants.push(null)
   if (schema.enum) variants.push('not-an-enum-value')
   if (schema.format === 'uuid') variants.push('bad-id', FIXTURE_TIMESTAMP)
   if (schema.format === 'date-time') variants.push('2026-10-07', '2026-99-99T99:99:99Z')
-  if (schema.type === 'array') return [undefined, null, {}, [null], [1.5]]
-  // An object whose fields are all optional (automod's per-kind settings) accepts any record.
-  if (schema.type === 'object') return schema.properties ? [undefined, null, [], ...(schema.required?.length ? [{ malformed: true }] : [])] : [undefined, null, [], 'text']
   if (schema.maxLength !== undefined) variants.push('😀'.repeat(schema.maxLength + 1))
   if (schema.minimum !== undefined) variants.push(schema.minimum - 1)
   if (schema.maximum !== undefined) variants.push(schema.maximum + 1)

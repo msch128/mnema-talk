@@ -9,7 +9,7 @@ function originOf(e: Event): EventTarget | null {
   return path[0] ?? e.target
 }
 
-export function isTypingTarget(el: EventTarget | null): boolean {
+function isTypingTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false
   if (el.isContentEditable) return true
   return !!el.closest?.(FIELD)

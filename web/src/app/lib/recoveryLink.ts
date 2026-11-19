@@ -2,7 +2,7 @@
 // The token sits in the URL fragment, which the browser never sends to the
 // server and never puts in a Referer header; the app reads it once and removes
 // it from the address bar and the history entry.
-export type RecoveryKind = 'verify' | 'reset'
+type RecoveryKind = 'verify' | 'reset'
 
 export interface RecoveryLink {
   kind: RecoveryKind

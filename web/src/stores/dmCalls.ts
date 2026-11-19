@@ -9,7 +9,7 @@ import type { DmCallEnd } from '../types/dmEvents'
 import * as calls from './dmCalls/actions'
 import type { CallInfo, CallMark } from './dmCalls/types'
 
-export type { CallInfo, CallMark, IncomingCall, OutgoingCall, OutgoingPhase } from './dmCalls/types'
+export type { CallInfo, CallMark, IncomingCall, OutgoingCall,  } from './dmCalls/types'
 
 export const useDmCallsStore = defineStore('dmCalls', () => {
   const cs = calls.createCallState()

@@ -10,7 +10,7 @@
 import type { WireControl } from './groupSim.fixture'
 import { runScript, type Script, type SimResult } from './groupSimRun.fixture'
 
-export type Deviation = 'drop' | 'swap'
+type Deviation = 'drop' | 'swap'
 export type Schedule = ReadonlyMap<number, Deviation>
 
 export interface NamedScript { name: string, script: Script }
@@ -40,7 +40,7 @@ export function scripts(members: number): NamedScript[] {
 }
 
 /** A control that carries out `schedule` and counts the handshakes it was asked about. */
-export function controlFor(schedule: Schedule): { control: WireControl, asked: () => number } {
+function controlFor(schedule: Schedule): { control: WireControl, asked: () => number } {
   let asked = 0
   return {
     control: () => schedule.get(asked++) ?? 'run',

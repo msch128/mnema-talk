@@ -7,6 +7,7 @@ import vueParser from 'vue-eslint-parser'
 import type { Rule } from 'eslint'
 import { fileURLToPath } from 'node:url'
 import { specifierViolation } from './scripts/importZones.ts'
+import { testFunctionLength } from './scripts/testFunctionLength.ts'
 
 const srcRoot = fileURLToPath(new URL('./src', import.meta.url))
 
@@ -28,6 +29,8 @@ const importZones: Rule.RuleModule = {
     }
   }
 }
+
+const mnema = { rules: { 'import-zones': importZones, 'test-function-length': testFunctionLength } }
 
 // Desktop window globals and IPC are named only in shared/lib/platform and its adapters.
 const desktopGlobalSyntax = [{
@@ -133,7 +136,10 @@ export default tseslint.config(
   // The browser specs probe the policy with a plain string at a sink (csp.spec.ts).
   {
     files: ['**/e2e/**/*.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...desktopGlobalSyntax] }
+    rules: { 'no-restricted-syntax': ['error', ...desktopGlobalSyntax, {
+      selector: "CallExpression[callee.property.name='waitForTimeout']",
+      message: 'Wait for a condition with a web-first assertion, expect.poll, awaitSettled or awaitScrollEnd; observeFor (helpers.ts) is for a measurement over real time.'
+    }] }
   },
   // The desktop adapters name the window globals; the HTML rule still holds there.
   {
@@ -161,8 +167,19 @@ export default tseslint.config(
   },
   {
     files: ['**/web/src/**/*.{ts,vue}'],
-    plugins: { mnema: { rules: { 'import-zones': importZones } } },
+    plugins: { mnema },
     rules: { 'mnema/import-zones': 'error' }
+  },
+  // Tests and fixtures obey the function limits of production code (80 lines,
+  // cognitive complexity 15); only a describe callback is exempt from the length
+  // (scripts/testFunctionLength.ts). The browser specs in e2e are not covered yet.
+  {
+    files: ['**/web/src/**/*.test.ts', '**/web/src/**/*.fixture.ts'],
+    plugins: { mnema },
+    rules: {
+      'mnema/test-function-length': ['error', { max: 80 }],
+      'sonarjs/cognitive-complexity': ['error', 15]
+    }
   },
   // Tests, fixtures and e2e specs may be up to 800 lines (same as Go _test.go).
   {

@@ -63,17 +63,18 @@ const ownPackage = (group: MediaGroup) => mls.encodeMlsMessage({ version: 'mls10
 async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster: string[]) {
   const pending = wires.map(wire => ({ from, wire }))
   for (const [id, group] of groups) if (roster.includes(id)) group.hint(roster)
-  while (pending.length) {
-    const item = pending.shift()
-    if (!item) break
+  for (let item = pending.shift(); item; item = pending.shift()) {
     for (const [id, group] of groups) {
-      if (id === item.from) continue
-      const step = await group.receive(item.from, item.wire)
-      for (const wire of step.wires) pending.push({ from: id, wire })
-      const synced = await group.sync(roster)
-      for (const wire of synced.wires) pending.push({ from: id, wire })
+      if (id !== item.from) pending.push(...await answers(group, id, item, roster))
     }
   }
+}
+
+/** What `group` (as `id`) sends on after it received `item` and synced to `roster`. */
+async function answers(group: MediaGroup, id: string, item: { from: string, wire: Uint8Array }, roster: string[]) {
+  const step = await group.receive(item.from, item.wire)
+  const synced = await group.sync(roster)
+  return [...step.wires, ...synced.wires].map(wire => ({ from: id, wire }))
 }
 
 /** Carol and Dave in a group of two; Alice, who is lower than both, is in the Talk but not in that group. */

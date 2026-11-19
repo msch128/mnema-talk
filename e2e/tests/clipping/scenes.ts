@@ -63,7 +63,7 @@ async function scrollMessages(s: SceneContext, to: 'top' | 'middle') {
   // The list loads older pages as it nears the top; scroll until it stops growing.
   for (let i = 0; i < 4; i++) {
     await list.evaluate((el, where) => { el.scrollTop = where === 'top' ? 0 : (el.scrollHeight - el.clientHeight) / 2 }, to)
-    await s.page.waitForTimeout(300)
+    await s.page.waitForLoadState('networkidle') // the older page, if one is asked for, has arrived
   }
 }
 
@@ -242,7 +242,7 @@ const chatScenes: Scene[] = [
       await s.page.route(`**/api/channels/${s.world.chat.id}/messages**`, async (route) => { await new Promise(r => setTimeout(r, 8_000)); await route.continue().catch(() => undefined) })
       await s.page.goto(`/c/${s.world.chat.id}`)
       await expect(s.page.getByTestId('own-profile-button')).toBeAttached()
-      await s.page.waitForTimeout(1_000)
+      await expect(s.page.getByTestId('row-skeleton')).toBeVisible() // the loading state is on screen
       await s.page.unroute(`**/api/channels/${s.world.chat.id}/messages**`)
     },
   },

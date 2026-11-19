@@ -40,7 +40,7 @@ const edge = {
   >
     <span
       :class="[
-        'pointer-events-none absolute transition-colors duration-150',
+        'pointer-events-none absolute transition-colors duration-(--motion-fade) motion-reduce:transition-none',
         horizontal ? 'inset-x-0 top-1/2 h-0.5 -translate-y-1/2' : 'inset-y-0 left-1/2 w-0.5 -translate-x-1/2',
         panel.dragging
           ? 'bg-mnema-accent'

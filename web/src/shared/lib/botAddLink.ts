@@ -16,7 +16,7 @@ export function manifestParam(hash: string): string | null {
 }
 
 /** Whether the address is an add link. */
-export function isBotAddPath(pathname: string): boolean {
+function isBotAddPath(pathname: string): boolean {
   return ADD_PATH.test(pathname)
 }
 

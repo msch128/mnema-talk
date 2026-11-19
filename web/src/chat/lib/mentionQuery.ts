@@ -44,7 +44,7 @@ export function findMentionQuery(text: string | null | undefined, caret: number 
 }
 
 /** The keyword mentions, offered after the members. */
-export const GROUP_MENTIONS = ['here', 'all'] as const
+const GROUP_MENTIONS = ['here', 'all'] as const
 
 function isEligibleMember(m: User & { disabled?: boolean }, selfId: string | null): boolean {
   if (!m?.username || m.id === selfId) return false

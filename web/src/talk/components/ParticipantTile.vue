@@ -103,7 +103,7 @@ watch(() => props.stream, (stream) => {
     @dblclick="onDblclick"
     @contextmenu.prevent="emit('menu', $event)"
     :class="[
-      'group relative isolate aspect-video cursor-pointer select-none overflow-hidden rounded-lg transition-colors duration-150 focus:outline-hidden',
+      'group relative isolate aspect-video cursor-pointer select-none overflow-hidden rounded-lg transition-colors duration-(--motion-fade) motion-reduce:transition-none focus:outline-hidden',
       compact ? 'tile-compact' : '',
       fill ? '' : (compact ? 'w-44' : 'w-72'),
       stream ? 'bg-black' : 'bg-mnema-surface hover:bg-mnema-hover'
@@ -139,7 +139,7 @@ watch(() => props.stream, (stream) => {
       <div
         data-tile-avatar
         :class="[
-          'tile-avatar shrink-0 rounded-full overflow-hidden flex items-center justify-center font-semibold border transition-shadow duration-150',
+          'tile-avatar shrink-0 rounded-full overflow-hidden flex items-center justify-center font-semibold border transition-shadow duration-(--motion-fade) motion-reduce:transition-none',
           compact ? 'text-base' : 'text-2xl',
           user.avatar_url ? 'border-mnema-border bg-mnema-surface' : 'bg-mnema-band border-mnema-mint/30 text-mnema-mint',
           speaking
@@ -171,7 +171,7 @@ watch(() => props.stream, (stream) => {
     <div
       v-if="isScreensharing && !isSelf"
       data-tile-watch-overlay
-      :class="['absolute inset-0 z-20 flex items-center justify-center bg-black/55 transition-opacity duration-150 pointer-events-none', REVEAL]"
+      :class="['absolute inset-0 z-20 flex items-center justify-center bg-black/55 transition-opacity duration-(--motion-fade) motion-reduce:transition-none pointer-events-none', REVEAL]"
     >
       <button
         v-if="!isWatching"
@@ -207,7 +207,7 @@ watch(() => props.stream, (stream) => {
       v-if="showStatus"
       data-tile-status
       :class="[
-        'absolute z-30 flex items-center rounded-sm bg-black/65 text-white/90 font-mono text-xs leading-4 tabular-nums pointer-events-none transition-opacity duration-150',
+        'absolute z-30 flex items-center rounded-sm bg-black/65 text-white/90 font-mono text-xs leading-4 tabular-nums pointer-events-none transition-opacity duration-(--motion-fade) motion-reduce:transition-none',
         compact ? 'top-1.5 left-1.5 h-4 px-1' : 'top-2 left-2 h-5 px-1.5',
         REVEAL
       ]"
@@ -285,9 +285,9 @@ watch(() => props.stream, (stream) => {
     <div
       data-tile-frame
       :class="[
-        'absolute inset-0 z-40 rounded-[inherit] pointer-events-none transition-shadow duration-150',
+        'absolute inset-0 z-40 rounded-[inherit] pointer-events-none transition-shadow duration-(--motion-fade) motion-reduce:transition-none',
         speaking
-          ? 'ring-2 ring-inset ring-mnema-accent shadow-[inset_0_0_14px_rgba(45,167,113,0.35)]'
+          ? 'ring-2 ring-inset ring-mnema-accent shadow-[inset_0_0_14px_color-mix(in_srgb,var(--color-mnema-accent)_35%,transparent)]'
           : cameraFocused
             ? 'ring-2 ring-inset ring-mnema-accent/70'
             : 'ring-1 ring-inset ring-white/6 group-hover:ring-white/12'

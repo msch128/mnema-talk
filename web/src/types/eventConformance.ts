@@ -33,5 +33,8 @@ type Mismatched = { [K in Checked]: [Unfit<ServerEventShapes[K], ServerEventPayl
 
 type None<T extends never> = T
 
-/** Fails to compile, naming the events, when a server shape no longer fits. */
+/**
+ * Fails to compile, naming the events, when a server shape no longer fits.
+ * @public Only the compiler reads it, so it is exported to count as used.
+ */
 export type ServerShapesFitDeclaredPayloads = None<Mismatched>

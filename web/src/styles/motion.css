@@ -9,6 +9,10 @@
 
 :root {
   --motion-press: 90ms;
+  --motion-fade: 160ms;
+  --motion-dialog: 200ms;
+  --motion-toast: 200ms;
+  --motion-base: 150ms;
   --motion-popover-in: 180ms;
   --motion-popover-out: 140ms;
   --motion-panel-in: 220ms;
@@ -25,15 +29,15 @@
 @keyframes mnema-fade-out { to { opacity: 0; } }
 @keyframes mnema-row-in { from { opacity: 0; transform: translateY(4px); } }
 @keyframes mnema-success-pulse {
-  from { box-shadow: 0 0 0 0 rgb(45 167 113 / 0.45); }
-  to { box-shadow: 0 0 0 6px rgb(45 167 113 / 0); }
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-mnema-accent) 45%, transparent); }
+  to { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-mnema-accent) 0%, transparent); }
 }
 @keyframes mnema-success-icon { from { opacity: 0; transform: scale(0.6); } }
 /* An icon has no box to ring: it glows once instead, along its own stroke. */
 @keyframes mnema-success-glow {
-  from { filter: drop-shadow(0 0 0 rgb(45 167 113 / 0.9)); }
-  40% { filter: drop-shadow(0 0 4px rgb(45 167 113 / 0.7)); }
-  to { filter: drop-shadow(0 0 6px rgb(45 167 113 / 0)); }
+  from { filter: drop-shadow(0 0 0 color-mix(in srgb, var(--color-mnema-accent) 90%, transparent)); }
+  40% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-mnema-accent) 70%, transparent)); }
+  to { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-mnema-accent) 0%, transparent)); }
 }
 
 @layer components {
@@ -134,6 +138,10 @@ svg.success-pulse {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Tailwind's looping utilities (spinners, skeleton pulses, pings) stand still. */
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
   .pop-in,
   .pop-out,
   .panel-in,

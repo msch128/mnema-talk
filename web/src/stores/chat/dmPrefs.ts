@@ -61,7 +61,7 @@ export function saveDmSettings(cx: Cx, change: Partial<ChatDMSettings>) {
 }
 
 /** The ids of the caller's favourites, in order. */
-export function favouriteIds(cx: Cx): string[] {
+function favouriteIds(cx: Cx): string[] {
   return splitDms(cx.cs.dms.value, null).favourites.map(dm => dm.id)
 }
 

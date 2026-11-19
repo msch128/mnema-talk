@@ -1,5 +1,5 @@
 import type { BrowserContext, Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, expectTalkLive, leaveAndClose, awaitSettled } from './helpers'
 import { test, expect } from './fixtures'
 
 // A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
@@ -306,7 +306,7 @@ test('picture-in-picture keeps playing after leaving the Talk view', async ({ br
   // To a text channel: the Talk view goes, PiP keeps playing.
   await a.locator('[data-channel-type="text"]', { hasText: TEXT_CHANNEL }).click()
   await expect(aStage).toHaveCount(0)
-  await a.waitForTimeout(1000)
+  await awaitSettled(a)
   await expect.poll(pipState).toMatchObject({ inPip: true, live: true, playing: true })
   await shot(a, 'extras-pip-text-channel')
 

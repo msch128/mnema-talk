@@ -7,7 +7,7 @@ export type DropHit =
   | { zone: 'channel' | 'header' | 'empty'; id: string; ratio?: number }
   | { zone: 'section' | 'end'; id: string | null; ratio?: number }
   | { zone: 'start' }
-export interface DropIndicator { key: string; edge: 'top' | 'bottom' | 'inside' }
+interface DropIndicator { key: string; edge: 'top' | 'bottom' | 'inside' }
 export interface DropTarget { categoryId: string | null; gap: number; index: number; indicator: DropIndicator | null }
 
 //

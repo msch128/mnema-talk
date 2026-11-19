@@ -12,11 +12,11 @@ const LEGACY_HINT_KEY = 'mnema_notif_hint_dismissed'
 export const TIPS = ['search', 'mention', 'talk'] as const
 export type TipId = typeof TIPS[number]
 
-export function legacyHintDismissed(): boolean {
+function legacyHintDismissed(): boolean {
   try { return localStorage.getItem(LEGACY_HINT_KEY) === '1' } catch { return false }
 }
 
-export function clearLegacyHint(): void {
+function clearLegacyHint(): void {
   try { localStorage.removeItem(LEGACY_HINT_KEY) } catch { /* storage blocked: nothing to clear */ }
 }
 

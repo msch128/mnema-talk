@@ -1,0 +1,105 @@
+/* Message and sidebar flashes, drag feedback, scrollbars and tooltips. Tokens come from @theme in style.css. */
+
+/* Jump-to-message highlight: warm flash that fades out */
+@keyframes mnema-msg-flash {
+  0%, 25% { background-color: color-mix(in srgb, var(--color-mnema-amber) 16%, transparent); box-shadow: inset 2px 0 0 var(--color-mnema-amber); }
+  100% { background-color: transparent; box-shadow: inset 2px 0 0 transparent; }
+}
+
+.msg-flash {
+  animation: mnema-msg-flash 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The class is removed after ~2s, so a static tint is enough. */
+  .msg-flash { animation: none; background-color: color-mix(in srgb, var(--color-mnema-amber) 12%, transparent); }
+}
+
+/* Sidebar drag and drop: where the item lands, and the item that just moved */
+.drop-line {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: var(--color-mnema-accent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.drop-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-mnema-accent);
+  background-color: var(--color-mnema-raised);
+}
+
+@keyframes mnema-nav-flash {
+  0%, 30% { background-color: color-mix(in srgb, var(--color-mnema-accent) 22%, transparent); }
+  100% { background-color: transparent; }
+}
+
+.nav-flash {
+  animation: mnema-nav-flash 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-flash { animation: none; background-color: color-mix(in srgb, var(--color-mnema-accent) 14%, transparent); }
+}
+
+/* While something is dragged: a grabbing hand everywhere, no text selection */
+.mnema-dragging,
+.mnema-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Mnema Subtle Hairline Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-mnema-hairline);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-mnema-border-strong);
+}
+
+/* Tooltips (directive in src/directives/tooltip.js) */
+.mnema-tooltip {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 7px 10px;
+  border-radius: var(--radius-lg);
+  background: var(--color-mnema-elevated);
+  color: var(--color-mnema-text);
+  box-shadow: inset 0 0 0 1px var(--color-mnema-border), var(--shadow-md);
+  font: 500 12px/16px Inter, system-ui, sans-serif;
+  pointer-events: none;
+  white-space: normal;
+}
+.mnema-tooltip[hidden] { display: none; }
+.mnema-tooltip:not([hidden]) { animation: var(--animate-fade-in); }
+@media (prefers-reduced-motion: reduce) { .mnema-tooltip:not([hidden]) { animation: none; } }
+.mnema-tooltip-kbd {
+  font: 500 12px/16px 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--color-mnema-tertiary);
+}

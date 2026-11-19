@@ -54,12 +54,7 @@ async function mountApp({ authenticated = true, admin = false, path = '/c/ch1' }
 }
 async function go(path: string) { router.navigate(path); await flushPromises() }
 
- describe('App routing and session lifecycle', () => {
-  it('keeps the server reload banner available in the browser', async () => {
-    vi.stubGlobal('isTauri', false)
-    const { w } = await mountApp()
-    expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(true)
-  })
+describe('App routing and session lifecycle: routing and deep links', () => {
   it('selects text channels, opens/closes threads, and repairs dead message and thread links', async () => {
     const { chat, toasts } = await mountApp()
     await go('/c/ch2/t/root')
@@ -94,6 +89,27 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     await go('/v/v2/chat')
     expect(chat.activeChannel?.id).toBe('v2')
   })
+  it('initializes at root, chooses voice when no text channel exists, and preserves current route state', async () => {
+    const { chat, voice } = await mountApp({ path: '/' })
+    expect(window.location.pathname).toBe('/c/ch1')
+    chat.activeThread = messageFixture({ id: 'root' })
+    await flushPromises()
+    await go('/')
+    expect(window.location.pathname).toBe('/c/ch1/t/root')
+    await go('/v/v1')
+    await go('/')
+    expect(window.location.pathname).toBe('/v/v1')
+    voice.activeView = 'chat'
+    chat.activeThread = null
+    chat.activeChannel = null
+    chat.categories = [categoryFixture({ channels: [requireValue(channels[3])] })]
+    await flushPromises()
+    await go('/')
+    expect(window.location.pathname).toBe('/v/v1')
+  })
+})
+
+describe('App routing and session lifecycle: phone layout', () => {
   it('shows an event reminder on a phone even with the channel drawer closed', async () => {
     const { w } = await mountApp()
     const { isCompact, navOpen } = useCompactLayout()
@@ -139,6 +155,9 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     await flushPromises()
     expect(chat.showMemberList).toBe(false)
   })
+})
+
+describe('App routing and session lifecycle: admin console', () => {
   it('guards admin routes and repairs missing or incorrectly typed channels', async () => {
     const { toasts, w } = await mountApp()
     const error = vi.spyOn(toasts, 'error')
@@ -199,6 +218,61 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     expect(window.location.pathname).toBe('/admin/users')
     expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(true)
   })
+})
+
+describe('App routing and session lifecycle: admin console requests and closing', () => {
+  it('closes deep linked admin to current text/thread/talk state and uses app history when available', async () => {
+    const { chat, voice, w } = await mountApp({ admin: true })
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
+    await go('/admin/system')
+    w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
+    expect(back).toHaveBeenCalledOnce()
+    for (const path of ['/c/ch1', '/c/ch1/t/root', '/v/v1', '/v/v1/chat']) {
+      await go(path)
+      router.navigate('/admin/system', { replace: true })
+      window.history.replaceState({ idx: 0 }, '', '/admin/system')
+      await flushPromises()
+      w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
+      await flushPromises()
+      expect(window.location.pathname).toBe(path)
+    }
+    voice.activeView = 'chat'
+    chat.activeChannel = null
+    chat.activeThread = null
+    await flushPromises()
+    router.navigate('/admin/system', { replace: true })
+    window.history.replaceState({ idx: 0 }, '', '/admin/system')
+    await flushPromises()
+    w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
+    await flushPromises()
+    expect(window.location.pathname).toBe('/c/ch1')
+  })
+  it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
+    const { w } = await mountApp({ admin: true })
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(adminTabRequest.value).toBeNull()
+    expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('onboarding')
+  })
+  it('does not open the console for a request from a member', async () => {
+    const { w } = await mountApp()
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
+  })
+  it('does not open admin for ordinary members and ignores routes after logout', async () => {
+    const { w, auth, chat } = await mountApp()
+    w.findComponent({ name: 'UserBar' }).vm.$emit('open-admin')
+    await flushPromises()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
+    auth.user = null
+    await flushPromises()
+    await go('/c/ch3')
+    expect(chat.activeChannel).toBeNull()
+  })
+})
+
+describe('App routing and session lifecycle: talks and startup', () => {
   it('previews talks, remembers their chat, joins the current talk and reacts to mentions', async () => {
     const { chat, voice, w } = await mountApp()
     await go('/v/v1')
@@ -232,6 +306,41 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     await go('/c/ch1')
     expect(voice.activeView).toBe('chat')
   })
+  it('keeps loading on transient auth errors and caps exponential retry delay', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    const answers: Array<boolean | null> = [null, null, null, null, null, null, false]
+    auth.checkAuth = vi.fn(async () => answers.length ? answers.splice(0, 1)[0] ?? null : false)
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'InviteLanding' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'ServerUnreachable' }).exists()).toBe(true)
+    for (const delay of [1000, 2000, 4000, 8000, 15000, 15000]) await vi.advanceTimersByTimeAsync(delay)
+    await flushPromises()
+    expect(auth.checkAuth).toHaveBeenCalledTimes(7)
+    expect(wrapper.findComponent({ name: 'InviteLanding' }).exists()).toBe(true)
+  })
+  it('handles a known signed-out startup without fetching community data', async () => {
+    const { chat, w } = await mountApp({ authenticated: false })
+    expect(w.findComponent({ name: 'InviteLanding' }).exists()).toBe(true)
+    expect(chat.fetchChannels).not.toHaveBeenCalled()
+  })
+  it.each([false, true])('retires auth polling when App unmounts (pending response: %s)', async pending => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    let resolve!: (value: null) => void
+    auth.checkAuth = vi.fn(() => pending ? new Promise<null>(r => { resolve = r }) : Promise.resolve(null))
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+    wrapper.unmount(); wrapper = undefined
+    if (pending) resolve(null)
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(auth.checkAuth).toHaveBeenCalledOnce()
+  })
+})
+
+describe('App routing and session lifecycle: dialogs', () => {
   it('renders optional dialogs and invokes their user actions', async () => {
     const { chat, voice, w } = await mountApp({ admin: true })
     chat.activeThread = messageFixture()
@@ -277,50 +386,9 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
       await go('/c/ch1')
     }
   })
-  it('closes deep linked admin to current text/thread/talk state and uses app history when available', async () => {
-    const { chat, voice, w } = await mountApp({ admin: true })
-    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
-    await go('/admin/system')
-    w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
-    expect(back).toHaveBeenCalledOnce()
-    for (const path of ['/c/ch1', '/c/ch1/t/root', '/v/v1', '/v/v1/chat']) {
-      await go(path)
-      router.navigate('/admin/system', { replace: true })
-      window.history.replaceState({ idx: 0 }, '', '/admin/system')
-      await flushPromises()
-      w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
-      await flushPromises()
-      expect(window.location.pathname).toBe(path)
-    }
-    voice.activeView = 'chat'
-    chat.activeChannel = null
-    chat.activeThread = null
-    await flushPromises()
-    router.navigate('/admin/system', { replace: true })
-    window.history.replaceState({ idx: 0 }, '', '/admin/system')
-    await flushPromises()
-    w.findComponent({ name: 'AdminDashboard' }).vm.$emit('close')
-    await flushPromises()
-    expect(window.location.pathname).toBe('/c/ch1')
-  })
-  it('initializes at root, chooses voice when no text channel exists, and preserves current route state', async () => {
-    const { chat, voice } = await mountApp({ path: '/' })
-    expect(window.location.pathname).toBe('/c/ch1')
-    chat.activeThread = messageFixture({ id: 'root' })
-    await flushPromises()
-    await go('/')
-    expect(window.location.pathname).toBe('/c/ch1/t/root')
-    await go('/v/v1')
-    await go('/')
-    expect(window.location.pathname).toBe('/v/v1')
-    voice.activeView = 'chat'
-    chat.activeThread = null
-    chat.activeChannel = null
-    chat.categories = [categoryFixture({ channels: [requireValue(channels[3])] })]
-    await flushPromises()
-    await go('/')
-    expect(window.location.pathname).toBe('/v/v1')
-  })
+})
+
+describe('App routing and session lifecycle: session changes', () => {
   it('resumes voice once per login, reconnects, leaves on logout, and consumes the saved route', async () => {
     const { auth, chat, voice, w } = await mountApp()
     chat.isConnected = true
@@ -375,60 +443,13 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     expect(later.loaded).toBe(false)
     expect(vi.mocked(chat.initWebSocket).mock.calls.length).toBe(opened + 1)
   })
-  it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
-    const { w } = await mountApp({ admin: true })
-    requestAdminTab('onboarding')
-    await flushPromises()
-    expect(adminTabRequest.value).toBeNull()
-    expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('onboarding')
-  })
-  it('does not open the console for a request from a member', async () => {
+})
+
+describe('App routing and session lifecycle: mount, unmount and stale loads', () => {
+  it('keeps the server reload banner available in the browser', async () => {
+    vi.stubGlobal('isTauri', false)
     const { w } = await mountApp()
-    requestAdminTab('onboarding')
-    await flushPromises()
-    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
-  })
-  it('does not open admin for ordinary members and ignores routes after logout', async () => {
-    const { w, auth, chat } = await mountApp()
-    w.findComponent({ name: 'UserBar' }).vm.$emit('open-admin')
-    await flushPromises()
-    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
-    auth.user = null
-    await flushPromises()
-    await go('/c/ch3')
-    expect(chat.activeChannel).toBeNull()
-  })
-  it('keeps loading on transient auth errors and caps exponential retry delay', async () => {
-    vi.useFakeTimers()
-    const auth = useAuthStore()
-    const answers: Array<boolean | null> = [null, null, null, null, null, null, false]
-    auth.checkAuth = vi.fn(async () => answers.length ? answers.splice(0, 1)[0] ?? null : false)
-    wrapper = mount(App, { shallow: true })
-    await flushPromises()
-    expect(wrapper.findComponent({ name: 'InviteLanding' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'ServerUnreachable' }).exists()).toBe(true)
-    for (const delay of [1000, 2000, 4000, 8000, 15000, 15000]) await vi.advanceTimersByTimeAsync(delay)
-    await flushPromises()
-    expect(auth.checkAuth).toHaveBeenCalledTimes(7)
-    expect(wrapper.findComponent({ name: 'InviteLanding' }).exists()).toBe(true)
-  })
-  it('handles a known signed-out startup without fetching community data', async () => {
-    const { chat, w } = await mountApp({ authenticated: false })
-    expect(w.findComponent({ name: 'InviteLanding' }).exists()).toBe(true)
-    expect(chat.fetchChannels).not.toHaveBeenCalled()
-  })
-  it.each([false, true])('retires auth polling when App unmounts (pending response: %s)', async pending => {
-    vi.useFakeTimers()
-    const auth = useAuthStore()
-    let resolve!: (value: null) => void
-    auth.checkAuth = vi.fn(() => pending ? new Promise<null>(r => { resolve = r }) : Promise.resolve(null))
-    wrapper = mount(App, { shallow: true })
-    await flushPromises()
-    wrapper.unmount(); wrapper = undefined
-    if (pending) resolve(null)
-    await flushPromises()
-    await vi.advanceTimersByTimeAsync(20000)
-    expect(auth.checkAuth).toHaveBeenCalledOnce()
+    expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(true)
   })
   it('does not reopen a socket or continue routing after pending initialization unmounts', async () => {
     const auth = useAuthStore(), chat = useChatStore()

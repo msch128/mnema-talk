@@ -107,7 +107,7 @@ async function dispatchAttachedSenders(
 }
 
 // Sends a freshly picked screen (and its sound, on its own line).
-export async function attachScreen(cx: Cx, stream: MediaStream) {
+async function attachScreen(cx: Cx, stream: MediaStream) {
   const { voice, st } = cx
   // A newly picked capture was made at the chosen quality: nothing is pending a restart.
   voice.screenQualityNeedsRestart = false

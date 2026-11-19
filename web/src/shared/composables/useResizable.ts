@@ -22,9 +22,9 @@ export interface ResizePanel { name: string; side: PanelSide; axis: PanelAxis; m
 // a column, e.g. the chat under a Talk's stage. "Width" then means height and
 // the window's height is what gets shared.
 
-export const STORAGE_PREFIX = 'mnema.panel.'
-export const KEY_STEP = 8
-export const KEY_STEP_LARGE = 32
+const STORAGE_PREFIX = 'mnema.panel.'
+const KEY_STEP = 8
+const KEY_STEP_LARGE = 32
 
 export function clamp(value: number, min: number, max: number) {
   const upper = Math.max(min, max)

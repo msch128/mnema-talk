@@ -7,7 +7,7 @@ import { fixtureId } from '../../test-fixtures.fixture'
 import type { MediaTiming } from './bounds'
 
 /** How long the relay interferes. */
-export const CHAOS_MS = 75_000
+const CHAOS_MS = 75_000
 /**
  * How long the room may take to agree once the relay behaves. The slowest
  * repair is a member that has to start over twice: the wait between two resets
@@ -16,7 +16,7 @@ export const CHAOS_MS = 75_000
  */
 export const AGREE_WITHIN_MS = 240_000
 /** How long the agreement must then last, over a rotation and every member's renewal. */
-export const HOLD_MS = 60_000
+const HOLD_MS = 60_000
 
 const HONEST: Fault = { drop: 0, duplicate: 0, slow: 0.2, stall: 0.03 }
 
@@ -82,7 +82,7 @@ export interface SimResult {
   trace: string[]
 }
 
-export type ActionKind = 'join' | 'leave' | 'reload' | 'sleep' | 'reconnect' | 'step' | 'lie'
+type ActionKind = 'join' | 'leave' | 'reload' | 'sleep' | 'reconnect' | 'step' | 'lie'
 type Action = [kind: ActionKind, weight: number, run: () => void]
 
 function actions(sim: GroupSim, ids: readonly string[], plan: SimPlan): Action[] {
@@ -214,7 +214,7 @@ export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResu
 }
 
 /** How long a scripted member sleeps: past the absence limit of SIM_TIMING, so it is removed meanwhile. */
-export const SCRIPT_SLEEP_MS = 45_000
+const SCRIPT_SLEEP_MS = 45_000
 
 export interface Script {
   /** Link latency per member number, in ms. */

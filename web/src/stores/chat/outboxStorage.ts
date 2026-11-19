@@ -26,7 +26,7 @@ const MAX_TEXT = 4000
  * sent by itself an hour before that, and one that never reached the server is
  * only forgotten after a week.
  */
-export const NONCE_LIFETIME_MS = 24 * 60 * 60 * 1000
+const NONCE_LIFETIME_MS = 24 * 60 * 60 * 1000
 export const REPEAT_SAFE_MS = NONCE_LIFETIME_MS - 60 * 60 * 1000
 export const KEEP_MAX_MS = 7 * 24 * 60 * 60 * 1000
 

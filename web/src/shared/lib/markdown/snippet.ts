@@ -6,7 +6,7 @@ import { markdownToPlain } from '../markdown'
 import { clampChars } from '../textLength'
 
 /** How many characters of a message a snippet shows. */
-export const SNIPPET_LEN = 200
+const SNIPPET_LEN = 200
 
 // A spoiler while the plain text is cut: a private use character, removed from the message first.
 const HIDDEN = ''

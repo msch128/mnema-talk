@@ -71,7 +71,7 @@ const ONE_LINE_TYPES = new Set(['text', 'number', 'url', 'email'])
  * A single-line field of this form: Enter there means "done". Search boxes, and fields of
  * another form inside it (their own Enter creates or filters), are not.
  */
-export function isOneLineField(target: EventTarget | null, container: EventTarget | null = null): boolean {
+function isOneLineField(target: EventTarget | null, container: EventTarget | null = null): boolean {
   if (!(target instanceof HTMLInputElement) || !ONE_LINE_TYPES.has(target.type)) return false
   const form = target.closest('form')
   return !form || form === container || !(container instanceof Element && container.contains(form))

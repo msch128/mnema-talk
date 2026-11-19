@@ -32,7 +32,7 @@ export interface DmCallRing {
   talk_name: string
   ring_seconds: number
 }
-export type DmCallEndReason = 'answered' | 'cancelled' | 'timeout' | 'ended'
+type DmCallEndReason = 'answered' | 'cancelled' | 'timeout' | 'ended'
 /** The call stopped ringing (`active`: somebody is still in the Talk) or is over. */
 export interface DmCallEnd {
   conversation_id: string

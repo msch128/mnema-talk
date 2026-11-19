@@ -13,7 +13,7 @@ export type Inline =
   /** A generated element (mention pill, custom emoji). Tag and attributes are validated when rendered. */
   | { t: 'el'; tag: ElementTag; attrs: Readonly<Record<string, string>>; c: Inline[] }
 
-export type ElementTag = 'span' | 'img'
+type ElementTag = 'span' | 'img'
 
 export interface ListItem {
   c: Inline[]

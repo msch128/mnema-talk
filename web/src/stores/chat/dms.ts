@@ -122,7 +122,7 @@ export async function fetchDms(cx: Cx) {
 }
 
 /** fresh: the row is the caller's own, just read from the server, so its counts replace what is held. */
-export function upsertDm(cx: Cx, dm: ChatDirectMessage, fresh = false) {
+function upsertDm(cx: Cx, dm: ChatDirectMessage, fresh = false) {
   const rest = cx.cs.dms.value.filter(d => d.id !== dm.id)
   setDms(cx, [...rest, dm])
   if (fresh) cx.cs.readStates.value = { ...cx.cs.readStates.value, [dm.id]: readStateOf(dm) }

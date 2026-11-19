@@ -49,7 +49,7 @@ export function newCallState(guard: MediaGuard, pacer: WirePacer): CallState {
   }
 }
 
-export function encodeWire(bytes: Uint8Array): string | null {
+function encodeWire(bytes: Uint8Array): string | null {
   if (bytes.byteLength === 0 || bytes.byteLength > HANDSHAKE_MAX_BYTES) return null
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
@@ -86,7 +86,7 @@ export function rosterIds(ids: readonly string[], self: string | null): string[]
   return [...members]
 }
 
-export function resetEvidence(s: CallState) {
+function resetEvidence(s: CallState) {
   s.lastOpenedAt = clock.now()
   s.newerFrom.clear()
 }
@@ -97,7 +97,7 @@ export function track(s: CallState, pending: Promise<void>) {
   if (s.call) work.set(s.call, s.tail)
 }
 
-export function verify(s: CallState, verification: MediaVerification | null) {
+function verify(s: CallState, verification: MediaVerification | null) {
   const code = verification ? `${verification.epoch}:${verification.code}` : null
   if (code === s.appliedCode) return
   s.appliedCode = code
@@ -182,7 +182,7 @@ function clearStepKeys(s: CallState) {
   verify(s, null)
 }
 
-export function emit(s: CallState, step: MediaStep) {
+function emit(s: CallState, step: MediaStep) {
   // A group exists only for a valid channel, and steps are dropped once the call moved on.
   pushPacedWires(s, step.wires)
   if (step.key && step.epoch !== null) {

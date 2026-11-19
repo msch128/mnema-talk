@@ -28,8 +28,8 @@ export function splitStage<T extends StageSeat>(users: readonly T[]): StageSplit
 }
 
 /** The live reaction rate the server allows (internal/ws reactions): the button waits this out. */
-export const REACTIONS_PER_WINDOW = 5
-export const REACTION_WINDOW_MS = 10_000
+const REACTIONS_PER_WINDOW = 5
+const REACTION_WINDOW_MS = 10_000
 
 /** A small client-side mirror of the server's allowance so a held-down button does not send what is dropped. */
 export function createReactionLimiter(now: () => number = Date.now) {

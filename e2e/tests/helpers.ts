@@ -31,8 +31,8 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
   // it out instead of failing.
   let result = await fetchOnce(page, method, path, body)
   for (let attempt = 0; attempt < 4 && result.status === 429; attempt++) {
-    // The window is fixed, so Retry-After is exactly how long to wait.
-    await page.waitForTimeout((Math.min(result.retryAfter, 65) + 1) * 1000)
+    // The window is fixed: ask again until the budget is back.
+    await expectBudgetBack(page)
     result = await fetchOnce(page, method, path, body)
   }
   if (method === 'GET' && path === '/api/channels') {
@@ -42,14 +42,14 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
   return result
 }
 
-function fetchOnce(page: Page, method: string, path: string, body: unknown): Promise<ApiResponse & { retryAfter: number }> {
+function fetchOnce(page: Page, method: string, path: string, body: unknown): Promise<ApiResponse> {
   return page.evaluate(async ({ method, path, body }) => {
     const response = await fetch(path, {
       method, credentials: 'same-origin',
       ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
     })
     const json: unknown = await response.json().catch(() => null)
-    return { status: response.status, json, retryAfter: Number(response.headers.get('Retry-After') ?? '5') || 5 }
+    return { status: response.status, json }
   }, { method, path, body })
 }
 
@@ -60,15 +60,66 @@ function fetchOnce(page: Page, method: string, path: string, body: unknown): Pro
 export async function awaitApiBudget(page: Page): Promise<boolean> {
   let throttled = false
   for (let attempt = 0; attempt < 3; attempt++) {
-    const retryAfter = await page.evaluate(async () => {
-      const response = await fetch('/api/auth/me', { credentials: 'same-origin' })
-      return response.status === 429 ? Number(response.headers.get('Retry-After') ?? '5') : 0
-    })
-    if (retryAfter === 0) break
+    if (await meStatus(page) !== 429) break
     throttled = true
-    await page.waitForTimeout((Math.min(retryAfter, 65) + 1) * 1000)
+    await expectBudgetBack(page)
   }
   return throttled
+}
+
+async function meStatus(page: Page): Promise<number> {
+  return page.evaluate(async () => (await fetch('/api/auth/me', { credentials: 'same-origin' })).status)
+}
+
+// The request budget is a fixed one-minute window, so it is back within 65 s.
+async function expectBudgetBack(page: Page) {
+  await expect.poll(() => meStatus(page), { timeout: 70_000, intervals: [2_000], message: 'the API request budget did not come back' }).not.toBe(429)
+}
+
+/**
+ * Resolves once every finite animation and transition of the page has ended (a
+ * dialog fading in, a staggered list), so what follows reads the settled layout
+ * and colours. A spinner that turns for ever does not count.
+ */
+export async function awaitSettled(page: Page) {
+  await page.evaluate(async () => {
+    const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+    await frame()
+    for (let round = 0; round < 10; round++) {
+      const running = document.getAnimations().filter(a => a.playState !== 'finished' && a.effect?.getComputedTiming().iterations !== Infinity)
+      if (running.length === 0) return
+      await Promise.allSettled(running.map(a => a.finished))
+      await frame()
+    }
+  })
+}
+
+/** Resolves once the page has stopped scrolling (a smooth scroll has landed): its position held for 5 frames in a row. */
+export async function awaitScrollEnd(page: Page) {
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    let last = ''
+    let still = 0
+    const deadline = performance.now() + 5_000
+    const step = () => {
+      const now = Math.round(window.scrollY * 2) + ':' + Math.round(document.scrollingElement?.scrollTop ?? 0)
+      still = last === now ? still + 1 : 0
+      last = now
+      if (still >= 5) return resolve()
+      if (performance.now() > deadline) return reject(new Error('the page kept scrolling'))
+      requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }))
+}
+
+/**
+ * Lets a stretch of real time pass in the page, for a measurement over a time
+ * span (bytes in ten seconds, packets a second). Where a state can be awaited,
+ * use a web-first assertion instead; this is only for rates and for proving
+ * that nothing happens.
+ */
+export async function observeFor(page: Page, ms: number) {
+  await page.evaluate((span) => new Promise<void>(resolve => setTimeout(resolve, span)), ms)
 }
 
 export function responseString(response: ApiResponse, field: string): string {

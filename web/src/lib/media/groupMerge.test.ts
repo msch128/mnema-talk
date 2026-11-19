@@ -302,6 +302,24 @@ describe('a welcome from an id between a member and the one who commits in its g
   }, 60_000)
 })
 
+/** At `at` ms after the start, every member's heartbeats reach every other. */
+async function heartbeatsAt(groups: Map<string, MediaGroup>, at: number) {
+  vi.setSystemTime(START + at)
+  for (const [id, group] of groups) {
+    for (const wire of (await group.maintain()).wires) await relayed(groups, id, wire)
+  }
+}
+
+async function relayed(groups: Map<string, MediaGroup>, from: string, wire: Uint8Array) {
+  for (const [other, peer] of groups) if (other !== from) await peer.receive(from, wire)
+}
+
+/** A member other than Alice receives Dave's key package and, unless left behind (`commit` null), Alice's commit that adds him. */
+async function hearAdd(group: MediaGroup, offer: Uint8Array, commit: Uint8Array | null) {
+  await group.receive(daveId, offer)
+  if (commit) await group.receive(aliceId, commit)
+}
+
 /**
  * Alice, Bob and Carol in one group, each with a heartbeat of the others for
  * that epoch. Then Alice lets Dave in, and that commit reaches everyone but
@@ -320,18 +338,13 @@ async function splitState(behindId: string) {
   await bob.receive(aliceId, only(third, 'mls_public_message'))
   await carol.receive(aliceId, only(third, 'mls_welcome'))
   const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
-  for (const at of [0, 5000]) {
-    vi.setSystemTime(START + at)
-    for (const [id, group] of groups) for (const wire of (await group.maintain()).wires) for (const [other, peer] of groups) if (other !== id) await peer.receive(id, wire)
-  }
+  for (const at of [0, 5000]) await heartbeatsAt(groups, at)
   const dave = await open(daveId)
   for (const group of groups.values()) await group.sync(everyone)
   const offer = only(await dave.sync(everyone), 'mls_key_package')
   const fourth = await alice.receive(daveId, offer)
   for (const [id, group] of groups) {
-    if (id === aliceId) continue
-    await group.receive(daveId, offer)
-    if (id !== behindId) await group.receive(aliceId, only(fourth, 'mls_public_message'))
+    if (id !== aliceId) await hearAdd(group, offer, id === behindId ? null : only(fourth, 'mls_public_message'))
   }
   await dave.receive(aliceId, only(fourth, 'mls_welcome'))
   const behind = groups.get(behindId) as MediaGroup

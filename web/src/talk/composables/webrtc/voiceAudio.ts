@@ -19,7 +19,7 @@ interface SpeakingTick {
 }
 
 /** Takes my speaking ring down for the others, if it is up. */
-export function endSpeakingRing({ chat, st }: Cx) {
+function endSpeakingRing({ chat, st }: Cx) {
   if (!st.speakingAnnounced) return
   st.speakingAnnounced = false
   chat.sendWSEvent('voice_speaking', { active: false })

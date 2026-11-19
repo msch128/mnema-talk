@@ -1,6 +1,6 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSource, type FrameStream } from './frame'
-import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
 import { clock } from './clock'
 import { lineFrom, type Line, type TransformOptions } from './frameWorkerLine'
 import { onLineMessage, type LineActions, type RememberedKey } from './frameWorkerPort'
@@ -139,7 +139,7 @@ function retainReplays() {
 
 /** The previous group's keys, while they may still open frames. */
 function previousKeys(): ReadonlyMap<number, EpochKeys> {
-  if (previous.size && clock.now() - regroupedAt > PREVIOUS_GROUP_MS) {
+  if (previous.size && clock.now() - regroupedAt > PREVIOUS_EPOCH_MS) {
     previous = new Map()
     retainReplays()
   }

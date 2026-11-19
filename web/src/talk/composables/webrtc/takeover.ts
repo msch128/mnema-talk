@@ -13,7 +13,7 @@ import type { Cx } from './state'
 const MOVED_NOTICE_MS = 15_000
 
 /** The Talk my account is listed in although this session is not in it, or null. */
-export function talkOnAnotherDevice(cx: Cx): string | null {
+function talkOnAnotherDevice(cx: Cx): string | null {
   const me = myUserId()
   if (!me) return null
   for (const [channelId, members] of Object.entries(cx.voice.channelUsers)) {

@@ -1,5 +1,5 @@
 import type { BrowserContext, Locator, Page } from '@playwright/test'
-import { apiFetch, bounds, expectTalkLive, leaveAndClose } from './helpers'
+import { apiFetch, awaitSettled, bounds, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 import { fakeDisplayMedia } from './clipping/talk'
 
@@ -71,7 +71,7 @@ async function openSettledDrawer(page: Page) {
   for (const toast of await page.locator('[data-toast]').all()) await toast.click({ timeout: 2_000 }).catch(() => undefined)
   await expect(async () => {
     await openDrawer(page)
-    await page.waitForTimeout(400)
+    await awaitSettled(page)
     await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 1, timeout: 100 })
   }).toPass({ timeout: 10_000 })
 }

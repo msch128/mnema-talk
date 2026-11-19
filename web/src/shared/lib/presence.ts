@@ -9,7 +9,7 @@ import { t } from '../../i18n'
 export const CHOOSABLE: readonly ChosenPresence[] = ['online', 'away', 'dnd', 'focus']
 
 /** Every live status, in member-list order. */
-export const STATUSES: readonly Presence[] = [...CHOOSABLE, 'offline']
+const STATUSES: readonly Presence[] = [...CHOOSABLE, 'offline']
 
 /** Idle time after which an "online" user shows as away. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000

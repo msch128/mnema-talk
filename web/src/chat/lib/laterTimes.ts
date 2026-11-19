@@ -5,8 +5,8 @@
 export type LaterPreset = 'in20m' | 'in30m' | 'in1h' | 'in3h' | 'tomorrow'
 
 /** What the server accepts: at least 10 seconds ahead, at most a year. */
-export const MIN_LEAD_MS = 10_000
-export const MAX_LEAD_DAYS = 366
+const MIN_LEAD_MS = 10_000
+const MAX_LEAD_DAYS = 366
 
 const MINUTE = 60_000
 

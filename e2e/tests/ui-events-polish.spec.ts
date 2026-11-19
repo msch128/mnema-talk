@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, awaitSettled, responseString } from './helpers'
 
 // Events and forum on a phone: the event cards keep their size and show who
 // is going, and the forum has the way back to the channel list.
@@ -65,7 +65,7 @@ for (const viewport of [{ width: 390, height: 844, label: '390' }, { width: 1440
       await expect(detail).toHaveCount(1)
       await expect(detail.getByRole('button', { name: 'Ich komme' })).toBeVisible()
       await expect(detail.getByRole('button', { name: 'Kann nicht' })).toBeVisible()
-      await page.waitForTimeout(500) // let the dialog finish its fade-in
+      await awaitSettled(page) // let the dialog finish its fade-in
       await shot(page, `event-detail-${viewport.label}`)
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog').getByRole('heading', { name: 'Veranstaltungen' })).toBeVisible()

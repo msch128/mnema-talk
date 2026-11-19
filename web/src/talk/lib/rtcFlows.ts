@@ -13,7 +13,7 @@ export type SendLines = ReadonlyMap<string, SendLine>
 export type MicState = 'none' | 'sending' | 'paused'
 
 export interface Flow { packets: number; bytes: number; kbps: number | null; lost: number }
-export type Flows = Partial<Record<FlowKey, Flow>>
+type Flows = Partial<Record<FlowKey, Flow>>
 /** Bytes per flow at a moment, for the rate of the next sample. */
 export interface FlowBytes { timestamp: number; bytes: Partial<Record<FlowKey, number>> }
 

@@ -17,13 +17,13 @@ import { isTabVisible } from './readState'
 import { notificationLevel } from './notifySettings'
 
 /** The shown name of a conversation member (or the community member), or ''. */
-export function memberName(cx: Cx, conversationId: string, userId: string): string {
+function memberName(cx: Cx, conversationId: string, userId: string): string {
   const member = cx.cs.dms.value.find(d => d.id === conversationId)?.members.find(m => m.id === userId) ?? cx.cs.members.value.find(m => m.id === userId)
   return member ? nameOf(member) : ''
 }
 
 /** Brings the member to the call: the conversation opens at its invitation card, which has the Join button. */
-export function openCall(cx: Cx, call: CallInfo) {
+function openCall(cx: Cx, call: CallInfo) {
   goToMessage(cx, { id: call.messageId, channel_id: call.conversationId })
 }
 
@@ -36,7 +36,7 @@ function windowAway(): boolean {
  * call card, so the notice is for a member who is not looking at it. With Web
  * Push on, a hidden page leaves it to the service worker.
  */
-export function notifyIncomingCall(cx: Cx, call: CallInfo) {
+function notifyIncomingCall(cx: Cx, call: CallInfo) {
   if (pushOnThisDevice.value && !isTabVisible()) return
   const allowed = shouldNotify({
     permission: platform.notificationPermission(),

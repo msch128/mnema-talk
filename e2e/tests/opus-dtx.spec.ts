@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember } from './helpers'
+import { apiFetch, responseString, suiteMember, observeFor } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -77,7 +77,7 @@ const audioIn = (page: Page) => page.evaluate(async () => {
 
 async function window_(page: Page, seconds: number) {
   const before = await audioIn(page)
-  await page.waitForTimeout(seconds * 1000)
+  await observeFor(page, seconds * 1000)
   const after = await audioIn(page)
   return { perSecond: (after.packets - before.packets) / seconds, samples: after.samples - before.samples }
 }
@@ -128,21 +128,21 @@ test('a silent speaker sends a few small packets, a speaking one the full rate, 
 
     // Nothing is said: the packets nearly stop (about 5 a second), and what is played out does not.
     await speak(speaker, false)
-    await listener.waitForTimeout(3000)
+    await expect.poll(async () => (await window_(listener, 1)).perSecond, { timeout: 30_000, message: 'the packets did not slow down in silence' }).toBeLessThan(15)
     const quiet = await window_(listener, 6)
     expect(quiet.perSecond).toBeLessThan(15)
     expect(quiet.samples).toBeGreaterThan(6 * 48000 * 0.9)
 
     // Speech: the full rate again.
     await speak(speaker, true)
-    await listener.waitForTimeout(2000)
+    await expect.poll(async () => (await window_(listener, 1)).perSecond, { timeout: 30_000, message: 'the packets did not return to the full rate' }).toBeGreaterThan(35)
     const talking = await window_(listener, 4)
     expect(talking.perSecond).toBeGreaterThan(35)
     expect(talking.samples).toBeGreaterThan(4 * 48000 * 0.9)
 
     // And back to quiet.
     await speak(speaker, false)
-    await listener.waitForTimeout(3000)
+    await expect.poll(async () => (await window_(listener, 1)).perSecond, { timeout: 30_000, message: 'the packets did not slow down again' }).toBeLessThan(15)
     expect((await window_(listener, 4)).perSecond).toBeLessThan(15)
   } finally {
     for (const page of [listener, speaker]) await page.getByRole('button', { name: 'Verlassen' }).first().click({ timeout: 3000 }).catch(() => undefined)

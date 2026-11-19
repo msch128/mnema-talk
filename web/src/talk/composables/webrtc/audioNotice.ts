@@ -5,7 +5,7 @@ import { useToastStore, type ToastAction, type ToastOptions } from '../../../sto
 const shown = new Set<string>()
 
 /** A toast button that opens the audio settings on the field that fixes the problem. */
-export function audioSettingsAction(field: SettingsField): ToastAction {
+function audioSettingsAction(field: SettingsField): ToastAction {
   return { label: t('audio.openSettings'), onClick: () => openSettings('audio', { field }) }
 }
 

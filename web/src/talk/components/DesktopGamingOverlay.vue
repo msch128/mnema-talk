@@ -161,13 +161,58 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
   <ToastHost v-if="interactive" />
 </template>
 <style scoped>
-.gaming-surface {margin:8px;padding:14px;border-radius:12px;color:var(--color-mnema-text,#eee);background:rgba(18,20,28,var(--sidepeek-opacity,.55));border:none;font-size:13px}
-.interactive {font-size:14px;padding:20px;background:rgba(18,20,28,.92);max-height:calc(100vh - 16px);overflow-y:auto;overflow-x:hidden}
-.gaming-form {display:flex;flex-direction:column;gap:1.75rem;margin:1.25rem auto 0;max-width:36rem;min-width:0}
-header button, .controls button {padding:8px;border-radius:7px;background:rgba(255,255,255,.08)}
-.controls button[aria-pressed="true"] {background:rgba(239,68,68,.25)}
-header button svg, .controls button svg {width:18px;height:18px}
-.speaker-dot {width:7px;height:7px;border-radius:50%;background:var(--color-mnema-tertiary);flex-shrink:0}
-.speaker-dot.live {background:var(--color-mnema-accent-hover);box-shadow:0 0 8px var(--color-mnema-accent-hover)}
-.speaking {background:rgb(54 189 129 / 0.1)}
+/* Sizes in rem so a larger root font size counts; colours from the Mnema tokens. */
+.gaming-surface {
+  margin: 0.5rem;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  color: var(--color-mnema-text);
+  background: color-mix(in srgb, var(--color-mnema-canvas) calc(var(--sidepeek-opacity, 0.55) * 100%), transparent);
+  border: none;
+  font-size: 0.8125rem;
+}
+.interactive {
+  font-size: 0.875rem;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--color-mnema-canvas) 92%, transparent);
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.gaming-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin: 1.25rem auto 0;
+  max-width: 36rem;
+  min-width: 0;
+}
+header button,
+.controls button {
+  padding: 0.5rem;
+  border-radius: 0.4375rem;
+  background: color-mix(in srgb, var(--color-mnema-white) 8%, transparent);
+}
+.controls button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--color-mnema-danger) 25%, transparent);
+}
+header button svg,
+.controls button svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.speaker-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--color-mnema-tertiary);
+  flex-shrink: 0;
+}
+.speaker-dot.live {
+  background: var(--color-mnema-accent-hover);
+  box-shadow: 0 0 0.5rem var(--color-mnema-accent-hover);
+}
+.speaking {
+  background: color-mix(in srgb, var(--color-mnema-accent-hover) 10%, transparent);
+}
 </style>

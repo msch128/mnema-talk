@@ -14,7 +14,7 @@ function plainText(text: string): string {
 }
 
 /** spoiler: the word shown instead of hidden text (default: the reader's language). */
-export function inlinePlain(nodes: readonly Inline[], spoiler = t('chat.spoiler')): string {
+function inlinePlain(nodes: readonly Inline[], spoiler = t('chat.spoiler')): string {
   return nodes
     .map(node => {
       switch (node.t) {

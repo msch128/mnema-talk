@@ -31,7 +31,7 @@ defineExpose({ peakLevel, threshold })
       :aria-valuenow="voiceStore.currentInputLevel"
     >
       <div
-        class="h-full rounded-md transition-all duration-75"
+        class="h-full rounded-md transition-[width,background-color] duration-(--motion-press) motion-reduce:transition-none"
         :class="isAboveThreshold ? 'bg-mnema-accent' : 'bg-mnema-warning'"
         :style="{ width: `${voiceStore.currentInputLevel}%` }"
       ></div>
@@ -46,7 +46,7 @@ defineExpose({ peakLevel, threshold })
 
       <!-- Threshold marker -->
       <div
-        class="pointer-events-none absolute top-0 bottom-0 z-10 w-1 bg-white shadow-lg transition-all"
+        class="pointer-events-none absolute top-0 bottom-0 z-10 w-1 bg-white shadow-lg transition-[left] motion-reduce:transition-none"
         :style="{ left: `${threshold}%` }"
       ></div>
     </div>

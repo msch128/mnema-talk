@@ -9,7 +9,7 @@ import type { User } from '../../types/domain'
  * session that started its request: every generation change drops the 401
  * listener of the one before, so old requests' captured callbacks are harmless.
  */
-export interface SessionState {
+interface SessionState {
   generation: number
   unauthorizedGeneration: number | null
   cookieRequests: Promise<void>
@@ -17,7 +17,7 @@ export interface SessionState {
   removeUnauthorized: () => boolean
 }
 
-export type SessionSnapshot = { generation: number; userId: string | null }
+type SessionSnapshot = { generation: number; userId: string | null }
 
 export interface SessionCore {
   s: SessionState

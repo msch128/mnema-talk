@@ -10,7 +10,6 @@ export interface DfnReady { type: 'ready'; frameLength: number }
 export interface DfnInit { type: 'init'; wasmModule: WebAssembly.Module; modelBytes: ArrayBuffer; suppressionLevel: number }
 export type DfnWorkerCommand = DfnInit | DfnConnect
 export type DfnWorkerReply = DfnReady | DfnFailed
-export type DfnBridgeCommand = DfnConnect | DfnFailed
 export type DfnFrameReply = DfnFrame | DfnFailed
 export type DfnBridgeReport = DfnFailed | ({ type: 'stats' } & FilterStats)
 
