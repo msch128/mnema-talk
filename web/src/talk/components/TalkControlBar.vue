@@ -157,7 +157,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
     :aria-label="t('talk.controls')"
     :class="[
       'flex max-w-full flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-[28px] bg-mnema-elevated/95 border border-mnema-border shadow-xl shadow-black/40 backdrop-blur-xs',
-      'transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
+      'transition-[opacity,transform] duration-(--motion-panel-in) ease-out motion-reduce:transition-none',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
     ]"
     @pointerenter="onPointerEnter"

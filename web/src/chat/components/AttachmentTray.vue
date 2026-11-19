@@ -77,7 +77,7 @@ const summary = computed(() => {
               aria-valuemin="0"
               aria-valuemax="100"
               :aria-valuenow="percent(item)"
-              class="h-full bg-mnema-accent transition-[width] duration-150 motion-reduce:transition-none"
+              class="h-full bg-mnema-accent transition-[width] duration-(--motion-fade) motion-reduce:transition-none"
               :style="{ width: percent(item) + '%' }"
             ></div>
           </div>

@@ -267,7 +267,7 @@ onMounted(async () => {
         data-testid="channel-drawer"
         :class="[
           'relative flex flex-col h-full shrink-0 border-r border-mnema-hairline bg-mnema-raised',
-          'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-200 motion-reduce:transition-none',
+          'max-md:safe-pad max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(86vw,22rem)] max-md:transition-transform max-md:duration-(--motion-panel-in) motion-reduce:transition-none',
           navOpen ? '' : 'max-md:-translate-x-full'
         ]"
         :inert="isCompact && !navOpen"

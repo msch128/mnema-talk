@@ -68,7 +68,7 @@ const tiny = computed(() => narrow.value && box.value.width < 440)
 // The control bar over the stage goes icons-only when the area asks for it or the box is too narrow for the full bar.
 const barCompact = computed(() => props.compactBar || (!props.fullscreen && box.value.width > 0 && box.value.width < STAGE_COMPACT_BAR_WIDTH))
 const fade = computed(() => [
-  'transition-opacity duration-200 motion-reduce:transition-none',
+  'transition-opacity duration-(--motion-panel-in) motion-reduce:transition-none',
   props.controlsShown ? 'opacity-100' : 'opacity-0'
 ])
 

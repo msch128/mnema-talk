@@ -9,6 +9,10 @@
 
 :root {
   --motion-press: 90ms;
+  --motion-fade: 160ms;
+  --motion-dialog: 200ms;
+  --motion-toast: 200ms;
+  --motion-base: 150ms;
   --motion-popover-in: 180ms;
   --motion-popover-out: 140ms;
   --motion-panel-in: 220ms;
@@ -134,6 +138,10 @@ svg.success-pulse {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Tailwind's looping utilities (spinners, skeleton pulses, pings) stand still. */
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
   .pop-in,
   .pop-out,
   .panel-in,

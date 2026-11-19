@@ -36,7 +36,7 @@ function toggle() {
     </template>
   </button>
   <div
-    :class="['w-full grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none', collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]']"
+    :class="['w-full grid transition-[grid-template-rows] duration-(--motion-panel-in) ease-out motion-reduce:transition-none', collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]']"
   >
     <div class="min-h-0 overflow-hidden">
       <div
