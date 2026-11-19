@@ -259,7 +259,7 @@ func corePoolWithConfig(t *testing.T, original *Pool, configure func(*pgxpool.Co
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	return &Pool{pool}
+	return &Pool{Pool: pool}
 }
 
 func TestMigrateReportsClosedPoolAndCanceledDatabaseOperations(t *testing.T) {
