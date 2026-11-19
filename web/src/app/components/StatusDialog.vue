@@ -152,7 +152,7 @@ async function clear() {
           </div>
         </FormField>
 
-        <EmojiPicker v-if="pickerOpen" :trigger="emojiButton" class="mx-auto -mt-2" @pick="insertEmoji" @close="pickerOpen = false" />
+        <EmojiPicker v-if="pickerOpen" :trigger="emojiButton" class="mx-auto -mt-2 origin-top" @pick="insertEmoji" @close="pickerOpen = false" />
 
         <div v-if="canExpire" role="radiogroup" :aria-labelledby="'status-expiry-label'" data-testid="status-expiry" class="space-y-2">
           <p id="status-expiry-label" class="text-sm font-medium text-mnema-body-ink">{{ $t('profile.clearAfter') }}</p>

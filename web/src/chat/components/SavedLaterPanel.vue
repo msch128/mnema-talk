@@ -11,6 +11,7 @@ import Badge from '../../shared/components/Badge.vue'
 import HeaderPopover from '../../shared/components/HeaderPopover.vue'
 import LaterList from './LaterList.vue'
 import SavedList from './SavedList.vue'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 // One header button for what the member keeps for themselves: their saved
 // messages (private bookmarks) and what they asked to be reminded of or
@@ -110,47 +111,51 @@ async function onTabKey(e: KeyboardEvent) {
       <Badge v-if="later.attention && hasLater" variant="info" data-testid="later-badge" class="absolute -right-1 -top-1 min-w-4 px-1 py-0 text-[10px] leading-4">{{ later.attention }}</Badge>
     </button>
 
-    <div
-      v-if="showHint"
-      role="status"
-      data-testid="saved-hint"
-      class="absolute right-0 top-full z-30 mt-2 flex w-[min(18rem,calc(100vw-1.5rem))] items-start gap-2 rounded-xl border border-mnema-border bg-mnema-elevated p-3 text-sm shadow-popover pop-in max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:w-auto"
-    >
-      <Bookmark class="mt-0.5 h-4 w-4 shrink-0 text-mnema-accent" aria-hidden="true" />
-      <p class="min-w-0 flex-1 text-mnema-muted">
-        <span class="block font-medium text-mnema-text">{{ $t('saved.hintTitle') }}</span>
-        {{ $t('saved.hintBody') }}
-      </p>
-      <button type="button" data-testid="saved-hint-dismiss" class="btn btn-icon h-7 w-7 shrink-0 max-md:h-11 max-md:w-11" :aria-label="$t('saved.hintDismiss')" v-tooltip="$t('saved.hintDismiss')" @click="dismissHint">
-        <X class="h-4 w-4" />
-      </button>
-    </div>
-
-    <HeaderPopover v-if="open" data-testid="saved-panel" :title="$t('panel.title')">
-      <div v-if="tabs.length > 1" role="tablist" :aria-label="$t('panel.title')" class="mb-1 flex gap-1 px-1" @keydown="onTabKey">
-        <button
-          v-for="item in tabs"
-          :id="`panel-tab-${item.id}`"
-          :key="item.id"
-          type="button"
-          role="tab"
-          :data-testid="`panel-tab-${item.id}`"
-          :aria-selected="current === item.id ? 'true' : 'false'"
-          :aria-controls="`panel-body-${item.id}`"
-          :tabindex="current === item.id ? 0 : -1"
-          :class="['flex items-center gap-1.5 rounded-md px-3 py-1 text-sm transition max-md:py-2.5', current === item.id ? 'bg-mnema-surface font-medium text-mnema-text' : 'text-mnema-tertiary hover:text-mnema-text']"
-          @click="tab = item.id"
-        >
-          {{ $t(item.label) }}
-          <Badge v-if="item.id === 'later' && later.attention" variant="info" class="min-w-4 px-1 py-0 text-[10px] leading-4">{{ later.attention }}</Badge>
+    <PopTransition>
+      <div
+        v-if="showHint"
+        role="status"
+        data-testid="saved-hint"
+        class="absolute right-0 top-full z-30 origin-top-right max-md:origin-top mt-2 flex w-[min(18rem,calc(100vw-1.5rem))] items-start gap-2 rounded-xl border border-mnema-border bg-mnema-elevated p-3 text-sm shadow-popover pop-in max-md:fixed max-md:inset-x-3 max-md:top-[calc(3rem+env(safe-area-inset-top))] max-md:mt-0 max-md:w-auto"
+      >
+        <Bookmark class="mt-0.5 h-4 w-4 shrink-0 text-mnema-accent" aria-hidden="true" />
+        <p class="min-w-0 flex-1 text-mnema-muted">
+          <span class="block font-medium text-mnema-text">{{ $t('saved.hintTitle') }}</span>
+          {{ $t('saved.hintBody') }}
+        </p>
+        <button type="button" data-testid="saved-hint-dismiss" class="btn btn-icon h-7 w-7 shrink-0 max-md:h-11 max-md:w-11" :aria-label="$t('saved.hintDismiss')" v-tooltip="$t('saved.hintDismiss')" @click="dismissHint">
+          <X class="h-4 w-4" />
         </button>
       </div>
-      <p class="px-3 pb-1.5 text-xs text-mnema-tertiary" data-testid="panel-description">{{ $t(current === 'saved' ? 'panel.descSaved' : 'panel.descLater') }}</p>
+    </PopTransition>
 
-      <div :id="`panel-body-${current}`" :role="tabs.length > 1 ? 'tabpanel' : undefined" :aria-labelledby="tabs.length > 1 ? `panel-tab-${current}` : undefined">
-        <SavedList v-if="current === 'saved'" :focus-id="focusId" @navigate="open = false" />
-        <LaterList v-else @navigate="open = false" @retry="refreshLater" />
-      </div>
-    </HeaderPopover>
+    <PopTransition>
+      <HeaderPopover v-if="open" data-testid="saved-panel" :title="$t('panel.title')">
+        <div v-if="tabs.length > 1" role="tablist" :aria-label="$t('panel.title')" class="mb-1 flex gap-1 px-1" @keydown="onTabKey">
+          <button
+            v-for="item in tabs"
+            :id="`panel-tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            role="tab"
+            :data-testid="`panel-tab-${item.id}`"
+            :aria-selected="current === item.id ? 'true' : 'false'"
+            :aria-controls="`panel-body-${item.id}`"
+            :tabindex="current === item.id ? 0 : -1"
+            :class="['flex items-center gap-1.5 rounded-md px-3 py-1 text-sm transition max-md:py-2.5', current === item.id ? 'bg-mnema-surface font-medium text-mnema-text' : 'text-mnema-tertiary hover:text-mnema-text']"
+            @click="tab = item.id"
+          >
+            {{ $t(item.label) }}
+            <Badge v-if="item.id === 'later' && later.attention" variant="info" class="min-w-4 px-1 py-0 text-[10px] leading-4">{{ later.attention }}</Badge>
+          </button>
+        </div>
+        <p class="px-3 pb-1.5 text-xs text-mnema-tertiary" data-testid="panel-description">{{ $t(current === 'saved' ? 'panel.descSaved' : 'panel.descLater') }}</p>
+
+        <div :id="`panel-body-${current}`" :role="tabs.length > 1 ? 'tabpanel' : undefined" :aria-labelledby="tabs.length > 1 ? `panel-tab-${current}` : undefined">
+          <SavedList v-if="current === 'saved'" :focus-id="focusId" @navigate="open = false" />
+          <LaterList v-else @navigate="open = false" @retry="refreshLater" />
+        </div>
+      </HeaderPopover>
+    </PopTransition>
   </div>
 </template>

@@ -77,6 +77,24 @@ describe('EmojiPicker and trigger', () => {
     expect((wrapper.element as HTMLElement).style.translate).toBe(translate)
   })
 
+  it('measures its layout box, not the box the opening animation scales towards the trigger', () => {
+    // Scaled to 0.95 from its bottom right corner, the painted box starts 17px right of the layout box.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.dataset['testid'] === 'emoji-picker' ? { left: 8, right: 331, top: 0, bottom: 342, width: 323, height: 342, x: 8, y: 0, toJSON: () => ({}) } : new DOMRect()
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340)
+    // jsdom does no layout: give the picker a positioned parent and an offset.
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body })
+    Object.defineProperty(HTMLElement.prototype, 'offsetLeft', { configurable: true, get: () => -9 })
+    try {
+      wrapper = mount(EmojiPicker, { attachTo: document.body })
+      expect((wrapper.element as HTMLElement).style.translate).toBe('17px 0')
+    } finally {
+      Reflect.deleteProperty(HTMLElement.prototype, 'offsetParent')
+      Reflect.deleteProperty(HTMLElement.prototype, 'offsetLeft')
+    }
+  })
+
   it('is placed again when the window changes size', async () => {
     let left = 100
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {

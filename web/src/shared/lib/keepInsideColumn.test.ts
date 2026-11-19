@@ -2,18 +2,19 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { keepInsideColumn } from './keepInsideColumn'
 
 // jsdom does no layout: each case states where the browser would put the column and the card.
-function layout(column: { left: number; width: number }, card: { left: number; width: number }) {
+// `painted` is the scale the opening animation draws the card at this frame (from its top right corner).
+function layout(column: { left: number; width: number }, card: { left: number; width: number }, painted = 1) {
   const main = document.createElement('main')
   const el = document.createElement('div')
   el.className = 'card'
   main.appendChild(el)
   document.body.appendChild(main)
   main.getBoundingClientRect = () => new DOMRect(column.left, 0, column.width, 600)
+  const width = () => Math.min(card.width, parseFloat(el.style.getPropertyValue('max-width')) || Infinity)
+  Object.defineProperty(el, 'offsetWidth', { get: width })
   el.getBoundingClientRect = () => {
-    const max = parseFloat(el.style.getPropertyValue('max-width')) || Infinity
-    const width = Math.min(card.width, max)
     const right = card.left + card.width
-    return new DOMRect(right - width, 50, width, 300)
+    return new DOMRect(right - width() * painted, 50, width() * painted, 300)
   }
   return el
 }
@@ -41,6 +42,13 @@ describe('keepInsideColumn', () => {
     keepInsideColumn(card)
     expect(card.style.getPropertyValue('max-width')).toBe('344px')
     expect(card.style.getPropertyValue('translate')).toBe('140px 0')
+  })
+
+  it('measures the card it will be, not the one its opening animation still scales down', () => {
+    positioned('absolute')
+    const card = layout({ left: 220, width: 360 }, { left: 48, width: 384 }, 0.95)
+    keepInsideColumn(card)
+    expect(card.style.getPropertyValue('max-width')).toBe('344px')
   })
 
   it('leaves the phone sheet alone', () => {

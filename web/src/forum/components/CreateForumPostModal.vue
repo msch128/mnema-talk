@@ -20,6 +20,7 @@ import ForumTagPicker from './ForumTagPicker.vue'
 import EmojiButton from '../../shared/components/EmojiButton.vue'
 import MarkdownHelp from '../../shared/components/MarkdownHelp.vue'
 import MentionSuggestions from '../../chat/components/MentionSuggestions.vue'
+import PopTransition from '../../shared/components/PopTransition.vue'
 
 const props = defineProps<{
   channelId: string
@@ -160,14 +161,16 @@ async function handleSubmit() {
           <span class="text-xs tabular-nums text-mnema-tertiary">{{ charCount(content) }}/{{ CONTENT_MAX }}</span>
         </div>
         <div class="relative rounded-lg border border-mnema-border bg-mnema-surface focus-within:border-mnema-accent">
-          <MentionSuggestions
-            v-if="assist.open.value"
-            id="post-mentions"
-            :items="assist.suggestions.value"
-            :active="assist.active.value"
-            @pick="assist.pick"
-            @hover="assist.active.value = $event"
-          />
+          <PopTransition>
+            <MentionSuggestions
+              v-if="assist.open.value"
+              id="post-mentions"
+              :items="assist.suggestions.value"
+              :active="assist.active.value"
+              @pick="assist.pick"
+              @hover="assist.active.value = $event"
+            />
+          </PopTransition>
           <textarea
             id="post-content"
             ref="textArea"

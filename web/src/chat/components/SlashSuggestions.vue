@@ -51,7 +51,7 @@ watch(() => props.active, index => {
     data-testid="slash-suggestions"
     :aria-label="$t('slash.listLabel')"
     :data-more="more ? '' : undefined"
-    class="fade-bottom absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-[min(26rem,55vh)] overflow-y-auto rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
+    class="fade-bottom absolute bottom-full left-0 right-0 z-30 origin-bottom-left mb-1.5 max-h-[min(26rem,55vh)] overflow-y-auto rounded-xl bg-mnema-elevated p-1.5 shadow-popover pop-in"
     @scroll.passive="measure"
   >
     <template v-for="(item, i) in items" :key="item.id">

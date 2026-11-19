@@ -104,7 +104,7 @@ function role(item: ContextMenuItem) {
     v-tooltip.visual="item.disabled ? item.disabledReason : undefined"
     :disabled="item.disabled && !item.disabledReason"
     :class="[
-      'w-full px-3 flex items-center justify-between gap-3 rounded-lg text-left transition-colors font-normal',
+      'w-full px-3 flex items-center justify-between gap-3 rounded-md text-left transition-colors font-normal',
       item.subtitle ? 'min-h-9 py-2' : 'h-9',
       item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
       item.danger
