@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.5](https://github.com/mnema-xyz/talk/compare/v3.3.4...v3.3.5) (2026-11-19)
+
+
+### Bug Fixes
+
+* **db:** refuse to start without the durability wait's grant; keep the automod flag of a stored post ([#885](https://github.com/mnema-xyz/talk/issues/885)) ([d82c4e6](https://github.com/mnema-xyz/talk/commit/d82c4e6043b98be830f6a891aa4f989f51be35b5))
+
+
+### Performance Improvements
+
+* **chat:** stop a busy channel's posts from queueing behind each other's WAL flush ([#884](https://github.com/mnema-xyz/talk/issues/884)) ([2f5095b](https://github.com/mnema-xyz/talk/commit/2f5095b5e2252717b3a377aa34bd9c046ee297de))
+
 ## [3.3.4](https://github.com/mnema-xyz/talk/compare/v3.3.3...v3.3.4) (2026-11-19)
 
 
