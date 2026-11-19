@@ -44,6 +44,12 @@ func (t *Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Trac
 	if !strings.Contains(normalize(data.SQL), normalize(t.Query)) {
 		return ctx
 	}
+	return t.fire(ctx, !t.AfterPrepare)
+}
+
+// fire arms the cancellation of a matching statement (at once, or after its
+// prepare) unless Skip lets it pass.
+func (t *Tracer) fire(ctx context.Context, now bool) context.Context {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.Skip > 0 {
@@ -52,13 +58,30 @@ func (t *Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Trac
 	}
 	t.hit = true
 	ctx, t.cancel = context.WithCancel(ctx)
-	if !t.AfterPrepare {
+	if now {
 		t.cancel()
 	}
 	return ctx
 }
 
 func (*Tracer) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+
+// A batch holding the statement fails as a whole: its statements share one
+// round trip. AfterPrepare does not apply; the batch is cancelled at once.
+func (t *Tracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
+	if data.Batch == nil {
+		return ctx
+	}
+	for _, q := range data.Batch.QueuedQueries {
+		if strings.Contains(normalize(q.SQL), normalize(t.Query)) {
+			return t.fire(ctx, true)
+		}
+	}
+	return ctx
+}
+
+func (*Tracer) TraceBatchQuery(context.Context, *pgx.Conn, pgx.TraceBatchQueryData) {}
+func (*Tracer) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData)     {}
 
 func (t *Tracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
 	t.mu.Lock()

@@ -36,6 +36,15 @@ func (c *Counter) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Tra
 
 func (*Counter) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A batch is one round trip, whatever it holds.
+func (c *Counter) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	c.n.Add(1)
+	return ctx
+}
+
+func (*Counter) TraceBatchQuery(context.Context, *pgx.Conn, pgx.TraceBatchQueryData) {}
+func (*Counter) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData)     {}
+
 // Pool opens a second pool on the same database as source with a counter
 // attached. The pool is limited to one connection, so the count only holds
 // what the test itself ran through it.
