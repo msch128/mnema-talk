@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/communityevents"
 )
 
 func (a *app) coverEvent(admin *client, channel *uuid.UUID) communityevents.CommunityEvent {

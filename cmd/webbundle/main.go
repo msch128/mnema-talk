@@ -5,7 +5,7 @@ package main
 import (
 	"os"
 
-	"github.com/msch128/mnema-talk/internal/webbundle"
+	"github.com/mnema-xyz/talk/internal/webbundle"
 )
 
 func main() {

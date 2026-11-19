@@ -1,8 +1,8 @@
 package ws
 
 import (
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 // ServerInfo is the payload of the server_info event every connection gets

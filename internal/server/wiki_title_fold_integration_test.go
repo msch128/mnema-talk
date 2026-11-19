@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/wiki"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/wiki"
 )
 
 // One rule, two implementations (2026-11 defect hunt, lane 3, pair 5): a wiki

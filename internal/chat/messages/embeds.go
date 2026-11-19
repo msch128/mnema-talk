@@ -7,7 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // Discord's embed limits, which Mnema Talk applies as well.

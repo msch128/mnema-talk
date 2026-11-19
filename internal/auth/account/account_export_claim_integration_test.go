@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/testutil/racetest"
+	"github.com/mnema-xyz/talk/internal/audit"
+	"github.com/mnema-xyz/talk/internal/testutil/racetest"
 )
 
 func TestOnlyOneOfParallelDownloadsHoldsTheExport(t *testing.T) {

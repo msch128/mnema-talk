@@ -3,7 +3,7 @@ package raid
 import (
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil/presets"
+	"github.com/mnema-xyz/talk/internal/testutil/presets"
 )
 
 // Every choice of the raid protection menus passes the validation the routes run.

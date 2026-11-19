@@ -15,7 +15,7 @@ import (
 
 	"runtime/debug"
 
-	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/opwarn"
 )
 
 var okHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })

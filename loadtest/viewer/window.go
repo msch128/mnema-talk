@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 // The packet split compares what the generator sent and received with what the

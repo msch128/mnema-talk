@@ -10,8 +10,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/mdplain"
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/mdplain"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // Payload is what the service worker receives (after the browser decrypted

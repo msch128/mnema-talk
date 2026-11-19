@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 const (

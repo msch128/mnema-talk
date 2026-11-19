@@ -7,31 +7,31 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/auth/authn"
-	"github.com/msch128/mnema-talk/internal/automod"
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/chat/talks"
-	"github.com/msch128/mnema-talk/internal/communityevents"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/discordimport"
-	"github.com/msch128/mnema-talk/internal/emoji"
-	"github.com/msch128/mnema-talk/internal/gateway"
-	"github.com/msch128/mnema-talk/internal/later"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/moderation"
-	"github.com/msch128/mnema-talk/internal/onboarding"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
-	"github.com/msch128/mnema-talk/internal/poll"
-	"github.com/msch128/mnema-talk/internal/roles"
-	"github.com/msch128/mnema-talk/internal/slashcmd"
-	"github.com/msch128/mnema-talk/internal/webhook"
-	"github.com/msch128/mnema-talk/internal/wiki"
-	"github.com/msch128/mnema-talk/internal/ws"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth/authn"
+	"github.com/mnema-xyz/talk/internal/automod"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/chat"
+	"github.com/mnema-xyz/talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/chat/talks"
+	"github.com/mnema-xyz/talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/discordimport"
+	"github.com/mnema-xyz/talk/internal/emoji"
+	"github.com/mnema-xyz/talk/internal/gateway"
+	"github.com/mnema-xyz/talk/internal/later"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/moderation"
+	"github.com/mnema-xyz/talk/internal/onboarding"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/poll"
+	"github.com/mnema-xyz/talk/internal/roles"
+	"github.com/mnema-xyz/talk/internal/slashcmd"
+	"github.com/mnema-xyz/talk/internal/webhook"
+	"github.com/mnema-xyz/talk/internal/wiki"
+	"github.com/mnema-xyz/talk/internal/ws"
 )
 
 // Everything that asks the permission model is built through a constructor
@@ -101,7 +101,7 @@ func TestTheRouterWiresThePermissionServiceIntoEveryComponent(t *testing.T) {
 			}
 			v = v.Elem()
 		}
-		if v.Kind() != reflect.Struct || depth > 3 || !strings.Contains(v.Type().PkgPath(), "/mnema-talk/internal/") {
+		if v.Kind() != reflect.Struct || depth > 3 || !strings.Contains(v.Type().PkgPath(), "/talk/internal/") {
 			return
 		}
 		for i := range v.NumField() {

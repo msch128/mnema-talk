@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/moderation"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/moderation"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 // H-L6-03. doc/moderation.md, "Access": who was in which Talk is read only by

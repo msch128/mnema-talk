@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/mnema-xyz/talk/internal/testutil"
 )
 
 func TestMain(m *testing.M) { os.Exit(testutil.Main(m)) }

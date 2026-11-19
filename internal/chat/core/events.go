@@ -1,6 +1,6 @@
 package core
 
-import "github.com/msch128/mnema-talk/internal/events"
+import "github.com/mnema-xyz/talk/internal/events"
 
 // MessageCreate announces a new message to those who may view its channel
 // (message_create). Publish a message as (*MessageCreate)(msg).

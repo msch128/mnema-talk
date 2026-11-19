@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/s3"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/s3"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // lazyStore is a media.Store that becomes usable once object storage could be

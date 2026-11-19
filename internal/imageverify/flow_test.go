@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/updaterd"
-	"github.com/msch128/mnema-talk/internal/updaterd/daemontest"
+	"github.com/mnema-xyz/talk/internal/updaterd"
+	"github.com/mnema-xyz/talk/internal/updaterd/daemontest"
 )
 
 // These tests run the whole update path: the real updater server, the real

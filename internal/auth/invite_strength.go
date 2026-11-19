@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // Custom invite codes are typed by an admin, so unlike the generated ones

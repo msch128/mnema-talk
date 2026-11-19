@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 func TestAuthRegistrationConcurrentChanges(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/opwarn"
 )
 
 func normalizeCIDR(v string) string {

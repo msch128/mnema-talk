@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // A message with a lifetime under ten minutes is pushed as "New message"

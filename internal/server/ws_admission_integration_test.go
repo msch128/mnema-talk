@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events/eventstest"
-	"github.com/msch128/mnema-talk/internal/ws"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/events/eventstest"
+	"github.com/mnema-xyz/talk/internal/ws"
 )
 
 // Pausing after the real check returns models a stale authenticated handshake

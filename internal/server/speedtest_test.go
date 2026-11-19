@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 func speedHandler(st speedTest) *systemHandler { return &systemHandler{speed: st} }

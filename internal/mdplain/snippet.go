@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/mnema-xyz/talk/internal/textcut"
 )
 
 // SnippetLen is how many characters of a message a snippet shows.

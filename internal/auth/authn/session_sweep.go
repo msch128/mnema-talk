@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/worker"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/worker"
 )
 
 // RunSessionSweep signs out inactive sessions every interval until ctx ends.

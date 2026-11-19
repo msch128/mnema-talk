@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"net/url"
 
-	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/ssrf"
 )
 
 // checkResolvedAddress applies the address policy after DNS resolution.

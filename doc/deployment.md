@@ -70,7 +70,7 @@ refuses the public placeholders from `.env.example`. (The setup assistant in
 [quick-start.md](quick-start.md#step-1-make-the-files) generates this file and
 the secrets for you.)
 
-The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
+The same image is also published on Docker Hub as `docker.io/mnemaxyz/mnema-talk` (the older `docker.io/msch128/mnema-talk` carries the same image; same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
 
 | Variable | Set it to |
 |---|---|

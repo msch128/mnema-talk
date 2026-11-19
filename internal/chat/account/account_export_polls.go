@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/userdata"
 )
 
 func pollVoteFile(ctx context.Context, q db.Querier, user uuid.UUID, limits userdata.Limits) userdata.File {

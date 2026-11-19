@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/bot"
 )
 
 // run is the read loop of one connection.

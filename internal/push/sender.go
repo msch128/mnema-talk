@@ -11,7 +11,7 @@ import (
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
-	"github.com/msch128/mnema-talk/internal/ssrf"
+	"github.com/mnema-xyz/talk/internal/ssrf"
 )
 
 // Outcome is how a push service answered one delivery.

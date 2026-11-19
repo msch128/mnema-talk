@@ -61,9 +61,9 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement through GitHub:
 use "Report content" on the issue, pull request or comment concerned, or contact
-the maintainer [msch128](https://github.com/msch128) through the contact options
-on that profile. If no private option is available to you, open an issue titled
-"Conduct report" without any details and ask for a private route.
+the maintainers at <contact@mnema.xyz>. If e-mail is not an option for you,
+open an issue titled "Conduct report" without any details and ask for a
+private route.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

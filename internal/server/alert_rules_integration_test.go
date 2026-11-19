@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/sfu"
 )
 
 const alertRulesFile = "../../deploy/monitoring/mnema-alerts.yml"

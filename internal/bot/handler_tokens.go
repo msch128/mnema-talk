@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
 // TokenRequest is the body of issuing a token.

@@ -7,9 +7,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 const rotateKeysUsage = "usage: mnema-talk rotate-keys"

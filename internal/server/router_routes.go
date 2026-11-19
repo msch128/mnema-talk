@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/communityevents"
-	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/onboarding"
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/webhook"
-	"github.com/msch128/mnema-talk/internal/wiki"
-	"github.com/msch128/mnema-talk/web"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/bot"
+	"github.com/mnema-xyz/talk/internal/communityevents"
+	"github.com/mnema-xyz/talk/internal/httpx"
+	"github.com/mnema-xyz/talk/internal/media"
+	"github.com/mnema-xyz/talk/internal/onboarding"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/webhook"
+	"github.com/mnema-xyz/talk/internal/wiki"
+	"github.com/mnema-xyz/talk/web"
 )
 
 // buildHandler assembles the global middleware, the /api tree and the web app.

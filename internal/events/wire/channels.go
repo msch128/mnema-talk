@@ -2,7 +2,7 @@ package wire
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 // signal is the payload of an event that only says "fetch this again": null.

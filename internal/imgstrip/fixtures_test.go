@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/mnema-xyz/talk/internal/imgproc"
 )
 
 // Every piece of metadata in the fixtures carries one of these, so a test can

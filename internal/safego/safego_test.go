@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 // captureLog collects what the package logs while the test runs. Every site
@@ -210,7 +210,7 @@ func TestLoggedValueAndStackAreBoundedAndStartAtThePanic(t *testing.T) {
 	if strings.Contains(out, strings.Repeat("v", valueLimit+1)) {
 		t.Error("the panic value was logged beyond its limit")
 	}
-	if !strings.Contains(out, `stack="github.com/msch128/mnema-talk/internal/safego.TestLoggedValueAndStack`) {
+	if !strings.Contains(out, `stack="github.com/mnema-xyz/talk/internal/safego.TestLoggedValueAndStack`) {
 		t.Errorf("the stack does not start at the frame that panicked: %s", out)
 	}
 	if got := panicStack(bytes.Repeat([]byte("x\n"), 3*stackLimit)); len(got) != stackLimit {

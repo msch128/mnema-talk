@@ -49,7 +49,7 @@ func readTemplate(path string) ([]byte, error) {
 			return b, nil
 		}
 	}
-	return nil, fmt.Errorf("docker-compose.yml template not found (looked in %s): pass --compose-template or download it from https://github.com/msch128/mnema-talk", strings.Join(candidates, ", "))
+	return nil, fmt.Errorf("docker-compose.yml template not found (looked in %s): pass --compose-template or download it from https://github.com/mnema-xyz/talk", strings.Join(candidates, ", "))
 }
 
 // Generated reports what Write created.

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/mdplain"
+	"github.com/mnema-xyz/talk/internal/mdplain"
 )
 
 // A reminder's push and the reminders list show the message's snippet

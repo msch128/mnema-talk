@@ -9,7 +9,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // ValidateAdminSeed checks ADMIN_USERNAME and ADMIN_INITIAL_PASSWORD against

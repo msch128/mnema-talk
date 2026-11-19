@@ -1,0 +1,46 @@
+name: Dependabot notices
+
+# A Dependabot bump of a Go module changes the versions THIRD_PARTY_NOTICES.md
+# must list (the internal/repo test fails otherwise). This regenerates the file
+# and commits it to the Dependabot branch. Only `go list` resolves modules; no
+# code of a dependency runs. A push made with GITHUB_TOKEN does not start other
+# workflows, so CI for the new head starts when the branch is next updated
+# (the merge queue updates it) or the PR is closed and reopened by a person.
+
+on:
+  pull_request:
+    paths:
+      - go.mod
+      - go.sum
+
+permissions: {}
+
+jobs:
+  notices:
+    if: ${{ github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Regenerate THIRD_PARTY_NOTICES.md
+        run: go run ./scripts/notices
+      - name: Commit the result
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if git diff --quiet -- THIRD_PARTY_NOTICES.md; then
+            echo "notices already match go.mod"
+            exit 0
+          fi
+          git config user.name "dependabot[bot]"
+          git config user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git add THIRD_PARTY_NOTICES.md
+          git commit -m "build(deps): update THIRD_PARTY_NOTICES.md"
+          git push origin "HEAD:refs/heads/${BRANCH}"

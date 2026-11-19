@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/expiry"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/chat/expiry"
+	"github.com/mnema-xyz/talk/internal/events"
 )
 
 // Messages with a lifetime (doc/timed-messages.md): the bounds and settings,

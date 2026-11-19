@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/push"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/push"
 )
 
 // fakePushService stands in for every browser vendor's push service: the

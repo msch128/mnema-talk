@@ -7,8 +7,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 // A sweep that cannot read the database reports that, and does not pretend

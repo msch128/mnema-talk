@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/mailer/mailtest"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/mailer/mailtest"
 )
 
 func requestReset(c *client, email string) response {

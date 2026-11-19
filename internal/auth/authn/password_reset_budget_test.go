@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 
-	"github.com/msch128/mnema-talk/internal/mailer"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/mailer"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 type noMail struct{}

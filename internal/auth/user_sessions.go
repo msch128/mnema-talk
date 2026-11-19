@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/db"
 )
 
 // touchInterval is the shortest gap between two writes of one session's

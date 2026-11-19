@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/mnema-xyz/talk/internal/chat/mentions"
 )
 
 // FuzzBuildSearchSQL checks that whatever the text and the filters are, the

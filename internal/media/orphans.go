@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/db"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // Orphans are stored objects no row refers to: left behind when an object

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/auth/mailtext"
-	"github.com/msch128/mnema-talk/internal/mailer"
+	"github.com/mnema-xyz/talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth/mailtext"
+	"github.com/mnema-xyz/talk/internal/mailer"
 )
 
 // The mails are short and plain text; their wording and language rule live in

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // TestCommandFatalConfiguration checks the executable's exit contract; the

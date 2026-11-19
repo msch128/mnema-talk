@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/mnema-xyz/talk/internal/safego"
 )
 
 // A camera can go out as layers like a screen share (see layerGroup), but only

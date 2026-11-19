@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/wiki"
+	"github.com/mnema-xyz/talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/wiki"
 )
 
 func (f *wikiFixture) uploadImage(c *client, filename, contentType string, data []byte) response {

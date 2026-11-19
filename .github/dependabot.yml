@@ -36,6 +36,22 @@ updates:
       loadtest-go-modules:
         patterns: ["*"]
 
+  # Browser smoke test (Playwright); the folder has its own lockfile.
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+    groups:
+      e2e-npm:
+        patterns: ["*"]
+
   # The bot SDKs do not need entries here: they live in their own repositories,
   # github.com/mnema-xyz/bot-sdk-js and github.com/mnema-xyz/bot-sdk-go, each with
   # its own Dependabot.
@@ -119,5 +135,21 @@ updates:
     ignore:
       # A Postgres major upgrade needs a dump/restore or pg_upgrade of the data
       # volume; do it deliberately, never via an automatic PR.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+
+  # Throwaway Postgres and SeaweedFS for the browser smoke test.
+  - package-ecosystem: docker-compose
+    directory: /e2e
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      e2e-compose-images:
+        patterns: ["*"]
+    ignore:
+      # Same rule as the main compose file: Postgres majors are deliberate.
       - dependency-name: postgres
         update-types: ["version-update:semver-major"]

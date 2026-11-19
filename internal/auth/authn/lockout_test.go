@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {

@@ -1,6 +1,6 @@
 package webhook
 
-import "github.com/msch128/mnema-talk/internal/userdata"
+import "github.com/mnema-xyz/talk/internal/userdata"
 
 // accountData is the webhooks an account created in an account erasure. It exports nothing: the
 // rows only name the account as their creator.

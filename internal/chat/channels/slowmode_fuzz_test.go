@@ -3,7 +3,7 @@ package channels
 import (
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/mnema-xyz/talk/internal/chat/core"
 )
 
 // FuzzSlowModeLimit checks the slow-mode value is accepted exactly from off

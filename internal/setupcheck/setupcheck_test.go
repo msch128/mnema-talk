@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/opwarn"
 )
 
 func prodConfig(t *testing.T, extra map[string]string) *config.Config {

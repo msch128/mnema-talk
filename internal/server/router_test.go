@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/perm/permtest"
+	"github.com/mnema-xyz/talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/perm/permtest"
 )
 
 func TestNewRouterRejectsInvalidDependencies(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/mnema-xyz/talk/internal/chat/readstate"
 )
 
 // SendEventReminder pushes an event reminder to the member's devices,

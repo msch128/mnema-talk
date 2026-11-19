@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/perm"
 )
 
 type editVersions struct {
@@ -197,7 +197,6 @@ func TestReadingEditHistoryIsRateLimitedPerMember(t *testing.T) {
 	f := newMessageModerationFixture(t, false)
 	msg := f.a.send(f.user, f.channel, "one")
 	f.edit(f.user, msg, "two")
-	deadline := time.Now().Add(time.Minute)
 	for i := 0; i < messages.EditHistoryRate; i++ {
 		if res := f.history(f.mod, msg); res.status != http.StatusOK {
 			t.Fatalf("read %d: %d", i, res.status)
@@ -207,9 +206,9 @@ func TestReadingEditHistoryIsRateLimitedPerMember(t *testing.T) {
 	if res.status != http.StatusTooManyRequests || res.header.Get("Retry-After") == "" {
 		t.Fatalf("over the limit: %d %v", res.status, res.header)
 	}
-	if time.Now().After(deadline) {
-		t.Skip("too slow to judge the window")
-	}
+	// Another member has a budget of their own whatever the window does, so
+	// this holds on a slow runner too; the burst above fails loudly, never
+	// skips, if the runner needs more than the one-minute window for it.
 	if other := f.history(f.admin, msg); other.status != http.StatusOK {
 		t.Errorf("another member is not held back: %d", other.status)
 	}

@@ -3,8 +3,8 @@ package ws
 import (
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/mnema-xyz/talk/internal/events"
+	"github.com/mnema-xyz/talk/internal/metrics"
 )
 
 const (

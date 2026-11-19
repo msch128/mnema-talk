@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/testutil/presets"
+	"github.com/mnema-xyz/talk/internal/testutil/presets"
 )
 
 // Every ready-made choice of the web client's invite and moderation menus has

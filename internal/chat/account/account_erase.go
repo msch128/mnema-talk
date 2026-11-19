@@ -1,6 +1,6 @@
 package account
 
-import "github.com/msch128/mnema-talk/internal/userdata"
+import "github.com/mnema-xyz/talk/internal/userdata"
 
 // soleDMs selects the direct message conversations in which nobody but $1 is.
 const soleDMs = `SELECT c.id FROM channels c WHERE c.type = 'dm'

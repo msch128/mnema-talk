@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/mnema-xyz/talk/internal/config"
 )
 
 // smtpServer is a small SMTP server for tests: it speaks just enough of the

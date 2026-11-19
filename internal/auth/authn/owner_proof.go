@@ -3,7 +3,7 @@ package authn
 import (
 	"net/http"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/mnema-xyz/talk/internal/auth"
 )
 
 // ConfirmOwner re-authenticates the signed-in Owner before a takeover action

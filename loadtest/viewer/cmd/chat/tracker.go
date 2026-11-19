@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
+	"github.com/mnema-xyz/talk/loadtest/viewer/internal/lt"
 )
 
 // kind is what happened to a message: it was created, edited, or reacted to.
