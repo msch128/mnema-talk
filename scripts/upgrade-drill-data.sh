@@ -135,8 +135,12 @@ verify_roles() {
     fail 'Bypass new member limits does not match Timeout members after the upgrade (migration 0083)'
   api cool_guy "$BASE/api/roles" | jq -e "$WIKI_GRANT_JQ" >/dev/null ||
     fail 'Edit the wiki and Manage the wiki do not match Timeout members after the upgrade (migration 0089)'
-  api cool_guy "$BASE/api/roles" | jq -e "$INVITES_GRANT_JQ" >/dev/null ||
-    fail 'Create invites went to a role without Manage invites, or to @everyone, after the upgrade (migration 0109)'
+  # Only an upgrade across migration 0109 (first shipped in 3.3.0) is judged:
+  # a role created on a newer release may hold Create invites on its own.
+  if ! drill_version_ge "$FROM_VERSION" 3.3.0; then
+    api cool_guy "$BASE/api/roles" | jq -e "$INVITES_GRANT_JQ" >/dev/null ||
+      fail 'Create invites went to a role without Manage invites, or to @everyone, after the upgrade (migration 0109)'
+  fi
   api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 536870912 | floor) % 2) == 1)' >/dev/null ||
     fail 'no role holds View the wiki after the upgrade (migration 0089 gives it to @everyone)'
   api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; .name == "Moderator" and ((.permissions / 2097152 | floor) % 2) == 1 and ((.permissions / 8388608 | floor) % 2) == 1)' >/dev/null ||
