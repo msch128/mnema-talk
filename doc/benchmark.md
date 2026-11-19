@@ -163,6 +163,27 @@ run (not recorded for 2.2.0 except for the relay).
 - No goroutine leak: goroutines returned to 40 to 48 after every scenario, and
   the database fingerprint matched before and after.
 
+### Same generator, both versions
+
+The chat run with 1,000 sessions was repeated on 2.2.0 and on 3.3.3 back to back,
+with the same (current) load generator, on a throwaway stack on the same host
+(fresh database for each; one run each, so differences of a few percent are
+noise). This separates the change in the server from the change in the
+generator.
+
+| Version | Messages p50 / p95 / p99 / max | Server CPU (hold) | Memory (peak) | Loss |
+|---|---|---:|---:|---:|
+| 2.2.0 | 31 / 75 / 98 / 153 ms | 0.63 cores | 90 MB | 0 % |
+| 3.3.3 | 38 / 120 / 196 / 345 ms | 0.64 cores | 99 MB | 0 % |
+
+With the same generator, 3.3.3 delivers about 60 % slower at p95 and twice as
+slow at p99 than 2.2.0, at the same CPU and about 10 % more memory; nothing is
+lost. All deliveries still arrive within 350 ms. The 2.2.0 figures with the
+newer generator (75 / 98 ms) are slightly better than those of the first run
+(84 / 115 ms), so part of the gap in the 3.3.0 table above comes from the
+generator and the shared host. We did not look for the cause of the remaining
+difference.
+
 ## Sizing guide
 
 The question this section answers: how much hardware does a Talk of a given
