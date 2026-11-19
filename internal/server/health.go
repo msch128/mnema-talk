@@ -151,10 +151,35 @@ type healthCheck struct {
 func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *healthCheck {
 	ping := func(context.Context) error { return errors.New("no database") }
 	if p != nil {
-		ping = p.Ping
+		ping = func(ctx context.Context) error {
+			return pingOrBusy(ctx, p.Ping, p.QueriesDone)
+		}
 	}
 	return &healthCheck{ping: ping, storage: storage, ttl: ttl}
 }
+
+// pingOrBusy pings the database, and does not count a ping that timed out
+// while the database kept finishing other work: it is busy then, not down.
+// After a restart every client reads its state again within seconds; a ping
+// queued behind those requests must not tell all of them that the server is
+// down (the web client shows an outage notice for a 503 here). done counts
+// queries that completed without an error (db.Pool.QueriesDone): connections
+// handed out or destroyed prove nothing, a hung database causes both.
+func pingOrBusy(ctx context.Context, ping func(context.Context) error, done func() int64) error {
+	before := done()
+	err := ping(ctx)
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	if done()-before >= busyMinQueries {
+		return nil
+	}
+	return err
+}
+
+// busyMinQueries is how many queries must complete while the ping waits for
+// the database to count as busy rather than down.
+const busyMinQueries = 2
 
 // check returns the dependencies that are down, none when healthy.
 func (h *healthCheck) check(ctx context.Context) []string {
