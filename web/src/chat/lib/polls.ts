@@ -4,7 +4,7 @@ import type { Poll, PollCreateRequest } from '../../types/domain'
 
 export const POLL_DURATIONS = ['1h', '4h', '8h', '24h', '3d', '1w'] as const
 export type PollDuration = (typeof POLL_DURATIONS)[number]
-export const DEFAULT_POLL_DURATION: PollDuration = '24h'
+const DEFAULT_POLL_DURATION: PollDuration = '24h'
 export const POLL_MIN_OPTIONS = 2
 export const POLL_MAX_OPTIONS = 10
 export const POLL_MAX_QUESTION = 300

@@ -43,7 +43,7 @@ export function disarm() {
 }
 
 /** One await boundary passed by the code of the tab that is running. True when the tab dies here. */
-export function boundary(): boolean {
+function boundary(): boolean {
   const member = sim?.running()
   if (!sim || !member || member.gone) return false
   const ordinal = (boundaries.counts.get(member.id) ?? 0) + 1
@@ -60,7 +60,7 @@ export function boundary(): boolean {
 const FOREVER = new Promise<never>(() => undefined)
 
 /** A function whose promise counts a boundary when it settles. Anything else goes through untouched. */
-export function counting<T extends (...args: never[]) => unknown>(fn: T): T {
+function counting<T extends (...args: never[]) => unknown>(fn: T): T {
   return new Proxy(fn, {
     apply(original, self, args) {
       const out = Reflect.apply(original, self, args) as unknown

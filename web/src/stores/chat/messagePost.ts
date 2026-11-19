@@ -39,7 +39,7 @@ export async function postWithReplyFallback<T>(replyToId: string | null, post: (
 }
 
 /** Writing a message means having read everything before it: the server moves the marker (and tells the other sessions); this does the same here at once. Thread replies change nothing, and neither does a message older than the marker (the answer to a repeated send). */
-export function markReadBySending({ cs }: Cx, msg: Message, isRepeat = false) {
+function markReadBySending({ cs }: Cx, msg: Message, isRepeat = false) {
   if (msg.parent_id) return
   const prev = cs.readStates.value[msg.channel_id] || { channel_id: msg.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
   // The answer to a replayed send (the server's 200) is an old message: it must not pull the marker back. A newly stored one (201) always moves it, whatever clock the marker came from.

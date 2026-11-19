@@ -14,8 +14,8 @@ import { useLaterStore } from './later'
 import { useSavedStore } from './saved'
 import { userFixture } from '../test-fixtures.fixture'
 
-export interface TraceFrame { type: string; payload: unknown }
-export interface TraceSnapshot { op: number; frames: number; bodies: Record<string, unknown> }
+interface TraceFrame { type: string; payload: unknown }
+interface TraceSnapshot { op: number; frames: number; bodies: Record<string, unknown> }
 export interface StoreTrace {
   seed: number
   /** When the trace was made; messages with a lifetime end by the server clock of that moment. */
@@ -226,7 +226,7 @@ class Replayer {
 }
 
 /** The last snapshot read when exactly `frames` frames had arrived, or -1. */
-export function lastSnapshotAt(trace: StoreTrace, frames: number): number {
+function lastSnapshotAt(trace: StoreTrace, frames: number): number {
   const s = trace.snapshots
   for (let j = s.length - 1; j >= 0; j--) if (s[j]?.frames === frames) return j
   return -1

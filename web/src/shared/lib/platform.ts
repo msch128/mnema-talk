@@ -100,8 +100,8 @@ function busyReporter(): NotifyAdapter | null {
   return app?.role === 'instance' && app.capabilities.includes('busy') ? hostNotify : null
 }
 
-/** A browser tab, including the trusted bundle served from the client's own origin. */
-export const browserPlatform: Platform = {
+/** The platform of this page: a browser tab, including the trusted bundle served from the client's own origin. */
+export const platform: Platform = {
   isWebDesktopSelector,
   isTrustedDesktop,
   trustedApp,
@@ -120,6 +120,3 @@ export const browserPlatform: Platform = {
   reportBusy: flags => busyReporter()?.reportBusy?.(flags),
   supportsBusyReport: () => busyReporter()?.reportBusy !== undefined,
 }
-
-/** The platform of this page. */
-export const platform: Platform = browserPlatform

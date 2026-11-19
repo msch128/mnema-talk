@@ -1,7 +1,7 @@
 // The colours a forum tag can have. The server stores a palette name, never CSS;
 // the classes are written out in full so the stylesheet generator finds them.
 export const TAG_COLORS = ['gray', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink'] as const
-export type TagColor = typeof TAG_COLORS[number]
+type TagColor = typeof TAG_COLORS[number]
 
 const PLAIN = 'bg-mnema-raised text-mnema-secondary border-mnema-hairline'
 

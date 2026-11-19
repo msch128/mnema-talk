@@ -1,7 +1,7 @@
 // Webhook shapes of the REST API under friendly names.
 export type {
-  WebhookWebhook as Webhook, WebhookCreatedWebhook as CreatedWebhook,
-  WebhookOutgoing as OutgoingWebhook, WebhookCreatedOutgoing as CreatedOutgoingWebhook,
+  WebhookWebhook as Webhook, 
+  WebhookOutgoing as OutgoingWebhook, 
   WebhookDelivery as WebhookDelivery,
 } from './rest'
 

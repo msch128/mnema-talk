@@ -11,7 +11,7 @@ export const STAGED_TTL_MS = 5 * 60 * 60 * 1000
 export const PARALLEL_UPLOADS = 3
 
 export type TrayKind = 'image' | 'video' | 'file'
-export type TrayStatus = 'queued' | 'uploading' | 'ready' | 'error'
+type TrayStatus = 'queued' | 'uploading' | 'ready' | 'error'
 
 export interface TrayItem {
   /** Local id, stable while the file sits in the tray. */

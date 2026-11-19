@@ -6,8 +6,8 @@ import { membersOverlay, membersSteppedAside, threadOverlay } from '../../shared
 // The narrowest the chat column may get beside an open thread, and the
 // thread's own narrowest width. Below their sum (plus the channel list) the
 // thread opens over the chat instead of squeezing it to a sliver.
-export const CHAT_MIN = 360
-export const THREAD_MIN = 320
+const CHAT_MIN = 360
+const THREAD_MIN = 320
 
 /**
  * Decides how the thread and the member list sit beside the chat on the

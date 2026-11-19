@@ -16,7 +16,7 @@ export type Route =
   | { view: 'dm'; dmRef: string; group: boolean; messageId?: string; threadId?: string }
   // The wiki dialog (doc/wiki.md): /wiki, /wiki/<slug>, /wiki/<slug>/history, /wiki/<slug>/edit, /wiki/search, /wiki/new, /wiki/deleted.
   | { view: 'wiki'; wiki: WikiLocation }
-export type ChannelRoute = Extract<Route, { view: 'chat' | 'voice' }>
+type ChannelRoute = Extract<Route, { view: 'chat' | 'voice' }>
 export interface RouteChannel extends PathChannel { previous_slugs?: readonly string[] | undefined }
 export interface RouteOptions { isAdmin?: boolean; channels?: RouteChannel[]; dms?: PathDm[] }
 export interface RouteResolution { redirect: string; reason: 'noAccess' | 'voiceNotFound' | 'channelNotFound' | null }
@@ -95,7 +95,7 @@ export function canGoBackInApp() {
   return typeof window !== 'undefined' && historyIndex() > 0
 }
 
-export function navigateTo(path: string, opts: boolean | { replace?: boolean } = false) {
+export function navigate(path: string, opts: boolean | { replace?: boolean } = false) {
   if (typeof window === 'undefined') return
   const replace = typeof opts === 'boolean' ? opts : !!opts?.replace
   // A path the browser resolves to another origin (like "//host/x") makes history throw; show the start page instead.
@@ -114,7 +114,7 @@ export function navigateTo(path: string, opts: boolean | { replace?: boolean } =
 }
 
 /** Address of a message in a voice channel's chat. */
-export function voiceMessagePath(channel: Pick<PathChannel, 'id' | 'slug'>, messageId: string) {
+function voiceMessagePath(channel: Pick<PathChannel, 'id' | 'slug'>, messageId: string) {
   return talkPath(channel, { messageId })
 }
 
@@ -201,8 +201,6 @@ export function targetOf(route: Route, { channels = [], dms = [] }: Pick<RouteOp
   return route
 }
 
-export const navigate = navigateTo
-export const popRedirectRoute = consumePendingRoute
 
 export function savePendingRoute() {
   if (typeof window === 'undefined') return

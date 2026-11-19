@@ -31,7 +31,7 @@ function useBrowserNoiseSuppression(cx: Cx) {
   return mode === 'browser' || (aiModel(mode) !== null && (!isNoiseSuppressionSupported() || aiModel(mode) === st.failedAIModel))
 }
 
-export function getAudioConstraints(cx: Cx, withDevice = true) {
+function getAudioConstraints(cx: Cx, withDevice = true) {
   const { voice } = cx
   const audioConstraints: MediaTrackConstraints & { googEchoCancellation: boolean; googAutoGainControl: boolean; googNoiseSuppression: boolean; googHighpassFilter: boolean } = {
     channelCount: 1,

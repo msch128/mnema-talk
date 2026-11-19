@@ -9,11 +9,11 @@ import { MAX_SCREEN_LAYERS } from '../../types/events'
 import { bitrateFor, normalizeQuality, sentSize, streamEncoding } from './streamQuality'
 
 /** Heights the lower layers aim for, best first. */
-export const SCREEN_LAYER_HEIGHTS = [1080, 720, 480, 360] as const
+const SCREEN_LAYER_HEIGHTS = [1080, 720, 480, 360] as const
 /** A lower layer must be at least this much smaller than the one above it, or it adds nothing. */
 export const MIN_LAYER_STEP = 1.25
 /** Frame rate cap of the lower layers. */
-export const LOWER_LAYER_FPS = 30
+const LOWER_LAYER_FPS = 30
 
 /** A layer as declared to the server, plus what the sender needs to produce it. */
 export interface LayerPlan extends ScreenLayer {
@@ -102,7 +102,7 @@ export function layersShape(layers: readonly ScreenLayer[]): string {
 }
 
 /** A layer is enough for a picture when it has at least this share of the pixels the picture shows. */
-export const FIT_TOLERANCE = 0.9
+const FIT_TOLERANCE = 0.9
 
 /**
  * The index of the layer a picture of `cssHeight` CSS pixels at `pixelRatio`

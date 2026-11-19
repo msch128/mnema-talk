@@ -66,12 +66,12 @@ export function errorMessage(code: unknown, serverMessage?: unknown): string {
   return formatErrorCode(code, message)
 }
 
-export type UnauthorizedHandler = (error: ApiError) => void
+type UnauthorizedHandler = (error: ApiError) => void
 
 /** Requests expose no direct transport headers, cookie or credential options.
  * Path and payload remain caller input; a transport must independently
  * enforce its fixed endpoint registry, body schemas and broker capabilities. */
-export interface ApiRequest {
+interface ApiRequest {
   readonly method: string
   readonly json?: unknown
   readonly form?: FormData
@@ -103,7 +103,7 @@ export interface ApiOptions {
   shouldNotifyUnauthorized?: () => boolean
 }
 
-export interface DecodedApiOptions<T> extends ApiOptions {
+interface DecodedApiOptions<T> extends ApiOptions {
   decode: Decoder<T>
 }
 

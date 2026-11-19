@@ -1,17 +1,17 @@
 // Game executable names as the desktop host accepts them (valid_executable
 // there): a basename of 5 to 128 characters ending in .exe, starting with a
 // letter or digit, then letters, digits and "-_. !", and no "..". At most 32.
-export const MAX_GAMES = 32
+const MAX_GAMES = 32
 
 export type GameNameProblem = 'empty' | 'invalid' | 'duplicate' | 'full'
 
 // A pasted path is reduced to its file name, so "D:\Games\Wow.exe" works.
-export function baseName(raw: string): string {
+function baseName(raw: string): string {
   const trimmed = raw.trim()
   return trimmed.slice(Math.max(trimmed.lastIndexOf('\\'), trimmed.lastIndexOf('/')) + 1).trim()
 }
 
-export function isExecutableName(name: string): boolean {
+function isExecutableName(name: string): boolean {
   return name.length > 4 && name.length <= 128 && /^[A-Za-z0-9][A-Za-z0-9_. !-]*$/.test(name) && /\.exe$/i.test(name) && !name.includes('..')
 }
 

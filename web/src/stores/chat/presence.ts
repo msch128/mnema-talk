@@ -8,7 +8,7 @@ import { updateUserEverywhere } from './members'
 import { sendWSEvent } from './socket'
 
 /** Sharing the screen or the camera in a Talk is activity without input events. */
-export function holdsPresence({ voiceStore: voice }: Cx): boolean {
+function holdsPresence({ voiceStore: voice }: Cx): boolean {
   return voice.isConnected && (voice.isScreenSharing || voice.isCameraOn)
 }
 
@@ -23,7 +23,7 @@ function armIdleTimer(cx: Cx) {
   }, IDLE_AFTER_MS)
 }
 
-export function markActive(cx: Cx) {
+function markActive(cx: Cx) {
   const { cs } = cx
   armIdleTimer(cx)
   if (cs.isIdle) {
@@ -32,7 +32,7 @@ export function markActive(cx: Cx) {
   }
 }
 
-export function onActivity(cx: Cx) {
+function onActivity(cx: Cx) {
   const { cs } = cx
   // Input events fire constantly; re-arming once a second is plenty.
   const now = Date.now()
@@ -42,7 +42,7 @@ export function onActivity(cx: Cx) {
 }
 
 /** Speaking and push-to-talk are activity; the timer is re-armed at most once per VOICE_ACTIVITY_THROTTLE_MS. */
-export function onVoiceActivity(cx: Cx) {
+function onVoiceActivity(cx: Cx) {
   const { cs } = cx
   const now = Date.now()
   if (now - cs.lastVoiceActivityAt < VOICE_ACTIVITY_THROTTLE_MS && !cs.isIdle) return

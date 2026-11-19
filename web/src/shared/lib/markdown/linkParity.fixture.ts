@@ -5,7 +5,7 @@
 // shared with internal/automod/linkparity_test.go through a JSON file.
 import { renderMarkdown } from '../markdown'
 
-export interface ServerLink { host: string; ok: boolean; opaque?: boolean }
+interface ServerLink { host: string; ok: boolean; opaque?: boolean }
 export interface Vector { msg: string; server: ServerLink[] }
 
 export const VECTOR_FILE = 'internal/automod/testdata/link_parity.json'
@@ -13,7 +13,7 @@ export const VECTOR_FILE = 'internal/automod/testdata/link_parity.json'
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" }
 
 /** The href of every link the real renderer emits, as the browser reads the attribute. */
-export function renderedHrefs(msg: string): string[] {
+function renderedHrefs(msg: string): string[] {
   const html = renderMarkdown(msg)
   return [...html.matchAll(/<a href="([^"]*)"/g)].map(m => (m[1] ?? '').replace(/&(?:amp|lt|gt|quot|#39);/g, e => ENTITIES[e] ?? e))
 }
@@ -23,7 +23,7 @@ export function renderedHrefs(msg: string): string[] {
 const REACHABLE = /^(?:(?:[a-z0-9_-]+\.)*[a-z0-9_-]+|\[[0-9a-f:.]+\])$/
 
 /** The host the browser connects to for one href; "" for mailto:, what does not parse and what cannot be reached. */
-export function openedHost(href: string): string {
+function openedHost(href: string): string {
   try {
     const url = new URL(href)
     const host = url.hostname.replace(/\.$/, '')
@@ -46,7 +46,7 @@ export function unjudged(v: Vector): string[] {
 export type Mode = 'block_all' | 'allow_list' | 'block_list'
 
 /** Whether the server's verdict lets the message through, as compile.go matchesLinks decides. */
-export function serverAllows(server: readonly ServerLink[], mode: Mode, domains: readonly string[]): boolean {
+function serverAllows(server: readonly ServerLink[], mode: Mode, domains: readonly string[]): boolean {
   const covered = (h: string) => domains.some(d => h === d || h.endsWith('.' + d))
   // A host whose top-level label is no DNS label leads nowhere (compile.go reachable).
   const leads = (h: string) => h.startsWith('[') || /^[a-z0-9_-]+$/.test(h.slice(h.lastIndexOf('.') + 1))
@@ -59,7 +59,7 @@ export function serverPasses(v: Vector): boolean {
 }
 
 /** Whether a message the client renders shows a link the rule forbids. */
-export function clientForbidden(msg: string, mode: Mode, domains: readonly string[]): boolean {
+function clientForbidden(msg: string, mode: Mode, domains: readonly string[]): boolean {
   const covered = (h: string) => domains.some(d => h === d || h.endsWith('.' + d))
   return renderedHrefs(msg).map(openedHost).filter(h => h !== '').some(h => mode === 'block_all' || (mode === 'allow_list' ? !covered(h) : covered(h)))
 }
@@ -76,7 +76,7 @@ export function bypassModes(v: Vector): Mode[] {
 // and every character NFKC turns into one, lands at every position.
 
 /** Characters at the edge of the two stop sets, and what NFKC turns into them. */
-export const EDGE_CHARS = [
+const EDGE_CHARS = [
   "'", '"', '`', '<', '>', '\\', ' ', '\t', '\n', '\r', '\f', '\v', '\u0000', '\u0001', '\u001f', '\u007f', '\u0085', '\u00a0',
   '\u2028', '\u3000', '\u200b', '\u00ad', '\u0301', '\u030a', '\u200c', '\u200d', '\u034f', '\u2060', '\ufeff', '\u0008', '\uff02', '\uff07', '\uff1c', '\uff1e', '\uff3c', '\uff40', '\uff09',
   '\ufe64', '\ufe65', '\uff20', '\ufe6b', '\uff0f', '\uff1f', '\uff03', '\uff0e', '\u3002', '\u2024', '\uff1a', '@', '/', '?', '#',
@@ -120,7 +120,7 @@ function userInfo(r: () => number): string {
 }
 
 /** One link-like token; edge characters are spliced in at random positions. */
-export function linkToken(r: () => number): string {
+function linkToken(r: () => number): string {
   let s = pick(r, SCHEMES) + userInfo(r) + pick(r, HOSTS) + pick(r, PORTS) + pick(r, RESTS)
   for (let n = Math.floor(r() * 3); n > 0; n--) {
     const at = Math.floor(r() * (s.length + 1))
@@ -155,7 +155,7 @@ const WRAPS: ((u: string, r: () => number) => string)[] = [
 ]
 
 /** One generated message. */
-export function message(r: () => number): string {
+function message(r: () => number): string {
   const before = pick(r, ['', 'see ', 'x', '(', '"', "'", '\u200b', 'a\n'])
   const after = pick(r, ['', ' now', '.', ')', '!', "'", '"', '\n', '||'])
   return before + pick(r, WRAPS)(linkToken(r), r) + after

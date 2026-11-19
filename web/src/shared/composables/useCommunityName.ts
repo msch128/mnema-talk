@@ -3,7 +3,7 @@ import { useOnboardingStore } from '../../stores/onboarding'
 import { useServerFeaturesStore } from '../../stores/serverFeatures'
 
 /** The product's name, shown only while the server has told nothing else. */
-export const PRODUCT_NAME = 'Mnema Talk'
+const PRODUCT_NAME = 'Mnema Talk'
 
 /**
  * What this server calls itself: the name the Owner set (live, the server

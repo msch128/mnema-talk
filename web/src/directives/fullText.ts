@@ -22,7 +22,7 @@ export function isTextCut(el: HTMLElement | null | undefined): boolean {
 }
 
 /** Sets or clears the title for the element's current size and text. */
-export function refreshFullText(el: HTMLElement): void {
+function refreshFullText(el: HTMLElement): void {
   const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim()
   if (text && isTextCut(el)) el.setAttribute('title', text)
   else el.removeAttribute('title')

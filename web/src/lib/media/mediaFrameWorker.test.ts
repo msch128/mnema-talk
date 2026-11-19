@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { requireValue } from '../../test-fixtures.fixture'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
-import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
 
 const previous = globalThis.crypto
 let alice: TestMember
@@ -473,7 +473,7 @@ describe('media frame worker', () => {
       const opened = await frames('recv', [await sealedAt(old, 2, 5), await sealedAt(fresh, 0, 6)], [
         { type: 'key', epoch: 2, key: old, seq: 1 },
         { type: 'key', epoch: 0, key: fresh, replace: true, seq: 2 },
-      ], { afterCommands: () => { clock += PREVIOUS_GROUP_MS + 1 } })
+      ], { afterCommands: () => { clock += PREVIOUS_EPOCH_MS + 1 } })
       now.mockRestore()
       expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[6]])
     })

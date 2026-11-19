@@ -105,7 +105,7 @@ export class FakePC {
   close() { this.closed = true }
 }
 
-export interface FakeNode { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }
+interface FakeNode { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }
 export interface FakeDestination extends FakeNode { stream: TestStream }
 export interface FakeSource extends FakeNode { stream: MediaStream }
 export interface FakeGain extends FakeNode { gain: { value: number; cancelScheduledValues: ReturnType<typeof vi.fn>; setValueAtTime: ReturnType<typeof vi.fn> } }

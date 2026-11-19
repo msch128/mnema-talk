@@ -1,6 +1,6 @@
 import type { Channel } from '../../types/domain'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { parseRoute, savePendingRoute, consumePendingRoute, navigate, popRedirectRoute, currentRoute, guardRoute, resolveRoute, canGoBackInApp, targetOf } from './router'
+import { parseRoute, savePendingRoute, consumePendingRoute, navigate, currentRoute, guardRoute, resolveRoute, canGoBackInApp, targetOf } from './router'
 
 describe('router', () => {
   beforeEach(() => {
@@ -73,11 +73,11 @@ describe('router', () => {
     expect(consumePendingRoute()).toBeNull()
   })
 
-  it('provides popRedirectRoute alias and navigate function with opts', () => {
+  it('consumes a saved route once and navigates with options', () => {
     window.history.pushState(null, '', '/v/ch-voice')
     savePendingRoute()
-    expect(popRedirectRoute()).toBe('/v/ch-voice')
-    expect(popRedirectRoute()).toBeNull()
+    expect(consumePendingRoute()).toBe('/v/ch-voice')
+    expect(consumePendingRoute()).toBeNull()
 
     navigate('/c/ch-1', { replace: false })
     expect(currentRoute.value).toEqual({ view: 'chat', channelRef: 'ch-1' })
@@ -98,7 +98,7 @@ describe('router', () => {
     window.history.replaceState(null, '', '/c/c-id/m/m-id')
     savePendingRoute()
     window.history.replaceState(null, '', '/')
-    expect(popRedirectRoute()).toBe('/c/c-id/m/m-id')
+    expect(consumePendingRoute()).toBe('/c/c-id/m/m-id')
   })
 })
 

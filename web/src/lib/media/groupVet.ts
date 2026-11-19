@@ -74,23 +74,23 @@ export function scanCommitProposals(
   return { removed, added, removedAt }
 }
 
-export function illegalAdd(id: string, members: Map<string, number>, removed: Set<string>): boolean {
+function illegalAdd(id: string, members: Map<string, number>, removed: Set<string>): boolean {
   return members.has(id) && !removed.has(id)
 }
 
-export interface RemovalContext {
+interface RemovalContext {
   added: Set<string>
   slept: boolean
   userId: string
   room: Set<string>
 }
 
-export function skipRemovalCheck(id: string, ctx: RemovalContext): boolean {
+function skipRemovalCheck(id: string, ctx: RemovalContext): boolean {
   if (ctx.added.has(id) || ctx.slept) return true
   return id === ctx.userId || !ctx.room.has(id)
 }
 
-export function prematureRemoval(now: number, lastAlive: number | undefined, absentMs: number, slack: number): boolean {
+function prematureRemoval(now: number, lastAlive: number | undefined, absentMs: number, slack: number): boolean {
   if (lastAlive === undefined) return false
   return now - lastAlive <= absentMs - slack
 }

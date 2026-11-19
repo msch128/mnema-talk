@@ -21,13 +21,13 @@ interface StreamQualityOptions {
 }
 
 // How often the "Advanced" info refreshes while it is open.
-export const STATS_INTERVAL_MS = 1000
+const STATS_INTERVAL_MS = 1000
 
-export function resolutionLabel(r: StreamResolution) {
+function resolutionLabel(r: StreamResolution) {
   return r === 'source' ? t('talk.quality.source') : `${r}p`
 }
 
-export function frameRateLabel(fps: StreamFrameRate) {
+function frameRateLabel(fps: StreamFrameRate) {
   return t('talk.quality.fps', { fps })
 }
 

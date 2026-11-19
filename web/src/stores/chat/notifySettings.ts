@@ -32,7 +32,7 @@ export async function refreshNotifications(cx: Cx) {
 }
 
 /** The next moment a timed mute ends, in epoch milliseconds, or null. */
-export function nextMuteEnd(cx: Cx, now = Date.now()): number | null {
+function nextMuteEnd(cx: Cx, now = Date.now()): number | null {
   const { channels, categories, server } = cx.cs.notifySettings.value
   let next: number | null = null
   for (const s of [...channels, ...categories, server]) {

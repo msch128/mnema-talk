@@ -3,7 +3,6 @@
 import type { CommunityEvent } from '../../types/domain'
 
 export const FREQUENCIES = ['weekly', 'biweekly', 'monthly'] as const
-export type Frequency = typeof FREQUENCIES[number]
 /** What an edit, a cancellation or a role list applies to: one occurrence, or it and the later ones. */
 export type Scope = 'this' | 'following'
 

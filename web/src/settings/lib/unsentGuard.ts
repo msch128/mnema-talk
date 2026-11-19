@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/auth'
 import { useChatStore } from '../../stores/chat'
 
 /** How many of the signed-in account's messages are still waiting in the outbox (sent or refused ones are gone from it already). */
-export function unsentCount(): number {
+function unsentCount(): number {
   const uid = useAuthStore().user?.id
   return useChatStore().outbox.filter(p => p.userId === uid).length
 }

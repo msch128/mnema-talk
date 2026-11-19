@@ -157,7 +157,7 @@ export class SpeedRefused extends Error {
 }
 
 /** The download speed from the server, or why there is none. From the server's own network it is not measured. */
-export async function measureSpeed(deps: ConnectionTestDeps, report: ConnectionReport, signal?: AbortSignal): Promise<SpeedResult> {
+async function measureSpeed(deps: ConnectionTestDeps, report: ConnectionReport, signal?: AbortSignal): Promise<SpeedResult> {
   const remote = report.direct.pair?.remoteAddress
   const lan = (report.direct.outcome === 'ok' && !!remote && isLocalAddress(remote)) || (!!deps.pageHost && isLocalAddress(deps.pageHost))
   if (lan) return { outcome: 'lan' }

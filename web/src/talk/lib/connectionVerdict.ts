@@ -23,7 +23,7 @@ export type SpeedResult =
   | { outcome: 'busy' }
 
 /** Mbit/s of upload one screen watcher needs: 1.5 Mbit/s plus 30 % for headers, keyframes and retransmissions (doc/benchmark.md). */
-export const SCREEN_VIEWER_MBPS = 1.95
+const SCREEN_VIEWER_MBPS = 1.95
 export const SCREEN_MBPS = 1.5
 export const OVERHEAD_PERCENT = 30
 /** From this speed on the number is shown with a note: symmetric gigabit fibre is real, but so is a LAN. */
@@ -50,10 +50,10 @@ export interface ConnectionReport {
   speed?: SpeedResult
 }
 
-export type VerdictKind = 'direct' | 'relay_only' | 'none' | 'inconclusive'
+type VerdictKind = 'direct' | 'relay_only' | 'none' | 'inconclusive'
 
 /** The likely reason; each has an i18n text under connectionTest.cause.*. */
-export type Cause =
+type Cause =
   | 'ok'
   | 'same_network'
   | 'udp_not_forwarded'

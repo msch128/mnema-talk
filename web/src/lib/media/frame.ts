@@ -100,7 +100,7 @@ export interface FrameOpen {
   onUnknownEpoch?: (epoch: number) => void
 }
 
-export interface FrameAadParams {
+interface FrameAadParams {
   channelId: string
   senderId: string
   epoch: number
@@ -161,7 +161,7 @@ export async function importFrameVerifier(raw: Uint8Array): Promise<CryptoKey | 
   }
 }
 
-export function bindFrameAad(p: FrameAadParams): Uint8Array {
+function bindFrameAad(p: FrameAadParams): Uint8Array {
   const clearBytes = p.clear ?? new Uint8Array()
   const channel = new TextEncoder().encode(p.channelId)
   const sender = new TextEncoder().encode(p.senderId)
@@ -301,7 +301,7 @@ async function openWithKeys(frame: FrameOpen, candidates: EpochKeys[], unit: Fra
 }
 
 /** The retired version 2 format: the right magic, the old version byte. */
-export function isLegacyFrame(packet: Uint8Array): boolean {
+function isLegacyFrame(packet: Uint8Array): boolean {
   return packet.byteLength >= 2 && packet[0] === MAGIC_0 && packet[1] === LEGACY_MAGIC_1
 }
 
@@ -347,7 +347,7 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
 // of a share ever share a stream and a receiver's replay window can never
 // mistake one layer's counter for another's, however the SFU switches between
 // them. The other bits are random.
-export const LAYER_STREAM_BITS = 2
+const LAYER_STREAM_BITS = 2
 export const LAYER_STREAM_MASK = (1 << LAYER_STREAM_BITS) - 1
 
 /** A random stream ID that carries `layer` (0..3) in its low bits. */

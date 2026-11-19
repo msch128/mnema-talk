@@ -212,5 +212,3 @@ export function useAttachmentTray(target: () => TrayTarget | null) {
 
   return { items, count, uploading, failed, add, remove, retry, discardAll, hold, view, onKeydown }
 }
-
-export type AttachmentTray = ReturnType<typeof useAttachmentTray>

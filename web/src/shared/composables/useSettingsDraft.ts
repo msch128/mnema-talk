@@ -10,7 +10,7 @@ import { t } from '../../i18n'
 import { formatShortcut } from '../lib/shortcuts'
 
 /** Per-field normalisers: values that mean the same thing compare as equal. A normaliser also sees the whole state, for fields that only matter next to another one. */
-export type Normalisers<T> = { [K in keyof T]?: (value: T[K], state: T) => unknown }
+type Normalisers<T> = { [K in keyof T]?: (value: T[K], state: T) => unknown }
 
 /** Normalisers for the usual field shapes. */
 export const normalise = {

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { t } from '../i18n'
 
-export type ToastType = 'info' | 'success' | 'error'
+type ToastType = 'info' | 'success' | 'error'
 export interface ToastAction { label: string; onClick: () => void | Promise<void> }
 export interface ToastOptions { detail?: string; action?: ToastAction | null; secondary?: ToastAction | null; duration?: number }
 export interface ToastInput extends ToastOptions { type?: ToastType; text?: string }

@@ -110,13 +110,13 @@ export function availabilityOf(result: SimResult): Availability {
  *   that alone, so SHARD_WINDOW (2 points either way) is about 1.5 standard deviations of a timing change: a shard
  *   outside it means "measure again", not "regression" by itself. It is a warning in the job summary, not a failure.
  */
-export const LOST_BUDGET = {
+const LOST_BUDGET = {
   honest: { seed: 0.3, knownSeed: 0.5, joinMs: 110_000, pooled: 0.061, shardLost: [0.0643, 0.046, 0.0581, 0.0517, 0.0593, 0.0669, 0.0738, 0.0646] },
   hostile: { seed: 0.4, knownSeed: 0.5, joinMs: 140_000, pooled: 0.1282, shardLost: [0.1505, 0.1067, 0.1295, 0.1373, 0.1114, 0.1179, 0.148, 0.1108] },
 } as const
-export const SHARD_WINDOW = 0.02
+const SHARD_WINDOW = 0.02
 /** About two standard deviations of the pooled share under a change of timing (1.3 points per shard, 8 shards). */
-export const POOL_WINDOW = 0.01
+const POOL_WINDOW = 0.01
 export const SHARDS = 8
 
 /**

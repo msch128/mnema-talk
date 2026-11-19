@@ -31,7 +31,7 @@ export function save(channelId: string, now = Date.now()) {
   }
 }
 
-export function clear() {
+function clear() {
   try {
     storage()?.removeItem(STORAGE_KEY)
   } catch {

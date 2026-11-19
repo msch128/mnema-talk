@@ -8,7 +8,7 @@ import type { FlowBytes, MicState, SendLines } from './rtcFlows'
 export interface RTCStatsSample { timestamp: number; bytesSent: number; bytesReceived: number; flows?: FlowBytes }
 /** What the caller knows about the connection that the report cannot say. */
 export interface StatsContext { lines?: SendLines; micState?: MicState }
-export interface ReceivedVideo { width: number; height: number; fps: number }
+interface ReceivedVideo { width: number; height: number; fps: number }
 interface AudioCounters { packetsReceived: number; packetsLost: number; jitter: number; bytesReceived: number; codecId: string | undefined }
 
 function succeededPair(s: MediaStat): boolean {

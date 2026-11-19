@@ -239,7 +239,7 @@ async function memberCall(member: MenuMember, url: string, { title, body, confir
   }
 }
 
-export function isInVoiceWithMe(userId: string) {
+function isInVoiceWithMe(userId: string) {
   const voiceStore = useVoiceStore()
   const cur = voiceStore.currentChannelId
   return !!(cur && voiceStore.channelUsers?.[cur]?.[userId])

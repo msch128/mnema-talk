@@ -18,7 +18,7 @@ function cut(text: string): string {
 }
 
 /** One value as short text; yes and no are the caller's words. */
-export function shortValue(value: unknown, yes: string, no: string): string {
+function shortValue(value: unknown, yes: string, no: string): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? yes : no
   if (typeof value === 'string') return cut(value.replace(/\s+/g, ' ').trim())

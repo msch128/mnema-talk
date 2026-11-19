@@ -11,9 +11,9 @@ import type { LayerPlan } from './screenLayers'
 import { MIN_LAYER_STEP } from './screenLayers'
 
 /** Heights the lower layers aim for, best first. */
-export const CAMERA_LAYER_HEIGHTS = [360, 180] as const
+const CAMERA_LAYER_HEIGHTS = [360, 180] as const
 /** The thumbnail is not worth less than this. */
-export const MIN_CAMERA_LAYER_HEIGHT = 180
+const MIN_CAMERA_LAYER_HEIGHT = 180
 /** Frame rate cap of the lower layers; the thumbnail moves less. */
 const CAMERA_LAYER_FPS = [30, 15] as const
 /** Bits per second a camera layer of this height is capped at. */

@@ -39,7 +39,7 @@ function callField(msg: Message): { call?: 'invite' | 'missed' } {
   return call ? { call } : {}
 }
 
-export type PreviewKind = 'none' | 'text' | 'attachment' | 'poll' | 'call' | 'missedCall'
+type PreviewKind = 'none' | 'text' | 'attachment' | 'poll' | 'call' | 'missedCall'
 
 export interface DmPreview {
   kind: PreviewKind

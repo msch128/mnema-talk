@@ -38,15 +38,15 @@ const LANGUAGES = { bash, c, cpp, csharp, css, diff, dockerfile, go, ini, java, 
 for (const [name, definition] of Object.entries(LANGUAGES)) hljs.registerLanguage(name, definition)
 
 /** Larger blocks are shown unhighlighted: tokenising them would stall the UI. */
-export const HIGHLIGHT_MAX_CHARS = 8000
-export const HIGHLIGHT_MAX_LINES = 300
+const HIGHLIGHT_MAX_CHARS = 8000
+const HIGHLIGHT_MAX_LINES = 300
 
 // Names and aliases of the registered languages: an own list, because
 // hljs.getLanguage would also answer for inherited keys like "constructor".
 const KNOWN = new Set(hljs.listLanguages().flatMap(name => [name, ...(hljs.getLanguage(name)?.aliases ?? [])]))
 
 /** The languages a code block can be highlighted in (names and aliases). */
-export function isHighlightable(lang: string): boolean {
+function isHighlightable(lang: string): boolean {
   return KNOWN.has(lang)
 }
 

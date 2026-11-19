@@ -10,7 +10,7 @@ import { MediaGroup, type MediaStep } from './group'
 
 export const ROOM_IDS = Array.from({ length: 13 }, (_, index) => fixtureId(index + 1))
 export const ROOM_CHANNEL = fixtureId(9999)
-export const ROOM_START = Date.UTC(2026, 0, 1)
+const ROOM_START = Date.UTC(2026, 0, 1)
 /** The product's timing, without the jitter. */
 export const PRODUCTION: MediaTiming = { rotateMs: 30 * 60_000, rotateJitterMs: 0, absentMs: 20 * 60_000, heartbeatMs: 5 * 60_000, maintenanceMs: 30_000 }
 const FAKED: ('Date' | 'setTimeout' | 'clearTimeout')[] = ['Date', 'setTimeout', 'clearTimeout']

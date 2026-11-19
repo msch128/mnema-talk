@@ -60,7 +60,7 @@ export async function fetchFollowedThreads(cx: Cx) {
   }
 }
 
-export function isFollowingThread(cx: Cx, threadId: string): boolean {
+function isFollowingThread(cx: Cx, threadId: string): boolean {
   return cx.cs.followedThreads.value.has(threadId)
 }
 

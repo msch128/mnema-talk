@@ -28,7 +28,7 @@ export { previewText } from '../../shared/lib/markdown'
  * Applies `patch(preview)` to every reply preview that points at `originalId`
  * in the given message lists. Returns the number of previews touched.
  */
-export function patchReplyPreviews(lists: Array<Array<Pick<Message, 'reply_to' | 'reply_to_id'>>>, originalId: string, patch: (preview: ReplyPreview) => void): number {
+function patchReplyPreviews(lists: Array<Array<Pick<Message, 'reply_to' | 'reply_to_id'>>>, originalId: string, patch: (preview: ReplyPreview) => void): number {
   let touched = 0
   for (const list of lists) {
     for (const msg of list || []) {

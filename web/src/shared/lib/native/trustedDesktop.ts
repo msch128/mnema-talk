@@ -6,7 +6,7 @@ import { isTauri } from '@tauri-apps/api/core'
  * The host announces the bundle it verified before any page script runs. In a
  * browser, or on any other origin, none of this exists.
  */
-export type TrustedAppRole = 'selector' | 'instance' | 'surface'
+type TrustedAppRole = 'selector' | 'instance' | 'surface'
 export interface TrustedApp {
   /** Version of the verified bundle, X.Y.Z. */
   version: string

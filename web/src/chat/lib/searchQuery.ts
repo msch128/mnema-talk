@@ -4,13 +4,13 @@
 // parameters; resolving names to ids is done against the given members/channels.
 
 export const HAS_KINDS = ['file', 'image', 'video', 'link', 'embed', 'poll', 'edit'] as const
-export type HasKind = typeof HAS_KINDS[number]
+type HasKind = typeof HAS_KINDS[number]
 
 export const IS_KINDS = ['pinned'] as const
-export type IsKind = typeof IS_KINDS[number]
+type IsKind = typeof IS_KINDS[number]
 
 export const AUTHOR_KINDS = ['bot', 'webhook', 'member'] as const
-export type AuthorKind = typeof AUTHOR_KINDS[number]
+type AuthorKind = typeof AUTHOR_KINDS[number]
 
 export const FILTER_KEYS = ['from', 'in', 'has', 'is', 'before', 'after', 'during', 'mentions', 'author', 'filename'] as const
 export type FilterKey = typeof FILTER_KEYS[number]

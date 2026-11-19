@@ -7,7 +7,7 @@ import type { NotifyLevel } from '../../types/domain'
 /** The member's choice: every message of channels set to "all messages", only what addresses them, or none. */
 export type MessageSoundMode = 'all' | 'mentions' | 'off'
 export const MESSAGE_SOUND_MODES: readonly MessageSoundMode[] = ['all', 'mentions', 'off']
-export const DEFAULT_MESSAGE_SOUND_MODE: MessageSoundMode = 'mentions'
+const DEFAULT_MESSAGE_SOUND_MODE: MessageSoundMode = 'mentions'
 
 /** Two sounds closer than this count as one: a burst of messages chimes once. */
 export const MESSAGE_SOUND_GAP_MS = 2000
