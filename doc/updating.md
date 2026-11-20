@@ -84,17 +84,23 @@ Synology: [platform notes](platform-notes.md#synology).
 The "Update now" button never runs by itself. For a server that should follow
 patch releases on its own, pin the minor line (`MNEMA_IMAGE=...:X.Y`, a `fix:`
 release only bumps the patch) and let cron do what you would do by hand: back
-up, pull, recreate the app, check health. Save this as
-`/usr/local/sbin/mnema-auto-update`, `chmod 700` it, and adjust the two paths:
+up, pull, recreate the app, check health and, when the new version fails, go
+back to the old one. Save this as `/usr/local/sbin/mnema-auto-update`,
+`chmod 700` it, and adjust the paths at the top:
 
 ```sh
 #!/usr/bin/env bash
 set -uo pipefail
 exec 9>/run/mnema-auto-update.lock; flock -n 9 || exit 0   # never two runs at once
 cd /opt/mnema-talk || exit 1                               # your deployment folder
-HEALTH_WAIT=${HEALTH_WAIT:-180}      # seconds, at least 5; raise it for long migrations
-[[ $HEALTH_WAIT =~ ^[0-9]+$ ]] && [ "$HEALTH_WAIT" -ge 5 ] || { echo "HEALTH_WAIT must be a number >= 5" >&2; exit 1; }
+backups=/var/backups/mnema-talk      # where this script's backups go
 bad=/var/lib/mnema-bad-image         # id of a release that failed its health check
+halted=/var/lib/mnema-update-halted  # written when a rollback fails: no updates until you remove it
+HEALTH_WAIT=${HEALTH_WAIT:-180}         # seconds, at least 5
+MIGRATION_WAIT=${MIGRATION_WAIT:-3600}  # longest wait while the new version still migrates
+[[ $HEALTH_WAIT =~ ^[0-9]+$ ]] && [ "$HEALTH_WAIT" -ge 5 ] || { echo "HEALTH_WAIT must be a number >= 5" >&2; exit 1; }
+[[ $MIGRATION_WAIT =~ ^[0-9]+$ ]] || { echo "MIGRATION_WAIT must be a number" >&2; exit 1; }
+[ ! -e "$halted" ] || { echo "updates halted after a failed rollback: $(cat "$halted")" >&2; exit 1; }
 
 img=$(sed -n 's/^MNEMA_IMAGE=//p' .env)
 [[ ${img##*:} =~ ^[0-9]+\.[0-9]+$ ]] || { echo "MNEMA_IMAGE must be a pinned X.Y tag, got '$img'" >&2; exit 1; }
@@ -108,15 +114,36 @@ if [ "$(cat "$bad" 2>/dev/null)" = "$new" ]; then rollback; exit 0; fi # failed 
 
 health() { for _ in $(seq 1 $((HEALTH_WAIT / 5))); do
   [ "$(docker inspect -f '{{.State.Health.Status}}' mnema-talk 2>/dev/null)" = healthy ] && return 0; sleep 5; done; return 1; }
+# The server holds this advisory lock while it applies migrations.
+migrating() { [ "$(docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT count(*) FROM pg_locks WHERE locktype='"'advisory'"' AND granted AND objsubid=1 AND ((classid::bigint << 32) | objid::bigint) = 470003576161"' </dev/null)" = 1 ]; }
+halt() { docker compose stop app; echo "$(date -u +%FT%TZ) $1" > "$halted"
+  echo "ROLLBACK FAILED: $1. The app is stopped; restore $backup by hand (doc/upgrade.md, Rollback)" >&2; exit 1; }
 
-if ! BACKUP_MODE=online BACKUP_DIR=/var/backups/mnema-talk KEEP_DAYS=14 ./scripts/backup.sh; then
+out=$(BACKUP_MODE=online BACKUP_DIR=$backups KEEP_DAYS=14 ./scripts/backup.sh 2>&1); status=$?
+echo "$out"
+backup=$(echo "$out" | sed -n 's/^backup complete: \(.*\) (restore test: [a-z]*)$/\1/p')   # this run's backup
+if [ "$status" != 0 ] || [ ! -d "$backup" ]; then
   echo "backup failed, not updating" >&2; rollback; exit 1           # retried at the next run
 fi
 docker compose up -d        # recreates the services whose image changed (app and updater)
-health && exit 0
+waited=0
+while ! health && migrating; do   # never decide while a migration still runs
+  [ "$waited" -lt "$MIGRATION_WAIT" ] || { echo "still migrating after ${MIGRATION_WAIT}s, not rolling back: check by hand" >&2; exit 1; }
+  echo "a migration is still running, waiting"; waited=$((waited + HEALTH_WAIT))
+done
+health && exit 0                  # after a migration, the health check gets HEALTH_WAIT once more
 echo "new version not healthy, going back" >&2
 echo "$new" > "$bad"; rollback; docker compose up -d
-health || echo "ROLLBACK ALSO UNHEALTHY: manual action needed" >&2
+health && exit 0
+# The old version refuses a database the new one migrated: restore this run's backup.
+[ "$(docker compose logs app | grep -c 'migrated by a newer version')" != 0 ] || halt "the old version is unhealthy too"
+(cd "$backup" && sha256sum --quiet -c SHA256SUMS) || halt "backup $backup fails its checksums"
+echo "the old version refuses the migrated database, restoring $backup" >&2
+docker compose stop app
+./scripts/restore.sh "$backup" --yes || halt "restore failed"
+docker compose up -d
+health || halt "the old version is unhealthy after the restore"
+echo "rolled back and restored $backup: writes made since that backup are lost" >&2
 exit 1
 ```
 
@@ -127,8 +154,24 @@ is the only report, so read it now and then (or add a mail or webhook call at th
 `echo` lines). A release that failed its health check is remembered in
 `/var/lib/mnema-bad-image` and not retried until a newer image appears; a failed
 backup is retried at the next run. If `old` is empty (the app container was
-missing) the script cannot roll back and only reports it. Things
-to know:
+missing) the script cannot roll back and only reports it.
+
+When the new version does not become healthy, the script goes back in steps:
+
+1. It waits while the new version still applies migrations (up to
+   `MIGRATION_WAIT`), so it never rolls back in the middle of one.
+2. It points the tag at the old image and starts it. Without schema changes
+   this is enough, and no data is lost.
+3. Only if the old version refuses the database (the new one already migrated
+   it: `the database was migrated by a newer version` in the log) does it check
+   the checksums of the backup it took minutes earlier, restore exactly that
+   backup with `restore.sh` and start the old version again. Messages and
+   uploads made between that backup and the rollback are lost.
+4. If the restore or the old version fails as well, it stops the app, writes
+   `/var/lib/mnema-update-halted` and makes no further attempts. Repair by hand
+   ([Rollback](upgrade.md#rollback)) and remove that file to resume updates.
+
+Things to know:
 
 - Members are disconnected for 30 to 60 seconds during an update, so pick the
   hours that suit your community (change the cron hour field).
@@ -136,9 +179,12 @@ to know:
   "Update now" button does ([Verifying a release image](operations.md#verifying-a-release-image)).
   Use a pinned digest and the button if that matters more than automation.
 - A new minor line (a `feat:` release) is never picked up; it can change the
-  compose file, so move to it by hand as described above. A rollback by image
-  cannot undo a database migration; restore the backup the script took
-  ([If it goes wrong](#if-it-goes-wrong)).
+  compose file, so move to it by hand as described above.
+- The backup is taken online, so the app keeps serving while it runs; writes
+  made during the backup itself are not in it either.
+- The script reads no secret and prints none: `restore.sh` and `backup.sh`
+  read `.env` themselves, and the database query runs inside the postgres
+  container.
 
 ### Command line within a line
 
