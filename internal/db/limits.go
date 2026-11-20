@@ -30,6 +30,19 @@ const (
 	idleInTransactionTimeout = time.Minute
 )
 
+// disableJIT turns PostgreSQL's JIT compilation off for the pool's sessions,
+// unless DATABASE_URL sets jit itself. JIT pays off for long analytical
+// queries; the server's are short, and the planner's cost estimate of a few
+// of them (the unread summary over every channel, the forum post list and
+// search) is high enough to start it: compiling took 90 to 390 ms per call
+// on a million-message database, and the forum post search ran 345 ms instead
+// of 9 ms.
+func disableJIT(params map[string]string) {
+	if _, set := params["jit"]; !set {
+		params["jit"] = "off"
+	}
+}
+
 // Options are the limits of a pool.
 type Options struct {
 	// MaxConns is the most connections the pool opens.

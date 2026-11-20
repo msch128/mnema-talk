@@ -80,3 +80,14 @@ func TestPoolSizeAndUnlimitedStatements(t *testing.T) {
 		t.Errorf("limit of a pool without one %q (%v), want 0", limit, err)
 	}
 }
+
+// JIT compiling cost 90 to 390 ms per call of the unread summary and the
+// forum post list and search on a million-message database: the pool's
+// sessions run without it.
+func TestPoolSessionsRunWithoutJIT(t *testing.T) {
+	p := scratchPool(t)
+	var jit string
+	if err := p.QueryRow(context.Background(), `SHOW jit`).Scan(&jit); err != nil || jit != "off" {
+		t.Fatalf("jit = %q (%v), want off", jit, err)
+	}
+}

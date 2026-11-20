@@ -31,7 +31,7 @@ func TestMigrationsKeepOneChannelTimeIndexOnMessages(t *testing.T) {
 		}
 		names = append(names, name)
 	}
-	if len(names) != 1 || names[0] != "messages_channel_unread_idx" {
-		t.Fatalf("channel+time indexes on messages = %v, want only messages_channel_unread_idx", names)
+	if len(names) != 1 || names[0] != "messages_channel_unread_id_idx" {
+		t.Fatalf("channel+time indexes on messages = %v, want only messages_channel_unread_id_idx", names)
 	}
 }

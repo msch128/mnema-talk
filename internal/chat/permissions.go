@@ -46,10 +46,14 @@ func MessageCountByAuthor(ctx context.Context, q db.Querier, author uuid.UUID, c
 	return n, nil
 }
 
+// messageCountsByAuthorSQL counts per author from messages_channel_unread_id_idx
+// alone (it holds user_id and counted, migration 0112).
+const messageCountsByAuthorSQL = `SELECT user_id, COUNT(*) FROM messages WHERE counted AND channel_id = ANY($1::uuid[]) GROUP BY user_id`
+
 // MessageCountsByAuthor counts the messages per author inside the channels,
 // as MessageCountByAuthor does.
 func MessageCountsByAuthor(ctx context.Context, q db.Querier, channels []uuid.UUID) (map[uuid.UUID]int64, error) {
-	rows, err := q.Query(ctx, `SELECT user_id, COUNT(*) FROM messages WHERE counted AND channel_id = ANY($1::uuid[]) GROUP BY user_id`, channels)
+	rows, err := q.Query(ctx, messageCountsByAuthorSQL, channels)
 	if err != nil {
 		return nil, fmt.Errorf("count hidden messages: %w", err)
 	}

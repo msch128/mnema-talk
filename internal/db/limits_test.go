@@ -47,3 +47,16 @@ func TestConnectRejectsAPoolSizeOutOfRange(t *testing.T) {
 		}
 	}
 }
+
+func TestJITIsOffUnlessTheDatabaseURLSetsIt(t *testing.T) {
+	params := map[string]string{}
+	disableJIT(params)
+	if params["jit"] != "off" {
+		t.Errorf("jit = %q without a setting, want off", params["jit"])
+	}
+	params = map[string]string{"jit": "on"}
+	disableJIT(params)
+	if params["jit"] != "on" {
+		t.Errorf("jit = %q after DATABASE_URL set on, want on", params["jit"])
+	}
+}
