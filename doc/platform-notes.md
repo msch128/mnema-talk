@@ -107,6 +107,11 @@ The template installs a released image and has no "Update now" button. The
 app's admin page still tells you when a new release is out; update the app
 from Unraid (Docker tab or the stack's *Update*).
 
+**Mnemo, the AI helper bot.** [Mnemo](https://github.com/mnema-xyz/talk-mnemo-bot)
+(optional, bring your own AI provider) has a Community Apps template of its
+own: install it from the *Apps* tab after you added the bot in Talk, steps in
+the [Mnemo guide](https://github.com/mnema-xyz/talk-mnemo-bot/blob/main/README.md#install-on-unraid).
+
 ## Unraid
 
 1. **Files.** Open the Unraid terminal and run the assistant in an appdata
