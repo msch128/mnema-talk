@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.10](https://github.com/mnema-xyz/talk/compare/v3.3.9...v3.3.10) (2026-11-20)
+
+
+### Documentation
+
+* install on Unraid from three classic Community Apps templates ([#927](https://github.com/mnema-xyz/talk/issues/927)) ([8603a38](https://github.com/mnema-xyz/talk/commit/8603a38edf61e3420eeedcc8216ac836eaedc86e))
+* install on Unraid via Community Apps ([#915](https://github.com/mnema-xyz/talk/issues/915)) ([9b43190](https://github.com/mnema-xyz/talk/commit/9b43190591817250557d2fd0bfc7499c1b8d0f1d))
+* **updating:** automatic rollback restores the update's own backup ([#926](https://github.com/mnema-xyz/talk/issues/926)) ([10f921d](https://github.com/mnema-xyz/talk/commit/10f921da28660f51b0dce16b2dd58dab82f0f5e0))
+
 ## [3.3.9](https://github.com/mnema-xyz/talk/compare/v3.3.8...v3.3.9) (2026-11-20)
 
 
