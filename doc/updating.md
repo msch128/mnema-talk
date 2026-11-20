@@ -136,7 +136,7 @@ echo "new version not healthy, going back" >&2
 echo "$new" > "$bad"; rollback; docker compose up -d
 health && exit 0
 # The old version refuses a database the new one migrated: restore this run's backup.
-docker compose logs app | grep -q 'migrated by a newer version' || halt "the old version is unhealthy too"
+[ "$(docker compose logs app | grep -c 'migrated by a newer version')" != 0 ] || halt "the old version is unhealthy too"
 (cd "$backup" && sha256sum --quiet -c SHA256SUMS) || halt "backup $backup fails its checksums"
 echo "the old version refuses the migrated database, restoring $backup" >&2
 docker compose stop app
