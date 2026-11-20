@@ -113,21 +113,30 @@ func TestConcurrentWritersAllDeliver(t *testing.T) {
 	defer w.Close()
 	_ = w.(interface{ SetWriteBuffer(int) error }).SetWriteBuffer(8 << 20)
 	const writers, each = 8, 200
+	// Loopback drops nothing while the receiver's buffer has room, but the kernel
+	// caps SetReadBuffer (net.core.rmem_max, about 200 KiB on CI runners), so at
+	// most window datagrams may be in flight; the writers still run concurrently.
+	const window = 32
 	var wg sync.WaitGroup
+	var sent atomic.Int64
 	payload := make([]byte, 1200)
 	ua := net.UDPAddrFromAddrPort(r.addr())
+	deadline := time.Now().Add(10 * time.Second)
 	for range writers {
 		wg.Go(func() {
 			for range each {
+				for sent.Load()-r.count.Load() >= window && time.Now().Before(deadline) {
+					runtime.Gosched()
+				}
 				if _, err := w.WriteTo(payload, ua); err != nil {
 					t.Error(err)
 					return
 				}
+				sent.Add(1)
 			}
 		})
 	}
 	wg.Wait()
-	// Loopback drops nothing while the receiver's buffer has room.
 	if got := r.waitFor(writers * each); got != writers*each {
 		t.Fatalf("%d of %d datagrams arrived", got, writers*each)
 	}

@@ -229,6 +229,29 @@ function clientAddress(): string {
   return `198.18.${Math.floor(n / 250) % 250}.${(n % 250) + 1}`
 }
 
+// Playwright closes only the contexts of its own page and context fixtures. A
+// context a test opens with browser.newContext() and leaves open (no close, or
+// a close the failure skipped) stays signed in for the rest of the worker: it
+// answers every broadcast with API requests, which count against the Owner's
+// budget above, and, in WebKit, it is a whole browser process of its own (see
+// contextOwnProcess) that takes CPU from every later test. A WebKit shard that
+// carried eight of them from the bot specs ran the moderation spec five times
+// slower than a fresh worker, into the test timeout. So every context a test
+// (its fixtures, beforeEach or body) opens is closed when the test ends. A
+// beforeAll hook runs before the test fixtures, so contexts it shares across
+// its suite are not the test's and stay open until its afterAll.
+let testContexts: Set<BrowserContext> | null = null
+const openContexts = new WeakSet<BrowserContext>()
+
+async function closeTestContexts(contexts: Set<BrowserContext>): Promise<void> {
+  await Promise.all([...contexts].map(context => closeBounded(() => context.close())))
+}
+
+/** Whether a context is still open: false once closed, here or by the test itself. */
+export function isOpen(context: BrowserContext): boolean {
+  return openContexts.has(context)
+}
+
 function counted(browser: Browser): Browser {
   const newContext = browser.newContext.bind(browser)
   const separate = browser.browserType().name() === 'webkit'
@@ -236,6 +259,9 @@ function counted(browser: Browser): Browser {
     const options = args[0] ?? {}
     const addressed = grantable(browser, { serviceWorkers: serviceWorkersFor(), ...options, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(), ...(options.extraHTTPHeaders ?? {}) } })
     const context = await (separate ? contextOwnProcess(browser, addressed) : newContext(addressed))
+    testContexts?.add(context)
+    openContexts.add(context)
+    context.on('close', () => openContexts.delete(context))
     countApiRequests(context)
     // Records the peer connections and turns the AI noise filter off (see
     // helpers.ts). It runs before every init script of the spec, which may turn
@@ -251,9 +277,20 @@ function counted(browser: Browser): Browser {
   return browser
 }
 
-export const test = base.extend<{ apiHeadroom: void; cspViolations: void }, { browser: Browser }>({
+export const test = base.extend<{ testContextsClosed: void; apiHeadroom: void; cspViolations: void }, { browser: Browser }>({
   browser: [async ({ browser }, use) => { await use(counted(browser)) }, { scope: 'worker' }],
   // Playwright insists on a destructuring pattern, even an empty one.
+  // eslint-disable-next-line no-empty-pattern
+  testContextsClosed: [async ({}, use) => {
+    const opened = new Set<BrowserContext>()
+    testContexts = opened
+    try {
+      await use()
+    } finally {
+      testContexts = null
+      await closeTestContexts(opened)
+    }
+  }, { auto: true }],
   // eslint-disable-next-line no-empty-pattern
   apiHeadroom: [async ({}, use) => { await awaitApiHeadroom(); await use() }, { auto: true }],
   // eslint-disable-next-line no-empty-pattern
