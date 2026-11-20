@@ -107,7 +107,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_nightly_gate.py
 	python3 scripts/tests/test_gate_tool_failure.py
 	python3 scripts/tests/test_repo_guard_skip.py
-	node --test scripts/bench-compare.test.mjs
+	node --test scripts/bench-compare.test.mjs scripts/test-shard.test.mjs
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend
@@ -125,8 +125,9 @@ COVERAGE_OUT ?= coverage.out
 
 # The test run alone, for a subset of packages (GO_PKGS=...; CI runs the
 # integration tests as parallel shards and applies the gates to the merged profiles).
+# GO_TEST_RUN (environment, optional) is a -run regex; CI sets it per shard.
 coverage-go-profile: ## Go unit + integration tests with coverage -> $(COVERAGE_OUT), no gate
-	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=$(COVERAGE_OUT) $(GO_PKGS)
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=900s $${GO_TEST_RUN:+-run "$$GO_TEST_RUN"} -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=$(COVERAGE_OUT) $(GO_PKGS)
 
 coverage-go: coverage-go-profile ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
 	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN) --file-min $(COVERAGE_FILE_MIN)

@@ -337,9 +337,12 @@ jobs:
   # Unit and integration tests together record which code they reach. The
   # integration tests of a package reset the database they are given, so each
   # shard has a PostgreSQL of its own and runs its packages one after another.
-  # The shards are balanced by hand (internal/server alone takes about as long
-  # as the other two groups); `rest` is every package not named elsewhere, so a
-  # new package is always tested.
+  # The shards are balanced by hand; `rest` is every package not named
+  # elsewhere, so a new package is always tested. internal/server alone took
+  # 11-16 minutes and hit the 15 minute test timeout, so it is split into two
+  # shards (server-a, server-b) by a hash of the test name
+  # (scripts/test-shard.mjs); the check step fails if a test is in no shard or
+  # in both. The timeout stays.
   backend-integration:
     name: backend-integration (${{ matrix.shard }})
     needs: changes
@@ -348,7 +351,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [server, realtime, rest]
+        shard: [server-a, server-b, realtime, rest]
     services:
       postgres:
         image: postgres:18-alpine
@@ -398,7 +401,12 @@ jobs:
         run: |
           set -euo pipefail
           case "$SHARD" in
-            server) pkgs='./internal/server' ;;
+            server-a|server-b)
+              node scripts/test-shard.mjs check 2 ./internal/server integration
+              n=1; [ "$SHARD" = server-b ] && n=2
+              GO_TEST_RUN="$(node scripts/test-shard.mjs run "$n/2" ./internal/server integration)"
+              export GO_TEST_RUN
+              pkgs='./internal/server' ;;
             realtime) pkgs='./internal/bot ./internal/chat/...' ;;
             rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|bot)$|/internal/chat(/|$)' | tr '\n' ' ')" ;;
           esac
