@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.7](https://github.com/mnema-xyz/talk/compare/v3.3.6...v3.3.7) (2026-11-20)
+
+
+### Performance Improvements
+
+* **ws:** spread reconnect storms and cut their per-reconnect cost ([#917](https://github.com/mnema-xyz/talk/issues/917)) ([0b6422d](https://github.com/mnema-xyz/talk/commit/0b6422dacd142d4d8818bb8961d2a49f58e87020))
+
 ## [3.3.6](https://github.com/mnema-xyz/talk/compare/v3.3.5...v3.3.6) (2026-11-19)
 
 
