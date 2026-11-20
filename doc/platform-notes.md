@@ -75,37 +75,54 @@ button and the admin update check do.
 
 ## Install on Unraid via Community Apps
 
-The Community Apps template installs the whole stack (Mnema Talk, PostgreSQL
-and the SeaweedFS media store) as one app. It needs **Unraid 8 or newer**; on
-Unraid 7 use the Compose Manager route below.
+Mnema Talk runs as three containers from the *Apps* tab: PostgreSQL 18 for
+the data, SeaweedFS-Mnema for media (an S3 store), and Mnema Talk itself. Each
+is a classic single-container template, so any Unraid release with Community
+Apps works. Make every secret below on the Unraid terminal with
+`openssl rand -hex 32`, and keep them.
 
-1. **Install.** Open the *Apps* tab, search for *Mnema Talk* and click
-   *Install*.
-2. **Fill in five fields.** *Public URL* (the `https://` address people will
-   open), *Admin password*, and three secrets: *JWT secret*, *Database
-   password* and *Media storage secret*. Make each secret on the Unraid
-   terminal with `openssl rand -hex 32`. Keep them; the database password
-   cannot be changed afterwards by editing the field.
-3. **Apply.** Data lives under `/mnt/user/appdata/mnema-talk`. Point the
-   *Appdata path* at a cache-only path such as `/mnt/cache/appdata/mnema-talk`
-   if you have a cache pool: PostgreSQL is faster there.
+1. **PostgreSQL.** Search for *postgresql18* and install the one from
+   *jj9987's Repository* (the official `postgres:18` image). Set
+   *POSTGRES_PASSWORD* to a new secret, *POSTGRES_USER* to `mnema` and
+   *POSTGRES_DB* to `mnema_talk`. A cache-only data path such as
+   `/mnt/cache/appdata/postgresql18` is faster. Talk needs PostgreSQL 18 with
+   the `pgcrypto` and `pg_trgm` extensions, which the official image ships.
+2. **Media storage.** Search for *SeaweedFS-Mnema* and install it. Keep the
+   access key `mnema` (or pick your own) and set the *Secret key* to a new
+   secret. Only the S3 port 8333 is published, and it refuses every request
+   without the key.
+3. **Mnema Talk.** Search for *Mnema Talk* and install it. Fill in:
+   - *Public URL*: the `https://` address people will open;
+   - *Database URL*:
+     `postgres://mnema:DB-PASSWORD@UNRAID-IP:5432/mnema_talk?sslmode=disable`
+     with the password from step 1 and your Unraid server's address;
+   - *Media storage address* `http://UNRAID-IP:8333`, and the access key and
+     secret key from step 2;
+   - *JWT secret* (a new secret) and the *Admin password* for the first login.
+
+   The three containers stay on the default bridge network and reach each other
+   through the Unraid server's address. Never forward ports 5432, 8333 or the
+   web port 8080 on your router.
 4. **Reverse proxy and router.** Same as steps 3 and 4 of the
    [Unraid section](#unraid) below: a proxy container with HTTPS in front of the
    web port, and the [three ports](quick-start.md#step-4-open-the-three-ports)
-   forwarded. Enter the proxy container's address as *Reverse proxy address*.
+   forwarded (the voice ports keep the same number on host and container).
+   Enter the proxy container's address as *Reverse proxy address*.
 
-**Without Unraid 8 (Compose Manager).** Install the *Compose Manager Plus*
-plugin from Community Apps, add a stack, and paste the
+Back up the appdata folders of `postgresql18` and `seaweedfs-mnema` together.
+The templates install a released image and have no "Update now" button. The
+app's admin page still tells you when a new release is out; update from the
+Docker tab. Keep PostgreSQL on major version 18 when you update it.
+
+**Alternative: Compose Manager.** To run the stack as one unit instead,
+install the *Compose Manager Plus* plugin from Community Apps, add a stack, and
+paste the
 [`compose.yaml`](https://github.com/mnema-xyz/unraid-templates/blob/main/mnema-talk/compose.yaml)
 and
 [`.env.example`](https://github.com/mnema-xyz/unraid-templates/blob/main/mnema-talk/.env.example)
-of the template repository (save the second as `.env` and fill in the same five
-values). Updates: pull the new image in the stack, or follow
+of the template repository (save the second as `.env` and fill in the five
+values it lists). Updates: pull the new image in the stack, or follow
 [updating.md](updating.md).
-
-The template installs a released image and has no "Update now" button. The
-app's admin page still tells you when a new release is out; update the app
-from Unraid (Docker tab or the stack's *Update*).
 
 **Mnemo, the AI helper bot.** [Mnemo](https://github.com/mnema-xyz/talk-mnemo-bot)
 (optional, bring your own AI provider) has a Community Apps template of its
