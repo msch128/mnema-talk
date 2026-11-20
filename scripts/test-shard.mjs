@@ -10,11 +10,20 @@
 // Usage:
 //   node scripts/test-shard.mjs run   <index>/<count> <package> [tags]
 //       prints the -run regex that selects this shard's tests
+//   node scripts/test-shard.mjs pkgs  <index>/<count> <exclude-regex>
+//       prints the packages of this shard: every package of the module that
+//       the regex does not exclude, balanced by the seconds in
+//       scripts/test-shard-weights.json (a package missing there counts as
+//       DEFAULT_WEIGHT, so a new package is always tested)
+//   node scripts/test-shard.mjs check-pkgs <count> <exclude-regex>
+//       fails unless every package is in exactly one shard
 //   node scripts/test-shard.mjs check <count> <package> [tags]
 //       fails unless every test is in exactly one of the <count> shards
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+const DEFAULT_WEIGHT = 10
 const testName = /^(Test|Fuzz|Example)/
 
 export function fnv1a(name) {
@@ -40,6 +49,31 @@ export function partition(names, count) {
   const shards = Array.from({ length: count }, () => [])
   for (const name of names) shards[shardOf(name, count) - 1].push(name)
   return shards
+}
+
+// balance spreads items over count shards, heaviest first onto the lightest
+// shard (ties go to the lowest index), so the result depends only on the
+// items and their weights. Items without a weight count as DEFAULT_WEIGHT.
+export function balance(items, weights, count) {
+  const w = (item) => weights[item] ?? DEFAULT_WEIGHT
+  const shards = Array.from({ length: count }, () => ({ load: 0, items: [] }))
+  const order = [...items].sort((a, b) => w(b) - w(a) || (a < b ? -1 : a > b ? 1 : 0))
+  for (const item of order) {
+    const lightest = shards.reduce((min, s) => (s.load < min.load ? s : min))
+    lightest.load += w(item)
+    lightest.items.push(item)
+  }
+  return shards.map((s) => s.items.sort())
+}
+
+function listPackages(exclude) {
+  const out = execFileSync('go', ['list', './...'], { encoding: 'utf8', maxBuffer: 64 << 20 })
+  const skip = new RegExp(exclude)
+  return out.split('\n').map((l) => l.trim()).filter((l) => l && !skip.test(l))
+}
+
+function loadWeights() {
+  return JSON.parse(readFileSync(new URL('./test-shard-weights.json', import.meta.url), 'utf8'))
 }
 
 // runRegex anchors every name: -run matches the top-level test name unanchored.
@@ -92,7 +126,28 @@ function main(argv) {
     console.log(`${pkg}: ${all.length} tests, one shard each (${shards.map((s) => s.length).join(' + ')})`)
     return
   }
-  throw new Error('usage: test-shard.mjs run|check ...')
+  if (mode === 'pkgs' || mode === 'check-pkgs') {
+    const [spec, exclude] = rest
+    const m = /^(?:(\d+)\/)?(\d+)$/.exec(spec ?? '')
+    if (!m || exclude === undefined) throw new Error('usage: pkgs <index>/<count> <exclude-regex>')
+    const count = Number(m[2])
+    const all = listPackages(exclude)
+    const shards = balance(all, loadWeights(), count)
+    if (mode === 'pkgs') {
+      const index = Number(m[1])
+      if (index < 1 || index > count) throw new Error(`shard ${spec} is out of range`)
+      console.log(shards[index - 1].join(' '))
+      return
+    }
+    const bad = problems(all, shards)
+    if (bad.length > 0) {
+      console.error(bad.join('\n'))
+      process.exit(1)
+    }
+    console.log(`${all.length} packages, one shard each (${shards.map((s) => s.length).join(' + ')})`)
+    return
+  }
+  throw new Error('usage: test-shard.mjs run|check|pkgs|check-pkgs ...')
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -337,8 +337,12 @@ jobs:
   # Unit and integration tests together record which code they reach. The
   # integration tests of a package reset the database they are given, so each
   # shard has a PostgreSQL of its own and runs its packages one after another.
-  # The shards are balanced by hand; `rest` is every package not named
-  # elsewhere, so a new package is always tested. internal/server alone took
+  # The shards are balanced by hand; `rest` (rest-a, rest-b) is every package
+  # not named elsewhere, so a new package is always tested. The two halves are
+  # balanced by the package times in scripts/test-shard-weights.json
+  # (scripts/test-shard.mjs; a package without an entry gets a default, and
+  # the check step fails if a package is in no shard or in both). Re-measure
+  # the weights from a green run when the halves drift apart. internal/server alone took
   # 11-16 minutes and hit the 15 minute test timeout, so it is split into two
   # shards (server-a, server-b) by a hash of the test name
   # (scripts/test-shard.mjs); the check step fails if a test is in no shard or
@@ -351,7 +355,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [server-a, server-b, realtime, rest]
+        shard: [server-a, server-b, realtime, rest-a, rest-b]
     services:
       postgres:
         image: postgres:18-alpine
@@ -408,7 +412,11 @@ jobs:
               export GO_TEST_RUN
               pkgs='./internal/server' ;;
             realtime) pkgs='./internal/bot ./internal/chat/...' ;;
-            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|bot)$|/internal/chat(/|$)' | tr '\n' ' ')" ;;
+            rest-a|rest-b)
+              rest='/internal/(server|bot)$|/internal/chat(/|$)'
+              node scripts/test-shard.mjs check-pkgs 2 "$rest"
+              n=1; [ "$SHARD" = rest-b ] && n=2
+              pkgs="$(node scripts/test-shard.mjs pkgs "$n/2" "$rest")" ;;
           esac
           make coverage-go-profile GO_PKGS="$pkgs" COVERAGE_OUT="coverage-$SHARD.out"
 
