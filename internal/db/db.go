@@ -93,6 +93,7 @@ func ConnectWith(ctx context.Context, databaseURL string, opts Options) (*Pool, 
 	config.MaxConnIdleTime = 15 * time.Minute
 	config.ConnConfig.RuntimeParams["statement_timeout"] = milliseconds(opts.StatementTimeout)
 	config.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = milliseconds(idleInTransactionTimeout)
+	disableJIT(config.ConnConfig.RuntimeParams)
 	config.PrepareConn = statementLimit{base: opts.StatementTimeout}.prepare
 	done := new(atomic.Int64)
 	config.ConnConfig.Tracer = doneTracer{done: done}

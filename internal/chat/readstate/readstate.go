@@ -32,9 +32,20 @@ type ReadState struct {
 // the caller blocked never count as mentions, and in the chat of the Talk of
 // a conversation of two they do not count as unread either, as in the
 // conversation itself (dm.DmSelect).
+//
+// Each channel's messages since the marker are read once, from the index
+// messages_channel_unread_id_idx alone (migration 0112): the unread count and
+// both mention counts are filters over that one pass. my_mentions is the
+// member's own message_mentions rows, read once for all channels. Only a
+// message that quotes another one (reply_to_id, in the index) costs more:
+// whether the member wrote the quoted message is a primary key lookup. It is
+// a scalar subquery on purpose: an EXISTS may be planned as one hash of the
+// member's messages, which can be a scan of the whole table. OFFSET 0 keeps
+// that lookup from being evaluated once per count.
 func ReadStateSQL() string {
 	return `
-		SELECT c.id, unread.n, addr.mentions, addr.addressed,
+		WITH my_mentions AS MATERIALIZED (SELECT message_id, kind FROM message_mentions WHERE user_id = $1)
+		SELECT c.id, cnt.n, cnt.mentions, cnt.addressed,
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
 		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
@@ -50,25 +61,23 @@ func ReadStateSQL() string {
 		        SELECT 1 FROM channels d WHERE d.id = c.dm_id AND d.dm_key IS NOT NULL) AS talk
 		) pair
 		CROSS JOIN LATERAL (
-		    SELECT count(*) AS n FROM messages m
-		    WHERE m.channel_id = c.id AND m.user_id <> $1 AND m.parent_id IS NULL
-		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
-		      AND (NOT pair.talk OR ` + core.AuthorHiddenFrom("$1", "m.user_id") + `)
-		) unread
-		CROSS JOIN LATERAL (
-		    SELECT count(*) FILTER (WHERE COALESCE(rt.mine, FALSE) OR (mm.message_id IS NOT NULL
-		               AND (mm.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE)))) AS mentions,
-		           count(*) FILTER (WHERE COALESCE(rt.mine, FALSE) OR (mm.message_id IS NOT NULL AND mm.kind <> $2)) AS addressed
-		    FROM messages m
-		    LEFT JOIN message_mentions mm ON mm.message_id = m.id AND mm.user_id = $1
-		    LEFT JOIN LATERAL (
-		        SELECT orig.user_id = $1 AS mine FROM messages orig
-		        WHERE orig.id = m.reply_to_id OFFSET 0) rt ON TRUE
-		    WHERE m.channel_id = c.id AND m.user_id <> $1
-		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
-		      AND (mm.message_id IS NOT NULL OR COALESCE(rt.mine, FALSE))
-		      AND ` + core.AuthorHiddenFrom("$1", "m.user_id") + `
-		) addr
+		    SELECT count(*) FILTER (WHERE m.root AND (NOT pair.talk OR ` + core.AuthorHiddenFrom("$1", "m.user_id") + `)) AS n,
+		           count(*) FILTER (WHERE (m.mine OR (m.kind IS NOT NULL
+		               AND (m.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE))))
+		               AND ` + core.AuthorHiddenFrom("$1", "m.user_id") + `) AS mentions,
+		           count(*) FILTER (WHERE (m.mine OR (m.kind IS NOT NULL AND m.kind <> $2))
+		               AND ` + core.AuthorHiddenFrom("$1", "m.user_id") + `) AS addressed
+		    FROM (
+		        SELECT msg.user_id, msg.parent_id IS NULL AS root, mm.kind,
+		               msg.reply_to_id IS NOT NULL AND COALESCE((
+		                   SELECT orig.user_id = $1 FROM messages orig WHERE orig.id = msg.reply_to_id), FALSE) AS mine
+		        FROM messages msg
+		        LEFT JOIN my_mentions mm ON mm.message_id = msg.id
+		        WHERE msg.channel_id = c.id AND msg.user_id <> $1
+		          AND msg.created_at > COALESCE(cr.last_read_at, me.created_at)
+		        OFFSET 0
+		    ) m
+		) cnt
 		WHERE c.type <> 'dm'
 		ORDER BY c.id`
 }
@@ -82,8 +91,8 @@ func ReadStateSQL() string {
 // role or as a reply; not @all or @here), the same ones that still notify.
 // Before the first read, "last read" is the sign-up.
 // Messages of members the caller blocked never count as mentions.
-// The unread count is an index-only scan of messages_channel_unread_idx per
-// channel; only messages that mention the user or reply to their messages
+// All counts come from one index-only scan of messages_channel_unread_id_idx
+// per channel (see ReadStateSQL); only messages that quote another message
 // are looked at one by one, so a channel with a long backlog stays cheap.
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).

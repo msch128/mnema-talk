@@ -843,9 +843,10 @@ cannot work. Your options:
 
 ## Database limits
 
-The server sets three limits on its own database connections. They are
-session settings of those connections, not of the database or the role, so
-`pg_dump`, `psql` and the backup and restore scripts are not affected.
+The server sets three limits and one planner setting on its own database
+connections. They are session settings of those connections, not of the
+database or the role, so `pg_dump`, `psql` and the backup and restore scripts
+are not affected.
 
 - **Pool size** (`DB_MAX_CONNS`, default 25). A request that finds no free
   connection waits for one; `mnema_db_acquires_waited_total` counts those.
@@ -856,6 +857,10 @@ session settings of those connections, not of the database or the role, so
   switching it off with `0`.
 - **Idle in transaction** (fixed, 1 minute). A session that opened a
   transaction and then runs nothing is ended by the database.
+- **No JIT compilation** (`jit = off`). PostgreSQL's JIT pays off for long
+  analytical queries; for the server's short ones it cost 90 to 390 ms per
+  call of the unread summary and the forum post list on a million-message
+  database. A `jit` parameter in `DATABASE_URL` (`?jit=on`) overrides it.
 
 Work that rightly takes longer has its own limit instead of the request one:
 
