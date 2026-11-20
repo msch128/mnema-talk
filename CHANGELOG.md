@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.8](https://github.com/mnema-xyz/talk/compare/v3.3.7...v3.3.8) (2026-11-20)
+
+
+### Bug Fixes
+
+* hardening train: thread replies of timed roots, display names, command channel options, stored files ([#914](https://github.com/mnema-xyz/talk/issues/914)) ([99ed247](https://github.com/mnema-xyz/talk/commit/99ed2472a65768c9fe9ebaa6e5d43880892f82a6))
+
 ## [3.3.7](https://github.com/mnema-xyz/talk/compare/v3.3.6...v3.3.7) (2026-11-20)
 
 
