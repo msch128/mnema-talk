@@ -1,9 +1,13 @@
 package ws
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -92,7 +96,7 @@ func (c *Client) writePump() {
 			_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 			return
 		case msg := <-c.send:
-			if !c.writeQueued(msg) {
+			if !c.writeBatch(msg) {
 				return
 			}
 		case <-ping.C:
@@ -173,4 +177,166 @@ func (c *Client) writeSessionRevokedClose() {
 	// Control writes use their own fresh bounded deadline before teardown.
 	_ = c.conn.WriteControl(websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"), time.Now().Add(writeWait))
+}
+
+// batchConn lets the write loop send the frames that are already queued with
+// one write to the network instead of one write each. Every presence change is
+// a frame to every connection: when a restarted server takes all its members
+// back within seconds, each connection is sent one frame per member that comes
+// online, and one system call per frame was most of the server's work.
+//
+// Outside a batch every write goes straight through. Inside one (hold until
+// flush) writes are gathered, up to batchBytes; a write that would pass that
+// first sends what was gathered. Control frames other goroutines write in the
+// meantime (a pong, a close) join the batch in order and leave with it.
+type batchConn struct {
+	net.Conn
+	mu      sync.Mutex
+	holding bool
+	buf     []byte
+
+	// dmu guards the write deadline once Close has begun (closing, closeBy).
+	dmu     sync.Mutex
+	closing bool
+	closeBy time.Time
+}
+
+// batchBytes caps what one batch gathers before it is sent.
+const batchBytes = 32 << 10
+
+// keptBatchBuffer is the largest buffer kept between batches: an idle
+// connection should not hold on to the memory of a burst.
+const keptBatchBuffer = 4 << 10
+
+func (b *batchConn) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.holding && len(b.buf)+len(p) <= batchBytes {
+		b.buf = append(b.buf, p...)
+		return len(p), nil
+	}
+	if err := b.sendLocked(); err != nil {
+		return 0, err
+	}
+	return b.Conn.Write(p)
+}
+
+// closeFlushWait bounds how long Close waits to send a batch it finds: a
+// close frame another goroutine wrote into it (evict's 4001, renewLostPeer's
+// 4002, the echo of the peer's close) must reach the client, or it sees 1006
+// and reconnects at once.
+const closeFlushWait = 250 * time.Millisecond
+
+// Close sends what the batch gathered, then closes the connection. A write
+// that is stuck on the network gets closeFlushWait before it is cut off, and
+// no later deadline moves that (see SetWriteDeadline): the hub closes clients
+// one after another (shutdown, sign-out, kicks), so each must be quick.
+func (b *batchConn) Close() error {
+	b.dmu.Lock()
+	b.closing = true
+	b.closeBy = time.Now().Add(closeFlushWait)
+	_ = b.Conn.SetWriteDeadline(b.closeBy)
+	b.dmu.Unlock()
+	b.mu.Lock()
+	b.holding = false
+	_ = b.sendLocked()
+	b.mu.Unlock()
+	return b.Conn.Close()
+}
+
+// SetWriteDeadline passes t on, but once Close has begun never past its own
+// deadline: gorilla sets one of writeWait before every write.
+func (b *batchConn) SetWriteDeadline(t time.Time) error {
+	b.dmu.Lock()
+	defer b.dmu.Unlock()
+	return b.Conn.SetWriteDeadline(b.clampLocked(t))
+}
+
+// SetDeadline is SetWriteDeadline for both directions; reads are not clamped.
+func (b *batchConn) SetDeadline(t time.Time) error {
+	if err := b.Conn.SetReadDeadline(t); err != nil {
+		return err
+	}
+	return b.SetWriteDeadline(t)
+}
+
+// clampLocked is t, or the close deadline when Close has begun and t is
+// later (or none). Callers hold b.dmu.
+func (b *batchConn) clampLocked(t time.Time) time.Time {
+	if b.closing && (t.IsZero() || t.After(b.closeBy)) {
+		return b.closeBy
+	}
+	return t
+}
+
+// hold starts a batch.
+func (b *batchConn) hold() {
+	b.mu.Lock()
+	b.holding = true
+	b.mu.Unlock()
+}
+
+// flush ends the batch and sends what it gathered.
+func (b *batchConn) flush() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.holding = false
+	return b.sendLocked()
+}
+
+func (b *batchConn) sendLocked() error {
+	if len(b.buf) == 0 {
+		return nil
+	}
+	_, err := b.Conn.Write(b.buf)
+	if cap(b.buf) > keptBatchBuffer {
+		b.buf = nil
+	} else {
+		b.buf = b.buf[:0]
+	}
+	return err
+}
+
+// batchingWriter hands the upgrader a connection that can batch.
+type batchingWriter struct {
+	http.ResponseWriter
+}
+
+var errNoHijack = errors.New("websocket: response does not support hijacking")
+
+func (w batchingWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, brw, err := http.NewResponseController(w.ResponseWriter).Hijack()
+	if err != nil {
+		if errors.Is(err, http.ErrNotSupported) {
+			err = errNoHijack
+		}
+		return nil, nil, err
+	}
+	return &batchConn{Conn: conn}, brw, nil
+}
+
+func (w batchingWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+// maxBatchFrames caps the frames one batch takes from the send buffer, so a
+// steady stream still reaches the network in pieces.
+const maxBatchFrames = 64
+
+// writeBatch sends msg and the frames queued behind it, up to maxBatchFrames,
+// in one batch when the connection can batch. false ends the connection.
+func (c *Client) writeBatch(msg []byte) bool {
+	batch, _ := c.conn.NetConn().(*batchConn)
+	if batch == nil {
+		return c.writeQueued(msg)
+	}
+	batch.hold()
+	ok := c.writeQueued(msg)
+	for n := 1; ok && n < maxBatchFrames; n++ {
+		select {
+		case next := <-c.send:
+			ok = c.writeQueued(next)
+		default:
+			n = maxBatchFrames
+		}
+	}
+	return batch.flush() == nil && ok
 }

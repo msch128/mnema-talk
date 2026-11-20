@@ -35,6 +35,7 @@ move the ports when something else on the machine uses one.
 | `mint.mjs` | Mints HS256 session tokens with the claims of `auth.IssueToken`. |
 | `report.mjs` | Summary and thresholds; exit code 1 on a violation. |
 | `viewer/cmd/chat` | Chat load test (Go, static). N WebSocket sessions, a share writes, all read; delivery latency, loss, server CPU and memory. |
+| `viewer/cmd/storm` | Reconnect storm (Go, static). N sessions connected; when the server restarts they come back as the web client does (its backoff, `GET /api/auth/me`, the socket, then its burst of REST reads). Time until all are back, upgrade and first-sync latency, every refused or failed request. See [Reconnect storm](#reconnect-storm). |
 | `viewer/cmd/mint` | `mint.mjs` in Go, for hosts without Node. |
 | `host-run.sh` | Orchestrator for the server host: snapshot, seed, mint, run the scenarios, clean up, verify. |
 
@@ -419,6 +420,28 @@ The tools also run on a development machine against a throwaway stack; the
 script's own end-to-end test is a compose project with the repository's
 `docker-compose.yml`, a local image and `APP_CONTAINER`/`DB_CONTAINER` set to
 its container names.
+
+## Reconnect storm
+
+`viewer/cmd/storm` connects `SESSIONS` (1,000) members, writes `READY_FILE`
+and waits for the connections to drop. Restart the server then; the tool
+measures from the first drop until the last session has its socket open and
+its resync done, and prints JSON (also to `OUT`). Each session behaves like a
+browser tab: its own six HTTP connections, its own `X-Forwarded-For` (so run
+it from an address the server trusts as a proxy, loopback by default; the
+per-address upgrade limit is not changed), the client's backoff (`BACKOFF=half`,
+a random point in the second half of a window that doubles from 1 s to 30 s;
+`fixed` waits the whole window, as the client did before), and after
+each open the requests of `resyncState` in `web/src/stores/chat/socket.ts`.
+Keep that list in step with the client. Run it against a throwaway server
+only: the tokens are real sessions.
+
+```sh
+cd loadtest/viewer && go build -o ../../bin/loadtest-storm ./cmd/storm
+BASE_URL=http://127.0.0.1:8090 TOKENS=tokens.json CHANNEL_ID=<text channel> \
+  READY_FILE=/tmp/ready OUT=storm.json bin/loadtest-storm
+# once /tmp/ready exists: restart the server
+```
 
 ## Notes on the Pion viewer
 

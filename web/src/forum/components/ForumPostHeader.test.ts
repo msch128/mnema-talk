@@ -255,4 +255,41 @@ describe('ForumPostHeader', () => {
     expect(w.find('[data-testid="forum-tags-error"]').exists()).toBe(false)
     expect(w.get('[data-testid="forum-tags-save"]').attributes('disabled')).toBeUndefined()
   })
+
+  it('closes the title editor with the cancel button and keeps the title', async () => {
+    setup()
+    await choose('Edit title')
+    await w.get('[data-testid="forum-title-input"]').setValue('Never saved')
+    await w.get('button[aria-label="Cancel"]').trigger('click')
+    expect(w.find('[data-testid="forum-title-input"]').exists()).toBe(false)
+    expect(w.get('[data-testid="forum-post-title"]').text()).toBe('How do roles work?')
+    expect(forumApi.updateForumPost).not.toHaveBeenCalled()
+  })
+
+  it('leaves both editors when another post opens', async () => {
+    setup()
+    await w.get('[data-testid="forum-edit-tags"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="forum-tag-edit"]').exists()).toBe(true)
+    chat.activeThread = post({ id: 'post2', title: 'Another question' })
+    await flushPromises()
+    expect(w.find('[data-testid="forum-tag-edit"]').exists()).toBe(false)
+    expect(w.get('[data-testid="forum-post-title"]').text()).toBe('Another question')
+  })
+
+  it('reloads the tags while the picker is open when the forum changes its tags, and ignores it when closed', async () => {
+    setup()
+    chat.forumTagsSignal = { channelId: 'ch1', seq: 1 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).not.toHaveBeenCalled()
+    await w.get('[data-testid="forum-edit-tags"]').trigger('click')
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledTimes(1)
+    const renamed = [...tags, forumTagFixture({ id: 'n', channel_id: 'ch1', name: 'gamma', position: 4 })]
+    vi.mocked(forumApi.fetchForumTags).mockResolvedValue(renamed)
+    chat.forumTagsSignal = { channelId: 'ch1', seq: 2 }
+    await flushPromises()
+    expect(forumApi.fetchForumTags).toHaveBeenCalledTimes(2)
+    expect(w.findAll('[data-testid="tag-toggle-btn"]')).toHaveLength(4)
+  })
 })

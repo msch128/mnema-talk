@@ -133,7 +133,8 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if !h.upgradeAllowed(w, user.ID) {
 		return
 	}
-	conn, err := h.upgrader.Upgrade(w, r, nil)
+	// batchingWriter: frames that queue up behind each other leave in one write (lifecycle_pumps.go).
+	conn, err := h.upgrader.Upgrade(batchingWriter{w}, r, nil)
 	if err != nil {
 		// The upgrader already answered (e.g. 403 for a foreign origin).
 		slog.Warn("websocket upgrade failed", "err", err)

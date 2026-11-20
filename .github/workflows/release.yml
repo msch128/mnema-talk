@@ -32,6 +32,12 @@ name: Release
 #    The desktop app (Windows, macOS Apple silicon, Linux) lives in
 #    mnema-xyz/talk-desktop.
 #    Releases through v0.7.3 keep the ZIP that was attached here.
+#    Every call to an external service after the build (cosign sign and
+#    verify, the Docker Hub copy, the npm install of the bundle build, the
+#    release upload) goes through scripts/retry.sh: up to four attempts with
+#    a growing pause. If a job still fails on a glitch, release-rerun.yml
+#    runs the failed jobs once more; it never reruns a failed release-please
+#    job, because that job holds the gates.
 #
 # Before a release is cut or merged, the most recent completed scheduled run
 # on main of each deep nightly sweep (the list is GATED in
@@ -377,7 +383,9 @@ jobs:
       - name: Sign the image
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
-        run: cosign sign --yes "$IMAGE@$DIGEST"
+        # Sigstore (Fulcio, Rekor) answers 502 now and then; signing the same
+        # digest again is harmless, so a failed attempt is repeated.
+        run: scripts/retry.sh -- cosign sign --yes "$IMAGE@$DIGEST"
 
   # Copies the image that the image job pushed to Docker Hub, by digest: no
   # rebuild, so the multi-arch index with its provenance and SBOM attestations
@@ -449,6 +457,16 @@ jobs:
           fi
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
+      # The retry helper and the Docker Hub description sources, from this
+      # run's commit (main for a backfill).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            deploy/dockerhub
+
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         if: steps.cfg.outputs.enabled == 'true'
 
@@ -481,14 +499,14 @@ jobs:
               SOURCE=$LEGACY_SOURCE
               echo "SOURCE=$SOURCE" >> "$GITHUB_ENV"
             fi
-            digest=$(docker buildx imagetools inspect "$SOURCE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+            digest=$(scripts/retry.sh -- docker buildx imagetools inspect "$SOURCE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
           else
             digest=$IMAGE_DIGEST
           fi
           case "$digest" in
             sha256:*) ;; *) echo "::error::no digest for $SOURCE:$VERSION"; exit 1 ;;
           esac
-          cosign verify "$SOURCE@$digest" \
+          scripts/retry.sh -- cosign verify "$SOURCE@$digest" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-identity-regexp '^https://github\.com/(mnema-xyz/talk|msch128/mnema-talk)/\.github/workflows/release\.yml@refs/heads/main$' >/dev/null
           echo "DIGEST=$digest" >> "$GITHUB_ENV"
@@ -520,9 +538,9 @@ jobs:
           target="docker.io/$NAMESPACE/mnema-talk"
           args=()
           for tag in $TAGS; do args+=(--tag "$target:$tag"); done
-          docker buildx imagetools create "${args[@]}" "$SOURCE@$DIGEST"
+          scripts/retry.sh -- docker buildx imagetools create "${args[@]}" "$SOURCE@$DIGEST"
           for tag in $TAGS; do
-            got=$(docker buildx imagetools inspect "$target:$tag" --format '{{json .Manifest}}' | jq -r .digest)
+            got=$(scripts/retry.sh -- docker buildx imagetools inspect "$target:$tag" --format '{{json .Manifest}}' | jq -r .digest)
             if [ "$got" != "$DIGEST" ]; then
               echo "::error::$target:$tag has digest $got, expected $DIGEST"
               exit 1
@@ -538,7 +556,7 @@ jobs:
         run: |
           set -euo pipefail
           ref="docker.io/$NAMESPACE/mnema-talk@$DIGEST"
-          cosign sign --yes "$ref"
+          scripts/retry.sh -- cosign sign --yes "$ref"
           # Docker Hub can take a moment before a fresh signature is readable.
           for _ in 1 2 3 4 5 6; do
             if cosign verify "$ref" \
@@ -556,12 +574,6 @@ jobs:
       # deploy/dockerhub/ of this run's commit on main, so a backfill of an
       # old version also gets the current text (the full one is a Docker Hub
       # specific overview; the repository README is too long for it).
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
-        with:
-          persist-credentials: false
-          sparse-checkout: deploy/dockerhub
-
       - name: Read the short description
         if: steps.cfg.outputs.enabled == 'true' && matrix.namespace == 'mnemaxyz'
         id: short
@@ -654,7 +666,8 @@ jobs:
           rm -rf "$work/web/dist" "$work/web/node_modules"
           sandbox=(--rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges
             --env HOME=/tmp --mount "type=bind,src=$work,dst=/work" --workdir /work/web)
-          docker run "${sandbox[@]}" "$image" npm ci --ignore-scripts --no-audit --no-fund
+          # The install is the one step that reaches the npm registry.
+          scripts/retry.sh -- docker run "${sandbox[@]}" "$image" npm ci --ignore-scripts --no-audit --no-fund
           docker run "${sandbox[@]}" --network none --env "MNEMA_VERSION=$VERSION" "$image" npm run build
           test -s "$work/web/dist/index.html"
           echo "WEB_DIST=$work/web/dist" >> "$GITHUB_ENV"
@@ -711,7 +724,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
+          scripts/retry.sh -- gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
             --repo "$GITHUB_REPOSITORY" --clobber
 
   # The server releases carry the Docker image and the signed web bundle, not

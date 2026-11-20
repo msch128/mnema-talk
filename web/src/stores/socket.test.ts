@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useSocketStore, type SocketHost } from './socket'
+import { reconnectWait, useSocketStore, type SocketHost } from './socket'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
@@ -125,6 +125,43 @@ describe('the socket store', () => {
     last().onopen?.()
     expect(socket.reconnectCount).toBe(1)
     expect(socket.reconnectAttempt).toBe(0)
+  })
+
+  // A restarting server drops every socket at once: the clients must not all come back in the same instant.
+  it('spreads the reconnects over the second half of each backoff window', () => {
+    expect(reconnectWait(1000, () => 0)).toBe(500)
+    expect(reconnectWait(1000, () => 0.999)).toBe(1000)
+    expect(reconnectWait(8000, () => 0.5)).toBe(6000)
+    const waits = new Set(Array.from({ length: 1000 }, () => reconnectWait(4000)))
+    for (const wait of waits) {
+      expect(wait).toBeGreaterThanOrEqual(2000)
+      expect(wait).toBeLessThanOrEqual(4000)
+    }
+    expect(waits.size).toBeGreaterThan(500)
+  })
+
+  it('waits a random part of the window, announces it and doubles the window', async () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+    try {
+      const socket = useSocketStore()
+      let answer: boolean | null = null
+      socket.transport().host = hostFixture({ checkAuth: () => Promise.resolve(answer) }).host
+      socket.open()
+      last().onopen?.()
+      last().onclose?.()
+      expect(socket.nextRetryAt - Date.now()).toBe(500)
+      await vi.advanceTimersByTimeAsync(499)
+      expect(socket.reconnectAttempt).toBe(1)
+      await vi.advanceTimersByTimeAsync(1)
+      // The server is still away: the next window is 2 s, so the wait is 1 s.
+      expect(socket.reconnectAttempt).toBe(2)
+      expect(socket.nextRetryAt - Date.now()).toBe(1000)
+      answer = true
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(FakeSocket.opened).toHaveLength(2)
+    } finally {
+      random.mockRestore()
+    }
   })
 
   it('keeps trying while the server cannot be reached and stops when the session is gone', async () => {

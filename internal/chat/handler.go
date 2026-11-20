@@ -57,6 +57,8 @@ type Handler struct {
 	FollowLimit *httpx.RateLimiter
 
 	historyViews messages.HistoryViews
+	// memberList shares concurrent reads of GET /api/members.
+	memberList memberLoads
 	// BlockLimit caps blocking and unblocking per member; nil means no cap.
 	BlockLimit *httpx.RateLimiter
 	// ReportLimit caps message reports per member; nil means no cap.
@@ -191,7 +193,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/members [get]
 func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
-	members, err := core.GetAllMembers(r.Context(), h.DB)
+	members, err := h.memberList.get(r.Context(), h.DB)
 	if err != nil {
 		return err
 	}

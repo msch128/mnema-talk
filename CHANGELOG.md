@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.3.7](https://github.com/mnema-xyz/talk/compare/v3.3.6...v3.3.7) (2026-11-20)
+
+
+### Performance Improvements
+
+* **ws:** spread reconnect storms and cut their per-reconnect cost ([#917](https://github.com/mnema-xyz/talk/issues/917)) ([0b6422d](https://github.com/mnema-xyz/talk/commit/0b6422dacd142d4d8818bb8961d2a49f58e87020))
+
+## [3.3.6](https://github.com/mnema-xyz/talk/compare/v3.3.5...v3.3.6) (2026-11-19)
+
+
+### Bug Fixes
+
+* **web:** colours from tokens instead of raw rgb and hex values ([3552a76](https://github.com/mnema-xyz/talk/commit/3552a760cdb8eb0700c1a0000b8e0ac4ce7edcf0))
+* **web:** drop the owner's name from the licence notice and update stale repo names ([#887](https://github.com/mnema-xyz/talk/issues/887)) ([598be2b](https://github.com/mnema-xyz/talk/commit/598be2bba3b363a0947a34308da43d819b1b403e))
+* **web:** reduced motion for spinners and pulses, motion tokens for durations ([3552a76](https://github.com/mnema-xyz/talk/commit/3552a760cdb8eb0700c1a0000b8e0ac4ce7edcf0))
+
+
+### Code Refactoring
+
+* **web:** remove dead exports, duplicate aliases and the unused fake-indexeddb ([3552a76](https://github.com/mnema-xyz/talk/commit/3552a760cdb8eb0700c1a0000b8e0ac4ce7edcf0))
+
+
+### Documentation
+
+* point docs at the current names, contact, status and Docker Hub org ([15bcaf1](https://github.com/mnema-xyz/talk/commit/15bcaf17f2784a0fcb801aec5fd958978184b688))
+
 ## [3.3.5](https://github.com/mnema-xyz/talk/compare/v3.3.4...v3.3.5) (2026-11-19)
 
 

@@ -1,0 +1,73 @@
+name: Production probe
+
+# Tells us when the public server is unhealthy, without a third-party service:
+# every 15 minutes a GitHub-hosted runner (outside our network, like a member)
+# runs scripts/prod-probe.sh against the public URL. A failing probe opens one
+# issue labelled `prod-down` (later failures comment on it); the first passing
+# probe closes it. GitHub's issue notification is the alert.
+#
+# What it sees: /api/health, the web client, the TLS certificate and whether
+# the self-updater is keeping up with releases. What it cannot see: anything
+# behind the login, the backup status (Admin > Status shows it) and servers on
+# a private network. Those need a scraper inside the network: see
+# doc/operations.md, "Monitoring and alerts" (deploy/monitoring/).
+#
+# The URL is the repository variable PROD_PROBE_URL; without it the public
+# instance below is probed. A fork that does not run a server can disable the
+# workflow.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: prod-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.repository == 'mnema-xyz/talk'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # open and close the prod-down issue, nothing else
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PROBE_URL: ${{ vars.PROD_PROBE_URL || 'https://talk.mnema.xyz' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Probe
+        id: probe
+        run: |
+          set +e
+          scripts/prod-probe.sh "$PROBE_URL" | tee "$RUNNER_TEMP/report.md"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          [ "$status" -le 1 ] || exit "$status"
+
+      - name: Open or update the issue
+        if: steps.probe.outputs.status == '1'
+        run: |
+          {
+            echo "The scheduled probe of $PROBE_URL failed ($(date -u +%FT%TZ), run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID):"
+            echo
+            cat "$RUNNER_TEMP/report.md"
+            echo
+            echo "First steps: doc/operations.md (Troubleshooting), then the host's updater and container logs."
+          } > "$RUNNER_TEMP/issue.md"
+          scripts/ops-issue.sh open prod-down "Production probe failing: $PROBE_URL" "$RUNNER_TEMP/issue.md"
+
+      - name: Close the issue when the probe passes
+        if: steps.probe.outputs.status == '0'
+        run: scripts/ops-issue.sh close prod-down "The probe passes again ($(date -u +%FT%TZ))."
+
+      - name: Fail the run when the probe failed
+        if: steps.probe.outputs.status == '1'
+        run: exit 1

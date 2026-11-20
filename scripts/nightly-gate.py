@@ -69,6 +69,10 @@ NOT_GATED = {
     'codeql.yml': 'weekly; CodeQL also runs on every pull request as a required check',
     'trust-expiry.yml': 'weekly operational alert that the desktop trust statement expires soon; '
                         'not a property of the code being released',
+    'prod-probe.yml': 'probes the running production host every 15 minutes; an outage there '
+                      'is not a property of the code, and blocking would block its fix',
+    'release-drill.yml': 'weekly drill of the image already released; a red run opens an issue, '
+                         'and blocking would block the release that repairs it',
 }
 
 
