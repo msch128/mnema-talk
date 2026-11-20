@@ -12,9 +12,10 @@ export interface RoleMention {
 
 const text = (v: string): Inline[] => (v ? [{ t: 'text', v }] : [])
 
-// Direction and zero-width format characters (bidi embeddings, overrides and
-// isolates, the marks, ZWSP, ZWNJ/ZWJ are kept for scripts and emoji).
-const NAME_FORMAT = /[\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g
+// Direction and invisible format characters (bidi embeddings, overrides and
+// isolates, the marks, ZWSP, word joiners, soft hyphen); ZWNJ and ZWJ are kept
+// for scripts and emoji. Migration 0111 uses the same set.
+const NAME_FORMAT = /[\u00AD\u061C\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]/g
 
 /**
  * A member's display name as it may stand inside someone else's text: the
