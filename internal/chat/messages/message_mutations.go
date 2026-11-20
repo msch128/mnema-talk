@@ -74,7 +74,7 @@ func editTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messag
 	err := tx.QueryRow(ctx, `
 		SELECT user_id, channel_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-		FROM messages WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()) FOR NO KEY UPDATE`, messageID).Scan(&author, &channel, &hasMedia, &isPoll, &forwarded)
+		FROM messages WHERE id = $1 AND `+core.LiveSQL("messages")+` FOR NO KEY UPDATE`, messageID).Scan(&author, &channel, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrMessageNotFound
 	}
@@ -219,7 +219,7 @@ func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID,
 // gone) and returns its channel.
 func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (uuid.UUID, error) {
 	var channel uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()) FOR NO KEY UPDATE`, messageID).Scan(&channel)
+	err := tx.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1 AND `+core.LiveSQL("messages")+` FOR NO KEY UPDATE`, messageID).Scan(&channel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrMessageNotFound
 	}

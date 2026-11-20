@@ -82,6 +82,11 @@ func rootLiveSQL(alias string) string {
 	return "NOT EXISTS (SELECT 1 FROM messages ended_root WHERE ended_root.id = " + alias + ".parent_id AND ended_root.expires_at <= now())"
 }
 
+// LiveM is LiveSQL("m") as a constant, for query constants that call their
+// messages row m (a test holds the two together).
+const LiveM = "((m.expires_at IS NULL OR m.expires_at > now()) AND " +
+	"NOT EXISTS (SELECT 1 FROM messages ended_root WHERE ended_root.id = m.parent_id AND ended_root.expires_at <= now()))"
+
 // LiveMessages is the messages table without the rows whose lifetime ended,
 // or whose thread root's did, for a FROM or JOIN clause:
 // "FROM " + LiveMessages + " m".

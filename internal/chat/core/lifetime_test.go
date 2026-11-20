@@ -10,3 +10,9 @@ func TestLiveMessagesSpellsOutLiveSQL(t *testing.T) {
 		t.Fatalf("LiveMessages = %q\nwant %q", LiveMessages, want)
 	}
 }
+
+func TestLiveMSpellsOutLiveSQL(t *testing.T) {
+	if LiveM != LiveSQL("m") {
+		t.Fatalf("LiveM = %q\nwant %q", LiveM, LiveSQL("m"))
+	}
+}
