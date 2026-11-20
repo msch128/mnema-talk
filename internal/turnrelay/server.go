@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mnema-xyz/talk/internal/fastudp"
 	"github.com/mnema-xyz/talk/internal/safego"
 	"github.com/pion/logging"
 	"github.com/pion/turn/v5"
@@ -92,7 +93,7 @@ func (s *Server) listen() error {
 		ChannelBindTimeout: 10 * time.Minute,
 	}
 	var closers []io.Closer
-	udp, udpErr := net.ListenPacket("udp4", addr)
+	udp, udpErr := relayUDP(addr)
 	if udpErr == nil {
 		cfg.PacketConnConfigs = []turn.PacketConnConfig{{PacketConn: udp, RelayAddressGenerator: gen, PermissionHandler: s.permit}}
 		closers = append(closers, udp)
@@ -210,3 +211,20 @@ func (s *Server) Close() error {
 	s.wg.Wait()
 	return err
 }
+
+// listenRelayUDP opens the relay's UDP socket. Everything relayed to members over
+// UDP leaves through it, so it sends from many goroutines at once
+// (internal/fastudp) instead of queueing on the runtime's write lock.
+func listenRelayUDP(addr string) (net.PacketConn, error) {
+	conn, err := net.ListenPacket("udp4", addr)
+	if err != nil {
+		return nil, err
+	}
+	if udp, ok := conn.(*net.UDPConn); ok {
+		return fastudp.Wrap(udp), nil
+	}
+	return conn, nil
+}
+
+// relayUDP opens the relay's UDP socket; tests replace it.
+var relayUDP = listenRelayUDP

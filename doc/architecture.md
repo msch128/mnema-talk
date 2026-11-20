@@ -870,9 +870,12 @@ The method, caveats and per-scenario detail are in [doc/benchmark.md](benchmark.
 What the host comfortably carries: chat for 1000 sessions, and one screen to
 about 100 members directly or through the relay. Watching all of 10 cameras plus
 a screen with 100 members (about 450 Mbit/s of media out of one 4-core host that
-also runs the generator) is beyond it; the memory limit of 1 GB is reached there
-too. The limit in that scenario is the shared host, not a leak: goroutines and
-heap return to their start values afterwards.
+also runs the generator) did not hold on 2.2.0 to 3.3: the SFU's one UDP socket
+let one send through at a time and capped the server at about 45,000 packets a
+second. Since the SFU sends from all goroutines at once (on Linux, which is
+where the container runs; other platforms keep the one-at-a-time path), that Talk holds with
+no loss at 1.91 cores and 406 MB ([benchmark](benchmark.md#the-mixed-talk-holds-the-sockets-write-lock));
+the next limit is the host's CPU, at about 120 members.
 
 The measurements above are reproducible with `make load-test` (see
 [`loadtest/README.md`](../loadtest/README.md)): one sharer, real browsers and

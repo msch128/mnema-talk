@@ -10,10 +10,13 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
+	"github.com/mnema-xyz/talk/internal/fastudp"
 	"github.com/mnema-xyz/talk/internal/metrics"
 	"github.com/mnema-xyz/talk/internal/safego"
 	"github.com/pion/ice/v4"
+	"github.com/pion/transport/v5"
 	"github.com/pion/transport/v5/packetio"
+	"github.com/pion/transport/v5/stdnet"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -40,7 +43,10 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 	if port < portMin || port > portMax {
 		return nil, fmt.Errorf("UDP mux port %d must be inside UDP range %d-%d", port, portMin, portMax)
 	}
-	options := buildUDPMuxOptions(announceIPs)
+	options, err := buildUDPMuxOptions(announceIPs)
+	if err != nil {
+		return nil, err
+	}
 	// Pion binds separately to each usable IPv4/IPv6 interface. Its constructor
 	// closes previously opened sockets if a later bind fails.
 	mux, err := ice.NewMultiUDPMuxFromPort(int(port), options...)
@@ -61,10 +67,15 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 // most net.core.rmem_max / wmem_max (doc/deployment.md, "UDP socket buffers").
 const udpSocketBuffer = 4 << 20
 
-func buildUDPMuxOptions(announceIPs []string) []ice.UDPMuxFromPortOption {
+func buildUDPMuxOptions(announceIPs []string) ([]ice.UDPMuxFromPortOption, error) {
+	network, err := muxNet()
+	if err != nil {
+		return nil, fmt.Errorf("SFU UDP mux network: %w", err)
+	}
 	options := []ice.UDPMuxFromPortOption{
 		ice.UDPMuxFromPortWithReadBufferSize(udpSocketBuffer),
 		ice.UDPMuxFromPortWithWriteBufferSize(udpSocketBuffer),
+		ice.UDPMuxFromPortWithNet(network),
 	}
 	if filter := announceIPFilter(announceIPs); filter != nil {
 		options = append(options, ice.UDPMuxFromPortWithIPFilter(filter))
@@ -72,7 +83,34 @@ func buildUDPMuxOptions(announceIPs []string) []ice.UDPMuxFromPortOption {
 	if announcesLoopback(announceIPs) {
 		options = append(options, ice.UDPMuxFromPortWithLoopback())
 	}
-	return options
+	return options, nil
+}
+
+// fastNet is the standard network with UDP sockets that send from many
+// goroutines at once (internal/fastudp): every member's media leaves through
+// the mux's one socket per interface, and the runtime's write lock on it was
+// the first limit of a large Talk on a slow CPU.
+type fastNet struct{ *stdnet.Net }
+
+func newFastNet() (transport.Net, error) {
+	n, err := stdnet.NewNet()
+	return fastNet{n}, err
+}
+
+// muxNet is the network the mux listens on; tests replace it.
+var muxNet = newFastNet
+
+func (n fastNet) ListenUDP(network string, laddr *net.UDPAddr) (transport.UDPConn, error) {
+	c, err := n.Net.ListenUDP(network, laddr)
+	if err != nil {
+		return nil, err
+	}
+	if udp, ok := c.(*net.UDPConn); ok {
+		if fast, ok := fastudp.Wrap(udp).(*fastudp.Conn); ok {
+			return fast, nil
+		}
+	}
+	return c, nil
 }
 
 // announceIPFilter says which local addresses may become candidates when
@@ -178,10 +216,28 @@ func srtpBuffer(kind packetio.BufferPacketType, _ uint32) io.ReadWriteCloser {
 	if kind == packetio.RTCPBufferPacket {
 		b.SetLimitCount(rtcpBufferPackets)
 		b.SetLimitSize(rtcpBufferBytes)
-	} else {
-		b.SetLimitSize(rtpBufferBytes)
+		return attrBuffer{b}
 	}
-	return attrBuffer{b}
+	b.SetLimitSize(rtpBufferBytes)
+	return rtpBuffer{attrBuffer{b}}
+}
+
+// rtpBuffer is the buffer of an SRTP stream. Pion drops a packet that does not
+// fit without a word (srtp's ReadStreamSRTP ignores ErrFull); this counts it,
+// as reason "buffer": the track's reader fell behind its publisher.
+type rtpBuffer struct{ attrBuffer }
+
+func (b rtpBuffer) Write(p []byte) (int, error) { return countFull(b.Buffer.Write(p, nil)) }
+
+func (b rtpBuffer) WriteWithAttributes(p []byte, a packetio.Attributes) (int, error) {
+	return countFull(b.Buffer.Write(p, a))
+}
+
+func countFull(n int, err error) (int, error) {
+	if errors.Is(err, packetio.ErrFull) {
+		metrics.SFUIngressDropped.With("buffer").Inc()
+	}
+	return n, err
 }
 
 type attrBuffer struct{ *packetio.Buffer }
