@@ -6,6 +6,6 @@
 -- set. ZWJ and ZWNJ stay: scripts and emoji sequences need them.
 UPDATE users
 SET display_name = COALESCE(NULLIF(btrim(regexp_replace(display_name,
-        '[­؜᠎​‎‏‪-‮⁠-⁤⁦-⁯﻿]', '', 'g')), ''),
+        '[\u00AD\u061C\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]', '', 'g')), ''),
     LEFT(username, 24))
-WHERE display_name ~ '[­؜᠎​‎‏‪-‮⁠-⁤⁦-⁯﻿]';
+WHERE display_name ~ '[\u00AD\u061C\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]';

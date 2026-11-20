@@ -51,6 +51,14 @@ audit.
 | [850](2026-11/850.md) | #850 | a leave lost while the socket was down no longer leaves a ghost seat for the server's grace time: a seatless connection's `voice_leave` naming its Talk and tab ends the lost seat (same user, same tab only), including a stale connection the server has not noticed yet; the client sends it after the reconnect |
 | [851](2026-11/851.md) | #851 | bots can download attachments of messages they can see: unified authorization and streaming path with members, forced attachment disposition, existence privacy (404), Range and 304 leak prevention, mutation checks |
 
+## 2026-11: security audit of the features after 3.0.10 (3.3.x)
+
+| Report | Change | Subject |
+|---|---|---|
+| [914](2026-11/914.md) | #914 | replies of a timed thread root end with it for every read and copy, display names without direction and invisible characters (also stored ones, migration 0111), a command's channel option needs the bot's view, a command restriction that cannot be stored is refused, a stored message keeps its file when the durability wait fails; two rounds |
+| [mnemo-39](2026-11/mnemo-39.md) | talk-mnemo-bot #39 | Mnemo's attachment reading: PDF extraction bounded in time, memory and length, a pixel limit, names in the consent prompt as plain text, refusals under the rate limits, no file text in thread memory; two rounds |
+| [bot-sdks-go-9-js-18](2026-11/bot-sdks-go-9-js-18.md) | bot-sdk-go #9, bot-sdk-js #18 | the bot token stays with the configured server (resume address, redirects), interaction tokens out of errors and logs, bounded answers; two rounds each |
+
 ## 2026-11: defect hunt on 3.0.8
 
 Each finding of the hunt went to two agents that had not written it (one
