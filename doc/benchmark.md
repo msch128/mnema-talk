@@ -221,7 +221,7 @@ change: `mnema_sfu_ingress_dropped_total{reason="buffer"}` (35,265 in the run
 before the fix).
 
 Since the fix the SFU's port and the built-in relay's port send from all
-goroutines at once (Linux; see `internal/fastudp`). Same host, same throwaway
+goroutines at once. This direct path exists on Linux only (the container image); other platforms keep Go's one-at-a-time path (see `internal/fastudp`). Same host, same throwaway
 stack and generator, server built from the same commit with and without the
 fix, one run each with a 120 s hold:
 

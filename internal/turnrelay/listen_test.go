@@ -1,6 +1,7 @@
 package turnrelay
 
 import (
+	"net"
 	"runtime"
 	"testing"
 
@@ -21,5 +22,26 @@ func TestRelaySocketSendsConcurrentlyOnLinux(t *testing.T) {
 	}
 	if runtime.GOOS != "linux" && ok {
 		t.Fatalf("relay socket wrapped on %s", runtime.GOOS)
+	}
+}
+
+// Start must open the relay's UDP socket through listenRelayUDP.
+func TestStartListensThroughTheFastSocket(t *testing.T) {
+	var conns []net.PacketConn
+	prev := relayUDP
+	relayUDP = func(addr string) (net.PacketConn, error) {
+		c, err := listenRelayUDP(addr)
+		if err == nil {
+			conns = append(conns, c)
+		}
+		return c, err
+	}
+	t.Cleanup(func() { relayUDP = prev })
+	newHarness(t, harnessOpts{})
+	if len(conns) == 0 {
+		t.Fatal("Start opened its UDP socket without listenRelayUDP")
+	}
+	if _, ok := conns[len(conns)-1].(*fastudp.Conn); runtime.GOOS == "linux" && !ok {
+		t.Fatalf("relay socket %T is not direct", conns[len(conns)-1])
 	}
 }

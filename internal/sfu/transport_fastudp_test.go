@@ -7,12 +7,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/mnema-xyz/talk/internal/fastudp"
 	"github.com/mnema-xyz/talk/internal/metrics"
 	"github.com/pion/logging"
+	"github.com/pion/transport/v5"
 	"github.com/pion/transport/v5/packetio"
 )
 
@@ -98,5 +100,41 @@ func TestPionLogLinesStillMatch(t *testing.T) {
 		if !strings.Contains(string(src), line) {
 			t.Errorf("%s no longer logs %s", file, line)
 		}
+	}
+}
+
+// countingNet counts the sockets the mux opens through it.
+type countingNet struct {
+	transport.Net
+	listens *atomic.Int32
+}
+
+func (n countingNet) ListenUDP(network string, laddr *net.UDPAddr) (transport.UDPConn, error) {
+	n.listens.Add(1)
+	return n.Net.ListenUDP(network, laddr)
+}
+
+// openUDPMux must open its sockets through the fast network.
+func TestOpenUDPMuxListensThroughTheFastNet(t *testing.T) {
+	var listens atomic.Int32
+	prev := muxNet
+	muxNet = func() (transport.Net, error) {
+		n, err := newFastNet()
+		return countingNet{Net: n, listens: &listens}, err
+	}
+	t.Cleanup(func() { muxNet = prev })
+	probe, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := uint16(probe.LocalAddr().(*net.UDPAddr).Port)
+	_ = probe.Close()
+	mux, err := openUDPMux(port, port, port, []string{"127.0.0.1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mux.Close()
+	if listens.Load() == 0 {
+		t.Fatal("the mux opened no socket through the fast network")
 	}
 }

@@ -68,7 +68,7 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 const udpSocketBuffer = 4 << 20
 
 func buildUDPMuxOptions(announceIPs []string) ([]ice.UDPMuxFromPortOption, error) {
-	network, err := newFastNet()
+	network, err := muxNet()
 	if err != nil {
 		return nil, fmt.Errorf("SFU UDP mux network: %w", err)
 	}
@@ -92,10 +92,13 @@ func buildUDPMuxOptions(announceIPs []string) ([]ice.UDPMuxFromPortOption, error
 // the first limit of a large Talk on a slow CPU.
 type fastNet struct{ *stdnet.Net }
 
-func newFastNet() (fastNet, error) {
+func newFastNet() (transport.Net, error) {
 	n, err := stdnet.NewNet()
 	return fastNet{n}, err
 }
+
+// muxNet is the network the mux listens on; tests replace it.
+var muxNet = newFastNet
 
 func (n fastNet) ListenUDP(network string, laddr *net.UDPAddr) (transport.UDPConn, error) {
 	c, err := n.Net.ListenUDP(network, laddr)

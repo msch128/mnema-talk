@@ -7,6 +7,7 @@ import (
 	"net"
 	"syscall"
 	"testing"
+	"time"
 )
 
 // stubSendto replaces the system call for one test.
@@ -61,5 +62,49 @@ func TestSendtoReportsWouldBlockAsNotDone(t *testing.T) {
 	}
 	if _, done, _ := sendto4(-1, nil, [4]byte{127, 0, 0, 1}, 9); done {
 		t.Fatal("an empty datagram must take the runtime's path")
+	}
+}
+
+func TestSendOutcomeMapsErrno(t *testing.T) {
+	if n, done, retry, err := sendOutcome(7, 0); n != 7 || !done || retry || err != nil {
+		t.Fatalf("sent: %d %v %v %v", n, done, retry, err)
+	}
+	if _, done, retry, _ := sendOutcome(0, syscall.EINTR); done || !retry {
+		t.Fatal("EINTR must be retried")
+	}
+	if _, done, retry, err := sendOutcome(0, syscall.EAGAIN); done || retry || err != nil {
+		t.Fatal("EAGAIN must hand the datagram to the runtime")
+	}
+	_, done, retry, err := sendOutcome(0, syscall.ENOBUFS)
+	if !done || retry || !errors.Is(err, syscall.ENOBUFS) {
+		t.Fatalf("ENOBUFS: done=%v retry=%v err=%v", done, retry, err)
+	}
+}
+
+// Close must wait for a direct send in progress: the descriptor number would
+// otherwise be released (and maybe reused) under the system call.
+func TestCloseWaitsForASendInProgress(t *testing.T) {
+	r := newReceiver(t, "udp4", "127.0.0.1")
+	w := Wrap(listen(t, "udp4", "127.0.0.1"))
+	entered, release := make(chan struct{}), make(chan struct{})
+	stubSendto(t, func(int, []byte, [4]byte, uint16) (int, bool, error) {
+		close(entered)
+		<-release
+		return 1, true, nil
+	})
+	go func() { _, _ = w.WriteTo([]byte("x"), net.UDPAddrFromAddrPort(r.addr())) }()
+	<-entered
+	closed := make(chan struct{})
+	go func() { _ = w.Close(); close(closed) }()
+	select {
+	case <-closed:
+		t.Fatal("Close returned while a send was in progress")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case <-closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close did not return after the send finished")
 	}
 }

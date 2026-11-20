@@ -93,7 +93,7 @@ func (s *Server) listen() error {
 		ChannelBindTimeout: 10 * time.Minute,
 	}
 	var closers []io.Closer
-	udp, udpErr := listenRelayUDP(addr)
+	udp, udpErr := relayUDP(addr)
 	if udpErr == nil {
 		cfg.PacketConnConfigs = []turn.PacketConnConfig{{PacketConn: udp, RelayAddressGenerator: gen, PermissionHandler: s.permit}}
 		closers = append(closers, udp)
@@ -225,3 +225,6 @@ func listenRelayUDP(addr string) (net.PacketConn, error) {
 	}
 	return conn, nil
 }
+
+// relayUDP opens the relay's UDP socket; tests replace it.
+var relayUDP = listenRelayUDP

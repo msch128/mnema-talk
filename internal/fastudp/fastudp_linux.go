@@ -48,14 +48,22 @@ func sendto4(fd int, b []byte, ip [4]byte, port uint16) (n int, done bool, err e
 		r, _, errno := syscall.Syscall6(syscall.SYS_SENDTO, uintptr(fd),
 			uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0,
 			uintptr(unsafe.Pointer(&sa)), unsafe.Sizeof(sa))
-		switch {
-		case errno == 0:
-			return int(r), true, nil
-		case errno == syscall.EINTR:
-			continue
-		case errors.Is(errno, syscall.EAGAIN):
-			return 0, false, nil
+		if n, done, retry, err := sendOutcome(r, errno); !retry {
+			return n, done, err
 		}
-		return 0, true, &net.OpError{Op: "write", Net: "udp", Err: os.NewSyscallError("sendto", errno)}
 	}
+}
+
+// sendOutcome maps what sendto(2) returned: sent, interrupted (retry), would
+// block (not done: the caller waits through the runtime) or an error.
+func sendOutcome(r uintptr, errno syscall.Errno) (n int, done, retry bool, err error) {
+	switch {
+	case errno == 0:
+		return int(r), true, false, nil
+	case errno == syscall.EINTR:
+		return 0, false, true, nil
+	case errors.Is(errno, syscall.EAGAIN):
+		return 0, false, false, nil
+	}
+	return 0, true, false, &net.OpError{Op: "write", Net: "udp", Err: os.NewSyscallError("sendto", errno)}
 }
