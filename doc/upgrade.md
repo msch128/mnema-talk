@@ -319,6 +319,27 @@ and media with the backup's state and preserves the current `.env` and compose
 configuration. Keep the complete backup from step 1 and the saved compose file
 until the new release has passed your application checks.
 
+#### Automatic rollback in an unattended updater
+
+A script that updates without you (the cron example in
+[Unattended updates](updating.md#unattended-updates-cron)) should go back in
+this order when the new version does not become healthy:
+
+1. Wait while a migration still runs. The server holds a PostgreSQL advisory
+   lock (key `470003576161`) from the first migration to the last and logs
+   `migration applied` for each file; a rollback in the middle of a long
+   migration helps nobody.
+2. Put the old image back (the old `.env` or tag) and start it. If the new
+   version applied no migration, the old one starts and nothing is lost.
+3. If the old version refuses the database (`the database was migrated by a
+   newer version`), restore the backup this very update took, after checking
+   its `COMPLETE` file, manifest and `SHA256SUMS`, never an older one, then
+   start the old version and require it to be healthy. Writes made after that
+   backup are lost.
+4. If that fails too, stop the app, leave a marker that stops further update
+   attempts and report it. Never retry the same release in a loop; wait for a
+   newer one.
+
 ## Version notes
 
 ### Upgrading to 3.0.0
