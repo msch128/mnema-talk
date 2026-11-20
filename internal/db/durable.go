@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,6 +33,12 @@ func AsyncCommit(ctx context.Context, tx pgx.Tx) error {
 	}
 	return nil
 }
+
+// ErrNotDurable is in the error of AwaitDurable: the transaction it waited
+// for is committed (and readable), only not confirmed on disk. A caller that
+// undoes side effects of a failed write, such as deleting a stored file, must
+// not do that for this error: the rows that refer to them are there.
+var ErrNotDurable = errors.New("commit not confirmed on disk")
 
 // durableTimeout bounds AwaitDurable; durableAttempts is how often it tries.
 const (
@@ -70,7 +77,7 @@ func AwaitDurable(ctx context.Context, p *Pool) error {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
-				return fmt.Errorf("wait for durable commit: %w", err)
+				return fmt.Errorf("wait for durable commit: %w: %w", ErrNotDurable, err)
 			case <-time.After(time.Duration(attempt) * 50 * time.Millisecond):
 			}
 		}
@@ -78,7 +85,7 @@ func AwaitDurable(ctx context.Context, p *Pool) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("wait for durable commit: %w", err)
+	return fmt.Errorf("wait for durable commit: %w: %w", ErrNotDurable, err)
 }
 
 // CheckDurable tries AwaitDurable once at startup, so a database role that may

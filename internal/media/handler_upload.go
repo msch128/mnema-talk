@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/mnema-xyz/talk/internal/auth"
 	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/db"
 	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
@@ -139,8 +140,11 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 		return RecordUploadUsage(ctx, tx, user.ID, in.size)
 	})
 	if err != nil {
-		// The object must not outlive a failed DB write.
-		h.discard(ctx, in.key)
+		// The object must not outlive a failed DB write; a committed one
+		// that is only not confirmed on disk keeps it (its rows are there).
+		if !errors.Is(err, db.ErrNotDurable) {
+			h.discard(ctx, in.key)
+		}
 		return uuid.Nil, fmt.Errorf("record upload: %w", err)
 	}
 	return msgID, nil

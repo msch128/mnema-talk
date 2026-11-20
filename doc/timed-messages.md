@@ -118,7 +118,9 @@ batches of 100, one transaction each, and on start removes everything that
 ended while the server was down. Reads never depend on it: history, threads,
 search, the mentions inbox, pins, saved messages, reminders, exports, reply
 previews, forward quotes, new report copies, link cards and the bot API all
-leave out a message whose end has passed. Auto-delete keeps its own sweep
+leave out a message whose end has passed, and a thread reply whose root's end
+has passed (with its files), whether the reply has a lifetime of its own or
+not. Auto-delete keeps its own sweep
 every ten minutes.
 
 ## Removed files

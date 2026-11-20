@@ -124,6 +124,8 @@
   opacity: 0.65;
 }
 .markdown-body .md-mention {
+  /* A display name inside someone else's text keeps its direction to itself. */
+  unicode-bidi: isolate;
   padding: 0 0.25rem;
   border-radius: 0.25rem;
   font-weight: 600;

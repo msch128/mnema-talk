@@ -100,7 +100,7 @@ func cleanRegistration(username, displayName, password, inviteCode string) (stri
 	if err := ValidatePassword(password); err != nil {
 		return "", "", "", err
 	}
-	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	displayName, err := cleanDisplayName(displayName)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -227,9 +227,18 @@ func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
 	return err
 }
 
+// cleanDisplayName cleans a member's display name like a bot's or a webhook's
+// (httpx.CleanName): others read it as the member's identity, also in their
+// own messages where a mention shows it, so it may not carry characters that
+// render differently from what they spell (direction overrides, zero-width
+// characters).
+func cleanDisplayName(s string) (string, error) {
+	return httpx.CleanName("display_name", s, MaxDisplayNameLen, false)
+}
+
 // UpdateProfile changes display name and bio.
 func UpdateProfile(ctx context.Context, p *db.Pool, userID uuid.UUID, displayName, bio string) (*User, error) {
-	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	displayName, err := cleanDisplayName(displayName)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +256,7 @@ func UpdateProfile(ctx context.Context, p *db.Pool, userID uuid.UUID, displayNam
 // UpdateDisplayName changes only the display name; the bio and everything else
 // stay as stored. It cleans and limits the name like UpdateProfile.
 func UpdateDisplayName(ctx context.Context, p *db.Pool, userID uuid.UUID, displayName string) (*User, error) {
-	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	displayName, err := cleanDisplayName(displayName)
 	if err != nil {
 		return nil, err
 	}

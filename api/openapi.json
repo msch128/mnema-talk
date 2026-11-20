@@ -2195,7 +2195,7 @@
             "type": "boolean"
           },
           "type": {
-            "description": "Type is Discord's option type: 3 string, 4 integer, 5 boolean, 6 user\n(a member's ID), 7 channel (a channel ID).",
+            "description": "Type is Discord's option type: 3 string, 4 integer, 5 boolean, 6 user\n(a member's ID), 7 channel (the ID of a text, voice or forum channel\nthat the member and the bot can both see).",
             "enum": [
               3,
               4,

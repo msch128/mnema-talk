@@ -659,8 +659,10 @@ per bot and 10 options per command. Commands an admin disabled are kept by a
 bulk `PUT` and count toward the 50 (more is a `400`); `DELETE /commands/{id}` of
 a command an admin disabled answers `404`, so a bot cannot remove (or re-create)
 what the admin switched off. Option types: `3` string, `4` integer,
-`5` boolean, `6` user (a member's ID), `7` channel (an ID); required options
-come first. A text option may list `choices` (at most 25, each 1 to 100
+`5` boolean, `6` user (a member's ID), `7` channel (the ID of a text, voice or
+forum channel that the member and the bot can both see; a conversation, or a
+channel the bot cannot see, is refused with `400`); required options come
+first. A text option may list `choices` (at most 25, each 1 to 100
 characters, unique): the composer shows them as a list and the server refuses
 any other value.
 

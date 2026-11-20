@@ -317,6 +317,21 @@ func verifySlashCommandOptionErrors(t *testing.T, run func(map[string]any) respo
 	}
 }
 
+// A channel option names a channel the bot may be told of: one the member and
+// the bot can both see, never a conversation (as for a channel select).
+func verifyChannelOptionNeedsTheBotsView(t *testing.T, f *botFixture, max *client, run func(map[string]any) response) {
+	t.Helper()
+	dmRes := max.post("/api/dms", map[string]any{"user_ids": []uuid.UUID{f.owner.user.ID}})
+	wantStatus(t, "create dm", dmRes, http.StatusCreated)
+	var dm struct {
+		ID uuid.UUID `json:"id"`
+	}
+	dmRes.decode(t, &dm)
+	for name, where := range map[string]uuid.UUID{"a channel the bot cannot see": f.other, "a conversation": dm.ID} {
+		wantStatus(t, name, run(map[string]any{"text": "x", "where": where}), http.StatusBadRequest)
+	}
+}
+
 func assertPublicInteractionMessage(t *testing.T, maxWS *wsConn, botUserID uuid.UUID) {
 	t.Helper()
 	p, ok := maxWS.expect("message_create", soon)
@@ -400,6 +415,7 @@ func TestSlashCommandRoundTrip(t *testing.T) {
 	maxWS := mustDial(t, max)
 
 	verifySlashCommandOptionErrors(t, run)
+	verifyChannelOptionNeedsTheBotsView(t, f, max, run)
 
 	res := run(map[string]any{"text": "hello", "times": 3, "loud": true, "who": max.user.ID, "where": f.open})
 	wantStatus(t, "run", res, http.StatusAccepted)

@@ -15,6 +15,7 @@ import (
 	"github.com/mnema-xyz/talk/internal/chat/core"
 	"github.com/mnema-xyz/talk/internal/chat/mentions"
 	"github.com/mnema-xyz/talk/internal/chat/messages"
+	"github.com/mnema-xyz/talk/internal/db"
 	"github.com/mnema-xyz/talk/internal/httpx"
 )
 
@@ -276,7 +277,9 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*co
 		return nil
 	})
 	if err != nil {
-		discard()
+		if !errors.Is(err, db.ErrNotDurable) { // committed: the files are the message's
+			discard()
+		}
 		return nil, err
 	}
 	// The message is committed: a failed read-back (a cancelled request, a

@@ -254,3 +254,27 @@ func TestCommandPermChecks(t *testing.T) {
 		t.Fatalf("owner must pass checkCommandPerm in denied channel: %v", err)
 	}
 }
+
+// A restriction that cannot be stored is refused: it never becomes NULL,
+// which would let everyone run the command.
+func TestStoredDefaultPermsFailsClosed(t *testing.T) {
+	huge := perm.Set(1<<63 | 1)
+	unknown := perm.Set(1 << 62)
+	for name, in := range map[string]CommandInput{
+		"above int64":       {defaultPerms: &huge},
+		"unknown bits":      {defaultPerms: &unknown},
+		"unparsed too big":  {DefaultMemberPermissions: &CommandPermissionsInput{raw: []byte(`"18446744073709551615"`)}},
+		"unparsed not bits": {DefaultMemberPermissions: &CommandPermissionsInput{raw: []byte(`"nope"`)}},
+	} {
+		if got, err := storedDefaultPerms(in); err == nil {
+			t.Errorf("%s: stored %v without an error", name, got)
+		}
+	}
+	manage := perm.ManageMessages
+	if got, err := storedDefaultPerms(CommandInput{defaultPerms: &manage}); err != nil || got == nil || *got != int64(manage) {
+		t.Errorf("a valid restriction: %v, %v", got, err)
+	}
+	if got, err := storedDefaultPerms(CommandInput{DefaultMemberPermissions: &CommandPermissionsInput{raw: []byte(`null`)}}); err != nil || got != nil {
+		t.Errorf("no restriction: %v, %v", got, err)
+	}
+}

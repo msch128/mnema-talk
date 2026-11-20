@@ -67,14 +67,30 @@ func (s MessageSettings) CheckLifetime(seconds int) error {
 	return nil
 }
 
-// LiveSQL holds for the messages row called alias while it has not reached
-// the end of its lifetime. Every read of messages for anyone adds it: the
-// sweeper removes ended rows within about a second, and this keeps a late
-// sweep from showing one.
+// LiveSQL holds for the messages row called alias while neither it nor its
+// thread root has reached the end of its lifetime: a reply ends with its
+// thread, also when it has no lifetime of its own. Every read of messages for
+// anyone adds it: the sweeper removes ended rows (a root with its replies)
+// within about a second, and this keeps a late sweep from showing one.
 func LiveSQL(alias string) string {
-	return "(" + alias + ".expires_at IS NULL OR " + alias + ".expires_at > now())"
+	return "((" + alias + ".expires_at IS NULL OR " + alias + ".expires_at > now()) AND " + rootLiveSQL(alias) + ")"
 }
 
+// rootLiveSQL holds for the messages row called alias unless it is a reply
+// whose thread root ended. A row without a parent compares with no root.
+func rootLiveSQL(alias string) string {
+	return "NOT EXISTS (SELECT 1 FROM messages ended_root WHERE ended_root.id = " + alias + ".parent_id AND ended_root.expires_at <= now())"
+}
+
+// LiveM is LiveSQL("m") as a constant, for query constants that call their
+// messages row m (a test holds the two together).
+const LiveM = "((m.expires_at IS NULL OR m.expires_at > now()) AND " +
+	"NOT EXISTS (SELECT 1 FROM messages ended_root WHERE ended_root.id = m.parent_id AND ended_root.expires_at <= now()))"
+
 // LiveMessages is the messages table without the rows whose lifetime ended,
-// for a FROM or JOIN clause: "FROM " + LiveMessages + " m".
-const LiveMessages = "(SELECT * FROM messages WHERE expires_at IS NULL OR expires_at > now())"
+// or whose thread root's did, for a FROM or JOIN clause:
+// "FROM " + LiveMessages + " m".
+// It spells out LiveSQL("live"), so that it stays a constant (a test holds the
+// two together).
+const LiveMessages = "(SELECT * FROM messages live WHERE ((live.expires_at IS NULL OR live.expires_at > now()) AND " +
+	"NOT EXISTS (SELECT 1 FROM messages ended_root WHERE ended_root.id = live.parent_id AND ended_root.expires_at <= now())))"
