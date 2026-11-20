@@ -1,0 +1,131 @@
+name: Release drill
+
+# The backup, restore and upgrade drills of ci.yml run on pull requests against
+# the image built from the change. This one runs on a schedule against the
+# image that was actually released (the newest GHCR release), with the scripts
+# and migrations of that release's tag, so it also catches what changes
+# without a commit here: a base image or registry that moved, a dependency
+# that no longer pulls, a restore that stopped working on a shipped version.
+#
+#   restore       back up on the released image (offline, then online while
+#                 messages and uploads arrive, encrypted with age), wipe,
+#                 restore, compare every table digest and every attachment
+#   upgrade-*     install an older release, seed data through its API, switch
+#                 to the released image, back up on the old release, restore
+#                 into the new one, check the old one refuses the newer data
+#
+# A failure opens one `drill-failed` issue (later failures comment on it); the
+# next fully green run closes it.
+on:
+  schedule:
+    - cron: "37 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to test (default, the newest release)
+        required: false
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: release-drill
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: github.repository == 'mnema-xyz/talk'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - name: Newest release
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$WANT" ]; then version="$WANT"; else
+            version=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name | ltrimstr("v")')
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a release version: $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Drilling the released $version" >> "$GITHUB_STEP_SUMMARY"
+
+  drill:
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # '' is the same-version restore drill; the others upgrade from that release.
+        from: ['', '2.9.19', '3.0.13', '3.2.1']
+    env:
+      VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: v${{ needs.resolve.outputs.version }}
+
+      - name: Pull the released image
+        run: |
+          set -euo pipefail
+          source scripts/drill-common.sh
+          drill_pull_image "ghcr.io/mnema-xyz/mnema-talk:$VERSION"
+          docker tag "ghcr.io/mnema-xyz/mnema-talk:$VERSION" mnema-talk:ci
+
+      - name: Restore drill (same version, offline and online)
+        if: matrix.from == ''
+        run: |
+          scripts/ci-dns-fallback.sh azure.archive.ubuntu.com archive.ubuntu.com || true
+          sudo apt-get install -y --no-install-recommends age >/dev/null
+          scripts/backup-drill.sh mnema-talk:ci
+
+      - name: Upgrade drill (${{ matrix.from }} to the released image)
+        if: matrix.from != ''
+        env:
+          FROM_VERSIONS: ${{ matrix.from }}
+        run: scripts/upgrade-drill.sh mnema-talk:ci
+
+      - name: Restore into the released image from ${{ matrix.from }}
+        if: matrix.from != ''
+        env:
+          FROM_VERSION: ${{ matrix.from }}
+        run: scripts/backup-drill.sh mnema-talk:ci
+
+  report:
+    needs: [resolve, drill]
+    if: always() && github.repository == 'mnema-xyz/talk' && needs.resolve.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # open and close the drill-failed issue, nothing else
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RESULT: ${{ needs.drill.result }}
+      RESOLVE: ${{ needs.resolve.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Open, update or close the issue
+        run: |
+          set -euo pipefail
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$RESULT" = success ]; then
+            scripts/ops-issue.sh close drill-failed "The release drill passes again ($run)."
+          elif [ "$RESULT" = failure ] || [ "$RESOLVE" = failure ]; then
+            printf 'The scheduled release drill failed (%s). A backup, restore or upgrade of the released image did not work; the legs that failed are in the run.\n' "$run" > "$RUNNER_TEMP/issue.md"
+            scripts/ops-issue.sh open drill-failed "Release drill failing" "$RUNNER_TEMP/issue.md"
+          fi

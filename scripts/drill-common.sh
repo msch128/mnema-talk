@@ -7,13 +7,29 @@
 # 0.8.16 is the last 0.8; 0.9.0 is the first release with notification levels,
 # role mentions and onboarding; 1.0.0 is the first stable release; 2.0.0 added
 # the built-in TURN relay. 2.9.12 is a late 2.9 release; 2.9.19 is a recent
-# 2.9 patch, the most common real upgrade path and the closest start to 3.0.
+# 2.9 patch and the closest start to 3.0. 3.0.13 is the last 3.0 patch, 3.2.1
+# the release before the member-invite and bot-access migrations (0106 to
+# 0110), and 3.3.5 the release a server on the current line upgrades from.
 # Add the newest patch of a line here when a new line ships, not every patch.
-DRILL_DEFAULT_FROM_VERSIONS='0.8.16 0.9.0 1.0.0 1.1.0 2.0.0 2.9.12 2.9.19'
+DRILL_DEFAULT_FROM_VERSIONS='0.8.16 0.9.0 1.0.0 1.1.0 2.0.0 2.9.12 2.9.19 3.0.13 3.2.1 3.3.5'
 # The seed uses the roles, webhook and bot APIs, which start with 0.8.
 DRILL_MIN_FROM_VERSION='0.8.0'
-# The pre-move path still holds every old release the drill upgrades from.
-REGISTRY_IMAGE="${REGISTRY_IMAGE:-ghcr.io/msch128/mnema-talk}"
+# Releases before 3.2.1 exist only at the pre-move path (GHCR does not
+# redirect); 3.2.1 and later are at the organization's path.
+LEGACY_REGISTRY_IMAGE='ghcr.io/msch128/mnema-talk'
+ORG_REGISTRY_IMAGE='ghcr.io/mnema-xyz/mnema-talk'
+ORG_REGISTRY_FROM_VERSION='3.2.1'
+
+# drill_image_for VERSION: the repository path that holds that release.
+# REGISTRY_IMAGE, when set, overrides the choice (a mirror or a local registry).
+drill_image_for() {
+  if [ -n "${REGISTRY_IMAGE:-}" ]; then printf '%s\n' "$REGISTRY_IMAGE"; return 0; fi
+  if drill_version_ge "$1" "$ORG_REGISTRY_FROM_VERSION"; then
+    printf '%s\n' "$ORG_REGISTRY_IMAGE"
+  else
+    printf '%s\n' "$LEGACY_REGISTRY_IMAGE"
+  fi
+}
 
 drill_fail() { echo "$*" >&2; return 1; }
 

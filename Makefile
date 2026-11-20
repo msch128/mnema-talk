@@ -92,12 +92,13 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 	cd e2e && npm run typecheck
 
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
-	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/backup-online.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh scripts/backup-drill-online.sh scripts/drill-digest.sh scripts/retry.sh
+	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/backup-online.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh scripts/backup-drill-online.sh scripts/drill-digest.sh scripts/prod-probe.sh scripts/ops-issue.sh scripts/retry.sh
 	e2e/ports_test.sh
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_retry.py
 	python3 scripts/tests/test_drill_versions.py
+	python3 scripts/tests/test_prod_probe.py
 	python3 scripts/tests/test_drill_downgrade.py
 	python3 scripts/tests/test_coverage_summary.py
 	python3 scripts/tests/test_openapi_diff.py
@@ -243,7 +244,7 @@ backup-drill: docker ## Back up, change, verify and restore a throwaway compose 
 postgres-upgrade-drill: docker ## Install like 0.4 (PostgreSQL 17), then check the guard and scripts/upgrade-postgres.sh
 	scripts/postgres-upgrade-drill.sh mnema-talk:local
 
-upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 to 2.9.19, see scripts/drill-common.sh), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
+upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 to 3.3.5, see scripts/drill-common.sh), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
 	scripts/upgrade-drill.sh mnema-talk:local
 
 docker: ## Build the app image (mnema-talk:local, what compose runs by default)

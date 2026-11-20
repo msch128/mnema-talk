@@ -31,7 +31,7 @@ IMAGE="${1:-mnema-talk:local}"
 START_IMAGE="$IMAGE"
 if [ -n "${FROM_VERSION:-}" ]; then
   FROM_VERSION="$(drill_resolve_versions "$FROM_VERSION")" || exit 1
-  START_IMAGE="$REGISTRY_IMAGE:$FROM_VERSION"
+  START_IMAGE="$(drill_image_for "$FROM_VERSION"):$FROM_VERSION"
   drill_pull_image "$START_IMAGE"
   echo "==> cross-version: back up on $START_IMAGE, restore into $IMAGE"
 fi
