@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.3.9](https://github.com/mnema-xyz/talk/compare/v3.3.8...v3.3.9) (2026-11-20)
+
+
+### Performance Improvements
+
+* **db:** index-only unread summary, no JIT, quoted attachments by id ([#916](https://github.com/mnema-xyz/talk/issues/916)) ([9f3315d](https://github.com/mnema-xyz/talk/commit/9f3315d7ca4374fb3fef29a5b0e455c1942916a6))
+* **sfu:** send media from all goroutines at once on the shared UDP socket ([#918](https://github.com/mnema-xyz/talk/issues/918)) ([894927b](https://github.com/mnema-xyz/talk/commit/894927b158f464f2c212e96ae3ba1728aad31e19))
+
+
+### Documentation
+
+* the direct path is Linux only. ([894927b](https://github.com/mnema-xyz/talk/commit/894927b158f464f2c212e96ae3ba1728aad31e19))
+
 ## [3.3.8](https://github.com/mnema-xyz/talk/compare/v3.3.7...v3.3.8) (2026-11-20)
 
 
