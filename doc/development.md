@@ -144,7 +144,7 @@ these jobs in parallel (rough wall times with warm caches):
 | Job | What | Time |
 |-----|------|------|
 | `secret-scan` | gitleaks (pinned, checksum verified) over the tree and the history | < 1 min |
-| `backend` | Verdict of `backend-checks` (gofmt, go vet, OpenAPI check, unit tests, build), three parallel `backend-integration` shards (unit + integration tests with coverage, a Postgres service each) and `backend-coverage` (merges the profiles, applies the coverage gates) | 6–8 min |
+| `backend` | Verdict of `backend-checks` (gofmt, go vet, OpenAPI check, unit tests, build), four parallel `backend-integration` shards (`server-a`, `server-b`, `realtime`, `rest`: unit + integration tests with coverage, a Postgres service each; `internal/server` is split in two by a hash of the test name, `scripts/test-shard.mjs`, and CI fails if a test is in no shard or in both) and `backend-coverage` (merges the profiles, applies the coverage gates) | 6–8 min |
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
