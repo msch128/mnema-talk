@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { fnv1a, parseList, partition, problems, runRegex, shardOf } from './test-shard.mjs'
+import { balance, fnv1a, parseList, partition, problems, runRegex, shardOf } from './test-shard.mjs'
 
 const names = Array.from({ length: 400 }, (_, i) => `TestCase${i}`)
 
@@ -37,4 +37,14 @@ test('problems reports a test in no shard and one in two', () => {
 test('runRegex anchors the names and refuses an empty shard', () => {
   assert.equal(runRegex(['TestA', 'TestB']), '^(TestA|TestB)$')
   assert.throws(() => runRegex([]))
+})
+
+test('balance is deterministic, covers every item once and evens the load', () => {
+  const weights = { a: 100, b: 90, c: 10, d: 10, e: 5 }
+  const items = ['e', 'd', 'c', 'b', 'a', 'new']
+  const shards = balance(items, weights, 2)
+  assert.deepEqual(shards, balance([...items].reverse(), weights, 2))
+  assert.deepEqual(problems(items, shards), [])
+  const load = shards.map((s) => s.reduce((n, i) => n + (weights[i] ?? 10), 0))
+  assert.ok(Math.abs(load[0] - load[1]) <= 20, `${load}`)
 })
