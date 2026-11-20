@@ -43,7 +43,8 @@ type Option struct {
 	Name        string `json:"name" minLength:"1" maxLength:"32"`
 	Description string `json:"description" minLength:"1" maxLength:"100"`
 	// Type is Discord's option type: 3 string, 4 integer, 5 boolean, 6 user
-	// (a member's ID), 7 channel (a channel ID).
+	// (a member's ID), 7 channel (the ID of a text, voice or forum channel
+	// that the member and the bot can both see).
 	Type     int  `json:"type" enums:"3,4,5,6,7"`
 	Required bool `json:"required"`
 	// Choices limit a string option to these values (the composer shows them

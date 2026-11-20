@@ -138,22 +138,25 @@ func (c *Commands) checkReference(r *http.Request, oc optionContext, typ int, v 
 }
 
 func (c *Commands) checkChannelOption(r *http.Request, oc optionContext, id uuid.UUID, bad func(string) (any, error)) (any, error) {
-	if !oc.snap.Channel(oc.user.Subject(), id).Has(perm.ViewChannel) {
-		return bad("a channel you can see")
-	}
 	if oc.botUser == uuid.Nil {
+		if !oc.snap.Channel(oc.user.Subject(), id).Has(perm.ViewChannel) {
+			return bad("a channel you can see")
+		}
 		return id, nil
 	}
-	if !oc.snap.Channel(perm.Subject{ID: oc.botUser}, id).Has(perm.ViewChannel) {
-		return bad("a channel the bot can see")
+	// One refusal for every case, as for a channel select: it tells the
+	// member nothing about the bot's access they could not see otherwise.
+	if !oc.snap.Channel(oc.user.Subject(), id).Has(perm.ViewChannel) || !oc.snap.Channel(perm.Subject{ID: oc.botUser}, id).Has(perm.ViewChannel) {
+		return bad("a channel you and the bot can see")
 	}
+	// A conversation is refused even should the bot see it one day.
 	var community bool
 	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM channels
 		WHERE id = $1 AND type IN ('text', 'voice', 'forum') AND dm_id IS NULL)`, id).Scan(&community); err != nil {
 		return nil, err
 	}
 	if !community {
-		return bad("a channel the bot can see")
+		return bad("a channel you and the bot can see")
 	}
 	return id, nil
 }
