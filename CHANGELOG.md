@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.11](https://github.com/mnema-xyz/talk/compare/v3.3.10...v3.3.11) (2026-11-21)
+
+
+### Documentation
+
+* **unraid:** fix gaps in the Community Apps install found on a live move ([#929](https://github.com/mnema-xyz/talk/issues/929)) ([e43a65d](https://github.com/mnema-xyz/talk/commit/e43a65df5a657cd9a8bf5f8aabb821ed8b1cc9f3))
+
 ## [3.3.10](https://github.com/mnema-xyz/talk/compare/v3.3.9...v3.3.10) (2026-11-20)
 
 
