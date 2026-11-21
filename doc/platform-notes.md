@@ -87,6 +87,9 @@ Apps works. Make every secret below on the Unraid terminal with
    *POSTGRES_DB* to `mnema_talk`. A cache-only data path such as
    `/mnt/cache/appdata/postgresql18` is faster. Talk needs PostgreSQL 18 with
    the `pgcrypto` and `pg_trgm` extensions, which the official image ships.
+   If a container named `postgresql18` already exists for another app (the
+   Docker tab lists it), do not reuse or overwrite it: change *Name* to, for
+   example, `postgresql18-mnema` and give it its own data path.
 2. **Media storage.** Search for *SeaweedFS-Mnema* and install it. Keep the
    access key `mnema` (or pick your own) and set the *Secret key* to a new
    secret. Only the S3 port 8333 is published, and it refuses every request
@@ -100,19 +103,73 @@ Apps works. Make every secret below on the Unraid terminal with
      secret key from step 2;
    - *JWT secret* (a new secret) and the *Admin password* for the first login.
 
+   Under *Show more settings*, also fill in the *Operator* fields (they appear
+   on the legal notice) and, for e-mail, the *SMTP* fields. *SMTP from* takes
+   a bare address such as `talk@example.com`: Unraid removes angle brackets, so
+   `Name <talk@example.com>` arrives as an invalid address and Talk does not
+   start. Mails carry your community name as the sender name anyway.
+
    The three containers stay on the default bridge network and reach each other
    through the Unraid server's address. Never forward ports 5432, 8333 or the
-   web port 8080 on your router.
+   web port 8080 on your router. To use another voice port range, edit the
+   *Voice UDP ports* entry and set the same range as host and container port,
+   then *Voice UDP port min* and *max* to match.
 4. **Reverse proxy and router.** Same as steps 3 and 4 of the
    [Unraid section](#unraid) below: a proxy container with HTTPS in front of the
    web port, and the [three ports](quick-start.md#step-4-open-the-three-ports)
    forwarded (the voice ports keep the same number on host and container).
-   Enter the proxy container's address as *Reverse proxy address*.
+   *Reverse proxy address* is the address the proxy's requests arrive from. A
+   proxy that forwards to `UNRAID-IP:8080` (the usual setup) arrives from the
+   Docker bridge gateway, normally `172.17.0.1`; only a proxy on the same custom
+   network that forwards to the Talk container directly arrives from its own
+   container address. If Admin > Status warns about a proxy that is not
+   trusted, the address is wrong.
+5. **Autostart.** In the Docker tab, turn on autostart for all three in the
+   order postgresql18, SeaweedFS-Mnema, Mnema Talk, with a wait of 10 seconds
+   after the first two: Talk exits when the database is not up yet when it
+   starts.
 
-Back up the appdata folders of `postgresql18` and `seaweedfs-mnema` together.
-The templates install a released image and have no "Update now" button. The
-app's admin page still tells you when a new release is out; update from the
-Docker tab. Keep PostgreSQL on major version 18 when you update it.
+**Backups.** Copying the PostgreSQL appdata folder while the database runs is
+no backup. Use
+[`scripts/mnema-talk-backup.sh`](https://github.com/mnema-xyz/unraid-templates/blob/main/scripts/mnema-talk-backup.sh)
+of the template repository as a daily user script (*User Scripts* plugin): it
+stops Talk and SeaweedFS-Mnema for a few seconds, dumps the database, archives
+the media folder and the three Docker templates, restore-tests the dump in a
+throwaway container and reports the result in Admin > Status through the
+*Backup status folder*. Setup and restore steps are in the
+[template repository README](https://github.com/mnema-xyz/unraid-templates#backups).
+`scripts/backup.sh` and `scripts/restore.sh` of this repository serve the
+Compose stack only.
+
+**Updates.** The templates install a released image and have no "Update now"
+button. The tag `3.3` follows every 3.3.x release through the Docker tab's
+update check; for a new minor release (3.4) edit the container once and change
+the tag in *Repository*. The app's admin page tells you when a new release is
+out. Keep PostgreSQL on major version 18 when you update it.
+
+**Moving a Compose install to the templates.** Keep the Compose stack until
+the new install works; it stays your way back.
+
+1. Write down the settings the app runs with (`docker inspect mnema-talk`
+   lists them as `Config.Env`) and back up: `./scripts/backup.sh` in the
+   Compose folder, with the app stopped first (`docker compose stop app`) so
+   nothing writes after the dump.
+2. Install the three templates as above with the same values: the same
+   database password, S3 keys, JWT secret (a new one signs every member out
+   and makes the stored two-factor secrets unreadable) and bucket. The voice ports must be free, so stop the Compose stack
+   (`docker compose stop`, never `down -v`) before you start Mnema Talk.
+3. Import the database into the new, still empty PostgreSQL:
+   `gunzip -c BACKUP/postgres.sql.gz | docker exec -i postgresql18 psql -U mnema -d mnema_talk -v ON_ERROR_STOP=1 -q`.
+   Do not copy the old data folder instead: the Compose image is Alpine-based
+   and the official one Debian-based, and their different text sorting breaks
+   indexes on copied data. The Compose database runs in UTC, while the template
+   container takes the Unraid time zone; keep UTC with
+   `docker exec postgresql18 psql -U mnema -d mnema_talk -c "ALTER DATABASE mnema_talk SET timezone TO 'UTC'"`.
+4. Copy the media with an S3 client while both stores run, for example
+   `rclone copy` from the old SeaweedFS (on the Compose network, port 8333) to
+   the new one (`UNRAID-IP:8333`), and compare both with `rclone check`.
+5. Start Mnema Talk and keep the reverse proxy pointing at port 8080; adjust
+   *Reverse proxy address* as in step 4 above.
 
 **Alternative: Compose Manager.** To run the stack as one unit instead,
 install the *Compose Manager Plus* plugin from Community Apps, add a stack, and
